@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CheckCircle2, ArrowRight, Download } from 'lucide-react';
+import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { Reveal } from '../ui/Reveal';
 import { subscribeNewsletter, type NewsletterSource } from '../../services/newsletter.service';
 import { getApiErrorMessage } from '../../services/api';
@@ -21,27 +21,10 @@ interface NewsletterCaptureProps {
   cta: string;
   source: NewsletterSource;
   successMessage: string;
-  // Gated-content capture (#2) hands the visitor the actual file once they've
-  // subscribed — the "get updates" capture (#1) has nothing to fetch, so this is
-  // the one behavioral difference between the two instances of this component.
-  downloadHref?: string;
-  downloadFilename?: string;
 }
 
-// Shared mechanic for both Home-page email captures (see brief sections #4 and #11)
-// — a low-friction two-field form laid over a photo, differing only in framing/copy
-// and whether success hands over a file.
-export const NewsletterCapture = ({
-  photo,
-  eyebrow,
-  title,
-  body,
-  cta,
-  source,
-  successMessage,
-  downloadHref,
-  downloadFilename,
-}: NewsletterCaptureProps) => {
+// Low-friction two-field form laid over a photo — see brief section #4.
+export const NewsletterCapture = ({ photo, eyebrow, title, body, cta, source, successMessage }: NewsletterCaptureProps) => {
   const [submitError, setSubmitError] = useState('');
   const {
     register,
@@ -53,12 +36,6 @@ export const NewsletterCapture = ({
     setSubmitError('');
     try {
       await subscribeNewsletter({ ...values, source });
-      if (downloadHref) {
-        const link = document.createElement('a');
-        link.href = downloadHref;
-        link.download = downloadFilename ?? '';
-        link.click();
-      }
     } catch (err) {
       setSubmitError(getApiErrorMessage(err));
     }
@@ -111,7 +88,7 @@ export const NewsletterCapture = ({
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-orange px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange/25 transition-all hover:scale-[1.02] hover:bg-orange-hover disabled:opacity-60 sm:w-auto"
             >
               {isSubmitting ? 'Submitting…' : cta}
-              {downloadHref ? <Download size={16} /> : <ArrowRight size={16} />}
+              <ArrowRight size={16} />
             </button>
           </form>
         )}

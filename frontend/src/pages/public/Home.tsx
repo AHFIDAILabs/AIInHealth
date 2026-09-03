@@ -30,7 +30,6 @@ import { RevealText } from '../../components/ui/RevealText';
 import heroBg from '../../assets/images/hero_bg.png';
 import ahfidMark from '../../assets/images/Icon@4x.png';
 import homePageBg from '../../assets/images/home_page_bg.png';
-import abujaBuilding from '../../assets/images/Abuja_Building.jpeg';
 import { PARTNER_LOGOS } from '../../lib/partnerLogos';
 import { SummitAtAGlance } from '../../components/home/SummitAtAGlance';
 import { ConfirmedVoices } from '../../components/home/ConfirmedVoices';
@@ -461,18 +460,6 @@ export const Home = () => (
     <InnovatorsShowcase />
 
     <PressQuoteBand />
-
-    <NewsletterCapture
-      photo={abujaBuilding}
-      eyebrow="Go Deeper"
-      title="Download the Concept Note"
-      body="The full strategic rationale, objectives, and programme structure behind AHTS 2026 — in one document."
-      cta="Download PDF"
-      source="concept_note"
-      successMessage="Your download is starting — thanks for your interest."
-      downloadHref="/downloads/AHTS-2026-Concept-Note.pdf"
-      downloadFilename="AI-in-Health-Summit-2026-Concept-Note.pdf"
-    />
 
     {/* Why Partner — full cards with real copy, plus a CTA through to the tiers page */}
     <section className="relative overflow-hidden bg-white py-24">

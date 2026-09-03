@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Landmark, Stethoscope, Rocket, TrendingUp, Globe2, Search, X } from 'lucide-react';
+import { Landmark, Stethoscope, Rocket, TrendingUp, Globe2, Search } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
 import { InitialsAvatar } from '../../components/ui/InitialsAvatar';
+import { SpeakerModal } from '../../components/ui/SpeakerModal';
 import { FEATURED_SPEAKERS, type Speaker } from '../../lib/speakers';
 
 const TRACKS = ['All', ...Array.from(new Set(FEATURED_SPEAKERS.map((s) => s.track)))];
@@ -176,52 +176,7 @@ export const Speakers = () => {
         </div>
       </section>
 
-      {/* Speaker detail modal */}
-      <AnimatePresence>
-        {active && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-navy/70 p-4 backdrop-blur-sm"
-            onClick={() => setActive(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.97 }}
-              transition={{ duration: 0.25 }}
-              onClick={(e) => e.stopPropagation()}
-              className="grid w-full max-w-lg grid-cols-1 overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-w-2xl sm:grid-cols-2"
-            >
-              <div className="relative aspect-[4/3] sm:aspect-auto">
-                {active.photo ? (
-                  <img src={active.photo} alt={active.name} className="h-full w-full object-cover" />
-                ) : (
-                  <InitialsAvatar name={active.name} className="h-full w-full" />
-                )}
-              </div>
-              <div className="relative p-6 sm:p-7">
-                <button
-                  onClick={() => setActive(null)}
-                  aria-label="Close"
-                  className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
-                >
-                  <X size={18} />
-                </button>
-                <span className="inline-block rounded-full bg-orange/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-orange">
-                  {active.track}
-                </span>
-                <h3 className="mt-4 font-display text-xl font-semibold text-navy">{active.name}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.title}</p>
-                <ButtonLink to="/agenda" variant="primary" className="!mt-6 !py-2.5 !text-sm">
-                  View Related Sessions
-                </ButtonLink>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <SpeakerModal speaker={active} onClose={() => setActive(null)} />
     </>
   );
 };
