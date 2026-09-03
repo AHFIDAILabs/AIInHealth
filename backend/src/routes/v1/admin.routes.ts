@@ -23,6 +23,7 @@ import * as analyticsController from '../../controllers/analytics.controller.js'
 import * as integrationsController from '../../controllers/integrations.controller.js';
 import * as newsletterController from '../../controllers/newsletter.controller.js';
 import * as uploadController from '../../controllers/upload.controller.js';
+import * as searchController from '../../controllers/search.controller.js';
 import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
@@ -36,6 +37,10 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/dashboard', requireRole('super_admin', 'content_editor', 'registrations_officer', 'viewer'), adminController.dashboardStats);
+
+// Global search (topbar ⌘K) — every role may call this; which resources are
+// actually queried is narrowed per-role inside the controller itself.
+router.get('/search', requireRole('super_admin', 'content_editor', 'registrations_officer', 'viewer'), searchController.globalSearch);
 
 // Any authenticated admin role can upload an image (own profile photo at minimum);
 // which resource a URL ends up saved on is still gated by that resource's own route.
