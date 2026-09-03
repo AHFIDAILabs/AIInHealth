@@ -35,6 +35,9 @@ const VOLUNTEER_ALREADY_APPLIED_MESSAGE = "You've already applied to volunteer �
 const VOLUNTEER_CONFIRMED_MESSAGE = "You're confirmed as a volunteer! We'll be in touch with schedule and role details shortly.";
 const ATTENDEE_PAID_MESSAGE = "You're one step away — complete payment to confirm your seat.";
 
+// Idempotency window for the non-volunteer create() branch below — see its comment.
+const DUPLICATE_SUBMIT_WINDOW_MS = 2 * 60 * 1000;
+
 // Fires the "you're in — complete your profile (with a photo)" email for a
 // newly-confirmed volunteer, whichever path got them there (self-redeemed code,
 // or an admin confirming them directly). Best-effort — a send failure here
@@ -180,25 +183,42 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   // categories (government_official, accredited_media) keep the default
   // 'not_required' and go through the same manual admin review as before.
   const requiresPayment = input.type === 'attendee' && !isFreeTicketCategory(input.ticketCategory as TicketCategory);
-  const registration = await Registration.create({
-    ...input,
-    ...(requiresPayment && { paymentStatus: 'unpaid' }),
-  });
 
-  const who = input.type === 'attendee' ? input.fullName : input.companyName;
-  await emitAdminNotification({
-    type: 'registration.new',
-    title: `New ${input.type} registration`,
-    body: who,
-    resourceType: 'Registration',
-    resourceId: registration.id,
-  });
+  // Idempotency: a double-click or a network-retried submit shouldn't create a
+  // second registration — return the one that already exists instead. Scoped to a
+  // short recent window (not "ever") so someone who genuinely wants to submit again
+  // later (e.g. after correcting a mistake) isn't blocked indefinitely.
+  const dedupeEmail = input.type === 'attendee' ? input.email : input.contactEmail;
+  const recentDuplicate = await Registration.findOne({
+    type: input.type,
+    ...(input.type === 'attendee' ? { email: dedupeEmail } : { contactEmail: dedupeEmail }),
+    createdAt: { $gte: new Date(Date.now() - DUPLICATE_SUBMIT_WINDOW_MS) },
+  }).sort({ createdAt: -1 });
 
-  res.status(201).json(
+  const registration =
+    recentDuplicate ??
+    (await Registration.create({
+      ...input,
+      ...(requiresPayment && { paymentStatus: 'unpaid' }),
+    }));
+
+  if (!recentDuplicate) {
+    const who = input.type === 'attendee' ? input.fullName : input.companyName;
+    await emitAdminNotification({
+      type: 'registration.new',
+      title: `New ${input.type} registration`,
+      body: who,
+      resourceType: 'Registration',
+      resourceId: registration.id,
+    });
+  }
+
+  const stillRequiresPayment = requiresPayment && registration.paymentStatus !== 'paid';
+  res.status(recentDuplicate ? 200 : 201).json(
     new ApiResponse({
       id: registration.id,
-      requiresPayment,
-      message: requiresPayment ? ATTENDEE_PAID_MESSAGE : CONFIRMATION_MESSAGE[input.type],
+      requiresPayment: stillRequiresPayment,
+      message: stillRequiresPayment ? ATTENDEE_PAID_MESSAGE : CONFIRMATION_MESSAGE[input.type],
     })
   );
 });

@@ -68,33 +68,47 @@ export const adminGenerate = catchAsync(async (req: Request, res: Response) => {
     throw new ApiError(403, 'You can only generate volunteer access codes.', 'FORBIDDEN');
   }
 
-  const codes = [];
-  for (const email of input.emails) {
+  // Idempotency: retrying "Generate" for someone who already has a live, unused
+  // code of this type (a double-click, or re-running the same email list) must not
+  // mint a second one — that would leave two valid codes for the same person, only
+  // one of which the "used" list would ever reflect. Reuse the existing code and
+  // just resend it instead.
+  const existing = await AccessCode.find({ type: input.type, issuedTo: { $in: input.emails }, status: 'unused' });
+  const existingByEmail = new Map(existing.map((c) => [c.issuedTo, c]));
+  const newEmails = input.emails.filter((email) => !existingByEmail.has(email));
+
+  const codesToInsert = [];
+  for (const email of newEmails) {
     let code = generateCode(input.type);
     // Collision odds at this alphabet/length are astronomically low, but check anyway.
     // eslint-disable-next-line no-await-in-loop
     while (await AccessCode.exists({ code })) code = generateCode(input.type);
-    codes.push({ code, type: input.type, issuedTo: email, expiresAt: input.expiresAt, createdBy: req.user!.sub });
+    codesToInsert.push({ code, type: input.type, issuedTo: email, expiresAt: input.expiresAt, createdBy: req.user!.sub });
   }
 
-  const created = await AccessCode.insertMany(codes);
+  const created = codesToInsert.length > 0 ? await AccessCode.insertMany(codesToInsert) : [];
+  const result = [...existing, ...created];
 
-  await recordAudit({
-    req,
-    action: 'access_code.generated',
-    resourceType: 'AccessCode',
-    resourceId: created[0]?.id ?? 'batch',
-    after: { type: input.type, emails: input.emails },
-  });
+  if (created.length > 0) {
+    await recordAudit({
+      req,
+      action: 'access_code.generated',
+      resourceType: 'AccessCode',
+      resourceId: created[0]?.id ?? 'batch',
+      after: { type: input.type, emails: newEmails },
+    });
+  }
 
   // Auto-send by default — the whole point of requiring a real issuedTo email is
   // that the chosen person actually receives their code, not that an admin
-  // remembers a separate step. The per-row "Resend" button covers follow-ups.
-  sendBatch(created.map((c) => ({ _id: c._id, issuedTo: c.issuedTo, type: c.type, code: c.code }))).catch((err) =>
+  // remembers a separate step. Reused existing codes get resent too, since an
+  // admin retrying "Generate" for them is a reasonable signal they still want it
+  // delivered; the per-row "Resend" button covers one-off follow-ups.
+  sendBatch(result.map((c) => ({ _id: c._id, issuedTo: c.issuedTo, type: c.type, code: c.code }))).catch((err) =>
     logger.error({ err }, 'Batch access code send failed')
   );
 
-  res.status(201).json(new ApiResponse(created));
+  res.status(created.length > 0 ? 201 : 200).json(new ApiResponse(result));
 });
 
 export const adminRevoke = catchAsync(async (req: Request, res: Response) => {

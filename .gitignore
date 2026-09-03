@@ -5,3 +5,5 @@ build/
 *.log
 .mongo-data/
 backend/uploads/
+coverage/
+*.tsbuildinfo

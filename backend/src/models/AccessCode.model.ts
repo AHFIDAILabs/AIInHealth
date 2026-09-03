@@ -19,7 +19,8 @@ const accessCodeSchema = new Schema(
   { timestamps: true }
 );
 
-accessCodeSchema.index({ code: 1 }, { unique: true });
+// `code`'s own `unique: true` above already creates that index — no separate
+// .index({ code: 1 }) call needed.
 accessCodeSchema.index({ status: 1, type: 1 });
 
 export type AccessCodeDoc = InferSchemaType<typeof accessCodeSchema>;

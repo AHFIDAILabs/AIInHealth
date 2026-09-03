@@ -57,6 +57,12 @@ const registrationSchema = new Schema(
     // categories and every non-attendee type; those never touch this beyond the default.
     paymentStatus: { type: String, enum: PAYMENT_STATUSES, default: 'not_required' },
     paymentReference: { type: String, trim: true }, // Paystack transaction reference
+    // Not secret — the same checkout link Paystack already shows the payer. Kept so
+    // a retried "Pay Now" click within the idempotency window (payment.controller.ts's
+    // initialize) can hand back the SAME transaction instead of opening a new one on
+    // Paystack's side for every retry.
+    paymentAuthorizationUrl: { type: String, trim: true },
+    paymentInitializedAt: { type: Date },
     amountKobo: { type: Number },
     paidAt: { type: Date },
 

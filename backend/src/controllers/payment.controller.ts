@@ -14,6 +14,12 @@ import { sendPaymentConfirmationEmail } from '../services/email.service.js';
 import type { InitializePaymentInput } from '../validations/payment.validation.js';
 import type { TicketCategory } from '../types/enums.js';
 
+// A retried "Pay Now" click (double-click, a network timeout the client retries)
+// shouldn't open a second Paystack transaction for the same seat — Paystack has no
+// idempotency-key support on initialize, so this is enforced here by reusing a
+// still-open transaction within a short window instead of minting a new one.
+const PENDING_PAYMENT_REUSE_WINDOW_MS = 30 * 60 * 1000;
+
 export const initialize = catchAsync(async (req: Request, res: Response) => {
   const { registrationId } = req.body as InitializePaymentInput;
   const registration = await Registration.findById(registrationId);
@@ -26,6 +32,17 @@ export const initialize = catchAsync(async (req: Request, res: Response) => {
   }
   if (registration.paymentStatus === 'paid') {
     throw new ApiError(400, 'This registration has already been paid for.', 'ALREADY_PAID');
+  }
+
+  const hasFreshPendingTransaction =
+    registration.paymentReference &&
+    registration.paymentAuthorizationUrl &&
+    registration.paymentInitializedAt &&
+    Date.now() - registration.paymentInitializedAt.getTime() < PENDING_PAYMENT_REUSE_WINDOW_MS;
+
+  if (hasFreshPendingTransaction) {
+    res.status(200).json(new ApiResponse({ authorizationUrl: registration.paymentAuthorizationUrl, reference: registration.paymentReference }));
+    return;
   }
 
   const attendeeCount = 1 + (registration.groupAttendees?.length ?? 0);
@@ -42,6 +59,8 @@ export const initialize = catchAsync(async (req: Request, res: Response) => {
   });
 
   registration.paymentReference = reference;
+  registration.paymentAuthorizationUrl = authorizationUrl;
+  registration.paymentInitializedAt = new Date();
   registration.amountKobo = amountKobo;
   await registration.save();
 

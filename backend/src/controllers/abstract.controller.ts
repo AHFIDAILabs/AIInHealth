@@ -9,9 +9,27 @@ import { listAbstractsQuerySchema, adminUpdateAbstractSchema } from '../validati
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
 
+// Same double-click/network-retry protection as registration.controller.ts's
+// create() — a short recent window, not a permanent block, so someone submitting a
+// genuinely different abstract later under the same email isn't prevented from it.
+const DUPLICATE_SUBMIT_WINDOW_MS = 2 * 60 * 1000;
+const SUBMISSION_MESSAGE = "Thanks for your submission — our programme committee will review it and follow up by email.";
+
 // POST /abstracts — public
 export const create = catchAsync(async (req: Request, res: Response) => {
   const { website: _honeypot, ...input } = req.body as CreateAbstractInput & { website?: string };
+
+  const recentDuplicate = await Abstract.findOne({
+    authorEmail: input.authorEmail,
+    title: input.title,
+    createdAt: { $gte: new Date(Date.now() - DUPLICATE_SUBMIT_WINDOW_MS) },
+  }).sort({ createdAt: -1 });
+
+  if (recentDuplicate) {
+    res.status(200).json(new ApiResponse({ id: recentDuplicate.id, message: SUBMISSION_MESSAGE }));
+    return;
+  }
+
   const abstract = await Abstract.create(input);
 
   await emitAdminNotification({
@@ -22,9 +40,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     resourceId: abstract.id,
   });
 
-  res.status(201).json(
-    new ApiResponse({ id: abstract.id, message: "Thanks for your submission — our programme committee will review it and follow up by email." })
-  );
+  res.status(201).json(new ApiResponse({ id: abstract.id, message: SUBMISSION_MESSAGE }));
 });
 
 const buildFilter = (query: ListAbstractsQuery): FilterQuery<AbstractDoc> => {

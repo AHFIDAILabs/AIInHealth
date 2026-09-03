@@ -1,10 +1,12 @@
 import type { Response } from 'express';
 import { env, isProd } from '../config/env.js';
 
+// Browsers require Secure whenever SameSite=None is used — force it regardless of
+// isProd so a 'none' deployment can't end up with a cookie the browser just drops.
 const baseCookieOptions = {
   httpOnly: true,
-  secure: isProd,
-  sameSite: 'strict' as const,
+  secure: isProd || env.COOKIE_SAME_SITE === 'none',
+  sameSite: env.COOKIE_SAME_SITE,
   domain: env.COOKIE_DOMAIN,
   path: '/',
 };

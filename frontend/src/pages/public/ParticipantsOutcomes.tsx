@@ -1,4 +1,17 @@
-import { User, Building2, GraduationCap, FileCheck2, ScrollText, Handshake, Users2 } from 'lucide-react';
+import {
+  User,
+  Building2,
+  GraduationCap,
+  FileCheck2,
+  FileText,
+  ScrollText,
+  BookOpen,
+  Handshake,
+  Users2,
+  Lightbulb,
+  Network,
+  Target,
+} from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
@@ -16,32 +29,61 @@ const STATS = [
   { value: '20+', label: 'Sessions', note: 'Across two days of programming' },
 ];
 
-const OUTCOMES = [
-  {
-    icon: ScrollText,
-    title: 'Summit Communiqué',
-    body: 'A jointly-endorsed statement capturing the Summit’s consensus on priorities for AI adoption across Nigerian and African health systems.',
-  },
+// Verbatim from the Concept Note's "Expected Outcomes" — four categories, each with
+// its own sub-bullets, not a single flattened list.
+const EXPECTED_OUTCOMES = [
   {
     icon: FileCheck2,
-    title: 'National Policy Brief',
-    body: 'A concrete policy document feeding directly into Nigeria’s national AI-in-health framework and regulatory roadmap.',
+    title: 'Policy Outcomes',
+    items: [
+      'Draft recommendations for a National AI-in-Health Framework',
+      'Policy recommendations for responsible AI governance',
+      'Strategic roadmap for AI integration across health systems',
+    ],
   },
   {
     icon: Handshake,
-    title: 'Deal Room Commitments',
-    body: 'Structured investor-startup matchmaking outcomes — partnerships, pilots, and funding commitments made during the Summit.',
+    title: 'Partnership Outcomes',
+    items: [
+      'New public-private partnerships',
+      'Memoranda of Understanding (MoUs)',
+      'Multi-sector collaboration platforms',
+      'Cross-country technical collaborations',
+    ],
   },
   {
-    icon: Users2,
-    title: 'Cross-Sector Network',
-    body: 'A standing network of government, clinical, industry, and donor stakeholders to sustain momentum after the Summit closes.',
+    icon: Lightbulb,
+    title: 'Innovation Outcomes',
+    items: [
+      'Increased visibility for African AI innovators',
+      'Investment opportunities for health tech startups',
+      'New research collaborations',
+      'Pilot implementation opportunities',
+    ],
+  },
+  {
+    icon: Network,
+    title: 'Capacity Outcomes',
+    items: [
+      'Enhanced understanding of responsible AI among policymakers',
+      'Increased institutional readiness for AI adoption',
+      'Expanded technical networks across sectors',
+    ],
   },
 ];
 
-export const ParticipantsOutcomes = () => {
-  const headlineOutcome = OUTCOMES[0];
+// Verbatim from the Concept Note's "Knowledge Products" — documented outputs that
+// carry Summit outcomes forward into national policy and practice.
+const KNOWLEDGE_PRODUCTS = [
+  { icon: ScrollText, title: 'Summit Communiqué' },
+  { icon: BookOpen, title: 'AI in Health Summit Proceedings' },
+  { icon: FileCheck2, title: 'National Policy Brief' },
+  { icon: FileText, title: 'Technical Report' },
+  { icon: Users2, title: 'Strategic Partnership Directory' },
+  { icon: Target, title: 'Action Plan for AI in Health Implementation' },
+];
 
+export const ParticipantsOutcomes = () => {
   return (
   <>
     <PageHero
@@ -91,9 +133,8 @@ export const ParticipantsOutcomes = () => {
       </div>
     </section>
 
-    {/* Expected outcomes — one featured outcome up top (full-width), three supporting
-        outcomes below. Deliberately a different bento shape than the Objectives grid
-        elsewhere on the site, since this is a 4-item set, not 5. */}
+    {/* Expected outcomes — the Concept Note's four real categories, each with its
+        own sub-bullets, laid out as a 2x2 grid rather than flattened into one list. */}
     <section className="bg-white py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center">
@@ -101,41 +142,53 @@ export const ParticipantsOutcomes = () => {
           <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">Expected Outcomes</h2>
         </Reveal>
 
-        <div className="mt-10 space-y-4">
-          <Reveal>
-            <div className="group relative overflow-hidden rounded-2xl bg-navy p-8 sm:p-10">
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -right-6 -top-10 font-display text-[10rem] font-bold leading-none text-white/[0.04] transition-transform duration-500 group-hover:scale-110"
-              >
-                01
-              </span>
-              <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-orange text-white shadow-md shadow-orange/30">
-                  <headlineOutcome.icon size={24} />
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          {EXPECTED_OUTCOMES.map((category, i) => (
+            <Reveal key={category.title} delay={i * 0.08}>
+              <div className="h-full rounded-2xl border border-slate-200 bg-offwhite p-6 sm:p-7">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-orange">
+                  <category.icon size={20} />
                 </span>
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-orange">Headline Outcome</p>
-                  <h3 className="mt-1.5 font-display text-xl font-semibold text-white sm:text-2xl">{headlineOutcome.title}</h3>
-                  <p className="mt-2 max-w-2xl text-slate-300">{headlineOutcome.body}</p>
-                </div>
+                <h3 className="mt-4 font-display text-lg font-semibold text-navy">{category.title}</h3>
+                <ul className="mt-3 space-y-2">
+                  {category.items.map((item) => (
+                    <li key={item} className="flex items-start gap-2.5 text-sm leading-relaxed text-slate-600">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-          </Reveal>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            {OUTCOMES.slice(1).map((o, i) => (
-              <Reveal key={o.title} delay={0.1 + i * 0.08}>
-                <div className="group h-full rounded-2xl border border-slate-200 bg-offwhite p-6 transition-all hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-md">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-orange shadow-sm shadow-navy/5 transition-colors group-hover:bg-orange group-hover:text-white">
-                    <o.icon size={18} />
-                  </span>
-                  <p className="mt-4 font-display text-base font-semibold text-navy">{o.title}</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{o.body}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+    {/* Knowledge Products — the Concept Note's six documented outputs, distinct from
+        the outcome categories above: these are the deliverables that carry those
+        outcomes forward into national policy and practice after the Summit closes. */}
+    <section className="bg-navy py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <Reveal className="text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-orange">Documented Outputs</p>
+          <h2 className="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl">Knowledge Products</h2>
+          <p className="mx-auto mt-2 max-w-xl text-slate-300">
+            Carrying Summit outcomes forward into national policy and practice.
+          </p>
+        </Reveal>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {KNOWLEDGE_PRODUCTS.map((product, i) => (
+            <Reveal key={product.title} delay={i * 0.06}>
+              <div className="flex h-full items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange/15 text-orange">
+                  <product.icon size={19} />
+                </span>
+                <p className="font-display text-[15px] font-semibold leading-snug text-white">{product.title}</p>
+              </div>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>

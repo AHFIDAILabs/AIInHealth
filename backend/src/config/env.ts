@@ -13,6 +13,17 @@ const envSchema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().default(30),
 
   COOKIE_DOMAIN: z.string().default('localhost'),
+  // 'lax'/'strict' both work identically here as long as frontend and backend share
+  // a registrable domain (e.g. a subdomain split like app.example.com /
+  // api.example.com — same "site" even though different origins, so the cookie is
+  // still sent on cross-origin XHR/fetch between them); 'lax' is the slightly less
+  // restrictive, more commonly recommended default for an auth cookie. If frontend
+  // and backend end up on genuinely UNRELATED domains (no shared registrable
+  // suffix — e.g. separate platforms' default *.vercel.app / *.onrender.com URLs),
+  // set this to 'none' (forces secure:true below) — 'lax' and 'strict' both silently
+  // stop sending the cookie on cross-site XHR/fetch in that case, breaking auth
+  // entirely rather than in some edge case.
+  COOKIE_SAME_SITE: z.enum(['strict', 'lax', 'none']).default('lax'),
   FRONTEND_ORIGIN: z.string().url(),
   // This server's own public URL — distinct from FRONTEND_ORIGIN. Used only to
   // display the Paystack webhook URL in Integrations; defaults to localhost:PORT
