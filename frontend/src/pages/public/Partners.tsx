@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,10 +9,9 @@ import { Button, ButtonLink } from '../../components/ui/Button';
 import { AhfidBadge } from '../../components/ui/AhfidBadge';
 import { LightField, LightTextArea, LightSelect } from '../../components/ui/LightField';
 import ahfidMark from '../../assets/images/Icon@4x.png';
-import { PARTNER_LOGOS } from '../../lib/partnerLogos';
 import { submitPartnershipInquiry } from '../../services/inquiry.service';
 import { getApiErrorMessage } from '../../services/api';
-import { PARTNER_TIERS } from '../../services/partner.service';
+import { listPublicPartners, PARTNER_TIERS, type AdminPartner } from '../../services/partner.service';
 
 const WHY_PARTNER = [
   { icon: Eye, label: 'Visibility & Positioning', body: 'Brand presence in front of 500+ delegates from 45+ African nations.' },
@@ -52,7 +51,15 @@ const inquirySchema = z.object({
 type InquiryValues = z.infer<typeof inquirySchema>;
 
 export const Partners = () => {
+  const [partners, setPartners] = useState<AdminPartner[]>([]);
   const [submitError, setSubmitError] = useState('');
+
+  useEffect(() => {
+    listPublicPartners()
+      .then(setPartners)
+      .catch(() => setPartners([]));
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -78,37 +85,46 @@ export const Partners = () => {
       subtitle="Government agencies, health institutions, industry, and donors already backing the Summit — with room for more."
     />
 
-    {/* Current partner logos */}
-    <section className="border-b border-slate-100 bg-white py-16">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <Reveal className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-orange">Current Partners</p>
-        </Reveal>
-        <Reveal delay={0.08} className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-8">
-          <div className="flex shrink-0 items-center gap-2.5 rounded-lg bg-ahfid/5 px-3 py-2">
-            <img src={ahfidMark} alt="AHFID" className="h-7 w-7 rounded" />
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-ahfid">Convener</span>
-          </div>
-          {PARTNER_LOGOS.map((logo) => {
-            const img = (
-              <img
-                src={logo.src}
-                alt={logo.name}
-                title={logo.name}
-                className="h-9 shrink-0 object-contain opacity-70 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
-              />
-            );
-            return logo.url ? (
-              <a key={logo.name} href={logo.url} target="_blank" rel="noopener noreferrer" aria-label={logo.name}>
-                {img}
-              </a>
-            ) : (
-              <span key={logo.name}>{img}</span>
-            );
-          })}
-        </Reveal>
-      </div>
-    </section>
+    {/* Current partner logos — backed by the real GET /partners (published-only);
+        a partner added and published in the admin shows up here without a code
+        change. The AHFID chip is hardcoded since AHFID convenes rather than
+        "partners with" itself. */}
+    {partners.length > 0 && (
+      <section className="border-b border-slate-100 bg-white py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <Reveal className="text-center">
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange">Current Partners</p>
+          </Reveal>
+          <Reveal delay={0.08} className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-8">
+            <div className="flex shrink-0 items-center gap-2.5 rounded-lg bg-ahfid/5 px-3 py-2">
+              <img src={ahfidMark} alt="AHFID" className="h-7 w-7 rounded" />
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-ahfid">Convener</span>
+            </div>
+            {partners.map((partner) => {
+              const img = partner.logoUrl ? (
+                <img
+                  src={partner.logoUrl}
+                  alt={partner.name}
+                  title={partner.name}
+                  className="h-9 shrink-0 object-contain opacity-70 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
+                />
+              ) : (
+                <span className="shrink-0 text-sm font-semibold text-slate-500" title={partner.name}>
+                  {partner.name}
+                </span>
+              );
+              return partner.website ? (
+                <a key={partner._id} href={partner.website} target="_blank" rel="noopener noreferrer" aria-label={partner.name}>
+                  {img}
+                </a>
+              ) : (
+                <span key={partner._id}>{img}</span>
+              );
+            })}
+          </Reveal>
+        </div>
+      </section>
+    )}
 
     {/* Why partner */}
     <section className="bg-offwhite py-24">

@@ -89,6 +89,19 @@ export const AnalyticsPage = () => {
             <Skeleton className="mt-4 h-52 w-full" />
           ) : data.registrationsByDay.length === 0 ? (
             <p className="mt-8 py-8 text-center text-sm text-slate-400">No registrations in this window yet</p>
+          ) : data.registrationsByDay.length === 1 ? (
+            // A single point has nothing to draw a trend line between — Recharts
+            // just renders one dot floating in an otherwise-empty canvas, which
+            // reads as broken rather than "not enough data yet". A plain stat
+            // callout says the same thing honestly instead.
+            <div className="mt-4 flex h-44 flex-col items-center justify-center text-center">
+              <p className="font-display text-3xl font-bold text-navy">{data.registrationsByDay[0].count}</p>
+              <p className="mt-1 text-xs text-slate-400">
+                registration{data.registrationsByDay[0].count === 1 ? '' : 's'} on {shortDate(data.registrationsByDay[0].date)}
+                <br />
+                Trend line appears once there&rsquo;s more than one day of activity.
+              </p>
+            </div>
           ) : (
             <div className="mt-2 h-52 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -111,6 +124,15 @@ export const AnalyticsPage = () => {
             <Skeleton className="mt-4 h-52 w-full" />
           ) : data.revenueByDay.length === 0 ? (
             <p className="mt-8 py-8 text-center text-sm text-slate-400">No payments in this window yet</p>
+          ) : data.revenueByDay.length === 1 ? (
+            <div className="mt-4 flex h-44 flex-col items-center justify-center text-center">
+              <p className="font-display text-3xl font-bold text-navy">{naira(data.revenueByDay[0].amountNaira)}</p>
+              <p className="mt-1 text-xs text-slate-400">
+                on {shortDate(data.revenueByDay[0].date)}
+                <br />
+                Trend line appears once there&rsquo;s more than one day of activity.
+              </p>
+            </div>
           ) : (
             <div className="mt-2 h-52 w-full">
               <ResponsiveContainer width="100%" height="100%">

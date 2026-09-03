@@ -57,6 +57,14 @@ const envSchema = z.object({
   VAPID_PRIVATE_KEY: z.string().optional().default(''),
   VAPID_SUBJECT: z.string().optional().default('mailto:support@example.com'),
 
+  // Cloudinary — every profile/logo photo upload (admin settings, delegate portal,
+  // speakers, partners, innovations) goes here; there's no local-disk fallback.
+  // Empty in dev returns a clear 503 from the upload endpoint rather than silently
+  // no-opping, since (unlike email/push) there's no sensible fake URL to hand back.
+  CLOUDINARY_CLOUD_NAME: z.string().optional().default(''),
+  CLOUDINARY_API_KEY: z.string().optional().default(''),
+  CLOUDINARY_API_SECRET: z.string().optional().default(''),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   SEED_SUPER_ADMIN_NAME: z.string().optional().default('Super Admin'),
@@ -75,6 +83,9 @@ const productionRequiredSchema = envSchema.superRefine((val, ctx) => {
   }
   if (!val.MS_TENANT_ID || !val.MS_CLIENT_ID || !val.MS_CLIENT_SECRET || !val.MS_SENDER_EMAIL) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['MS_CLIENT_SECRET'], message: 'MS_TENANT_ID/MS_CLIENT_ID/MS_CLIENT_SECRET/MS_SENDER_EMAIL are all required in production' });
+  }
+  if (!val.CLOUDINARY_CLOUD_NAME || !val.CLOUDINARY_API_KEY || !val.CLOUDINARY_API_SECRET) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['CLOUDINARY_API_SECRET'], message: 'CLOUDINARY_CLOUD_NAME/CLOUDINARY_API_KEY/CLOUDINARY_API_SECRET are all required in production' });
   }
 });
 

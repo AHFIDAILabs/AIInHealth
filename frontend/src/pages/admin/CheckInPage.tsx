@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import { Html5QrcodeScanner } from 'html5-qrcode';
 import { CheckCircle2, XCircle, Search, ScanLine, UserCheck } from 'lucide-react';
 import { fetchCheckInStats, scanQrToken, searchCheckIn, manualCheckIn, type CheckInSummary, type CheckInSearchResult } from '../../services/checkin.service';
 import { getApiErrorMessage } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
+import { QrScanner } from '../../components/admin/QrScanner';
 
 const SOCKET_URL = ((import.meta.env.VITE_API_URL as string) ?? '').replace(/\/api\/?.*$/, '');
-const SCANNER_ELEMENT_ID = 'checkin-qr-reader';
 
 type Feedback = { kind: 'success' | 'error'; text: string; sub?: string } | null;
 
@@ -20,8 +19,6 @@ export const CheckInPage = () => {
   const [results, setResults] = useState<CheckInSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [manualBusy, setManualBusy] = useState<string | null>(null);
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-  const pendingClearRef = useRef<Promise<void> | null>(null);
   const scanLockRef = useRef(false);
 
   const loadStats = useCallback(() => {
@@ -61,40 +58,6 @@ export const CheckInPage = () => {
     },
     [loadStats]
   );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    // html5-qrcode injects video/canvas elements directly into the DOM outside
-    // React's control, and its teardown (clear()) is async — under React 18
-    // StrictMode's dev-only double-invoke of effects, a second scanner would
-    // otherwise start before the first one's camera-stream teardown finishes,
-    // and the two fight over the same container (surfaces as a spurious
-    // "removeChild" NotFoundError). Waiting for any prior clear() to settle
-    // before creating a new instance serializes them so that never happens.
-    const start = async () => {
-      if (pendingClearRef.current) await pendingClearRef.current;
-      if (cancelled) return;
-
-      const scanner = new Html5QrcodeScanner(SCANNER_ELEMENT_ID, { fps: 10, qrbox: 240 }, false);
-      scanner.render(
-        (decodedText) => handleScanResult(decodedText),
-        () => {} // ignore per-frame decode failures — expected while no code is in view
-      );
-      scannerRef.current = scanner;
-    };
-    start();
-
-    return () => {
-      cancelled = true;
-      const scanner = scannerRef.current;
-      scannerRef.current = null;
-      if (scanner) {
-        pendingClearRef.current = scanner.clear().catch(() => {});
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const runSearch = useCallback((value: string) => {
     setQ(value);
@@ -151,7 +114,9 @@ export const CheckInPage = () => {
           <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
             <ScanLine size={14} /> Camera Scanner
           </p>
-          <div id={SCANNER_ELEMENT_ID} className="mt-3 overflow-hidden rounded-xl" />
+          <div className="mt-3">
+            <QrScanner onScan={handleScanResult} />
+          </div>
           {feedback && (
             <div
               className={`mt-3 flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 text-sm font-medium ${

@@ -72,6 +72,11 @@ export interface ConflictInfo {
   conflicts: { _id: string; title: string; startTime: string; endTime: string; room: string }[];
 }
 
+export const listPublicSessions = async (params?: { day?: SessionDay; track?: Track }): Promise<AdminSession[]> => {
+  const res = await api.get<{ success: true; data: AdminSession[] }>('/sessions', { params });
+  return res.data.data;
+};
+
 export const adminListSessions = async (params: ListSessionsParams): Promise<Paginated<AdminSession>> => {
   const res = await api.get<{ success: true; data: AdminSession[]; meta: Omit<Paginated<never>, 'items'> }>(
     '/admin/sessions',

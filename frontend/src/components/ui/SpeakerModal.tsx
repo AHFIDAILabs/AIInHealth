@@ -2,17 +2,17 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { InitialsAvatar } from './InitialsAvatar';
 import { ButtonLink } from './Button';
-import type { Speaker } from '../../lib/speakers';
+import type { AdminSpeaker } from '../../services/speaker.service';
 
 interface SpeakerModalProps {
-  speaker: Speaker | null;
+  speaker: AdminSpeaker | null;
   onClose: () => void;
 }
 
 // Shared full-detail overlay for a speaker — used by both the dedicated /speakers
 // grid and the Home page's Confirmed Voices strip, so the two never drift apart.
-// Only shows fields that actually exist on the data (name/title/track/photo) —
-// no bio field exists in lib/speakers.ts, so none is invented here.
+// Backed by the real GET /speakers data, so organization/bio show up whenever
+// they're actually filled in (unlike the old static roster, which never had them).
 export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
   <AnimatePresence>
     {speaker && (
@@ -32,13 +32,13 @@ export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
           className="grid w-full max-w-lg grid-cols-1 overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-w-2xl sm:grid-cols-2"
         >
           <div className="relative aspect-[4/3] sm:aspect-auto">
-            {speaker.photo ? (
-              <img src={speaker.photo} alt={speaker.name} className="h-full w-full object-cover" />
+            {speaker.photoUrl ? (
+              <img src={speaker.photoUrl} alt={speaker.fullName} className="h-full w-full object-cover" />
             ) : (
-              <InitialsAvatar name={speaker.name} className="h-full w-full" />
+              <InitialsAvatar name={speaker.fullName} className="h-full w-full" />
             )}
           </div>
-          <div className="relative p-6 sm:p-7">
+          <div className="relative max-h-[70vh] overflow-y-auto p-6 sm:p-7">
             <button
               onClick={onClose}
               aria-label="Close"
@@ -49,8 +49,10 @@ export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
             <span className="inline-block rounded-full bg-orange/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-orange">
               {speaker.track}
             </span>
-            <h3 className="mt-4 font-display text-xl font-semibold text-navy">{speaker.name}</h3>
+            <h3 className="mt-4 font-display text-xl font-semibold text-navy">{speaker.fullName}</h3>
             <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{speaker.title}</p>
+            {speaker.organization && <p className="mt-0.5 text-sm text-slate-500">{speaker.organization}</p>}
+            {speaker.bio && <p className="mt-3 text-sm leading-relaxed text-slate-600">{speaker.bio}</p>}
             <ButtonLink to="/agenda" variant="primary" className="!mt-6 !py-2.5 !text-sm">
               View Related Sessions
             </ButtonLink>

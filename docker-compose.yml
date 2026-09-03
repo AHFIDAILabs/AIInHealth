@@ -24,11 +24,13 @@ services:
       DELEGATE_TOKEN_SECRET: docker-compose-dev-delegate-secret-change-me-32chars+
       FRONTEND_ORIGIN: http://localhost:5173
       COOKIE_DOMAIN: localhost
-    volumes:
-      # Uploaded images (avatars/logos) live on local disk — persisted here for
-      # Docker-based local dev. A real deploy needs this volume to survive
-      # redeploys too, or a move to cloud storage (S3/Cloudinary) instead.
-      - uploads_data:/app/uploads
+      # Real values — image uploads (avatar/logo pickers) return a 503 without
+      # these, same as any other environment. Set them in a local .env and
+      # reference via `env_file: ./backend/.env` instead if you'd rather not
+      # inline real credentials here.
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     depends_on:
       - mongo
 
@@ -44,4 +46,3 @@ services:
 
 volumes:
   mongo_data:
-  uploads_data:

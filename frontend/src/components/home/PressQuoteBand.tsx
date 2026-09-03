@@ -23,7 +23,7 @@ export const PressQuoteBand = () => (
         Nigeria&rsquo;s Premier Platform for <span className="text-orange">AI-Enabled Healthcare</span>
       </p>
       <p className="mt-5 text-sm font-semibold uppercase tracking-widest text-slate-400">
-        — AI in Health Summit 2026 Concept Note
+        AI in Health Summit 2026
       </p>
 
       <p className="mt-8 text-sm font-medium text-slate-300">

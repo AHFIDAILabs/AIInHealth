@@ -57,6 +57,14 @@ Push (`VAPID_*`) vars blank disables those integrations gracefully — emails/pu
 are logged instead of sent, and Paystack payment always auto-succeeds. This is the
 normal way to run the app locally without needing live credentials for everything.
 
+The one exception is **Cloudinary** (`CLOUDINARY_*`) — every profile/logo photo
+upload (admin settings, delegate portal, speakers, partners, innovations) goes
+straight there, with no local-disk fallback. Leaving these blank doesn't degrade
+gracefully like the others; the upload endpoint returns a clear 503 instead, since
+there's no safe fake image URL to hand back to a picker expecting a real one. Set
+real values (a free Cloudinary account's dashboard has them under Account Details)
+to exercise any image-upload flow locally.
+
 The first time the backend boots with no `MONGO_URI` set, it auto-seeds a
 `super_admin` (`SEED_SUPER_ADMIN_EMAIL`/`SEED_SUPER_ADMIN_PASSWORD` in `.env`,
 defaults documented there). Against a real database (`MONGO_URI` set), run the seed
@@ -107,13 +115,12 @@ that need a real decision at deploy time, not left to guesswork here:
   suffix — e.g. separate platforms' default `*.vercel.app` / `*.onrender.com`
   URLs), set this to `none` instead, or auth cookies silently stop being sent on
   cross-site API calls. See the comment on this var in `backend/src/config/env.ts`.
-- **Uploaded images** (`backend/uploads/`, avatars/logos via the admin/portal image
-  picker) are stored on local disk. That's fine as long as the container's
-  filesystem persists across redeploys (a mounted volume — see
-  `docker-compose.yml`'s `uploads_data` volume for the pattern). Most managed
-  platforms' *default* filesystem is ephemeral and wipes on every redeploy — either
-  attach a persistent volume, or move this to object storage (S3/Cloudinary) before
-  relying on it for real uploaded photos.
+- **`CLOUDINARY_CLOUD_NAME`/`CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET`** — real
+  Cloudinary credentials, required once `NODE_ENV` is `staging` or `production`
+  (same boot-time gate as `MONGO_URI`). Every profile/logo photo upload (admin
+  settings, delegate portal, speakers, partners, innovations) goes straight to
+  Cloudinary — nothing is ever written to the container's local disk, so this isn't
+  affected by a platform's filesystem being ephemeral across redeploys.
 - **`MS_TENANT_ID`/`MS_CLIENT_ID`/`MS_CLIENT_SECRET`/`MS_SENDER_EMAIL`** — real
   Microsoft Graph app-only credentials, required once `NODE_ENV` is `staging` or
   `production` (same boot-time gate as `MONGO_URI`). Without these, no real email

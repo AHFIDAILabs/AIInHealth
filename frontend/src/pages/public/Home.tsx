@@ -28,11 +28,10 @@ import { AbujaSkyline } from '../../components/ui/AbujaSkyline';
 import { Reveal } from '../../components/ui/Reveal';
 import { RevealText } from '../../components/ui/RevealText';
 import heroBg from '../../assets/images/hero_bg.png';
-import ahfidMark from '../../assets/images/Icon@4x.png';
 import homePageBg from '../../assets/images/home_page_bg.png';
-import { PARTNER_LOGOS } from '../../lib/partnerLogos';
 import { SummitAtAGlance } from '../../components/home/SummitAtAGlance';
 import { ConfirmedVoices } from '../../components/home/ConfirmedVoices';
+import { ConvenedWith } from '../../components/home/ConvenedWith';
 import { NewsletterCapture } from '../../components/home/NewsletterCapture';
 import { InnovatorsShowcase } from '../../components/home/InnovatorsShowcase';
 import { PressQuoteBand } from '../../components/home/PressQuoteBand';
@@ -190,42 +189,7 @@ export const Home = () => {
       successMessage="You're subscribed — watch your inbox for updates."
     />
 
-    {/* Convened With — real partner logos, auto-scrolling marquee (pauses on hover) */}
-    <section className="overflow-hidden border-b border-slate-100 bg-white py-12">
-      <Reveal className="mx-auto mb-6 flex max-w-6xl flex-col items-center gap-2 px-4 text-center sm:px-6 lg:px-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-orange">Convened With</p>
-        <ButtonLink to="/partners" variant="secondary" className="!mt-2 !border-slate-300 !bg-transparent !text-navy hover:!bg-navy/5 !px-4 !py-2 !text-xs">
-          Become a Partner
-        </ButtonLink>
-      </Reveal>
-      <div className="flex w-max animate-marquee items-center gap-10 hover:[animation-play-state:paused]">
-        {[0, 1].map((rep) => (
-          <div key={rep} className="flex items-center gap-10">
-            <div className="flex shrink-0 items-center gap-2.5 rounded-lg bg-ahfid/5 px-3 py-2">
-              <img src={ahfidMark} alt="AHFID" className="h-7 w-7 rounded" />
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-ahfid">Convener</span>
-            </div>
-            {PARTNER_LOGOS.map((logo) => {
-              const img = (
-                <img
-                  src={logo.src}
-                  alt={logo.name}
-                  title={logo.name}
-                  className="h-9 shrink-0 object-contain opacity-60 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
-                />
-              );
-              return logo.url ? (
-                <a key={logo.name} href={logo.url} target="_blank" rel="noopener noreferrer" aria-label={logo.name}>
-                  {img}
-                </a>
-              ) : (
-                <span key={logo.name}>{img}</span>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </section>
+    <ConvenedWith />
 
     <SummitAtAGlance />
 

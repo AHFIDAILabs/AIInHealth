@@ -30,4 +30,7 @@ Object.assign(process.env, {
   // MS_* vars — the three blanked above are enough on their own.
   VAPID_PUBLIC_KEY: '',
   VAPID_PRIVATE_KEY: '',
+  CLOUDINARY_CLOUD_NAME: '',
+  CLOUDINARY_API_KEY: '',
+  CLOUDINARY_API_SECRET: '',
 });

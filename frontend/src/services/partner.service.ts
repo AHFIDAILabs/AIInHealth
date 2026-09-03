@@ -48,6 +48,11 @@ export interface Paginated<T> {
   pages: number;
 }
 
+export const listPublicPartners = async (category?: PartnerCategory): Promise<AdminPartner[]> => {
+  const res = await api.get<{ success: true; data: AdminPartner[] }>('/partners', { params: category ? { category } : {} });
+  return res.data.data;
+};
+
 export const adminListPartners = async (params: ListPartnersParams): Promise<Paginated<AdminPartner>> => {
   const res = await api.get<{ success: true; data: AdminPartner[]; meta: Omit<Paginated<never>, 'items'> }>(
     '/admin/partners',
