@@ -155,6 +155,7 @@ const ACTIVITY_META: Record<string, { icon: typeof UserPlus; color: Chip }> = {
   'registration.new': { icon: UserPlus, color: 'blue' },
   'inquiry.new': { icon: Handshake, color: 'violet' },
   'message.new': { icon: MessageSquare, color: 'teal' },
+  'newsletter.new': { icon: Mail, color: 'amber' },
 };
 
 const timeAgo = (iso: string): string => {

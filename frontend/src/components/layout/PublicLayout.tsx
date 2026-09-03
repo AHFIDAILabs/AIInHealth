@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
+import { FloatingCTA } from './FloatingCTA';
 
 export const PublicLayout = () => (
   <div className="flex min-h-screen flex-col">
@@ -9,5 +10,6 @@ export const PublicLayout = () => (
       <Outlet />
     </main>
     <Footer />
+    <FloatingCTA />
   </div>
 );

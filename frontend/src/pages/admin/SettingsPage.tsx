@@ -14,6 +14,7 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   'registration.new': 'New registration submitted',
   'inquiry.new': 'New partnership inquiry',
   'message.new': 'New contact message',
+  'newsletter.new': 'New newsletter signup',
 };
 
 const PASSWORD_RULES = [

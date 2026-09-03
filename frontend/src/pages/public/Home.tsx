@@ -29,9 +29,14 @@ import { Reveal } from '../../components/ui/Reveal';
 import { RevealText } from '../../components/ui/RevealText';
 import heroBg from '../../assets/images/hero_bg.png';
 import ahfidMark from '../../assets/images/Icon@4x.png';
+import homePageBg from '../../assets/images/home_page_bg.png';
+import abujaBuilding from '../../assets/images/Abuja_Building.jpeg';
 import { PARTNER_LOGOS } from '../../lib/partnerLogos';
 import { SummitAtAGlance } from '../../components/home/SummitAtAGlance';
-import { FeaturedSpeakers } from '../../components/home/FeaturedSpeakers';
+import { ConfirmedVoices } from '../../components/home/ConfirmedVoices';
+import { NewsletterCapture } from '../../components/home/NewsletterCapture';
+import { InnovatorsShowcase } from '../../components/home/InnovatorsShowcase';
+import { PressQuoteBand } from '../../components/home/PressQuoteBand';
 import { FindYourJourney } from '../../components/home/FindYourJourney';
 import { AbujaExperience } from '../../components/home/AbujaExperience';
 import { HeroCountdown } from '../../components/home/HeroCountdown';
@@ -113,7 +118,11 @@ export const Home = () => (
   <>
     {/* Hero — full-bleed photo panel with all content centered on top.
         Capped to one viewport at lg+ so the whole thing is visible with no scroll —
-        every size/gap below is deliberately tight to make that fit. */}
+        every size/gap below is deliberately tight to make that fit.
+        Video-ready: once real event/Abuja footage exists, this <img> becomes a muted
+        autoplay <video> with the same absolute-fill treatment — no other markup here
+        needs to change. No stock "conference crowd" footage in the meantime; a static
+        photo of the real skyline is more honest than a generic loop. */}
     <section className="relative isolate overflow-hidden bg-navy lg:h-[calc(100vh-4rem)] lg:max-h-[620px] lg:min-h-[520px]">
       <img src={heroBg} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-br from-navy/95 via-navy/85 to-[#3a2415]/80" />
@@ -166,8 +175,26 @@ export const Home = () => (
       </div>
     </section>
 
-    {/* Stakeholder strip — real partner logos, auto-scrolling marquee (pauses on hover) */}
-    <section className="overflow-hidden border-b border-slate-100 bg-white py-8">
+    <ConfirmedVoices />
+
+    <NewsletterCapture
+      photo={homePageBg}
+      eyebrow="Stay Informed"
+      title="Get Summit Updates & Policy Briefings"
+      body="Be first to hear about confirmed speakers, agenda releases, and policy briefings ahead of Abuja."
+      cta="Sign Up"
+      source="updates"
+      successMessage="You're subscribed — watch your inbox for updates."
+    />
+
+    {/* Convened With — real partner logos, auto-scrolling marquee (pauses on hover) */}
+    <section className="overflow-hidden border-b border-slate-100 bg-white py-12">
+      <Reveal className="mx-auto mb-6 flex max-w-6xl flex-col items-center gap-2 px-4 text-center sm:px-6 lg:px-8">
+        <p className="text-xs font-semibold uppercase tracking-widest text-orange">Convened With</p>
+        <ButtonLink to="/partners" variant="secondary" className="!mt-2 !border-slate-300 !bg-transparent !text-navy hover:!bg-navy/5 !px-4 !py-2 !text-xs">
+          Become a Partner
+        </ButtonLink>
+      </Reveal>
       <div className="flex w-max animate-marquee items-center gap-10 hover:[animation-play-state:paused]">
         {[0, 1].map((rep) => (
           <div key={rep} className="flex items-center gap-10">
@@ -386,8 +413,6 @@ export const Home = () => (
       </div>
     </section>
 
-    <FeaturedSpeakers />
-
     {/* Programme Structure preview — compact two-column icon list */}
     <section className="relative overflow-hidden bg-white py-24">
       <div className="pointer-events-none absolute -right-40 bottom-0 h-[26rem] w-[26rem] rounded-full bg-navy/[0.03] blur-[120px]" />
@@ -432,6 +457,22 @@ export const Home = () => (
     </section>
 
     <FindYourJourney />
+
+    <InnovatorsShowcase />
+
+    <PressQuoteBand />
+
+    <NewsletterCapture
+      photo={abujaBuilding}
+      eyebrow="Go Deeper"
+      title="Download the Concept Note"
+      body="The full strategic rationale, objectives, and programme structure behind AHTS 2026 — in one document."
+      cta="Download PDF"
+      source="concept_note"
+      successMessage="Your download is starting — thanks for your interest."
+      downloadHref="/downloads/AHTS-2026-Concept-Note.pdf"
+      downloadFilename="AI-in-Health-Summit-2026-Concept-Note.pdf"
+    />
 
     {/* Why Partner — full cards with real copy, plus a CTA through to the tiers page */}
     <section className="relative overflow-hidden bg-white py-24">
