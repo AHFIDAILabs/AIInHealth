@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, Plus, X, UsersRound, Pencil, Trash2 } from 'lucide-react';
 import {
@@ -36,7 +37,8 @@ export const EventTeamPage = () => {
   const [items, setItems] = useState<EventTeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [q, setQ] = useState('');
+  const [searchParams] = useSearchParams();
+  const [q, setQ] = useState(searchParams.get('q') ?? '');
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<EventTeamMember | null>(null);

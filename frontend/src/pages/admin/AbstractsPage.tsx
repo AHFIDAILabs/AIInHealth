@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FileText, X, Search } from 'lucide-react';
 import {
@@ -26,7 +27,8 @@ export const AbstractsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<AbstractStatus | ''>('');
-  const [q, setQ] = useState('');
+  const [searchParams] = useSearchParams();
+  const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [active, setActive] = useState<AdminAbstract | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
   const [updating, setUpdating] = useState(false);

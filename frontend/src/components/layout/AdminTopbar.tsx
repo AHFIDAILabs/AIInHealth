@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, ChevronDown, LogOut, Search, UserCircle } from 'lucide-react';
+import { Menu, ChevronDown, LogOut, UserCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { NotificationBell } from './NotificationBell';
+import { GlobalSearch } from './GlobalSearch';
 import { Avatar } from '../ui/Avatar';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -26,19 +27,7 @@ export const AdminTopbar = ({ onOpenMobileSidebar }: AdminTopbarProps) => {
         <Menu size={20} />
       </button>
 
-      <div className="relative hidden max-w-sm flex-1 sm:block">
-        <Search size={15} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type="search"
-          placeholder="Search anything..."
-          disabled
-          title="Global search — coming soon"
-          className="w-full cursor-not-allowed rounded-full border-none bg-offwhite py-2.5 pl-10 pr-14 text-[13px] text-slate-400 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange/20"
-        />
-        <kbd className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rounded-md bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 shadow-sm">
-          ⌘K
-        </kbd>
-      </div>
+      <GlobalSearch />
 
       <div className="flex-1 sm:hidden flex items-center justify-between" />
 

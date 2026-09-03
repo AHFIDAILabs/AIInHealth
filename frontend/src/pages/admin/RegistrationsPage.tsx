@@ -57,7 +57,7 @@ export const RegistrationsPage = () => {
   const [type, setType] = useState<RegistrationType | ''>(
     contentEditorOnly ? 'volunteer' : TYPE_OPTIONS.includes(initialType as RegistrationType) ? (initialType as RegistrationType) : ''
   );
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<AdminRegistration | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, Plus, X, Handshake, Pencil, Trash2 } from 'lucide-react';
 import {
@@ -37,10 +37,11 @@ export const PartnersPage = () => {
   const toast = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState<AdminPartner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [tierFilter, setTierFilter] = useState<PartnerTier | ''>('');
 
   const [formOpen, setFormOpen] = useState(false);

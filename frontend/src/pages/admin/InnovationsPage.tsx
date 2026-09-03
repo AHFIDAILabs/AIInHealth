@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, Plus, X, Lightbulb, Pencil, Trash2 } from 'lucide-react';
 import {
@@ -38,7 +39,8 @@ export const InnovationsPage = () => {
   const [items, setItems] = useState<Innovation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [q, setQ] = useState('');
+  const [searchParams] = useSearchParams();
+  const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [trackFilter, setTrackFilter] = useState<Track | ''>('');
 
   const [formOpen, setFormOpen] = useState(false);
