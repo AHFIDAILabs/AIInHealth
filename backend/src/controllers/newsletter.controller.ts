@@ -1,8 +1,11 @@
 import type { Request, Response } from 'express';
+import type { FilterQuery } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-import { NewsletterSubscriber } from '../models/NewsletterSubscriber.model.js';
-import type { SubscribeNewsletterInput } from '../validations/newsletter.validation.js';
+import { toCsv } from '../utils/toCsv.js';
+import { NewsletterSubscriber, type NewsletterSubscriberDoc } from '../models/NewsletterSubscriber.model.js';
+import type { SubscribeNewsletterInput, ListNewsletterSubscribersQuery } from '../validations/newsletter.validation.js';
+import { listNewsletterSubscribersQuerySchema } from '../validations/newsletter.validation.js';
 import { emitAdminNotification } from '../services/notification.service.js';
 
 const SOURCE_LABEL: Record<SubscribeNewsletterInput['source'], string> = {
@@ -32,4 +35,42 @@ export const subscribe = catchAsync(async (req: Request, res: Response) => {
   }
 
   res.status(201).json(new ApiResponse({ message: "You're on the list." }));
+});
+
+const buildFilter = (query: ListNewsletterSubscribersQuery): FilterQuery<NewsletterSubscriberDoc> => {
+  const filter: FilterQuery<NewsletterSubscriberDoc> = {};
+  if (query.source) filter.source = query.source;
+  if (query.q) {
+    const rx = new RegExp(query.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    filter.$or = [{ email: rx }, { firstName: rx }];
+  }
+  return filter;
+};
+
+export const adminList = catchAsync(async (req: Request, res: Response) => {
+  const query = listNewsletterSubscribersQuerySchema.parse(req.query);
+  const filter = buildFilter(query);
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    NewsletterSubscriber.find(filter).sort({ createdAt: -1 }).skip(skip).limit(query.limit),
+    NewsletterSubscriber.countDocuments(filter),
+  ]);
+
+  res.json(
+    new ApiResponse(items, { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) || 1 })
+  );
+});
+
+const CSV_COLUMNS = ['_id', 'email', 'firstName', 'source', 'createdAt'];
+
+export const adminExport = catchAsync(async (req: Request, res: Response) => {
+  const query = listNewsletterSubscribersQuerySchema.parse(req.query);
+  const filter = buildFilter(query);
+  const items = await NewsletterSubscriber.find(filter).sort({ createdAt: -1 }).lean();
+
+  const csv = toCsv(items as unknown as Record<string, unknown>[], CSV_COLUMNS);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="newsletter-subscribers-${Date.now()}.csv"`);
+  res.send(csv);
 });

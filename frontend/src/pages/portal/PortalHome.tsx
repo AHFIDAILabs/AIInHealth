@@ -44,6 +44,12 @@ export const PortalHome = () => {
 
   useEffect(() => {
     if (!delegate?.hasTicket) return;
+    // Reset before refetching — otherwise a stale QR or stale error from a previous
+    // ticket state can linger on screen if hasTicket flips true→true across a refresh
+    // (e.g. after a profile/payment update) without ever passing through the "no
+    // ticket yet" branch that would have cleared them.
+    setQrDataUrl('');
+    setQrError('');
     fetchTicketQr()
       .then(setQrDataUrl)
       .catch((err) => setQrError(getApiErrorMessage(err)));

@@ -1,7 +1,11 @@
 import { AbujaSkyline } from '../../components/ui/AbujaSkyline';
 import { ButtonLink } from '../../components/ui/Button';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
-export const NotFound = () => (
+export const NotFound = () => {
+  useDocumentTitle('Page Not Found');
+
+  return (
   <div className="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden bg-white px-4 text-center">
     <div
       className="pointer-events-none absolute inset-0 opacity-[0.5]"
@@ -22,4 +26,5 @@ export const NotFound = () => (
 
     <AbujaSkyline tone="onLight" className="pointer-events-none absolute bottom-0 left-0 h-24 w-full" opacity={0.18} />
   </div>
-);
+  );
+};

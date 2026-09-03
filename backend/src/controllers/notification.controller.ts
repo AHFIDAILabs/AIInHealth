@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
+import { isValidObjectId } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
+import { ApiError } from '../utils/ApiError.js';
 import { Notification } from '../models/Notification.model.js';
 
 export const adminList = catchAsync(async (req: Request, res: Response) => {
@@ -26,6 +28,7 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const adminMarkRead = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Notification not found', 'NOT_FOUND');
   const userId = req.user!.sub;
   await Notification.updateOne({ _id: req.params.id }, { $addToSet: { readBy: userId } });
   res.json(new ApiResponse({ ok: true }));

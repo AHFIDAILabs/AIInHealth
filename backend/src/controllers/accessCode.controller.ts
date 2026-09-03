@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import crypto from 'node:crypto';
-import type { FilterQuery } from 'mongoose';
+import { isValidObjectId, type FilterQuery } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -98,6 +98,7 @@ export const adminGenerate = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const adminRevoke = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Access code not found', 'NOT_FOUND');
   const code = await AccessCode.findById(req.params.id);
   if (!code) throw new ApiError(404, 'Access code not found', 'NOT_FOUND');
   if (isContentEditor(req) && code.type !== 'volunteer') throw new ApiError(403, 'You can only manage volunteer access codes.', 'FORBIDDEN');
@@ -114,6 +115,7 @@ export const adminRevoke = catchAsync(async (req: Request, res: Response) => {
 // POST /admin/access-codes/:id/send — emails the code to issuedTo. Safe to call
 // again (a resend), each call just bumps sentAt.
 export const adminSend = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Access code not found', 'NOT_FOUND');
   const code = await AccessCode.findById(req.params.id);
   if (!code) throw new ApiError(404, 'Access code not found', 'NOT_FOUND');
   if (isContentEditor(req) && code.type !== 'volunteer') throw new ApiError(403, 'You can only manage volunteer access codes.', 'FORBIDDEN');

@@ -34,27 +34,36 @@ const sendToSubscription = async (
   }
 };
 
+// sw.js is shared with the admin portal and falls back to /admin/dashboard when a
+// push carries no url (correct for admin pushes, which never set one) — an admin
+// announcement sent with the optional url field left blank would otherwise send
+// delegates to a page they can't access. Default it here, at the point that knows
+// the audience, rather than in the shared worker.
+const withDelegateUrlDefault = (payload: PushPayload): PushPayload => ({ ...payload, url: payload.url || '/portal' });
+
 // Broadcasts an announcement to every subscribed delegate device — used for
 // event-day updates (venue changes, session reminders) sent from the admin portal.
 export const sendPushToAllDelegates = async (payload: PushPayload): Promise<number> => {
+  const withUrl = withDelegateUrlDefault(payload);
   if (!configured) {
-    logger.info({ payload }, '🔔 [DEV DELEGATE PUSH — not actually sent, VAPID keys unset]');
+    logger.info({ payload: withUrl }, '🔔 [DEV DELEGATE PUSH — not actually sent, VAPID keys unset]');
     return 0;
   }
   const subscriptions = await DelegatePushSubscription.find();
-  const body = JSON.stringify(payload);
+  const body = JSON.stringify(withUrl);
   await Promise.all(subscriptions.map((sub) => sendToSubscription(sub, body)));
   return subscriptions.length;
 };
 
 // Targets a single delegate — used for meeting-request notifications.
 export const sendPushToRegistration = async (registrationId: string, payload: PushPayload): Promise<void> => {
+  const withUrl = withDelegateUrlDefault(payload);
   if (!configured) {
-    logger.info({ registrationId, payload }, '🔔 [DEV DELEGATE PUSH — not actually sent, VAPID keys unset]');
+    logger.info({ registrationId, payload: withUrl }, '🔔 [DEV DELEGATE PUSH — not actually sent, VAPID keys unset]');
     return;
   }
   const subscriptions = await DelegatePushSubscription.find({ registration: registrationId });
   if (subscriptions.length === 0) return;
-  const body = JSON.stringify(payload);
+  const body = JSON.stringify(withUrl);
   await Promise.all(subscriptions.map((sub) => sendToSubscription(sub, body)));
 };

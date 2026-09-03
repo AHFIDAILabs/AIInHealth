@@ -44,7 +44,7 @@ interface NavItem {
   to: string;
   icon: typeof LayoutDashboard;
   roles: Role[];
-  soon?: boolean; // designed placeholder (AdminComingSoon), not yet a real feature
+  soon?: boolean; // shows a "Soon" badge next to the label — not yet a real feature
 }
 
 interface NavSection {

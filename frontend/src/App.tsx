@@ -90,12 +90,19 @@ function App() {
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<DashboardPage />} />
 
-              <Route element={<RequireRole roles={['super_admin', 'registrations_officer', 'viewer']} />}>
+              {/* content_editor is admitted here too — RegistrationsPage/AccessCodesPage each
+                  self-scope to volunteer-only data for that role (and the backend enforces
+                  the same scoping), matching how content_editor's "Volunteers" sidebar
+                  entry actually links here. */}
+              <Route element={<RequireRole roles={['super_admin', 'registrations_officer', 'viewer', 'content_editor']} />}>
                 <Route path="/admin/registrations" element={<RegistrationsPage />} />
               </Route>
 
-              <Route element={<RequireRole roles={[...REGISTRATION_ROLES]} />}>
+              <Route element={<RequireRole roles={[...REGISTRATION_ROLES, 'content_editor']} />}>
                 <Route path="/admin/access-codes" element={<AccessCodesPage />} />
+              </Route>
+
+              <Route element={<RequireRole roles={[...REGISTRATION_ROLES]} />}>
                 <Route path="/admin/check-in" element={<CheckInPage />} />
                 <Route path="/admin/reconciliations" element={<ReconciliationsPage />} />
                 <Route path="/admin/portal-tokens" element={<PortalTokensPage />} />

@@ -36,8 +36,7 @@ import { fetchAnalyticsOverview, type AnalyticsOverview } from '../../services/a
 import { getApiErrorMessage } from '../../services/api';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
-
-const CARD_CLASS = 'rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover';
+import { CARD_CLASS, CHIP_COLOR, CHART_HEX, type ChipColorKey as Chip } from '../../lib/adminUi';
 
 const naira = (n: number) => `₦${n.toLocaleString('en-NG')}`;
 
@@ -79,18 +78,6 @@ const DeltaLine = ({ pct }: { pct: number | null }) => {
   );
 };
 
-// Static per-key class strings, not string-interpolated — Tailwind's JIT scanner
-// needs literal class names at build time.
-const CHIP_COLOR = {
-  orange: { bg: 'bg-orange/15', text: 'text-orange' },
-  violet: { bg: 'bg-chart-violet/15', text: 'text-chart-violet' },
-  teal: { bg: 'bg-chart-teal/15', text: 'text-chart-teal' },
-  rose: { bg: 'bg-chart-rose/15', text: 'text-chart-rose' },
-  blue: { bg: 'bg-chart-blue/15', text: 'text-chart-blue' },
-  amber: { bg: 'bg-chart-amber/15', text: 'text-chart-amber' },
-} as const;
-type Chip = keyof typeof CHIP_COLOR;
-const CHART_HEX: Record<Chip, string> = { orange: '#E8792C', violet: '#7C3AED', teal: '#0D9488', rose: '#E11D48', blue: '#2563EB', amber: '#D97706' };
 
 const QuickAction = ({ to, href, icon: Icon, color, label }: { to?: string; href?: string; icon: typeof ClipboardList; color: Chip; label: string }) => {
   const content = (

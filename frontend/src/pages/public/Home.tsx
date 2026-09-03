@@ -39,6 +39,7 @@ import { PressQuoteBand } from '../../components/home/PressQuoteBand';
 import { FindYourJourney } from '../../components/home/FindYourJourney';
 import { AbujaExperience } from '../../components/home/AbujaExperience';
 import { HeroCountdown } from '../../components/home/HeroCountdown';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 const BARRIERS = [
   { label: 'Limited governance frameworks', icon: Shield },
@@ -113,7 +114,10 @@ const fadeUp: Variants = {
   }),
 };
 
-export const Home = () => (
+export const Home = () => {
+  useDocumentTitle('Abuja, Nigeria');
+
+  return (
   <>
     {/* Hero — full-bleed photo panel with all content centered on top.
         Capped to one viewport at lg+ so the whole thing is visible with no scroll —
@@ -142,14 +146,14 @@ export const Home = () => (
           <motion.h1
             custom={1}
             variants={fadeUp}
-            className="mx-auto mt-3.5 max-w-2xl font-mono space-y-4 space-x-3 text-xl font-semibold leading-[1.3] tracking-normal text-white sm:text-2xl lg:text-[1.75rem] xl:text-[2rem]"
+            className="mx-auto mt-3.5 max-w-2xl font-mono text-xl font-semibold leading-[1.3] tracking-normal text-white sm:text-2xl lg:text-[1.75rem] xl:text-[2rem]"
           >
             <em className="font-normal italic">Catalyzing</em> Country{' '}
             <span className="text-orange">AI-in-Health</span> Framework{' '}
             <em className="font-normal italic">for</em> Transformative Healthcare Systems
           </motion.h1>
 
-          <motion.p custom={2} variants={fadeUp} className="mx-auto mt-3.5 max-w-lg text-[13px] space-x-3 space-y-3 leading-relaxed text-slate-300 lg:text-sm">
+          <motion.p custom={2} variants={fadeUp} className="mx-auto mt-3.5 max-w-lg text-[13px] leading-relaxed text-slate-300 lg:text-sm">
             Nigeria&rsquo;s premier platform for AI-enabled healthcare, convening national and international
             leaders to build practical pathways for responsible AI adoption across health systems.
           </motion.p>
@@ -248,7 +252,7 @@ export const Home = () => (
           </span>
         </Reveal>
         <Reveal y={14} delay={0.05} className="-mt-6">
-          <p className="text-xs font-semibold uppercase tracking-[2.1em] text-orange">Summit Goal</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-orange">Summit Goal</p>
         </Reveal>
 
         <RevealText
@@ -535,4 +539,5 @@ export const Home = () => (
       </Reveal>
     </section>
   </>
-);
+  );
+};

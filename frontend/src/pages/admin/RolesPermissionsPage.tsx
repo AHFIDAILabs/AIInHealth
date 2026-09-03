@@ -23,8 +23,8 @@ const SECTIONS: { section: string; rows: Row[] }[] = [
   {
     section: 'Event Setup',
     rows: [
-      { area: 'Registrations', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'full', viewer: 'view' } },
-      { area: 'Access Codes', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'full', viewer: 'none' } },
+      { area: 'Registrations (volunteers only for Content Editor)', access: { super_admin: 'full', content_editor: 'view', registrations_officer: 'full', viewer: 'view' } },
+      { area: 'Access Codes (volunteers only for Content Editor)', access: { super_admin: 'full', content_editor: 'view', registrations_officer: 'full', viewer: 'none' } },
       { area: 'Payments', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'full', viewer: 'view' } },
       { area: 'Reconciliations', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'full', viewer: 'none' } },
       { area: 'Check-In', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'full', viewer: 'none' } },
@@ -39,7 +39,7 @@ const SECTIONS: { section: string; rows: Row[] }[] = [
   {
     section: 'People',
     rows: [
-      { area: 'Attendees / Exhibitors / Volunteers', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'full', viewer: 'view' } },
+      { area: 'Attendees / Exhibitors / Volunteers', access: { super_admin: 'full', content_editor: 'view', registrations_officer: 'full', viewer: 'view' } },
       { area: 'Sponsors & Partners', access: { super_admin: 'full', content_editor: 'full', registrations_officer: 'none', viewer: 'none' } },
       { area: 'Portal Tokens', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'full', viewer: 'none' } },
     ],
@@ -59,6 +59,7 @@ const SECTIONS: { section: string; rows: Row[] }[] = [
       { area: 'Integrations', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'none', viewer: 'none' } },
       { area: 'Audit Log', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'none', viewer: 'view' } },
       { area: 'Users', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'none', viewer: 'none' } },
+      { area: 'Roles & Permissions (this page)', access: { super_admin: 'full', content_editor: 'none', registrations_officer: 'none', viewer: 'none' } },
     ],
   },
 ];

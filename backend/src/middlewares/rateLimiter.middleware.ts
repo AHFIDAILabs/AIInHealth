@@ -72,6 +72,25 @@ export const inquiryLimiter = rateLimit({
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many submissions. Try again in 15 minutes.' } },
 });
 
+// Each hit is an outbound Paystack API call, not just a DB write — the costliest
+// public endpoint to leave unbounded. Keyed by registrationId (initialize) / the
+// :reference param (verify) rather than just IP, since a shared office/campus IP
+// legitimately registers many people in a short window.
+export const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    const key =
+      (typeof req.body?.registrationId === 'string' && req.body.registrationId) ||
+      (typeof req.params?.reference === 'string' && req.params.reference) ||
+      '';
+    return `${req.ip}:${key}`;
+  },
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many payment requests. Try again in 15 minutes.' } },
+});
+
 export const abstractLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,

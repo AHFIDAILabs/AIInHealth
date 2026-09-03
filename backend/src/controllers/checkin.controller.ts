@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { isValidObjectId } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -82,6 +83,7 @@ export const search = catchAsync(async (req: Request, res: Response) => {
 
 // POST /admin/check-in/manual/:id — check in without scanning (e.g. lost/undelivered QR)
 export const manualCheckIn = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
   const registration = await Registration.findById(req.params.id);
   if (!registration) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
   if (registration.status !== 'confirmed') {

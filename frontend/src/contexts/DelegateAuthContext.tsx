@@ -30,8 +30,14 @@ export const DelegateAuthProvider = ({ children }: { children: ReactNode }) => {
   }, [refresh]);
 
   const logout = useCallback(async () => {
-    await delegateService.delegateLogout();
-    setDelegate(null);
+    // Clear local state regardless of whether the API call succeeds — a network
+    // blip or an already-expired session shouldn't leave Sign Out looking like it
+    // silently did nothing.
+    try {
+      await delegateService.delegateLogout();
+    } finally {
+      setDelegate(null);
+    }
   }, []);
 
   return (

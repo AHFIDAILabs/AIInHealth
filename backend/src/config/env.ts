@@ -9,7 +9,6 @@ const envSchema = z.object({
   MONGO_URI: z.string().optional().default(''),
 
   ACCESS_TOKEN_SECRET: z.string().min(32),
-  REFRESH_TOKEN_SECRET: z.string().min(32),
   ACCESS_TOKEN_TTL: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().default(30),
 
@@ -55,9 +54,11 @@ const envSchema = z.object({
 });
 
 const productionRequiredSchema = envSchema.superRefine((val, ctx) => {
-  if (val.NODE_ENV !== 'production') return;
-  // In dev, an empty MONGO_URI / missing Graph credentials fall back to an in-memory DB / console-logged email.
-  // Production must never boot on those fallbacks silently.
+  // Staging gets the same gate as production — both are real, shared, non-ephemeral
+  // deployments where silently falling back to an in-memory DB or console-logged
+  // email would be just as wrong as it would be in production. Only plain
+  // "development" (a local machine) is allowed to fall back.
+  if (val.NODE_ENV === 'development') return;
   if (!val.MONGO_URI) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['MONGO_URI'], message: 'required in production' });
   }

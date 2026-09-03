@@ -21,6 +21,7 @@ import * as portalTokenController from '../../controllers/portalToken.controller
 import * as reconciliationController from '../../controllers/reconciliation.controller.js';
 import * as analyticsController from '../../controllers/analytics.controller.js';
 import * as integrationsController from '../../controllers/integrations.controller.js';
+import * as newsletterController from '../../controllers/newsletter.controller.js';
 import * as uploadController from '../../controllers/upload.controller.js';
 import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { requireRole } from '../../middlewares/rbac.middleware.js';
@@ -103,6 +104,9 @@ router.patch('/inquiries/:id', requireRole(...contentRoles), inquiryController.a
 
 router.get('/messages', requireRole(...contentRoles), contactController.adminList);
 router.patch('/messages/:id', requireRole(...contentRoles), contactController.adminUpdate);
+
+router.get('/newsletter-subscribers', requireRole(...contentRoles), newsletterController.adminList);
+router.get('/newsletter-subscribers/export', requireRole(...contentRoles), newsletterController.adminExport);
 
 router.get('/audit-logs', requireRole('super_admin', 'viewer'), auditLogController.adminList);
 
