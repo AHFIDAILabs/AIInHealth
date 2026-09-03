@@ -57,7 +57,19 @@ app.use(hpp());
 app.use(apiLimiter);
 
 app.use('/healthz', healthRoutes);
-app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
+app.use(
+  '/uploads',
+  // Helmet's default Cross-Origin-Resource-Policy: same-origin (set above) is right
+  // for the JSON API, but it also silently blocks the browser from rendering these
+  // images when fetched from the frontend's different origin — the request succeeds
+  // (200) yet the <img> still renders broken. These files are public by design
+  // (avatars/logos), so relax just this one header for this one route.
+  (_req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static(UPLOADS_DIR, { maxAge: '7d' })
+);
 app.use('/api/v1', apiV1Router);
 
 app.use(notFoundHandler);
