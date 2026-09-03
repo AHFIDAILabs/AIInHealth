@@ -1,0 +1,33 @@
+import { z } from 'zod';
+import { TRACKS } from '../types/enums.js';
+
+const optionalUrl = z.string().trim().url('Enter a valid URL').optional().or(z.literal(''));
+
+export const createSpeakerSchema = z.object({
+  body: z.object({
+    fullName: z.string().trim().min(2, 'Enter a full name'),
+    title: z.string().trim().min(2, 'Enter a title'),
+    organization: z.string().trim().optional(),
+    bio: z.string().trim().max(2000).optional(),
+    track: z.enum(TRACKS),
+    photoUrl: optionalUrl,
+    isPublished: z.boolean().optional(),
+    order: z.coerce.number().int().optional(),
+  }),
+});
+
+export const updateSpeakerSchema = z.object({
+  body: createSpeakerSchema.shape.body.partial(),
+});
+
+export const listSpeakersQuerySchema = z.object({
+  track: z.enum(TRACKS).optional(),
+  published: z.enum(['true', 'false']).optional(),
+  q: z.string().trim().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export type CreateSpeakerInput = z.infer<typeof createSpeakerSchema>['body'];
+export type UpdateSpeakerInput = z.infer<typeof updateSpeakerSchema>['body'];
+export type ListSpeakersQuery = z.infer<typeof listSpeakersQuerySchema>;

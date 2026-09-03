@@ -1,0 +1,37 @@
+import { api } from './api';
+import type { PartnerTier } from './partner.service';
+
+export const INQUIRY_STATUSES = ['New', 'Contacted', 'Converted', 'Declined'] as const;
+export type InquiryStatus = (typeof INQUIRY_STATUSES)[number];
+
+export interface AdminInquiry {
+  _id: string;
+  organizationName: string;
+  contactName: string;
+  contactEmail: string;
+  tierInterested?: PartnerTier;
+  message?: string;
+  status: InquiryStatus;
+  createdAt: string;
+}
+
+export interface Paginated<T> {
+  items: T[];
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export const adminListInquiries = async (params: { status?: InquiryStatus; q?: string; limit?: number }): Promise<Paginated<AdminInquiry>> => {
+  const res = await api.get<{ success: true; data: AdminInquiry[]; meta: Omit<Paginated<never>, 'items'> }>(
+    '/admin/inquiries',
+    { params }
+  );
+  return { items: res.data.data, ...res.data.meta };
+};
+
+export const adminUpdateInquiryStatus = async (id: string, status: InquiryStatus): Promise<AdminInquiry> => {
+  const res = await api.patch<{ success: true; data: AdminInquiry }>(`/admin/inquiries/${id}`, { status });
+  return res.data.data;
+};
