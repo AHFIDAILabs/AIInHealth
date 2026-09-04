@@ -34,6 +34,7 @@ import { ConfirmedVoices } from '../../components/home/ConfirmedVoices';
 import { ConvenedWith } from '../../components/home/ConvenedWith';
 import { NewsletterCapture } from '../../components/home/NewsletterCapture';
 import { InnovatorsShowcase } from '../../components/home/InnovatorsShowcase';
+import { MediaHighlights } from '../../components/home/MediaHighlights';
 import { PressQuoteBand } from '../../components/home/PressQuoteBand';
 import { FindYourJourney } from '../../components/home/FindYourJourney';
 import { AbujaExperience } from '../../components/home/AbujaExperience';
@@ -426,6 +427,8 @@ export const Home = () => {
     <FindYourJourney />
 
     <InnovatorsShowcase />
+
+    <MediaHighlights />
 
     <PressQuoteBand />
 

@@ -16,6 +16,7 @@ import { Speakers } from './pages/public/Speakers';
 import { InnovationShowcase } from './pages/public/InnovationShowcase';
 import { ParticipantsOutcomes } from './pages/public/ParticipantsOutcomes';
 import { Partners } from './pages/public/Partners';
+import { Gallery } from './pages/public/Gallery';
 import { AboutAhfid } from './pages/public/AboutAhfid';
 import { Register } from './pages/public/Register';
 import { PaymentCallback } from './pages/public/PaymentCallback';
@@ -43,6 +44,7 @@ import { PaymentsPage } from './pages/admin/PaymentsPage';
 import { CheckInPage } from './pages/admin/CheckInPage';
 import { ReconciliationsPage } from './pages/admin/ReconciliationsPage';
 import { AbstractsPage } from './pages/admin/AbstractsPage';
+import { MediaPage } from './pages/admin/MediaPage';
 import { EventTeamPage } from './pages/admin/EventTeamPage';
 import { PortalTokensPage } from './pages/admin/PortalTokensPage';
 import { AnalyticsPage } from './pages/admin/AnalyticsPage';
@@ -72,6 +74,7 @@ function App() {
             <Route path="/innovation-showcase" element={<InnovationShowcase />} />
             <Route path="/participants-outcomes" element={<ParticipantsOutcomes />} />
             <Route path="/partners" element={<Partners />} />
+            <Route path="/gallery" element={<Gallery />} />
             <Route path="/about-ahfid" element={<AboutAhfid />} />
             <Route path="/register" element={<Register />} />
             <Route path="/register/payment-callback" element={<PaymentCallback />} />
@@ -120,6 +123,7 @@ function App() {
                 <Route path="/admin/inquiries" element={<InquiriesPage />} />
                 <Route path="/admin/messages" element={<MessagesPage />} />
                 <Route path="/admin/abstracts" element={<AbstractsPage />} />
+                <Route path="/admin/media" element={<MediaPage />} />
               </Route>
 
               <Route element={<RequireRole roles={['super_admin', 'content_editor', 'registrations_officer', 'viewer']} />}>

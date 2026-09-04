@@ -48,6 +48,7 @@ const NAV_SEGMENTS: NavSegment[] = [
   {
     label: 'Media',
     links: [
+      { label: 'Gallery', to: '/gallery', description: 'Photos and videos from the Summit as they happen.' },
       { label: 'Press & Media Inquiries', to: '/contact', description: 'Reach the Summit Secretariat directly.' },
       { label: 'About AHFID', to: 'https://ahfid.org/', description: 'Background on the convening organization.', external: true },
     ],

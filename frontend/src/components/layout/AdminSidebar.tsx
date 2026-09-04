@@ -26,6 +26,7 @@ import {
   UsersRound,
   Plug,
   ShieldCheck,
+  Images,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -78,6 +79,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Speakers', to: '/admin/speakers', icon: Users, roles: contentRoles },
       { label: 'Innovation Showcase', to: '/admin/innovations', icon: Lightbulb, roles: contentRoles },
       { label: 'Abstracts', to: '/admin/abstracts', icon: FileText, roles: contentRoles },
+      { label: 'Gallery', to: '/admin/media', icon: Images, roles: contentRoles },
     ],
   },
   {
