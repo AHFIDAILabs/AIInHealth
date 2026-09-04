@@ -24,10 +24,11 @@ import * as integrationsController from '../../controllers/integrations.controll
 import * as newsletterController from '../../controllers/newsletter.controller.js';
 import * as uploadController from '../../controllers/upload.controller.js';
 import * as searchController from '../../controllers/search.controller.js';
+import * as mediaController from '../../controllers/media.controller.js';
 import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { uploadImage } from '../../middlewares/upload.middleware.js';
+import { uploadImage, uploadMedia } from '../../middlewares/upload.middleware.js';
 import { subscribePushSchema, unsubscribePushSchema } from '../../validations/push.validation.js';
 import { sendAnnouncementSchema } from '../../validations/delegateAnnouncement.validation.js';
 
@@ -45,6 +46,15 @@ router.get('/search', requireRole('super_admin', 'content_editor', 'registration
 // Any authenticated admin role can upload an image (own profile photo at minimum);
 // which resource a URL ends up saved on is still gated by that resource's own route.
 router.post('/uploads/image', uploadImage, uploadController.uploadImage);
+
+// Gallery photo/video uploader — content_editor scope, same as the Media CRUD
+// routes below.
+router.post(
+  '/uploads/media',
+  requireRole('super_admin', 'content_editor'),
+  uploadMedia,
+  uploadController.uploadMedia
+);
 
 // content_editor is included here too — their access is narrowed to volunteer-type
 // records inside the controllers themselves (isContentEditor()), not at the route
@@ -103,6 +113,11 @@ router.delete('/innovations/:id', requireRole(...contentRoles), innovationContro
 
 router.get('/abstracts', requireRole(...contentRoles), abstractController.adminList);
 router.patch('/abstracts/:id', requireRole(...contentRoles), abstractController.adminUpdate);
+
+router.get('/media', requireRole(...contentRoles), mediaController.adminList);
+router.post('/media', requireRole(...contentRoles), mediaController.adminCreate);
+router.patch('/media/:id', requireRole(...contentRoles), mediaController.adminUpdate);
+router.delete('/media/:id', requireRole(...contentRoles), mediaController.adminDelete);
 
 router.get('/inquiries', requireRole(...contentRoles), inquiryController.adminList);
 router.patch('/inquiries/:id', requireRole(...contentRoles), inquiryController.adminUpdateStatus);

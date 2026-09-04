@@ -95,3 +95,12 @@ export type AbstractStatus = (typeof ABSTRACT_STATUSES)[number];
 // plus a 'both' option since most core staff work the whole summit.
 export const TEAM_MEMBER_DAYS = ['day1', 'day2', 'both'] as const;
 export type TeamMemberDay = (typeof TEAM_MEMBER_DAYS)[number];
+
+// Gallery uploads from the comms team — a photo or a short video clip.
+export const MEDIA_TYPES = ['photo', 'video'] as const;
+export type MediaType = (typeof MEDIA_TYPES)[number];
+
+// Which moment of the Summit a Gallery item is from — mirrors SESSION_DAYS plus a
+// 'general' bucket for pre-event, venue, or otherwise not-day-specific shots.
+export const MEDIA_DAYS = ['day1', 'day2', 'general'] as const;
+export type MediaDay = (typeof MEDIA_DAYS)[number];

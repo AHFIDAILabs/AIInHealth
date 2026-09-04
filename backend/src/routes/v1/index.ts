@@ -12,6 +12,7 @@ import innovationRoutes from './innovation.routes.js';
 import paymentRoutes from './payment.routes.js';
 import delegateRoutes from './delegate.routes.js';
 import abstractRoutes from './abstract.routes.js';
+import mediaRoutes from './media.routes.js';
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use('/innovations', innovationRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/delegate', delegateRoutes);
 router.use('/abstracts', abstractRoutes);
+router.use('/media', mediaRoutes);
 
 export default router;

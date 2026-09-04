@@ -18,3 +18,29 @@ export const uploadImage = multer({
     cb(null, true);
   },
 }).single('image');
+
+const ALLOWED_MEDIA_MIMES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'video/mp4',
+  'video/quicktime', // .mov, common straight off a phone camera
+  'video/webm',
+]);
+
+// The comms team's Gallery uploader (photos and short video clips) — a separate,
+// larger-ceiling picker from uploadImage above since event footage runs well past
+// a 5MB profile-photo cap. memoryStorage here too; media.service.ts streams
+// straight to Cloudinary the same way.
+export const uploadMedia = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB — comfortably covers a few minutes of 1080p phone footage
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_MEDIA_MIMES.has(file.mimetype)) {
+      cb(new ApiError(422, 'Only JPEG, PNG, WEBP, GIF images or MP4, MOV, WEBM videos are allowed.', 'INVALID_FILE_TYPE'));
+      return;
+    }
+    cb(null, true);
+  },
+}).single('file');

@@ -12,6 +12,7 @@ import { PartnershipInquiry } from '../models/PartnershipInquiry.model.js';
 import { ContactMessage } from '../models/ContactMessage.model.js';
 import { User } from '../models/User.model.js';
 import { EventTeamMember } from '../models/EventTeamMember.model.js';
+import { Media } from '../models/Media.model.js';
 import type { Role } from '../types/enums.js';
 
 const RESULT_LIMIT = 5;
@@ -198,6 +199,23 @@ const RESOURCES: SearchResource[] = [
         title: d.fullName,
         subtitle: [d.email, d.role].filter(Boolean).join(' · '),
         path: '/admin/users',
+      }));
+    },
+  },
+  {
+    key: 'media',
+    label: 'Gallery',
+    roles: ['super_admin', 'content_editor'],
+    search: async (rx, q) => {
+      const docs = await Media.find({ caption: rx })
+        .sort({ createdAt: -1 })
+        .limit(RESULT_LIMIT)
+        .select('type caption thumbnailUrl');
+      return docs.map((d) => ({
+        id: d.id as string,
+        title: d.caption || (d.type === 'video' ? 'Untitled video' : 'Untitled photo'),
+        subtitle: d.type === 'video' ? 'Video' : 'Photo',
+        path: `/admin/media?q=${encodeURIComponent(q)}`,
       }));
     },
   },
