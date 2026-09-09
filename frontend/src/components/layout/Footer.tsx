@@ -3,8 +3,8 @@ import { AhfidBadge } from '../ui/AhfidBadge';
 import summitMark from '../../assets/images/summit_logo_mark.png';
 
 export const Footer = () => (
-  <footer className="border-t border-slate-800 bg-navy">
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+  <footer className="w-full justify-between border-t border-slate-800 bg-navy">
+    <div className="flex flex-row w-full justify-between  px-4 py-5 sm:px-6">
       <div className="flex flex-col items-start gap-2.5">
         <img src={summitMark} alt="" aria-hidden="true" className="h-9 w-9 rounded-md" />
         <p className="font-display text-lg font-semibold text-white">AI in Health Summit 2026</p>
@@ -45,13 +45,12 @@ export const Footer = () => (
           </ul>
         </div>
       </div>
-
-      <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-slate-800 pt-8 sm:flex-row sm:items-center">
+    </div>
+     <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-slate-800 pt-8 sm:flex-row sm:items-center">
         <AhfidBadge />
         <p className="text-xs text-slate-500">
           Abuja, Nigeria &middot; 19&ndash;20 October 2026 &middot; &copy; 2026 AI in Health Summit. All rights reserved.
         </p>
       </div>
-    </div>
   </footer>
 );

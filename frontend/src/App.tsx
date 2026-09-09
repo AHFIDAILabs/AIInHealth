@@ -10,6 +10,7 @@ import { ProtectedRoute } from './routes/ProtectedRoute';
 import { RequireRole } from './routes/RequireRole';
 import { PortalProtectedRoute } from './routes/PortalProtectedRoute';
 import { Home } from './pages/public/Home';
+import { NewHome } from './pages/public/NewHome';
 import { About } from './pages/public/About';
 import { Agenda } from './pages/public/Agenda';
 import { Speakers } from './pages/public/Speakers';
@@ -67,7 +68,9 @@ function App() {
         <DelegateAuthProvider>
         <Routes>
           <Route element={<PublicLayout />}>
-            <Route path="/" element={<Home />} />
+            {/* <Route path="/" element={<Home />} /> */}
+            <Route path="/" element={<NewHome />} />
+            <Route path="/classic" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/speakers" element={<Speakers />} />
