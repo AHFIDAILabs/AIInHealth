@@ -3,7 +3,7 @@ import { ButtonLink } from '../../components/ui/Button';
 import { Reveal } from '../../components/ui/Reveal';
 import { ConvenedWith } from '../../components/home/ConvenedWith';
 import { ConfirmedVoices } from '../../components/home/ConfirmedVoices';
-import { NewsletterCapture } from '../../components/home/NewsletterCapture';
+// import { NewsletterCapture } from '../../components/home/NewsletterCapture';
 import { CountdownCard } from '../../components/home-v2/CountdownCard.tsx';
 import { ProgrammeTimeline } from '../../components/home-v2/ProgrammeTimeline.tsx';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase.tsx';
@@ -30,7 +30,7 @@ import heroBg from '../../assets/images/hero_bg.png';
 import { MediaHighlights } from '../../components/home/MediaHighlights';
 // import { PressQuoteBand } from '../../components/home/PressQuoteBand';
 // import { FindYourJourney } from '../../components/home/FindYourJourney';
-import { AbujaExperience } from '../../components/home/AbujaExperience';
+// import { AbujaExperience } from '../../components/home/AbujaExperience';
 import homePageBg from '../../assets/images/happy_new.png';
 
 const fadeUp: Variants = {
