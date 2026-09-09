@@ -31,7 +31,7 @@ import { MediaHighlights } from '../../components/home/MediaHighlights';
 // import { PressQuoteBand } from '../../components/home/PressQuoteBand';
 // import { FindYourJourney } from '../../components/home/FindYourJourney';
 // import { AbujaExperience } from '../../components/home/AbujaExperience';
-import homePageBg from '../../assets/images/happy_new.png';
+import homePageBg from '../../assets/images/AI in Health Summit 2026 - Website.png';
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 22 },
@@ -52,9 +52,9 @@ export const NewHome = () => {
           full-bleed at the top rather than floating with a visible gap the
           way the original static mockup did on a non-fixed white header. */}
       <section className="relative isolate overflow-hidden bg-navy">
-        <div className="mx-auto grid max-w-7xl gap-0 px-0 pt-20 lg:grid-cols-[1.15fr_1fr] lg:gap-6 lg:px-6 lg:pt-24 lg:pb-6">
+        <div className="flex justify-between w-full gap-0 px-0 pt-20 lg:grid-cols-[1.15fr_1fr] lg:gap-6 lg:px-6 lg:pt-24 lg:pb-6">
           {/* Left panel — photo + headline */}
-          <div className="relative flex min-h-[560px] flex-col justify-center gap-6 overflow-hidden px-6 py-14 sm:px-10 lg:rounded-3xl lg:px-12">
+          <div className="relative flex min-h-[560px] flex-col w-[70%] justify-center gap-6 overflow-hidden px-6 py-14 sm:px-10 lg:rounded-3xl lg:px-12">
             <img src={heroBg} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-b from-navy/35 to-navy/75" />
 
@@ -94,14 +94,14 @@ export const NewHome = () => {
           </div>
 
           {/* Right panel — theme card + primary CTAs */}
-          <Reveal delay={0.25} className="flex flex-col gap-4 p-5 sm:px-10 lg:px-0 lg:py-0 lg:rounded-3xl bg-white">
+          <Reveal delay={0.25} className="flex w-[30%] flex-col gap-4 p-2 sm:px-10 lg:px-0 lg:py-0 lg:rounded-3xl bg-white">
             <div className="flex flex-1 flex-col gap-4 rounded-3xl  bg-white p-0">
               {/* Placeholder until the real theme-card image asset is dropped in —
                   see the TODO at the top of this file. */}
-              <div className="flex min-h-[220px] flex-1 items-center justify-center rounded-2xl bg-gradient-to-b from-[#dfe9f3] to-[#eef3f8] p-0 text-center">
+              <div className=" items-center justify-center rounded-3xl bg-gradient-to-b from-[#dfe9f3] to-[#eef3f8] p-0 text-center">
                 <div>
                  
-            <img src={homePageBg} alt="Theme card " className="w-full object-fill lg:rounded-b-3xl" />
+            <img src={homePageBg} alt="Theme card " className="w-full object-fill lg:rounded-3xl p-2" />
                       <motion.p custom={2} variants={fadeUp} className="w-full p-5 text-[15px] leading-relaxed font-bold text-gray-700">
                 Nigeria&rsquo;s premier platform for AI-enabled healthcare, convening national and international
                 leaders to build practical pathways for responsible AI adoption across health systems.
