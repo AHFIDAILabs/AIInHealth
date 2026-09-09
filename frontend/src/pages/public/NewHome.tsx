@@ -102,7 +102,7 @@ export const NewHome = () => {
                 <div>
                  
             <img src={homePageBg} alt="Theme card " className="w-full object-fill lg:rounded-3xl p-2" />
-                      <motion.p custom={2} variants={fadeUp} className="w-full p-5 text-[15px] leading-relaxed font-bold text-gray-700">
+                      <motion.p custom={2} variants={fadeUp} className="w-full p-5 text-[15px] leading-relaxed font-semibold text-gray-700">
                 Nigeria&rsquo;s premier platform for AI-enabled healthcare, convening national and international
                 leaders to build practical pathways for responsible AI adoption across health systems.
               </motion.p>

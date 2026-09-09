@@ -30,7 +30,7 @@ export const PartnersShowcase = () => {
   })).filter((g) => g.items.length > 0);
 
   return (
-    <section className="bg-white py-24">
+    <section className="w-full justify-center bg-white py-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-orange">Partners</p>
@@ -49,7 +49,7 @@ export const PartnersShowcase = () => {
               </Reveal>
 
               <Reveal delay={gi * 0.06 + 0.05}>
-                <div className="mt-10 grid grid-cols-2 items-center gap-x-10 gap-y-10 sm:grid-cols-3 lg:grid-cols-5">
+                <div className="mt-10 grid grid-cols-2 items-center justify-center gap-x-10 gap-y-10 sm:grid-cols-3 lg:grid-cols-5">
                   {group.items.map((p) => {
                     const logo = p.logoUrl ? (
                       <img src={p.logoUrl} alt={p.name} title={p.name} className="h-9 max-w-full object-contain" />
