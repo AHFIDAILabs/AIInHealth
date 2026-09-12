@@ -17,5 +17,13 @@ export const isFreeTicketCategory = (category: TicketCategory): boolean => TICKE
 // Paystack amounts are in kobo (smallest currency unit).
 export const nairaToKobo = (naira: number): number => Math.round(naira * 100);
 
-export const priceForRegistration = (category: TicketCategory, attendeeCount: number): number =>
-  TICKET_PRICE_NGN[category] * Math.max(1, attendeeCount);
+// discountPercent comes from a redeemed 'scholarship' AccessCode (see
+// Registration.model.ts's discountPercent field) — 100 is handled separately by
+// registration.controller.ts (the seat never reaches this function at all, since
+// it's fully comped and skips payment/Paystack entirely), so this only ever needs
+// to shave a partial percentage off here.
+export const priceForRegistration = (category: TicketCategory, attendeeCount: number, discountPercent?: number): number => {
+  const base = TICKET_PRICE_NGN[category] * Math.max(1, attendeeCount);
+  if (!discountPercent) return base;
+  return Math.round(base * (1 - discountPercent / 100));
+};

@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { ACCESS_CODE_TYPES, ACCESS_CODE_STATUSES } from '../types/enums.js';
+import { ACCESS_CODE_TYPES, ACCESS_CODE_STATUSES, ACCESS_CODE_DISCOUNTS } from '../types/enums.js';
 
 const accessCodeSchema = new Schema(
   {
@@ -15,6 +15,10 @@ const accessCodeSchema = new Schema(
     usedAt: { type: Date },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     expiresAt: { type: Date },
+    // scholarship-type only — the % knocked off the attendee's ticket price when
+    // this code is redeemed (registration.controller.ts). Required-when-scholarship
+    // is enforced at the zod layer (accessCode.validation.ts), not here.
+    discountPercent: { type: Number, enum: ACCESS_CODE_DISCOUNTS },
   },
   { timestamps: true }
 );

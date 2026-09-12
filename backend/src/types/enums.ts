@@ -73,11 +73,22 @@ export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 // volunteer redeems one to register for free, and a keynote speaker's code (issued
 // by staff, redeemed the same way) grants them access without going through the
 // paid attendee flow. "complimentary" covers anyone else staff choose to comp.
-export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary'] as const;
+// "scholarship" is different from the other three: it's redeemed through the
+// paid ATTENDEE flow (not a separate free path) and carries a discountPercent
+// (see ACCESS_CODE_DISCOUNTS) applied against that ticket's price instead of
+// bypassing payment outright — payment.controller.ts still charges the
+// remainder via Paystack unless discountPercent is 100.
+export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship'] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;
 export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];
+
+// The only discount tiers a scholarship code can carry — required on the
+// AccessCode doc when type is 'scholarship', absent otherwise (enforced in
+// accessCode.validation.ts, not just documented here).
+export const ACCESS_CODE_DISCOUNTS = [25, 50, 100] as const;
+export type AccessCodeDiscount = (typeof ACCESS_CODE_DISCOUNTS)[number];
 
 // 'not_required' covers the two free ticket categories (government_official,
 // accredited_media) and every non-attendee registration type — they never touch

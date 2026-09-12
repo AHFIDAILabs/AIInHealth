@@ -73,17 +73,28 @@ const ACCESS_CODE_LABEL: Record<string, string> = {
   volunteer: 'volunteer',
   keynote_speaker: 'keynote speaker',
   complimentary: 'complimentary',
+  scholarship: 'scholarship',
 };
 
-export const sendAccessCodeEmail = async (to: string, type: string, code: string): Promise<void> => {
+export const sendAccessCodeEmail = async (to: string, type: string, code: string, discountPercent?: number): Promise<void> => {
   const registerUrl = `${env.FRONTEND_ORIGIN}/register`;
+  const isScholarship = type === 'scholarship' && discountPercent !== undefined;
+
+  const introLine = isScholarship
+    ? `You've been awarded a scholarship covering <strong>${discountPercent}%</strong> of your attendee registration fee for the AI in Health Summit 2026.`
+    : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
+
+  const instructionLine = isScholarship
+    ? `Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, and enter this code to apply your discount${discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'} — it's tied to this email address, so please register using ${to}.`
+    : `Visit <a href="${registerUrl}">the registration page</a> and use this code to confirm your spot — it's tied to this email address, so please register using ${to}.`;
+
   await sendEmail({
     to,
     subject: "You're invited — AI in Health Summit 2026",
     html: `
-      <p>You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.</p>
+      <p>${introLine}</p>
       <p>Your access code is: <strong style="font-size: 18px; letter-spacing: 1px;">${code}</strong></p>
-      <p>Visit <a href="${registerUrl}">the registration page</a> and use this code to confirm your spot — it's tied to this email address, so please register using ${to}.</p>
+      <p>${instructionLine}</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });

@@ -46,7 +46,10 @@ export const initialize = catchAsync(async (req: Request, res: Response) => {
   }
 
   const attendeeCount = 1 + (registration.groupAttendees?.length ?? 0);
-  const amountNaira = priceForRegistration(registration.ticketCategory as TicketCategory, attendeeCount);
+  // A 100%-scholarship registration never reaches here — registration.controller.ts
+  // marks it 'not_required' at creation and skips payment entirely — so
+  // discountPercent below is only ever undefined, 25, or 50.
+  const amountNaira = priceForRegistration(registration.ticketCategory as TicketCategory, attendeeCount, registration.discountPercent ?? undefined);
   const amountKobo = nairaToKobo(amountNaira);
   const reference = `AIHS-${registration.id}-${crypto.randomBytes(4).toString('hex')}`;
 

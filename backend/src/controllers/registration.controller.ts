@@ -5,7 +5,7 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { toCsv } from '../utils/toCsv.js';
 import { Registration, type RegistrationDoc } from '../models/Registration.model.js';
-import { AccessCode } from '../models/AccessCode.model.js';
+import { AccessCode, type AccessCodeDoc } from '../models/AccessCode.model.js';
 import type { CreateRegistrationInput, ListRegistrationsQuery } from '../validations/registration.validation.js';
 import { listRegistrationsQuerySchema, updateRegistrationStatusSchema } from '../validations/registration.validation.js';
 import { recordAudit } from '../services/audit.service.js';
@@ -178,16 +178,16 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     return;
   }
 
-  // Paid ticket categories start life unpaid — payment.controller.ts's initialize
-  // flips this to 'paid'/'confirmed' once Paystack verifies the charge. Free
-  // categories (government_official, accredited_media) keep the default
-  // 'not_required' and go through the same manual admin review as before.
-  const requiresPayment = input.type === 'attendee' && !isFreeTicketCategory(input.ticketCategory as TicketCategory);
-
   // Idempotency: a double-click or a network-retried submit shouldn't create a
   // second registration — return the one that already exists instead. Scoped to a
   // short recent window (not "ever") so someone who genuinely wants to submit again
   // later (e.g. after correcting a mistake) isn't blocked indefinitely.
+  //
+  // Deliberately computed BEFORE the scholarship-code redemption below: a retried
+  // submit must return the same registration the first request already created
+  // (and whose code was already marked used) without re-validating the code — the
+  // second look-up would otherwise find it 'used' and throw, turning a harmless
+  // double-click into a scary error on a submission that actually already succeeded.
   const dedupeEmail = input.type === 'attendee' ? input.email : input.contactEmail;
   const recentDuplicate = await Registration.findOne({
     type: input.type,
@@ -195,12 +195,58 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     createdAt: { $gte: new Date(Date.now() - DUPLICATE_SUBMIT_WINDOW_MS) },
   }).sort({ createdAt: -1 });
 
+  // Scholarship code redemption — attendee-only, and only on a genuinely new
+  // submission (see the comment above). Same validation shape as the volunteer
+  // branch above (unknown/used/revoked/expired/email-mismatch), just against
+  // 'scholarship'-type codes instead of 'volunteer'.
+  let discountPercent: number | undefined;
+  let redeemedCode: HydratedDocument<AccessCodeDoc> | null = null;
+  const trimmedAttendeeCode = input.type === 'attendee' ? input.accessCode?.trim().toUpperCase() : undefined;
+
+  if (!recentDuplicate && input.type === 'attendee' && trimmedAttendeeCode) {
+    const code = await AccessCode.findOne({ code: trimmedAttendeeCode });
+    if (!code || code.type !== 'scholarship') {
+      throw new ApiError(422, 'That access code is not valid.', 'INVALID_ACCESS_CODE');
+    }
+    if (code.status === 'used') {
+      throw new ApiError(422, 'That access code has already been used.', 'ACCESS_CODE_USED');
+    }
+    if (code.status === 'revoked') {
+      throw new ApiError(422, 'That access code has been revoked. Contact the organizing team.', 'ACCESS_CODE_REVOKED');
+    }
+    if (code.expiresAt && code.expiresAt < new Date()) {
+      throw new ApiError(422, 'That access code has expired. Contact the organizing team.', 'ACCESS_CODE_EXPIRED');
+    }
+    if (code.issuedTo !== input.email.trim().toLowerCase()) {
+      throw new ApiError(422, 'This access code was issued to a different email address. Please use the email it was sent to.', 'ACCESS_CODE_EMAIL_MISMATCH');
+    }
+    discountPercent = code.discountPercent ?? undefined;
+    redeemedCode = code;
+  }
+
+  // Paid ticket categories start life unpaid — payment.controller.ts's initialize
+  // flips this to 'paid'/'confirmed' once Paystack verifies the charge. Free
+  // categories (government_official, accredited_media), and a 100%-scholarship
+  // seat, keep the default 'not_required' — a 100% code is a full comp, not a
+  // ₦0 charge, so it never touches Paystack at all, same as a free category.
+  const isFullyComped = input.type === 'attendee' && discountPercent === 100;
+  const requiresPayment = input.type === 'attendee' && !isFreeTicketCategory(input.ticketCategory as TicketCategory) && !isFullyComped;
+
   const registration =
     recentDuplicate ??
     (await Registration.create({
       ...input,
       ...(requiresPayment && { paymentStatus: 'unpaid' }),
+      ...(discountPercent !== undefined && { discountPercent }),
+      ...(isFullyComped && { status: 'confirmed', paymentStatus: 'not_required', qrToken: generateQrToken() }),
     }));
+
+  if (redeemedCode && !recentDuplicate) {
+    redeemedCode.status = 'used';
+    redeemedCode.usedByRegistration = registration.id;
+    redeemedCode.usedAt = new Date();
+    await redeemedCode.save();
+  }
 
   if (!recentDuplicate) {
     const who = input.type === 'attendee' ? input.fullName : input.companyName;
@@ -213,12 +259,31 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     });
   }
 
-  const stillRequiresPayment = requiresPayment && registration.paymentStatus !== 'paid';
+  // Derived from the registration's own saved paymentStatus (not the pre-creation
+  // `requiresPayment` local above) so a deduped retry — which skips re-validating
+  // any code — still reports the seat's TRUE state, e.g. a 100%-comped registration
+  // correctly reports no payment needed even though this request's own
+  // `discountPercent` local is undefined (it never re-ran the code lookup).
+  const stillRequiresPayment = registration.paymentStatus === 'unpaid' || registration.paymentStatus === 'failed';
+  const appliedDiscount = registration.discountPercent ?? undefined;
+  const message = (() => {
+    if (input.type === 'attendee' && appliedDiscount === 100) {
+      return "Your scholarship code covers your registration fee in full — you're all set!";
+    }
+    if (stillRequiresPayment) {
+      return appliedDiscount
+        ? `Your ${appliedDiscount}% scholarship discount has been applied — complete payment to confirm your seat.`
+        : ATTENDEE_PAID_MESSAGE;
+    }
+    return CONFIRMATION_MESSAGE[input.type];
+  })();
+
   res.status(recentDuplicate ? 200 : 201).json(
     new ApiResponse({
       id: registration.id,
       requiresPayment: stillRequiresPayment,
-      message: stillRequiresPayment ? ATTENDEE_PAID_MESSAGE : CONFIRMATION_MESSAGE[input.type],
+      message,
+      ...(appliedDiscount !== undefined && appliedDiscount < 100 && { discountApplied: appliedDiscount }),
     })
   );
 });
@@ -308,7 +373,7 @@ export const adminUpdateStatus = catchAsync(async (req: Request, res: Response) 
 const CSV_COLUMNS = [
   '_id', 'type', 'status', 'createdAt', 'registrationMode', 'ticketCategory', 'fullName', 'email', 'phone',
   'organization', 'jobTitle', 'country', 'companyName', 'contactName', 'contactEmail', 'contactPhone', 'website',
-  'boothSize', 'productsDescription', 'message', 'accessCode',
+  'boothSize', 'productsDescription', 'message', 'accessCode', 'discountPercent',
 ];
 
 export const adminExport = catchAsync(async (req: Request, res: Response) => {

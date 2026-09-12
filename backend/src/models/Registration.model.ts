@@ -6,6 +6,7 @@ import {
   TICKET_CATEGORIES,
   BOOTH_SIZES,
   PAYMENT_STATUSES,
+  ACCESS_CODE_DISCOUNTS,
 } from '../types/enums.js';
 
 // One flat collection for all four Register-page flows (attendee/exhibitor/sponsor/
@@ -48,10 +49,17 @@ const registrationSchema = new Schema(
     // Sponsor only
     message: { type: String, trim: true },
 
-    // Volunteer only — the redeemed AccessCode's human-readable code, kept here too
-    // (not just on the AccessCode doc) so a registration record is self-explanatory
-    // on its own in exports/audits without a join.
+    // Volunteer and scholarship-attendee only — the redeemed AccessCode's
+    // human-readable code, kept here too (not just on the AccessCode doc) so a
+    // registration record is self-explanatory on its own in exports/audits without
+    // a join.
     accessCode: { type: String, trim: true, uppercase: true },
+
+    // Attendee only — set when accessCode above redeemed a 'scholarship'-type
+    // code. payment.controller.ts's initialize() discounts the charge by this
+    // percentage; 100 means the seat is fully comped and never touches Paystack
+    // at all (see registration.controller.ts's isFullyComped branch).
+    discountPercent: { type: Number, enum: ACCESS_CODE_DISCOUNTS },
 
     // Payment — paid attendee ticket categories only. 'not_required' covers free
     // categories and every non-attendee type; those never touch this beyond the default.

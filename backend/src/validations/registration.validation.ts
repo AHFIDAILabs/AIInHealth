@@ -18,6 +18,11 @@ const attendeeSchema = z.object({
   jobTitle: z.string().trim().optional(),
   country: z.string().trim().min(2, 'Enter your country'),
   groupAttendees: z.array(groupAttendeeSchema).max(50).optional(),
+  // Optional scholarship/discount code — shape-validated only here, same as
+  // volunteerSchema's accessCode. Verified against the AccessCode collection (must
+  // be type 'scholarship') in registration.controller.ts, which is also where its
+  // discountPercent gets copied onto this registration.
+  accessCode: z.string().trim().max(32).optional().or(z.literal('')),
 });
 
 const exhibitorSchema = z.object({
