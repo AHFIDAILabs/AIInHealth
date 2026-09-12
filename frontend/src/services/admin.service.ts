@@ -26,6 +26,8 @@ export interface AdminRegistration {
   productsDescription?: string;
   message?: string;
   accessCode?: string;
+  // Attendee only — set when accessCode above redeemed a 'scholarship'-type code.
+  discountPercent?: 25 | 50 | 100;
   paymentStatus?: 'not_required' | 'unpaid' | 'paid' | 'failed';
   paymentReference?: string;
   amountKobo?: number;

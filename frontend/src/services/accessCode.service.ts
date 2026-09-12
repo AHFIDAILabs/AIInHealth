@@ -1,10 +1,15 @@
 import { api } from './api';
 
-export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary'] as const;
+export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship'] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;
 export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];
+
+// The only discount tiers a scholarship code can carry — required when type is
+// 'scholarship', rejected otherwise (backend/src/validations/accessCode.validation.ts).
+export const ACCESS_CODE_DISCOUNTS = [25, 50, 100] as const;
+export type AccessCodeDiscount = (typeof ACCESS_CODE_DISCOUNTS)[number];
 
 export interface AdminAccessCode {
   _id: string;
@@ -17,6 +22,8 @@ export interface AdminAccessCode {
   usedAt?: string;
   expiresAt?: string;
   createdAt: string;
+  // scholarship-type only
+  discountPercent?: AccessCodeDiscount;
 }
 
 // One code per email — see backend/src/validations/accessCode.validation.ts for
@@ -25,6 +32,8 @@ export interface GenerateAccessCodesInput {
   type: AccessCodeType;
   emails: string[];
   expiresAt?: string;
+  // Required by the backend when type is 'scholarship', rejected otherwise.
+  discountPercent?: AccessCodeDiscount;
 }
 
 export interface Paginated<T> {

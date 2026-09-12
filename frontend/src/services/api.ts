@@ -5,7 +5,11 @@ export const api = axios.create({
   withCredentials: true, // cookies travel automatically — this code never touches tokens directly
 });
 
-let isRefreshing = false;
+// Shared in-flight refresh promise: concurrent 401s (e.g. a dashboard firing
+// several requests at once right as the session expires) all await the same
+// refresh instead of racing their own, so every one of them gets retried
+// after it resolves rather than only the first while the rest reject silently.
+let refreshPromise: Promise<unknown> | null = null;
 
 api.interceptors.response.use(
   (res) => res,
@@ -16,16 +20,17 @@ api.interceptors.response.use(
     // the admin refresh-token dance or bounce the visitor to /admin/login.
     const isAuthRoute = url.includes('/auth/') || url.includes('/delegate/');
 
-    if (error.response?.status === 401 && !original._retry && !isRefreshing && !isAuthRoute) {
+    if (error.response?.status === 401 && !original._retry && !isAuthRoute) {
       original._retry = true;
-      isRefreshing = true;
+      refreshPromise ??= api.post('/auth/refresh').finally(() => {
+        refreshPromise = null;
+      });
+
       try {
-        await api.post('/auth/refresh');
+        await refreshPromise;
         return api(original);
       } catch {
         window.location.href = '/admin/login';
-      } finally {
-        isRefreshing = false;
       }
     }
     return Promise.reject(error);

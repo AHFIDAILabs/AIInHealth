@@ -362,6 +362,12 @@ export const RegistrationsPage = () => {
                   {active.productsDescription && <DetailRow label="Products" value={active.productsDescription} />}
                   {active.message && <DetailRow label="Message" value={active.message} />}
                   {active.accessCode && <DetailRow label="Access Code" value={active.accessCode} />}
+                  {typeof active.discountPercent === 'number' && (
+                    <DetailRow
+                      label="Discount"
+                      value={active.discountPercent === 100 ? 'Full scholarship (100%)' : `${active.discountPercent}% scholarship`}
+                    />
+                  )}
                   {active.paymentStatus && active.paymentStatus !== 'not_required' && (
                     <DetailRow label="Payment" value={active.paymentStatus} />
                   )}

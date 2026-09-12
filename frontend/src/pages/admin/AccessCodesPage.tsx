@@ -8,9 +8,11 @@ import {
   adminSendAccessCode,
   ACCESS_CODE_TYPES,
   ACCESS_CODE_STATUSES,
+  ACCESS_CODE_DISCOUNTS,
   type AdminAccessCode,
   type AccessCodeType,
   type AccessCodeStatus,
+  type AccessCodeDiscount,
 } from '../../services/accessCode.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
@@ -24,6 +26,7 @@ const TYPE_LABEL: Record<AccessCodeType, string> = {
   volunteer: 'Volunteer',
   keynote_speaker: 'Keynote Speaker',
   complimentary: 'Complimentary',
+  scholarship: 'Scholarship (Discount)',
 };
 
 const STATUS_STYLE: Record<AccessCodeStatus, string> = {
@@ -36,8 +39,9 @@ interface FormState {
   type: AccessCodeType;
   emailsText: string;
   expiresAt: string;
+  discountPercent: AccessCodeDiscount | '';
 }
-const EMPTY_FORM: FormState = { type: ACCESS_CODE_TYPES[0], emailsText: '', expiresAt: '' };
+const EMPTY_FORM: FormState = { type: ACCESS_CODE_TYPES[0], emailsText: '', expiresAt: '', discountPercent: '' };
 
 export const AccessCodesPage = () => {
   const toast = useToast();
@@ -95,10 +99,19 @@ export const AccessCodesPage = () => {
       setFormError('Add at least one email — one per line.');
       return;
     }
+    if (form.type === 'scholarship' && !form.discountPercent) {
+      setFormError('Choose a discount tier for a scholarship code.');
+      return;
+    }
     setSaving(true);
     setFormError('');
     try {
-      const created = await adminGenerateAccessCodes({ type: form.type, emails: parsedEmails, expiresAt: form.expiresAt || undefined });
+      const created = await adminGenerateAccessCodes({
+        type: form.type,
+        emails: parsedEmails,
+        expiresAt: form.expiresAt || undefined,
+        discountPercent: form.type === 'scholarship' ? (form.discountPercent as AccessCodeDiscount) : undefined,
+      });
       setItems((prev) => [...created, ...prev]);
       toast('success', `${created.length} code${created.length === 1 ? '' : 's'} generated and emailed`);
       setFormOpen(false);
@@ -249,7 +262,16 @@ export const AccessCodesPage = () => {
                         </button>
                       </div>
                     </td>
-                    {!contentEditorOnly && <td className="px-3 py-3 text-slate-500">{TYPE_LABEL[c.type]}</td>}
+                    {!contentEditorOnly && (
+                      <td className="px-3 py-3 text-slate-500">
+                        {TYPE_LABEL[c.type]}
+                        {c.type === 'scholarship' && c.discountPercent && (
+                          <span className="ml-1.5 rounded-full bg-orange/10 px-2 py-0.5 text-[11px] font-semibold text-orange">
+                            {c.discountPercent}%
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-3 py-3 text-slate-500">
                       {c.issuedTo}
                       {c.usedByRegistration ? (
@@ -328,13 +350,36 @@ export const AccessCodesPage = () => {
               <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
                 {formError && <Banner variant="error">{formError}</Banner>}
                 {!contentEditorOnly && (
-                  <AdminSelect label="Type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as AccessCodeType })}>
+                  <AdminSelect
+                    label="Type"
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value as AccessCodeType, discountPercent: '' })}
+                  >
                     {ACCESS_CODE_TYPES.map((t) => (
                       <option key={t} value={t}>
                         {TYPE_LABEL[t]}
                       </option>
                     ))}
                   </AdminSelect>
+                )}
+                {form.type === 'scholarship' && (
+                  <div>
+                    <AdminSelect
+                      label="Discount"
+                      value={form.discountPercent}
+                      onChange={(e) => setForm({ ...form, discountPercent: (e.target.value ? Number(e.target.value) : '') as AccessCodeDiscount | '' })}
+                    >
+                      <option value="">Choose a tier…</option>
+                      {ACCESS_CODE_DISCOUNTS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}% off{d === 100 ? ' (fully covered)' : ''}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      Applied automatically when the recipient enters this code on the Attendee registration form.
+                    </p>
+                  </div>
                 )}
                 <div>
                   <AdminTextarea

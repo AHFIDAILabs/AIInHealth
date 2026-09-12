@@ -52,9 +52,9 @@ export const NewHome = () => {
           full-bleed at the top rather than floating with a visible gap the
           way the original static mockup did on a non-fixed white header. */}
       <section className="relative isolate overflow-hidden bg-navy">
-        <div className="flex justify-between w-full gap-0 px-0 pt-20 lg:grid-cols-[1.15fr_1fr] lg:gap-6 lg:px-6 lg:pt-24 lg:pb-6">
+        <div className="flex flex-col w-full gap-6 px-0 pt-20 lg:grid lg:grid-cols-[1.15fr_1fr] lg:gap-6 lg:px-6 lg:pt-24 lg:pb-6">
           {/* Left panel — photo + headline */}
-          <div className="relative flex min-h-[560px] flex-col w-[70%] justify-center gap-6 overflow-hidden px-6 py-14 sm:px-10 lg:rounded-3xl lg:px-12">
+          <div className="relative flex min-h-[480px] flex-col w-full justify-center gap-6 overflow-hidden px-6 py-14 sm:px-10 lg:min-h-[560px] lg:rounded-3xl lg:px-12">
             <img src={heroBg} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-b from-navy/35 to-navy/75" />
 
@@ -90,11 +90,15 @@ export const NewHome = () => {
                   Nigeria &amp; the AU region
                 </span>
               </motion.div>
+
+              <motion.div custom={4} variants={fadeUp} className="relative mt-8 max-w-lg">
+                <CountdownCard />
+              </motion.div>
             </motion.div>
           </div>
 
           {/* Right panel — theme card + primary CTAs */}
-          <Reveal delay={0.25} className="flex w-[30%] flex-col gap-4 p-2 sm:px-10 lg:px-0 lg:py-0 lg:rounded-3xl bg-white">
+          <Reveal delay={0.25} className="flex w-full flex-col gap-4 p-2 sm:px-10 lg:px-0 lg:py-0 lg:rounded-3xl bg-white">
             <div className="flex flex-1 flex-col gap-4 rounded-3xl  bg-white p-0">
               {/* Placeholder until the real theme-card image asset is dropped in —
                   see the TODO at the top of this file. */}
@@ -130,13 +134,6 @@ export const NewHome = () => {
 
       {/* Backed-by strip — unchanged, real published partners */}
       <ConvenedWith />
-
-      {/* Standalone dark countdown card, matching the mockup treatment */}
-      <section className="bg-offwhite px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl">
-          <CountdownCard />
-        </div>
-      </section>
 
       {/* Speakers — unchanged, real published speakers */}
       <ConfirmedVoices />

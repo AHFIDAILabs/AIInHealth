@@ -38,6 +38,8 @@ const schema = z.object({
   jobTitle: z.string().trim().optional(),
   country: z.string().trim().min(2, 'Enter your country'),
   groupAttendees: z.array(groupAttendeeSchema).optional(),
+  // Optional — see the note above the field for why.
+  accessCode: z.string().trim().max(32).optional().or(z.literal('')),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -46,6 +48,7 @@ export const AttendeeForm = () => {
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [discountApplied, setDiscountApplied] = useState<25 | 50 | null>(null);
 
   const {
     register,
@@ -69,8 +72,14 @@ export const AttendeeForm = () => {
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
     try {
-      const { id, message, requiresPayment } = await submitRegistration({ type: 'attendee', ...values });
+      const accessCode = values.accessCode?.trim();
+      const { id, message, requiresPayment, discountApplied: applied } = await submitRegistration({
+        type: 'attendee',
+        ...values,
+        accessCode: accessCode ? accessCode.toUpperCase() : undefined,
+      });
       if (requiresPayment) {
+        setDiscountApplied(applied ?? null);
         setRedirecting(true);
         const { authorizationUrl } = await initializePayment(id);
         window.location.href = authorizationUrl;
@@ -86,6 +95,7 @@ export const AttendeeForm = () => {
   const resetAll = () => {
     reset({ groupAttendees: [] });
     setConfirmation(null);
+    setDiscountApplied(null);
     setStep(0);
   };
 
@@ -96,6 +106,11 @@ export const AttendeeForm = () => {
       <div className="flex flex-col items-center gap-4 py-12 text-center">
         <div className="h-9 w-9 animate-spin rounded-full border-2 border-slate-200 border-t-orange" />
         <p className="font-display text-lg font-semibold text-navy">Redirecting you to secure payment…</p>
+        {discountApplied && (
+          <p className="rounded-full bg-success/10 px-4 py-1.5 text-sm font-semibold text-success">
+            ✓ {discountApplied}% scholarship discount applied
+          </p>
+        )}
         <p className="max-w-sm text-sm text-slate-500">
           You&rsquo;ll complete payment via Paystack, then return here automatically once it&rsquo;s confirmed.
         </p>
@@ -190,6 +205,20 @@ export const AttendeeForm = () => {
                 })}
               </div>
               {errors.ticketCategory && <p className="mt-2 text-xs font-medium text-danger">{errors.ticketCategory.message}</p>}
+            </div>
+
+            <div>
+              <LightField
+                label="Scholarship / Access Code (optional)"
+                placeholder="SCH-XXXXXX — leave blank if you don't have one"
+                error={errors.accessCode?.message}
+                {...register('accessCode')}
+                className="uppercase tracking-wider"
+              />
+              <p className="mt-1.5 text-xs text-slate-400">
+                Have a scholarship code? Enter it to apply your discount — it's checked and applied automatically
+                before you're sent to payment.
+              </p>
             </div>
 
             <div>

@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Reveal } from '../ui/Reveal';
 import { listPublicPartners, PARTNER_CATEGORIES, type AdminPartner } from '../../services/partner.service';
 
 // Matches the reference layout: a plain, bold centered headline per group,
 // then a wide multi-column grid of full-color logos with no card wrappers,
 // no swatches, no grayscale-on-hover treatment — just the logos themselves,
-// left-aligned within their grid cells. A dark pill CTA sits between groups,
-// same as the reference's "Exhibit at Web Summit Vancouver" button.
+// left-aligned within their grid cells. No "Become a Partner" CTA here —
+// that ask lives in the hero and closing CTA sections instead.
 //
 // Grouped by the real PartnerCategory field (Government / Multilateral /
 // Private Sector / Academia) — only categories with at least one published
@@ -75,29 +74,9 @@ export const PartnersShowcase = () => {
                   })}
                 </div>
               </Reveal>
-
-              {gi < grouped.length - 1 && (
-                <Reveal delay={gi * 0.06 + 0.1} className="mt-12 flex justify-center">
-                  <Link
-                    to="/partners"
-                    className="rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-navy-secondary"
-                  >
-                    Become a Partner
-                  </Link>
-                </Reveal>
-              )}
             </div>
           ))}
         </div>
-
-        <Reveal delay={0.2} className="mt-14 flex justify-center">
-          <Link
-            to="/partners"
-            className="rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-navy-secondary"
-          >
-            Become a Partner
-          </Link>
-        </Reveal>
       </div>
     </section>
   );
