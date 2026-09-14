@@ -52,7 +52,7 @@ export const NewHome = () => {
           full-bleed at the top rather than floating with a visible gap the
           way the original static mockup did on a non-fixed white header. */}
       <section className="relative isolate overflow-hidden bg-navy">
-        <div className="flex flex-col w-full gap-6 px-0 pt-20 lg:grid lg:grid-cols-[1.15fr_1fr] lg:gap-6 lg:px-6 lg:pt-24 lg:pb-6">
+        <div className="flex flex-col w-full gap-6 px-0 pt-20 lg:grid lg:grid-cols-[7fr_3fr] lg:gap-6 lg:px-6 lg:pt-24 lg:pb-6">
           {/* Left panel — photo + headline */}
           <div className="relative flex min-h-[480px] flex-col w-full justify-center gap-6 overflow-hidden px-6 py-14 sm:px-10 lg:min-h-[560px] lg:rounded-3xl lg:px-12">
             <img src={heroBg} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />

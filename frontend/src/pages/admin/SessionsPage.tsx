@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, X, CalendarDays, Pencil, Trash2, AlertTriangle, Search } from 'lucide-react';
+import { Plus, X, CalendarDays, Pencil, Trash2, AlertTriangle, Search, Ban } from 'lucide-react';
 import {
   adminListSessions,
   adminCreateSession,
   adminUpdateSession,
   adminDeleteSession,
   adminCheckConflict,
+  adminAddSessionRsvp,
+  adminRemoveSessionRsvp,
   SESSION_DAYS,
   SESSION_FORMATS,
   type AdminSession,
@@ -32,6 +34,8 @@ const EMPTY_FORM: SessionInput = {
   description: '',
   speakers: [],
   isPublished: false,
+  requiresRsvp: false,
+  maxAttendees: undefined,
 };
 
 const DAY_LABEL: Record<SessionDay, string> = { day1: 'Day 1 — 19 Oct', day2: 'Day 2 — 20 Oct' };
@@ -55,6 +59,11 @@ export const SessionsPage = () => {
 
   const [toDelete, setToDelete] = useState<AdminSession | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [rsvpEmailsText, setRsvpEmailsText] = useState('');
+  const [rsvpSaving, setRsvpSaving] = useState(false);
+  const [rsvpRemovingEmail, setRsvpRemovingEmail] = useState<string | null>(null);
+  const [rsvpError, setRsvpError] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -108,6 +117,8 @@ export const SessionsPage = () => {
     setForm(EMPTY_FORM);
     setFormError('');
     setConflictWarning([]);
+    setRsvpEmailsText('');
+    setRsvpError('');
     setFormOpen(true);
   };
 
@@ -124,7 +135,11 @@ export const SessionsPage = () => {
       description: session.description ?? '',
       speakers: session.speakers.map((s) => s._id),
       isPublished: session.isPublished,
+      requiresRsvp: session.requiresRsvp ?? false,
+      maxAttendees: session.maxAttendees,
     });
+    setRsvpEmailsText('');
+    setRsvpError('');
     setFormError('');
     setConflictWarning([]);
     setFormOpen(true);
@@ -144,6 +159,10 @@ export const SessionsPage = () => {
     }
     if (form.endTime <= form.startTime) {
       setFormError('End time must be after start time.');
+      return;
+    }
+    if (form.requiresRsvp && !form.maxAttendees) {
+      setFormError('Set a maximum number of attendees for an RSVP session.');
       return;
     }
     setSaving(true);
@@ -188,6 +207,42 @@ export const SessionsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const rsvpEmails = rsvpEmailsText
+    .split(/[\n,]/)
+    .map((e) => e.trim())
+    .filter(Boolean);
+
+  const addRsvpEmails = async () => {
+    if (!editing || rsvpEmails.length === 0) return;
+    setRsvpSaving(true);
+    setRsvpError('');
+    try {
+      const updated = await adminAddSessionRsvp(editing._id, rsvpEmails);
+      setEditing(updated);
+      setItems((prev) => prev.map((s) => (s._id === updated._id ? updated : s)));
+      setRsvpEmailsText('');
+      toast('success', `${rsvpEmails.length} email${rsvpEmails.length === 1 ? '' : 's'} added to the RSVP list`);
+    } catch (err) {
+      setRsvpError(getApiErrorMessage(err));
+    } finally {
+      setRsvpSaving(false);
+    }
+  };
+
+  const removeRsvpEmail = async (email: string) => {
+    if (!editing) return;
+    setRsvpRemovingEmail(email);
+    try {
+      const updated = await adminRemoveSessionRsvp(editing._id, email);
+      setEditing(updated);
+      setItems((prev) => prev.map((s) => (s._id === updated._id ? updated : s)));
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setRsvpRemovingEmail(null);
     }
   };
 
@@ -281,9 +336,14 @@ export const SessionsPage = () => {
                           </td>
                           <td className="px-3 py-3">
                             <p className="font-medium text-navy">{s.title}</p>
-                            <div className="mt-1 flex gap-1.5">
+                            <div className="mt-1 flex flex-wrap gap-1.5">
                               <span className="rounded-full bg-navy-secondary px-2 py-0.5 text-[10px] font-medium text-orange">{s.track}</span>
                               <span className="rounded-full bg-offwhite px-2 py-0.5 text-[10px] font-medium text-slate-500">{s.format}</span>
+                              {s.requiresRsvp && (
+                                <span className="rounded-full bg-chart-violet/15 px-2 py-0.5 text-[10px] font-semibold text-chart-violet">
+                                  RSVP {s.rsvpList?.length ?? 0}/{s.maxAttendees ?? '—'}
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className="px-3 py-3 text-slate-500">{s.room}</td>
@@ -447,6 +507,78 @@ export const SessionsPage = () => {
                 </div>
 
                 <AdminToggle label="Published" checked={!!form.isPublished} onChange={(v) => setForm({ ...form, isPublished: v })} />
+
+                <AdminToggle
+                  label="Requires RSVP (limited capacity)"
+                  checked={!!form.requiresRsvp}
+                  onChange={(v) => setForm({ ...form, requiresRsvp: v })}
+                />
+
+                {form.requiresRsvp && (
+                  <>
+                    <AdminInput
+                      label="Max Attendees"
+                      type="number"
+                      min={1}
+                      value={form.maxAttendees ?? ''}
+                      onChange={(e) => setForm({ ...form, maxAttendees: e.target.value ? Number(e.target.value) : undefined })}
+                    />
+
+                    {editing && (
+                      <div className="rounded-xl border border-slate-200 p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[13px] font-semibold text-navy">RSVP List</p>
+                          <span className="text-xs font-medium text-slate-500">
+                            {editing.rsvpList?.length ?? 0} / {form.maxAttendees ?? '—'}
+                          </span>
+                        </div>
+
+                        {rsvpError && (
+                          <p className="mt-2 text-xs font-medium text-danger">{rsvpError}</p>
+                        )}
+
+                        <div className="mt-3">
+                          <AdminTextarea
+                            label="Add Emails"
+                            value={rsvpEmailsText}
+                            onChange={(e) => setRsvpEmailsText(e.target.value)}
+                            placeholder={'One VIP, or a whole pasted batch — one per line or comma-separated:\nvip@example.com\nattendee2@example.com'}
+                          />
+                          <button
+                            onClick={addRsvpEmails}
+                            disabled={rsvpSaving || rsvpEmails.length === 0}
+                            className="mt-2 w-full rounded-lg bg-navy py-2 text-[13px] font-semibold text-white hover:bg-navy-secondary disabled:opacity-60"
+                          >
+                            {rsvpSaving ? 'Adding…' : `Add${rsvpEmails.length ? ` (${rsvpEmails.length})` : ''}`}
+                          </button>
+                        </div>
+
+                        {(editing.rsvpList?.length ?? 0) > 0 && (
+                          <div className="mt-3 max-h-40 overflow-y-auto rounded-lg border border-slate-200">
+                            {editing.rsvpList!.map((r) => (
+                              <div key={r.email} className="flex items-center justify-between px-3 py-2 text-[13px] hover:bg-offwhite">
+                                <div>
+                                  <span className="text-navy">{r.email}</span>
+                                  <span className="ml-1.5 rounded-full bg-offwhite px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
+                                    {r.source}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => removeRsvpEmail(r.email)}
+                                  disabled={rsvpRemovingEmail === r.email}
+                                  className="rounded-md p-1 text-slate-400 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                                  title="Remove"
+                                >
+                                  <Ban size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="flex gap-2.5 border-t border-slate-100 px-5 py-4">

@@ -1,14 +1,25 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { CalendarCheck } from 'lucide-react';
 import { Reveal } from '../ui/Reveal';
 import { ButtonLink } from '../ui/Button';
+import { SessionRsvpModal } from '../ui/SessionRsvpModal';
 import { listPublicSessions, type AdminSession, type SessionDay } from '../../services/session.service';
+
+interface RowSpeaker {
+  _id: string;
+  fullName: string;
+  photoUrl?: string;
+}
 
 interface Row {
   key: string;
   time: string;
   title: string;
   track: string;
+  description?: string;
+  speakers?: RowSpeaker[];
+  requiresRsvp?: boolean;
 }
 
 const DAY_LABEL: Record<SessionDay, string> = { day1: 'Day 1 · 19 Oct', day2: 'Day 2 · 20 Oct' };
@@ -38,6 +49,9 @@ const fromReal = (s: AdminSession): Row => ({
   time: `${s.startTime} – ${s.endTime}`,
   title: s.title,
   track: s.track,
+  description: s.description,
+  speakers: s.speakers,
+  requiresRsvp: s.requiresRsvp,
 });
 
 // Homepage teaser version of the full /agenda page: day tabs + a trimmed
@@ -47,6 +61,7 @@ const fromReal = (s: AdminSession): Row => ({
 export const ProgrammeTimeline = () => {
   const [dayKey, setDayKey] = useState<SessionDay>('day1');
   const [realSessions, setRealSessions] = useState<AdminSession[] | null>(null);
+  const [rsvpSession, setRsvpSession] = useState<{ _id: string; title: string } | null>(null);
 
   useEffect(() => {
     listPublicSessions()
@@ -108,10 +123,39 @@ export const ProgrammeTimeline = () => {
               <div key={row.key} className="relative mb-5 last:mb-0">
                 <span className="absolute -left-8 top-6 h-[18px] w-[18px] rounded-full border-[3px] border-navy bg-white" />
                 <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-navy-secondary">
-                    {row.time} &middot; {row.track}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-navy-secondary">
+                      {row.time} &middot; {row.track}
+                    </p>
+                    {row.requiresRsvp && (
+                      <button
+                        type="button"
+                        onClick={() => setRsvpSession({ _id: row.key, title: row.title })}
+                        className="flex shrink-0 items-center gap-1 rounded-full bg-orange/10 px-2.5 py-1 text-[11px] font-semibold text-orange hover:bg-orange/20"
+                      >
+                        <CalendarCheck size={12} /> RSVP
+                      </button>
+                    )}
+                  </div>
                   <h3 className="mt-2 font-display text-lg font-semibold text-navy">{row.title}</h3>
+                  {row.description && <p className="mt-2 text-sm leading-relaxed text-slate-500">{row.description}</p>}
+                  {row.speakers && row.speakers.length > 0 && (
+                    <div className="mt-3 flex -space-x-2">
+                      {row.speakers.map((sp) => (
+                        <span
+                          key={sp._id}
+                          title={sp.fullName}
+                          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-navy text-[11px] font-semibold text-white"
+                        >
+                          {sp.photoUrl ? (
+                            <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full rounded-full object-cover" />
+                          ) : (
+                            sp.fullName[0]
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -128,6 +172,8 @@ export const ProgrammeTimeline = () => {
           </ButtonLink>
         </Reveal>
       </div>
+
+      <SessionRsvpModal session={rsvpSession} onClose={() => setRsvpSession(null)} />
     </section>
   );
 };

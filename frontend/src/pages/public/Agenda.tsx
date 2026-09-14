@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Clock, MapPin, Mic2, Users, Rocket, FileText, Handshake, Landmark, Network, type LucideIcon } from 'lucide-react';
+import { Clock, MapPin, Mic2, Users, Rocket, FileText, Handshake, Landmark, Network, CalendarCheck, type LucideIcon } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
+import { SessionRsvpModal } from '../../components/ui/SessionRsvpModal';
 import { listPublicSessions, type AdminSession, type SessionDay, type SessionFormat } from '../../services/session.service';
+
+interface DisplaySpeaker {
+  _id: string;
+  fullName: string;
+  photoUrl?: string;
+}
 
 interface DisplaySession {
   key: string;
@@ -14,6 +21,9 @@ interface DisplaySession {
   icon: LucideIcon;
   room?: string;
   speakerNames?: string;
+  speakers?: DisplaySpeaker[];
+  description?: string;
+  requiresRsvp?: boolean;
 }
 
 const FORMAT_ICON: Record<SessionFormat, LucideIcon> = {
@@ -33,6 +43,9 @@ const fromRealSession = (s: AdminSession): DisplaySession => ({
   icon: FORMAT_ICON[s.format] ?? Users,
   room: s.room,
   speakerNames: s.speakers.length > 0 ? s.speakers.map((sp) => sp.fullName).join(', ') : undefined,
+  speakers: s.speakers,
+  description: s.description,
+  requiresRsvp: s.requiresRsvp,
 });
 
 // Illustrative fallback — shown for a day only once it has zero real published
@@ -80,6 +93,7 @@ const STATIC_DAYS: { key: SessionDay; label: string; date: string; theme: string
 export const Agenda = () => {
   const [dayKey, setDayKey] = useState<SessionDay>('day1');
   const [realSessions, setRealSessions] = useState<AdminSession[] | null>(null);
+  const [rsvpSession, setRsvpSession] = useState<{ _id: string; title: string } | null>(null);
 
   useEffect(() => {
     listPublicSessions()
@@ -160,13 +174,44 @@ export const Agenda = () => {
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-secondary text-orange">
                         <s.icon size={16} />
                       </span>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-navy">{s.title}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <p className="font-semibold text-navy">{s.title}</p>
+                          {s.requiresRsvp && (
+                            <button
+                              type="button"
+                              onClick={() => setRsvpSession({ _id: s.key, title: s.title })}
+                              className="flex shrink-0 items-center gap-1 rounded-full bg-orange/10 px-2.5 py-1 text-[11px] font-semibold text-orange hover:bg-orange/20"
+                            >
+                              <CalendarCheck size={12} /> RSVP
+                            </button>
+                          )}
+                        </div>
                         <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-slate-400">
                           {s.track}
                           {s.room && <span className="normal-case tracking-normal"> &middot; {s.room}</span>}
                         </p>
-                        {s.speakerNames && <p className="mt-1 text-xs text-slate-500">{s.speakerNames}</p>}
+                        {s.description && <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{s.description}</p>}
+                        {s.speakers && s.speakers.length > 0 && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <div className="flex -space-x-2">
+                              {s.speakers.map((sp) => (
+                                <span
+                                  key={sp._id}
+                                  title={sp.fullName}
+                                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-navy text-[10px] font-semibold text-white"
+                                >
+                                  {sp.photoUrl ? (
+                                    <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full rounded-full object-cover" />
+                                  ) : (
+                                    sp.fullName[0]
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                            <p className="text-xs text-slate-500">{s.speakerNames}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Reveal>
@@ -189,6 +234,8 @@ export const Agenda = () => {
           </ButtonLink>
         </Reveal>
       </section>
+
+      <SessionRsvpModal session={rsvpSession} onClose={() => setRsvpSession(null)} />
     </>
   );
 };

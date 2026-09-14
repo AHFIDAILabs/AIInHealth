@@ -21,6 +21,12 @@ export interface SessionSpeakerRef {
   photoUrl?: string;
 }
 
+export interface SessionRsvpEntry {
+  email: string;
+  source: 'admin' | 'self';
+  addedAt: string;
+}
+
 export interface AdminSession {
   _id: string;
   day: SessionDay;
@@ -35,6 +41,13 @@ export interface AdminSession {
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
+  // Limited-capacity ("special") session support. requiresRsvp/maxAttendees are
+  // present on both public and admin fetches (harmless flags/numbers); rsvpList
+  // — the actual attendee emails — is only ever populated on ADMIN fetches, since
+  // the public GET /sessions route strips it (session.controller.ts's `list`).
+  requiresRsvp?: boolean;
+  maxAttendees?: number;
+  rsvpList?: SessionRsvpEntry[];
 }
 
 export interface SessionInput {
@@ -48,6 +61,8 @@ export interface SessionInput {
   description?: string;
   speakers?: string[];
   isPublished?: boolean;
+  requiresRsvp?: boolean;
+  maxAttendees?: number;
 }
 
 export interface ListSessionsParams {
@@ -117,4 +132,32 @@ export const adminUpdateSession = async (
 
 export const adminDeleteSession = async (id: string): Promise<void> => {
   await api.delete(`/admin/sessions/${id}`);
+};
+
+// Admin-only — add one or many emails to a session's RSVP allow-list. Not capped
+// by maxAttendees (only the public self-service claim below is); safe to call
+// with a single email (one VIP) or a whole pasted batch (mass-add).
+export const adminAddSessionRsvp = async (sessionId: string, emails: string[]): Promise<AdminSession> => {
+  const res = await api.post<{ success: true; data: AdminSession }>(`/admin/sessions/${sessionId}/rsvp`, { emails });
+  return res.data.data;
+};
+
+export const adminRemoveSessionRsvp = async (sessionId: string, email: string): Promise<AdminSession> => {
+  const res = await api.delete<{ success: true; data: AdminSession }>(
+    `/admin/sessions/${sessionId}/rsvp/${encodeURIComponent(email)}`
+  );
+  return res.data.data;
+};
+
+export interface SessionRsvpResult {
+  status: 'confirmed' | 'already_rsvpd';
+  message: string;
+}
+
+// Public — a visitor claiming/checking their own spot on a limited-capacity
+// session. Throws (via axios) on a 422 RSVP_FULL — callers should catch that and
+// show it with getApiErrorMessage, same as every other public form in this app.
+export const submitSessionRsvp = async (sessionId: string, email: string): Promise<SessionRsvpResult> => {
+  const res = await api.post<{ success: true; data: SessionRsvpResult }>(`/sessions/${sessionId}/rsvp`, { email });
+  return res.data.data;
 };
