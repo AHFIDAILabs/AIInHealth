@@ -16,6 +16,26 @@ const sessionSchema = new Schema(
     // Set by the session-reminder cron job once it's fired for this session, so a
     // 5-minute polling loop never sends the same reminder twice.
     reminderSent: { type: Boolean, default: false },
+
+    // Limited-capacity ("special") session support — see session.controller.ts's
+    // publicRsvp/adminAddRsvp/adminRemoveRsvp. requiresRsvp just flags the session
+    // as needing the public "RSVP" badge/modal; maxAttendees is the cap the public
+    // self-service claim path enforces (admin add/remove is never capped — see
+    // adminAddRsvp). rsvpList is intentionally excluded from the PUBLIC session
+    // list route (session.controller.ts's `list`) — it holds real attendee emails
+    // and is admin-visible only.
+    requiresRsvp: { type: Boolean, default: false },
+    maxAttendees: { type: Number, min: 1 },
+    rsvpList: [
+      {
+        _id: false,
+        email: { type: String, required: true, trim: true, lowercase: true },
+        // 'admin' = added via the admin panel (single VIP add or bulk-paste);
+        // 'self' = the visitor claimed their own spot through the public modal.
+        source: { type: String, enum: ['admin', 'self'], required: true },
+        addedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );

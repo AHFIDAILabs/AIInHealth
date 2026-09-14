@@ -100,6 +100,8 @@ router.post('/sessions/check-conflict', requireRole(...contentRoles), sessionCon
 router.post('/sessions', requireRole(...contentRoles), sessionController.adminCreate);
 router.patch('/sessions/:id', requireRole(...contentRoles), sessionController.adminUpdate);
 router.delete('/sessions/:id', requireRole(...contentRoles), sessionController.adminDelete);
+router.post('/sessions/:id/rsvp', requireRole(...contentRoles), sessionController.adminAddRsvp);
+router.delete('/sessions/:id/rsvp/:email', requireRole(...contentRoles), sessionController.adminRemoveRsvp);
 
 router.get('/partners', requireRole(...contentRoles), partnerController.adminList);
 router.post('/partners', requireRole(...contentRoles), partnerController.adminCreate);

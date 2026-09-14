@@ -91,6 +91,18 @@ export const paymentLimiter = rateLimit({
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many payment requests. Try again in 15 minutes.' } },
 });
 
+// Public session RSVP claim — keyed by email+IP like the other public-write
+// limiters above. Guards against both spam-claiming limited seats and using this
+// endpoint to probe/enumerate whether a given email is already on a session's list.
+export const rsvpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: emailKey,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many attempts. Try again in 15 minutes.' } },
+});
+
 export const abstractLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,

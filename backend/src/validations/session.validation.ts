@@ -15,6 +15,18 @@ const baseSessionShape = {
   description: z.string().trim().max(3000).optional(),
   speakers: z.array(objectId).max(20).optional(),
   isPublished: z.boolean().optional(),
+  requiresRsvp: z.boolean().optional(),
+  maxAttendees: z.number().int().positive().optional(),
+};
+
+// requiresRsvp needs a maxAttendees to mean anything — enforced here for create
+// (full shape always present) and again in session.controller.ts for update
+// (whose body is a .partial(), so this same cross-field check can't run against
+// a possibly-incomplete patch without also knowing the session's current state).
+const requiresRsvpNeedsMax = <T extends { requiresRsvp?: boolean; maxAttendees?: number }>(data: T, ctx: z.RefinementCtx) => {
+  if (data.requiresRsvp && !data.maxAttendees) {
+    ctx.addIssue({ code: 'custom', path: ['maxAttendees'], message: 'Set a maximum number of attendees for an RSVP session.' });
+  }
 };
 
 export const createSessionSchema = z.object({
@@ -23,11 +35,28 @@ export const createSessionSchema = z.object({
     .refine((data) => data.endTime > data.startTime, {
       message: 'End time must be after start time',
       path: ['endTime'],
-    }),
+    })
+    .superRefine(requiresRsvpNeedsMax),
 });
 
 export const updateSessionSchema = z.object({
   body: z.object(baseSessionShape).partial(),
+});
+
+export const addRsvpSchema = z.object({
+  params: z.object({ id: objectId }),
+  body: z.object({
+    emails: z.array(z.string().trim().toLowerCase().email('Enter a valid email')).min(1, 'Add at least one email').max(200),
+  }),
+});
+
+export const removeRsvpParamsSchema = z.object({
+  params: z.object({ id: objectId, email: z.string().trim().toLowerCase().email('Invalid email') }),
+});
+
+export const publicRsvpSchema = z.object({
+  params: z.object({ id: objectId }),
+  body: z.object({ email: z.string().trim().toLowerCase().email('Enter a valid email') }),
 });
 
 export const listSessionsQuerySchema = z.object({
@@ -53,3 +82,5 @@ export type CreateSessionInput = z.infer<typeof createSessionSchema>['body'];
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema>['body'];
 export type ListSessionsQuery = z.infer<typeof listSessionsQuerySchema>;
 export type CheckConflictInput = z.infer<typeof checkConflictSchema>['body'];
+export type AddRsvpInput = z.infer<typeof addRsvpSchema>['body'];
+export type PublicRsvpInput = z.infer<typeof publicRsvpSchema>['body'];
