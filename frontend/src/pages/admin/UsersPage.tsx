@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, X, UserCog } from 'lucide-react';
-import { adminListUsers, adminCreateUser, adminUpdateUser, type AdminStaffUser, type CreateUserInput } from '../../services/adminUser.service';
+import { Plus, X, UserCog, Trash2 } from 'lucide-react';
+import { adminListUsers, adminCreateUser, adminUpdateUser, adminDeleteUser, type AdminStaffUser, type CreateUserInput } from '../../services/adminUser.service';
 import { ROLES, type Role } from '../../services/auth.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
@@ -34,6 +34,9 @@ export const UsersPage = () => {
 
   const [toDeactivate, setToDeactivate] = useState<AdminStaffUser | null>(null);
   const [deactivating, setDeactivating] = useState(false);
+
+  const [toDelete, setToDelete] = useState<AdminStaffUser | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -93,6 +96,21 @@ export const UsersPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setDeactivating(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      await adminDeleteUser(toDelete._id);
+      setItems((prev) => prev.filter((i) => i._id !== toDelete._id));
+      toast('success', `${toDelete.fullName} removed`);
+      setToDelete(null);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -172,14 +190,24 @@ export const UsersPage = () => {
                           {u.isActive ? 'Active' : 'Deactivated'}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-right">
-                        <button
-                          disabled={isSelf}
-                          onClick={() => setToDeactivate(u)}
-                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-navy hover:border-danger/40 hover:text-danger disabled:opacity-40"
-                        >
-                          {u.isActive ? 'Deactivate' : 'Reactivate'}
-                        </button>
+                      <td className="px-3 py-3">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            disabled={isSelf}
+                            onClick={() => setToDeactivate(u)}
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-navy hover:border-danger/40 hover:text-danger disabled:opacity-40"
+                          >
+                            {u.isActive ? 'Deactivate' : 'Reactivate'}
+                          </button>
+                          <button
+                            disabled={isSelf}
+                            onClick={() => setToDelete(u)}
+                            title={isSelf ? "You can't delete your own account" : 'Delete'}
+                            className="rounded-md p-1.5 text-slate-400 hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -247,6 +275,17 @@ export const UsersPage = () => {
         loading={deactivating}
         onConfirm={confirmDeactivate}
         onCancel={() => setToDeactivate(null)}
+      />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title={`Delete ${toDelete?.fullName}?`}
+        description="This permanently removes their admin account. This can't be undone."
+        confirmLabel="Delete"
+        danger
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setToDelete(null)}
       />
     </div>
   );

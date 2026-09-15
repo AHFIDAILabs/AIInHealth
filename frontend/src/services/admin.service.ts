@@ -34,6 +34,8 @@ export interface AdminRegistration {
   paidAt?: string;
   checkedIn?: boolean;
   checkedInAt?: string;
+  // Independent of status — see backend Registration.model.ts's isActive comment.
+  isActive: boolean;
 }
 
 export interface RecentActivityItem {
@@ -100,6 +102,87 @@ export const listRegistrations = async (params: ListRegistrationsParams): Promis
 
 export const updateRegistrationStatus = async (id: string, status: RegistrationStatus): Promise<AdminRegistration> => {
   const res = await api.patch<{ success: true; data: AdminRegistration }>(`/admin/registrations/${id}`, { status });
+  return res.data.data;
+};
+
+// Same PATCH endpoint as updateRegistrationStatus above — the backend accepts
+// either/both fields in one body; this is just a thin wrapper so existing status
+// call sites don't need to change shape.
+export const updateRegistrationActive = async (id: string, isActive: boolean): Promise<AdminRegistration> => {
+  const res = await api.patch<{ success: true; data: AdminRegistration }>(`/admin/registrations/${id}`, { isActive });
+  return res.data.data;
+};
+
+export const deleteRegistration = async (id: string): Promise<void> => {
+  await api.delete(`/admin/registrations/${id}`);
+};
+
+// Admin-create — same per-type field sets as the public RegistrationPayload
+// union in registration.service.ts, minus the public-only friction (no
+// accessCode string for attendee/volunteer; admin sets a scholarship tier or
+// confirms directly instead). Individual only for attendee — no group-attendees
+// support in this first pass.
+export interface AdminCreateAttendeePayload {
+  type: 'attendee';
+  registrationMode: 'individual';
+  ticketCategory: TicketCategory;
+  fullName: string;
+  email: string;
+  phone: string;
+  organization?: string;
+  jobTitle?: string;
+  country: string;
+  scholarshipDiscount?: 25 | 50 | 100;
+}
+
+export interface AdminCreateExhibitorPayload {
+  type: 'exhibitor';
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  website?: string;
+  boothSize?: BoothSize;
+  productsDescription?: string;
+}
+
+export interface AdminCreateSponsorPayload {
+  type: 'sponsor';
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  website?: string;
+  message?: string;
+}
+
+export interface AdminCreateVolunteerPayload {
+  type: 'volunteer';
+  fullName: string;
+  email: string;
+  phone: string;
+}
+
+export type AdminCreateRegistrationPayload =
+  | AdminCreateAttendeePayload
+  | AdminCreateExhibitorPayload
+  | AdminCreateSponsorPayload
+  | AdminCreateVolunteerPayload;
+
+export interface AdminCreateRegistrationResult {
+  id: string;
+  status: RegistrationStatus;
+  requiresPayment: boolean;
+  // Attendee-with-payment only — lets the admin UI offer a copy-link fallback in
+  // case the auto-sent email doesn't land.
+  paymentLinkSent?: boolean;
+  authorizationUrl?: string;
+}
+
+export const adminCreateRegistration = async (
+  input: AdminCreateRegistrationPayload
+): Promise<AdminCreateRegistrationResult> => {
+  const res = await api.post<{ success: true; data: AdminCreateRegistrationResult }>('/admin/registrations', input);
   return res.data.data;
 };
 

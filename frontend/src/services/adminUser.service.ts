@@ -45,3 +45,7 @@ export const adminUpdateUser = async (
   const res = await api.patch<{ success: true; data: AdminStaffUser }>(`/admin/users/${id}`, input);
   return res.data.data;
 };
+
+export const adminDeleteUser = async (id: string): Promise<void> => {
+  await api.delete(`/admin/users/${id}`);
+};
