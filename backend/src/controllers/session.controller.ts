@@ -4,6 +4,7 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Session, type SessionDoc } from '../models/Session.model.js';
+import { Registration } from '../models/Registration.model.js';
 import {
   createSessionSchema,
   updateSessionSchema,
@@ -171,6 +172,17 @@ export const adminRemoveRsvp = catchAsync(async (req: Request, res: Response) =>
   res.json(new ApiResponse(session));
 });
 
+// A self-service claim is gated to actual registered attendees — anyone can
+// otherwise type an arbitrary email into the public modal and claim a limited
+// seat. Admin-added entries (adminAddRsvp above) are exempt on purpose: staff
+// explicitly vouching for a VIP by email is a different trust level than an
+// anonymous visitor claiming their own spot. 'confirmed' specifically (not just
+// "has a Registration doc") — a still-pending application isn't a real attendee
+// yet, matching how payment/check-in already treat 'confirmed' as the real
+// attendee status.
+const isRegisteredAttendee = async (email: string): Promise<boolean> =>
+  Registration.exists({ $or: [{ email }, { contactEmail: email }], status: 'confirmed' }).then(Boolean);
+
 // POST /sessions/:id/rsvp — public. A pure self-service claim: already-on-the-list
 // is a no-op confirmation, a fresh email under the cap gets added right here, and
 // a fresh email at/over the cap is turned away. The push is done as one atomic
@@ -187,6 +199,14 @@ export const publicRsvp = catchAsync(async (req: Request, res: Response) => {
   if (session.rsvpList.some((r) => r.email === body.email)) {
     res.json(new ApiResponse({ status: 'already_rsvpd', message: "You're already on the list for this session — see you there!" }));
     return;
+  }
+
+  if (!(await isRegisteredAttendee(body.email))) {
+    throw new ApiError(
+      403,
+      "This session is for confirmed Summit registrants only. Register (or complete payment) with this email first, then come back to RSVP.",
+      'RSVP_NOT_REGISTERED'
+    );
   }
 
   const result = await Session.updateOne(
