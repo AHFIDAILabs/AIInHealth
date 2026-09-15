@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Clock, MapPin, Mic2, Users, Rocket, FileText, Handshake, Landmark, Network, CalendarCheck, type LucideIcon } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
 import { SessionRsvpModal } from '../../components/ui/SessionRsvpModal';
+import { SpeakerModal } from '../../components/ui/SpeakerModal';
 import { listPublicSessions, type AdminSession, type SessionDay, type SessionFormat } from '../../services/session.service';
+import { listPublicSpeakers, type AdminSpeaker, type Track } from '../../services/speaker.service';
 
 interface DisplaySpeaker {
   _id: string;
   fullName: string;
+  title?: string;
   photoUrl?: string;
 }
 
@@ -20,7 +23,6 @@ interface DisplaySession {
   track: string;
   icon: LucideIcon;
   room?: string;
-  speakerNames?: string;
   speakers?: DisplaySpeaker[];
   description?: string;
   requiresRsvp?: boolean;
@@ -42,7 +44,6 @@ const fromRealSession = (s: AdminSession): DisplaySession => ({
   track: s.track,
   icon: FORMAT_ICON[s.format] ?? Users,
   room: s.room,
-  speakerNames: s.speakers.length > 0 ? s.speakers.map((sp) => sp.fullName).join(', ') : undefined,
   speakers: s.speakers,
   description: s.description,
   requiresRsvp: s.requiresRsvp,
@@ -94,12 +95,39 @@ export const Agenda = () => {
   const [dayKey, setDayKey] = useState<SessionDay>('day1');
   const [realSessions, setRealSessions] = useState<AdminSession[] | null>(null);
   const [rsvpSession, setRsvpSession] = useState<{ _id: string; title: string } | null>(null);
+  const [allSpeakers, setAllSpeakers] = useState<AdminSpeaker[]>([]);
+  const [activeSpeaker, setActiveSpeaker] = useState<AdminSpeaker | null>(null);
 
   useEffect(() => {
     listPublicSessions()
       .then(setRealSessions)
       .catch(() => setRealSessions([]));
+    listPublicSpeakers()
+      .then(setAllSpeakers)
+      .catch(() => setAllSpeakers([]));
   }, []);
+
+  // Sessions only carry a speaker's _id/fullName/title/photoUrl; the full
+  // profile (track/organization/bio) that SpeakerModal shows lives on the
+  // speaker record itself, fetched separately and matched up here.
+  const speakerMap = useMemo(() => {
+    const map = new Map<string, AdminSpeaker>();
+    allSpeakers.forEach((sp) => map.set(sp._id, sp));
+    return map;
+  }, [allSpeakers]);
+
+  const resolveSpeaker = (sp: DisplaySpeaker, sessionTrack: string): AdminSpeaker =>
+    speakerMap.get(sp._id) ?? {
+      _id: sp._id,
+      fullName: sp.fullName,
+      title: sp.title ?? '',
+      track: sessionTrack as Track,
+      photoUrl: sp.photoUrl,
+      isPublished: true,
+      order: 0,
+      createdAt: '',
+      updatedAt: '',
+    };
 
   const days = STATIC_DAYS.map((staticDay) => {
     const realForDay = (realSessions ?? [])
@@ -193,23 +221,24 @@ export const Agenda = () => {
                         </p>
                         {s.description && <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{s.description}</p>}
                         {s.speakers && s.speakers.length > 0 && (
-                          <div className="mt-2 flex items-center gap-2">
-                            <div className="flex -space-x-2">
-                              {s.speakers.map((sp) => (
-                                <span
-                                  key={sp._id}
-                                  title={sp.fullName}
-                                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-navy text-[10px] font-semibold text-white"
-                                >
+                          <div className="mt-2.5 flex flex-wrap gap-2">
+                            {s.speakers.map((sp) => (
+                              <button
+                                key={sp._id}
+                                type="button"
+                                onClick={() => setActiveSpeaker(resolveSpeaker(sp, s.track))}
+                                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3 text-left transition-colors hover:border-orange/40 hover:bg-orange/5"
+                              >
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy text-[10px] font-semibold text-white">
                                   {sp.photoUrl ? (
-                                    <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full rounded-full object-cover" />
+                                    <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full object-cover" />
                                   ) : (
                                     sp.fullName[0]
                                   )}
                                 </span>
-                              ))}
-                            </div>
-                            <p className="text-xs text-slate-500">{s.speakerNames}</p>
+                                <span className="text-xs font-medium text-navy">{sp.fullName}</span>
+                              </button>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -236,6 +265,7 @@ export const Agenda = () => {
       </section>
 
       <SessionRsvpModal session={rsvpSession} onClose={() => setRsvpSession(null)} />
+      <SpeakerModal speaker={activeSpeaker} onClose={() => setActiveSpeaker(null)} />
     </>
   );
 };
