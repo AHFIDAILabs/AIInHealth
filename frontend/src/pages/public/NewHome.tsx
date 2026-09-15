@@ -13,7 +13,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 // monument photo used in the approved mockup — reusing the existing import
 // on the assumption it is. Swap the path if a different/higher-res file
 // should be used instead.
-import heroBg from '../../assets/images/hero_bg.png';
+import heroBg from '../../assets/images/hero_bg.webp';
 
 // TODO(design assets): the mockup's hero "theme" card (light-blue panel with
 // the THEME tag, headline, and partner-logo row) is a flattened graphic asset
@@ -31,7 +31,7 @@ import { MediaHighlights } from '../../components/home/MediaHighlights';
 // import { PressQuoteBand } from '../../components/home/PressQuoteBand';
 // import { FindYourJourney } from '../../components/home/FindYourJourney';
 // import { AbujaExperience } from '../../components/home/AbujaExperience';
-import homePageBg from '../../assets/images/AI in Health Summit 2026 - Website.png';
+import homePageBg from '../../assets/images/AI in Health Summit 2026 - Website.webp';
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 22 },

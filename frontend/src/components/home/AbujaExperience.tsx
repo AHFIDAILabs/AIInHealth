@@ -1,7 +1,7 @@
 import { Mountain } from 'lucide-react';
 import { Reveal } from '../ui/Reveal';
-import nigerianCulturalCentre from '../../assets/images/Nigerian Cultural Centre.jpg';
-import ecowasCommission from '../../assets/images/Abuja_Building.jpeg';
+import nigerianCulturalCentre from '../../assets/images/Nigerian Cultural Centre.webp';
+import ecowasCommission from '../../assets/images/Abuja_Building.webp';
 
 // Real photography of two of Abuja's most distinctive landmarks — a deliberate step up
 // from the icon-only cards this section used before, and a different monument from the

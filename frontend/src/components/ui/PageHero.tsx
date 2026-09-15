@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { AbujaSkyline } from './AbujaSkyline';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import heroBg from '../../assets/images/hero_bg.png';
+import heroBg from '../../assets/images/hero_bg.webp';
 
 interface PageHeroProps {
   eyebrow: string;
