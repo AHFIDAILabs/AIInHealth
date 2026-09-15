@@ -33,22 +33,32 @@ export const scan = catchAsync(async (req: Request, res: Response) => {
   const qrToken = typeof req.body?.qrToken === 'string' ? req.body.qrToken.trim() : '';
   if (!qrToken) throw new ApiError(422, 'qrToken is required', 'VALIDATION_ERROR');
 
-  const registration = await Registration.findOne({ qrToken });
-  if (!registration) throw new ApiError(404, "That QR code doesn't match any registration.", 'NOT_FOUND');
-  if (registration.status !== 'confirmed') {
-    throw new ApiError(400, 'This registration is not confirmed and cannot be checked in.', 'NOT_CONFIRMED');
-  }
-  if (registration.checkedIn) {
+  // Atomic: a shared/photographed QR scanned at two check-in lanes at once could
+  // otherwise have both requests read checkedIn:false before either write lands,
+  // checking the same ticket in twice. Only one concurrent scan can win this
+  // filtered update; the loser falls through to the follow-up read below, which
+  // now correctly reports "already checked in".
+  const registration = await Registration.findOneAndUpdate(
+    { qrToken, status: 'confirmed', isActive: true, checkedIn: false },
+    { $set: { checkedIn: true, checkedInAt: new Date() } },
+    { new: true }
+  );
+
+  if (!registration) {
+    const existing = await Registration.findOne({ qrToken });
+    if (!existing) throw new ApiError(404, "That QR code doesn't match any registration.", 'NOT_FOUND');
+    if (existing.status !== 'confirmed') {
+      throw new ApiError(400, 'This registration is not confirmed and cannot be checked in.', 'NOT_CONFIRMED');
+    }
+    if (!existing.isActive) {
+      throw new ApiError(403, 'This registration has been deactivated.', 'REGISTRATION_INACTIVE');
+    }
     throw new ApiError(
       409,
-      `Already checked in at ${registration.checkedInAt?.toLocaleString('en-GB') ?? 'an earlier time'}.`,
+      `Already checked in at ${existing.checkedInAt?.toLocaleString('en-GB') ?? 'an earlier time'}.`,
       'ALREADY_CHECKED_IN'
     );
   }
-
-  registration.checkedIn = true;
-  registration.checkedInAt = new Date();
-  await registration.save();
 
   await recordAudit({
     req,
@@ -84,18 +94,26 @@ export const search = catchAsync(async (req: Request, res: Response) => {
 // POST /admin/check-in/manual/:id — check in without scanning (e.g. lost/undelivered QR)
 export const manualCheckIn = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
-  const registration = await Registration.findById(req.params.id);
-  if (!registration) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
-  if (registration.status !== 'confirmed') {
-    throw new ApiError(400, 'This registration is not confirmed and cannot be checked in.', 'NOT_CONFIRMED');
-  }
-  if (registration.checkedIn) {
+
+  // Atomic for the same reason as scan() above — two staff hitting "check in"
+  // on the same record at once shouldn't both succeed.
+  const registration = await Registration.findOneAndUpdate(
+    { _id: req.params.id, status: 'confirmed', isActive: true, checkedIn: false },
+    { $set: { checkedIn: true, checkedInAt: new Date() } },
+    { new: true }
+  );
+
+  if (!registration) {
+    const existing = await Registration.findById(req.params.id);
+    if (!existing) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
+    if (existing.status !== 'confirmed') {
+      throw new ApiError(400, 'This registration is not confirmed and cannot be checked in.', 'NOT_CONFIRMED');
+    }
+    if (!existing.isActive) {
+      throw new ApiError(403, 'This registration has been deactivated.', 'REGISTRATION_INACTIVE');
+    }
     throw new ApiError(409, 'Already checked in.', 'ALREADY_CHECKED_IN');
   }
-
-  registration.checkedIn = true;
-  registration.checkedInAt = new Date();
-  await registration.save();
 
   await recordAudit({
     req,

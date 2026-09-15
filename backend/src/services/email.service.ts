@@ -175,6 +175,68 @@ export const sendPaymentConfirmationEmail = async (
   });
 };
 
+// The no-payment counterpart to sendPaymentConfirmationEmail above — a 100%
+// scholarship seat or a free ticket category (government_official,
+// accredited_media) never touches Paystack, so there's no amount to quote, but
+// the registrant still needs the same "you're confirmed" moment.
+export const sendRegistrationConfirmedEmail = async (
+  to: string,
+  fullName: string,
+  data: { ticketCategory?: string; portalUrl: string }
+): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "You're confirmed — AI in Health Summit 2026",
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Your registration${data.ticketCategory ? ` (${data.ticketCategory.replace(/_/g, ' ')})` : ''} for the AI in Health Summit 2026 is confirmed — no payment is required.</p>
+      <p><a href="${data.portalUrl}">Visit the delegate portal</a> to sign in with your email and access your e-ticket / QR check-in code.</p>
+      <p>See you in Abuja, 19&ndash;20 October 2026.</p>
+    `,
+  });
+};
+
+// Sent right after a registration is confirmed (paid, comped, or an admin
+// confirming directly) — every attendee's actual check-in credential, not just a
+// link to go fetch it from the portal. The QR image is a data: URI (same
+// qrDataUrlForToken() the portal's own /delegate/ticket/qr page already renders),
+// so it shows inline in the email body without needing a Graph attachment.
+export const sendTicketQrEmail = async (to: string, fullName: string, qrDataUrl: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Your check-in QR code — AI in Health Summit 2026',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Here's your e-ticket for the AI in Health Summit 2026. Show this QR code at the registration desk to check in on either day (19&ndash;20 October 2026) — it's yours for both days, no need to re-download.</p>
+      <p><img src="${qrDataUrl}" alt="Check-in QR code" width="220" height="220" /></p>
+      <p>Keep this email handy, or sign in to the delegate portal any time to view it again.</p>
+    `,
+  });
+};
+
+// Sent when an admin registers an attendee directly from the dashboard with less
+// than a full (100%) scholarship — there's no self-service checkout step for
+// them to land on, so the real Paystack link has to reach them some other way.
+export const sendRegistrationPaymentLinkEmail = async (
+  to: string,
+  fullName: string,
+  data: { authorizationUrl: string; ticketCategory: string; amountNaira: number; discountPercent?: number }
+): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Complete your registration — AI in Health Summit 2026',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>You've been registered for the AI in Health Summit 2026 (${data.ticketCategory.replace(/_/g, ' ')})${
+        data.discountPercent ? ` with a <strong>${data.discountPercent}% scholarship discount</strong> applied` : ''
+      }.</p>
+      <p>To confirm your seat, complete payment of <strong>&#8358;${data.amountNaira.toLocaleString('en-NG')}</strong>:</p>
+      <p><a href="${data.authorizationUrl}">Click here to pay securely via Paystack</a>.</p>
+      <p>Once payment is confirmed, you'll receive your registration confirmation and check-in QR code by email.</p>
+    `,
+  });
+};
+
 export const sendTestEmail = async (to: string): Promise<void> => {
   await sendEmail({
     to,

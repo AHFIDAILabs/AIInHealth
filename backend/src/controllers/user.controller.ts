@@ -98,3 +98,28 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
 
   res.json(new ApiResponse(user));
 });
+
+export const adminDelete = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'User not found', 'NOT_FOUND');
+
+  // Same self-protection as adminUpdate's isSelf check above — deleting your own
+  // account from inside your own admin session would either instantly log you
+  // out mid-request or leave a dangling session for an account that no longer
+  // exists, neither of which is recoverable from the UI.
+  if (req.user!.sub === req.params.id) {
+    throw new ApiError(400, 'You cannot delete your own account', 'CANNOT_MODIFY_SELF');
+  }
+
+  const user = await User.findByIdAndDelete(req.params.id);
+  if (!user) throw new ApiError(404, 'User not found', 'NOT_FOUND');
+
+  await recordAudit({
+    req,
+    action: 'user.deleted',
+    resourceType: 'User',
+    resourceId: req.params.id,
+    before: { fullName: user.fullName, email: user.email, role: user.role },
+  });
+
+  res.json(new ApiResponse({ id: req.params.id }));
+});

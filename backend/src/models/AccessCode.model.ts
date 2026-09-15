@@ -27,5 +27,18 @@ const accessCodeSchema = new Schema(
 // .index({ code: 1 }) call needed.
 accessCodeSchema.index({ status: 1, type: 1 });
 
+// At most one *unused* code per (issuedTo, type, discountPercent) — matches what
+// accessCode.controller.ts's adminGenerate already intends via its find-existing-
+// unused-then-insert check (including reusing a different code when the
+// discount tier differs), just made airtight against two concurrent "Generate"
+// requests for the same email both missing each other's in-flight insert.
+// discountPercent is absent for non-scholarship types, which MongoDB indexes as
+// null — exactly right, since only one unused volunteer/keynote_speaker/
+// complimentary code per person should exist anyway.
+accessCodeSchema.index(
+  { issuedTo: 1, type: 1, discountPercent: 1 },
+  { unique: true, partialFilterExpression: { status: 'unused' } }
+);
+
 export type AccessCodeDoc = InferSchemaType<typeof accessCodeSchema>;
 export const AccessCode = model('AccessCode', accessCodeSchema);

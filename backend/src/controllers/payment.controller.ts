@@ -1,16 +1,17 @@
 import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
+import type { HydratedDocument } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
-import { Registration } from '../models/Registration.model.js';
+import { Registration, type RegistrationDoc } from '../models/Registration.model.js';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import * as paystack from '../services/paystack.service.js';
 import { nairaToKobo, priceForRegistration, isFreeTicketCategory } from '../config/pricing.js';
 import { generateQrToken } from '../services/qr.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
-import { sendPaymentConfirmationEmail } from '../services/email.service.js';
+import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
 import type { InitializePaymentInput } from '../validations/payment.validation.js';
 import type { TicketCategory } from '../types/enums.js';
 
@@ -45,10 +46,26 @@ export const initialize = catchAsync(async (req: Request, res: Response) => {
     return;
   }
 
+  const { authorizationUrl, reference } = await initializePaymentForRegistration(registration);
+  res.status(201).json(new ApiResponse({ authorizationUrl, reference }));
+});
+
+// Computes the charge from the registration's own stored ticketCategory/
+// discountPercent/group size, opens a Paystack transaction, and persists the
+// resulting reference/authorizationUrl/amount on the registration. Shared by the
+// public `initialize` handler above (which does its own guard checks — already
+// paid, free category, a still-fresh pending transaction to reuse — before
+// calling this) and registration.controller.ts's admin-create-registration flow,
+// which needs the exact same "turn this registration into a real Paystack
+// checkout link" step but with no guards of its own (a freshly admin-created
+// registration is never already paid or mid-checkout).
+export const initializePaymentForRegistration = async (
+  registration: HydratedDocument<RegistrationDoc>
+): Promise<{ authorizationUrl: string; reference: string }> => {
   const attendeeCount = 1 + (registration.groupAttendees?.length ?? 0);
-  // A 100%-scholarship registration never reaches here — registration.controller.ts
-  // marks it 'not_required' at creation and skips payment entirely — so
-  // discountPercent below is only ever undefined, 25, or 50.
+  // A 100%-scholarship registration never reaches here — callers mark it
+  // 'not_required' at creation and skip payment entirely — so discountPercent
+  // below is only ever undefined, 25, or 50.
   const amountNaira = priceForRegistration(registration.ticketCategory as TicketCategory, attendeeCount, registration.discountPercent ?? undefined);
   const amountKobo = nairaToKobo(amountNaira);
   const reference = `AIHS-${registration.id}-${crypto.randomBytes(4).toString('hex')}`;
@@ -67,8 +84,8 @@ export const initialize = catchAsync(async (req: Request, res: Response) => {
   registration.amountKobo = amountKobo;
   await registration.save();
 
-  res.status(201).json(new ApiResponse({ authorizationUrl, reference }));
-});
+  return { authorizationUrl, reference };
+};
 
 // Shared by both the frontend's post-redirect verify call and the webhook — always
 // re-verifies against Paystack directly rather than trusting either caller's data,
@@ -84,32 +101,38 @@ export const confirmPaymentByReference = async (reference: string): Promise<void
   const result = await paystack.verifyTransaction(reference);
 
   if (result.status !== 'success') {
-    registration.paymentStatus = 'failed';
-    await registration.save();
+    await Registration.updateOne({ paymentReference: reference, paymentStatus: { $ne: 'paid' } }, { $set: { paymentStatus: 'failed' } });
     return;
   }
 
-  registration.paymentStatus = 'paid';
-  registration.status = 'confirmed';
-  registration.paidAt = result.paidAt ? new Date(result.paidAt) : new Date();
-  if (!registration.qrToken) registration.qrToken = generateQrToken();
-  await registration.save();
+  // Atomic, filtered on paymentStatus not already 'paid': the frontend's
+  // post-redirect verify call and Paystack's webhook call legitimately race for
+  // the same reference (both can arrive within milliseconds of a real checkout).
+  // Only the call that actually wins this update proceeds to notify/email below,
+  // so the race can't double-send the confirmation + ticket emails.
+  const updated = await Registration.findOneAndUpdate(
+    { paymentReference: reference, paymentStatus: { $ne: 'paid' } },
+    {
+      $set: {
+        paymentStatus: 'paid',
+        status: 'confirmed',
+        paidAt: result.paidAt ? new Date(result.paidAt) : new Date(),
+        ...(registration.qrToken ? {} : { qrToken: generateQrToken() }),
+      },
+    },
+    { new: true }
+  );
+  if (!updated) return;
 
   await emitAdminNotification({
     type: 'registration.new',
     title: 'Payment confirmed',
-    body: `${registration.fullName} — ${registration.ticketCategory}`,
+    body: `${updated.fullName} — ${updated.ticketCategory}`,
     resourceType: 'Registration',
-    resourceId: registration.id,
+    resourceId: updated.id,
   });
 
-  if (registration.email) {
-    sendPaymentConfirmationEmail(registration.email, registration.fullName ?? 'there', {
-      amountNaira: Math.round((registration.amountKobo ?? 0) / 100),
-      ticketCategory: registration.ticketCategory ?? '',
-      portalUrl: `${env.FRONTEND_ORIGIN}/portal/login`,
-    }).catch((err) => logger.error({ err }, 'sendPaymentConfirmationEmail failed'));
-  }
+  void sendConfirmationAndTicketEmails(updated, { amountNaira: Math.round((updated.amountKobo ?? 0) / 100) });
 };
 
 export const verify = catchAsync(async (req: Request, res: Response) => {

@@ -69,10 +69,22 @@ router.get(
   requireRole('super_admin', 'registrations_officer'),
   registrationController.adminExport
 );
+router.post(
+  '/registrations',
+  requireRole('super_admin', 'registrations_officer', 'content_editor'),
+  registrationController.adminCreate
+);
 router.patch(
   '/registrations/:id',
   requireRole('super_admin', 'registrations_officer', 'content_editor'),
-  registrationController.adminUpdateStatus
+  registrationController.adminUpdate
+);
+// Delete is a step above what content_editor should touch, so scoped tighter
+// than the PATCH above.
+router.delete(
+  '/registrations/:id',
+  requireRole('super_admin', 'registrations_officer'),
+  registrationController.adminDelete
 );
 
 // Access codes directly gate free entry — same role scope as reviewing registrations,
@@ -135,6 +147,7 @@ router.get('/audit-logs', requireRole('super_admin', 'viewer'), auditLogControll
 router.get('/users', requireRole('super_admin'), userController.adminList);
 router.post('/users', requireRole('super_admin'), userController.adminCreate);
 router.patch('/users/:id', requireRole('super_admin'), userController.adminUpdate);
+router.delete('/users/:id', requireRole('super_admin'), userController.adminDelete);
 
 router.get('/event-team', requireRole('super_admin'), eventTeamController.adminList);
 router.post('/event-team', requireRole('super_admin'), eventTeamController.adminCreate);

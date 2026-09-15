@@ -46,6 +46,25 @@ export const connectDB = async (): Promise<void> => {
 
   await mongoose.connect(uri);
   logger.info('MongoDB connected');
+
+  // Mongoose's default autoIndex only ever CREATES missing indexes — it never
+  // reconciles one whose definition changed (e.g. a field that gained
+  // `unique: true`). Against an already-populated database (this persisted dev
+  // store, or any real deploy), that mismatch fails outright with
+  // IndexKeySpecsConflict and the new constraint silently never takes effect.
+  // syncIndexes() actually drops-and-recreates anything that no longer matches
+  // its schema, so an index definition change here always takes effect on the
+  // next boot instead of requiring a manual migration step. All models are
+  // already registered by this point — index.ts's static `import { app }`
+  // pulls in every route/controller/model before connectDB() ever runs.
+  try {
+    const dropped = await mongoose.connection.syncIndexes();
+    if (Object.values(dropped).some((names) => names.length > 0)) {
+      logger.info({ dropped }, 'MongoDB indexes synced (some rebuilt)');
+    }
+  } catch (err) {
+    logger.error({ err }, 'MongoDB index sync failed — some constraints may be stale');
+  }
 };
 
 export const disconnectDB = async (): Promise<void> => {

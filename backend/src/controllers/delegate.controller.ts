@@ -28,6 +28,7 @@ export const requestMagicLink = catchAsync(async (req: Request, res: Response) =
 
   const registration = await Registration.findOne({
     status: 'confirmed',
+    isActive: true,
     $or: [{ email }, { contactEmail: email }],
   }).sort({ createdAt: -1 });
 

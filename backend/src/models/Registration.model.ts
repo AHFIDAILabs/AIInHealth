@@ -85,6 +85,13 @@ const registrationSchema = new Schema(
     // appear in the cross-registration directory other delegates can browse.
     directoryOptIn: { type: Boolean, default: false },
 
+    // Independent of `status` — a confirmed/declined registration can still be
+    // toggled active/inactive by an admin (e.g. suspected fraud, a request to
+    // pause someone) without losing its status history. Gates
+    // delegate.controller.ts's requestMagicLink and checkin.controller.ts's
+    // scan/manualCheckIn; same shape/intent as User.model.ts's isActive.
+    isActive: { type: Boolean, default: true },
+
     // Portal Tokens (admin) — last time a magic-link sign-in email went out, whether
     // self-requested or triggered by staff. Purely informational, not a session record.
     portalLastLinkSentAt: { type: Date },
@@ -98,7 +105,33 @@ const registrationSchema = new Schema(
 );
 
 registrationSchema.index({ type: 1, createdAt: -1 });
-registrationSchema.index({ paymentReference: 1 }, { sparse: true });
+// unique (not just sparse) — paymentReference is always generated server-side
+// (payment.controller.ts: `AIHS-${registration.id}-${random}`) so a collision is
+// already essentially impossible; this is a defense-in-depth backstop, not a
+// currently-exploitable gap.
+registrationSchema.index({ paymentReference: 1 }, { unique: true, sparse: true });
+
+// At most one registration per (type, email/contactEmail) — closes the gap that
+// let delegate.controller.ts's requestMagicLink silently pick the *most recent*
+// of several duplicate confirmed registrations for the same email, orphaning any
+// older one.
+//
+// MongoDB's partialFilterExpression only supports equality, $exists, $gt(e)/
+// $lt(e), $type, and top-level $and — notably NOT $ne/$not/$or/$in — so
+// "unique unless declined" (the original intent here) can't be expressed
+// directly against the `status` field. Rather than a shadow field kept in sync
+// via save/update hooks (real complexity for a nicety nobody asked for), this
+// applies unconditionally: a declined registration still blocks a future
+// duplicate of the same type+email. An admin can delete the declined record
+// (registration.controller.ts's adminDelete) to let that email register again.
+registrationSchema.index(
+  { type: 1, email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: 'string' } } }
+);
+registrationSchema.index(
+  { type: 1, contactEmail: 1 },
+  { unique: true, partialFilterExpression: { contactEmail: { $type: 'string' } } }
+);
 
 export type RegistrationDoc = InferSchemaType<typeof registrationSchema>;
 export const Registration = model('Registration', registrationSchema);

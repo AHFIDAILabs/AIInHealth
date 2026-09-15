@@ -78,7 +78,43 @@ export const listRegistrationsQuerySchema = z.object({
 export type ListRegistrationsQuery = z.infer<typeof listRegistrationsQuerySchema>;
 
 export const updateRegistrationStatusSchema = z.object({
-  body: z.object({
-    status: z.enum(REGISTRATION_STATUSES),
-  }),
+  body: z
+    .object({
+      status: z.enum(REGISTRATION_STATUSES).optional(),
+      // Independent of status — see Registration.model.ts's isActive comment.
+      isActive: z.boolean().optional(),
+    })
+    .refine((data) => data.status !== undefined || data.isActive !== undefined, {
+      message: 'Provide a status or isActive to update.',
+    }),
 });
+export type UpdateRegistrationInput = z.infer<typeof updateRegistrationStatusSchema>['body'];
+
+// Admin-create — same per-type field sets as the public form above, minus the
+// public-only friction: no accessCode for attendee (admin sets a discount tier
+// directly, not via a redeemed code string) or volunteer (admin confirms
+// directly, no "apply now / confirm later" distinction to make).
+const adminAttendeeSchema = z.object({
+  type: z.literal('attendee'),
+  registrationMode: z.enum(['individual', 'group']),
+  ticketCategory: z.enum(TICKET_CATEGORIES),
+  fullName: z.string().trim().min(2, 'Enter your full name'),
+  email: z.string().trim().toLowerCase().email('Enter a valid email'),
+  phone: z.string().trim().min(6, 'Enter a valid phone number'),
+  organization: z.string().trim().optional(),
+  jobTitle: z.string().trim().optional(),
+  country: z.string().trim().min(2, 'Enter your country'),
+  scholarshipDiscount: z.union([z.literal(25), z.literal(50), z.literal(100)]).optional(),
+});
+
+const adminVolunteerSchema = z.object({
+  type: z.literal('volunteer'),
+  fullName: z.string().trim().min(2, 'Enter your full name'),
+  email: z.string().trim().toLowerCase().email('Enter a valid email'),
+  phone: z.string().trim().min(6, 'Enter a valid phone number'),
+});
+
+export const adminCreateRegistrationSchema = z.object({
+  body: z.discriminatedUnion('type', [adminAttendeeSchema, exhibitorSchema, sponsorSchema, adminVolunteerSchema]),
+});
+export type AdminCreateRegistrationInput = z.infer<typeof adminCreateRegistrationSchema>['body'];

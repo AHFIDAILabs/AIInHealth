@@ -40,6 +40,22 @@ export const errorHandler = (err: unknown, req: Request, res: Response, _next: N
     return;
   }
 
+  // MongoDB/Mongoose duplicate-key violation (a unique or partial-unique index
+  // rejected the write). Most routes that can realistically hit one already
+  // catch it locally with a tailored message (e.g. meeting.controller.ts,
+  // registration.controller.ts's create()) — this is the global safety net for
+  // anywhere else, so a uniqueness violation reads as a clean 409 instead of a
+  // raw/leaky 500.
+  if (typeof err === 'object' && err !== null && (err as { code?: number }).code === 11000) {
+    const keyValue = (err as { keyValue?: Record<string, unknown> }).keyValue;
+    const fields = keyValue ? Object.keys(keyValue).join(', ') : 'value';
+    res.status(409).json({
+      success: false,
+      error: { code: 'DUPLICATE_KEY', message: `A record with this ${fields} already exists.` },
+    });
+    return;
+  }
+
   logger.error({ err, requestId: req.id }, 'Unhandled error');
   res.status(500).json({
     success: false,

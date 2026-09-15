@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import crypto from 'node:crypto';
-import { isValidObjectId, type FilterQuery } from 'mongoose';
+import { isValidObjectId, type FilterQuery, type HydratedDocument } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -101,7 +101,25 @@ export const adminGenerate = catchAsync(async (req: Request, res: Response) => {
     });
   }
 
-  const created = codesToInsert.length > 0 ? await AccessCode.insertMany(codesToInsert) : [];
+  let created: HydratedDocument<AccessCodeDoc>[] = [];
+  if (codesToInsert.length > 0) {
+    try {
+      created = await AccessCode.insertMany(codesToInsert, { ordered: false });
+    } catch (err) {
+      // The AccessCode.model.ts partial-unique index caught a concurrent
+      // "Generate" for one of these same emails (two admins, or a double-click,
+      // racing past the `existing` lookup above before either insert landed).
+      // Re-fetch rather than try to reconcile which of our own inserts landed —
+      // this converges on the same correct state a fresh call would see.
+      if ((err as { code?: number }).code !== 11000) throw err;
+      created = await AccessCode.find({
+        type: input.type,
+        issuedTo: { $in: newEmails },
+        status: 'unused',
+        ...(input.type === 'scholarship' && { discountPercent: input.discountPercent }),
+      });
+    }
+  }
   const result = [...existing, ...created];
 
   if (created.length > 0) {

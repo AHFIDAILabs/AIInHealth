@@ -6,15 +6,21 @@ import { ApiError } from '../utils/ApiError.js';
 import { toCsv } from '../utils/toCsv.js';
 import { Registration, type RegistrationDoc } from '../models/Registration.model.js';
 import { AccessCode, type AccessCodeDoc } from '../models/AccessCode.model.js';
-import type { CreateRegistrationInput, ListRegistrationsQuery } from '../validations/registration.validation.js';
-import { listRegistrationsQuerySchema, updateRegistrationStatusSchema } from '../validations/registration.validation.js';
+import type { CreateRegistrationInput, ListRegistrationsQuery, AdminCreateRegistrationInput } from '../validations/registration.validation.js';
+import {
+  listRegistrationsQuerySchema,
+  updateRegistrationStatusSchema,
+  adminCreateRegistrationSchema,
+} from '../validations/registration.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
 import { isFreeTicketCategory } from '../config/pricing.js';
-import { generateQrToken } from '../services/qr.service.js';
+import { generateQrToken, qrDataUrlForToken } from '../services/qr.service.js';
 import { generateCode } from './accessCode.controller.js';
+import { initializePaymentForRegistration } from './payment.controller.js';
 import { issueMagicLinkToken } from '../services/delegateToken.service.js';
-import { sendVolunteerConfirmedEmail } from '../services/email.service.js';
+import { sendVolunteerConfirmedEmail, sendTicketQrEmail, sendRegistrationPaymentLinkEmail } from '../services/email.service.js';
+import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import type { TicketCategory } from '../types/enums.js';
@@ -48,6 +54,14 @@ const notifyVolunteerConfirmed = async (registration: HydratedDocument<Registrat
     const rawToken = await issueMagicLinkToken(registration.id);
     const portalUrl = `${env.FRONTEND_ORIGIN}/portal/verify?token=${rawToken}`;
     await sendVolunteerConfirmedEmail(registration.email, registration.fullName || 'there', { portalUrl, code });
+    // Separate email, sent right after the confirmation above — their actual
+    // check-in QR, not just a link to go fetch it from the portal (matches the
+    // same two-email pattern every other confirmation path uses — see
+    // registrationNotification.service.ts).
+    if (registration.qrToken) {
+      const qrDataUrl = await qrDataUrlForToken(registration.qrToken);
+      await sendTicketQrEmail(registration.email, registration.fullName || 'there', qrDataUrl);
+    }
     registration.portalLastLinkSentAt = new Date();
     await registration.save();
   } catch (err) {
@@ -232,23 +246,46 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   const isFullyComped = input.type === 'attendee' && discountPercent === 100;
   const requiresPayment = input.type === 'attendee' && !isFreeTicketCategory(input.ticketCategory as TicketCategory) && !isFullyComped;
 
-  const registration =
-    recentDuplicate ??
-    (await Registration.create({
-      ...input,
-      ...(requiresPayment && { paymentStatus: 'unpaid' }),
-      ...(discountPercent !== undefined && { discountPercent }),
-      ...(isFullyComped && { status: 'confirmed', paymentStatus: 'not_required', qrToken: generateQrToken() }),
-    }));
+  let registration: HydratedDocument<RegistrationDoc>;
+  let isNewRegistration = false;
 
-  if (redeemedCode && !recentDuplicate) {
+  if (recentDuplicate) {
+    registration = recentDuplicate;
+  } else {
+    try {
+      registration = await Registration.create({
+        ...input,
+        ...(requiresPayment && { paymentStatus: 'unpaid' }),
+        ...(discountPercent !== undefined && { discountPercent }),
+        ...(isFullyComped && { status: 'confirmed', paymentStatus: 'not_required', qrToken: generateQrToken() }),
+      });
+      isNewRegistration = true;
+    } catch (err) {
+      // The Registration.model.ts partial-unique index on {type,email}/
+      // {type,contactEmail} caught a genuine duplicate the recentDuplicate window
+      // above missed — either a true race (two near-simultaneous submits) or a
+      // resubmit outside the 2-minute window. Fall back to the existing record
+      // with the SAME graceful "already registered" response shape, rather than
+      // surfacing a raw duplicate-key error to what's usually just an innocent
+      // double-click or someone forgetting they already signed up.
+      if ((err as { code?: number }).code !== 11000) throw err;
+      const existing = await Registration.findOne({
+        type: input.type,
+        ...(input.type === 'attendee' ? { email: dedupeEmail } : { contactEmail: dedupeEmail }),
+      }).sort({ createdAt: -1 });
+      if (!existing) throw err;
+      registration = existing;
+    }
+  }
+
+  if (redeemedCode && isNewRegistration) {
     redeemedCode.status = 'used';
     redeemedCode.usedByRegistration = registration.id;
     redeemedCode.usedAt = new Date();
     await redeemedCode.save();
   }
 
-  if (!recentDuplicate) {
+  if (isNewRegistration) {
     const who = input.type === 'attendee' ? input.fullName : input.companyName;
     await emitAdminNotification({
       type: 'registration.new',
@@ -257,6 +294,13 @@ export const create = catchAsync(async (req: Request, res: Response) => {
       resourceType: 'Registration',
       resourceId: registration.id,
     });
+
+    // The only auto-confirmed-with-no-payment path through this handler — a free
+    // ticket category still goes through manual admin review (see the comment
+    // above), so this fires only for a 100%-scholarship seat.
+    if (isFullyComped) {
+      void sendConfirmationAndTicketEmails(registration);
+    }
   }
 
   // Derived from the registration's own saved paymentStatus (not the pre-creation
@@ -292,6 +336,101 @@ export const create = catchAsync(async (req: Request, res: Response) => {
 // only — everything else (attendee payment data, exhibitor/sponsor contacts) stays
 // out of their lane, same enforcement pattern as accessCode.controller.ts.
 const isContentEditor = (req: Request) => req.user!.role === 'content_editor';
+
+// POST /admin/registrations — admin registers someone directly (a walk-in, a
+// phone registration, a manual comp) rather than them filling the public form.
+// Every non-attendee type is confirmed immediately — staff is vouching for the
+// record, no review queue. Attendee is confirmed immediately too if the admin
+// grants a full (100%) scholarship or the ticket category is free; otherwise a
+// real Paystack payment link is generated and emailed, since there's no
+// self-service checkout step for them to land on the way the public flow has.
+export const adminCreate = catchAsync(async (req: Request, res: Response) => {
+  const input = adminCreateRegistrationSchema.parse({ body: req.body }).body as AdminCreateRegistrationInput;
+
+  if (isContentEditor(req) && input.type !== 'volunteer') {
+    throw new ApiError(403, 'You can only register volunteers.', 'FORBIDDEN');
+  }
+
+  if (input.type === 'attendee') {
+    const { scholarshipDiscount, ...rest } = input;
+    const isFullyComped = scholarshipDiscount === 100;
+    const willRequirePayment = !isFreeTicketCategory(rest.ticketCategory as TicketCategory) && !isFullyComped;
+
+    let registration: HydratedDocument<RegistrationDoc>;
+    try {
+      registration = await Registration.create({
+        ...rest,
+        ...(scholarshipDiscount !== undefined && { discountPercent: scholarshipDiscount }),
+        ...(willRequirePayment
+          ? { paymentStatus: 'unpaid' }
+          : { status: 'confirmed', paymentStatus: 'not_required', qrToken: generateQrToken() }),
+      });
+    } catch (err) {
+      if ((err as { code?: number }).code !== 11000) throw err;
+      throw new ApiError(409, 'A registration with this email already exists.', 'DUPLICATE_REGISTRATION');
+    }
+
+    await emitAdminNotification({
+      type: 'registration.new',
+      title: 'New attendee registration (admin)',
+      body: rest.fullName,
+      resourceType: 'Registration',
+      resourceId: registration.id,
+    });
+
+    if (!willRequirePayment) {
+      void sendConfirmationAndTicketEmails(registration);
+      res.status(201).json(new ApiResponse({ id: registration.id, status: registration.status, requiresPayment: false }));
+      return;
+    }
+
+    const { authorizationUrl } = await initializePaymentForRegistration(registration);
+    const amountNaira = Math.round((registration.amountKobo ?? 0) / 100);
+    if (registration.email) {
+      sendRegistrationPaymentLinkEmail(registration.email, registration.fullName || 'there', {
+        authorizationUrl,
+        ticketCategory: registration.ticketCategory ?? '',
+        amountNaira,
+        discountPercent: scholarshipDiscount,
+      }).catch((err) => logger.error({ err, registrationId: registration.id }, 'sendRegistrationPaymentLinkEmail failed'));
+    }
+
+    // authorizationUrl is included so the admin UI can offer a copy-link
+    // fallback in case the email doesn't land — not sensitive, it's the exact
+    // same checkout link Paystack shows the payer.
+    res.status(201).json(
+      new ApiResponse({
+        id: registration.id,
+        status: registration.status,
+        requiresPayment: true,
+        paymentLinkSent: Boolean(registration.email),
+        authorizationUrl,
+      })
+    );
+    return;
+  }
+
+  // exhibitor / sponsor / volunteer — confirmed immediately, admin is vouching.
+  let registration: HydratedDocument<RegistrationDoc>;
+  try {
+    registration = await Registration.create({ ...input, status: 'confirmed', qrToken: generateQrToken() });
+  } catch (err) {
+    if ((err as { code?: number }).code !== 11000) throw err;
+    throw new ApiError(409, 'A registration with this email already exists.', 'DUPLICATE_REGISTRATION');
+  }
+
+  await emitAdminNotification({
+    type: 'registration.new',
+    title: `New ${input.type} registration (admin)`,
+    body: input.type === 'volunteer' ? input.fullName : input.companyName,
+    resourceType: 'Registration',
+    resourceId: registration.id,
+  });
+
+  void sendConfirmationAndTicketEmails(registration);
+
+  res.status(201).json(new ApiResponse({ id: registration.id, status: registration.status, requiresPayment: false }));
+});
 
 const buildAdminFilter = (query: ListRegistrationsQuery, req: Request): FilterQuery<RegistrationDoc> => {
   const filter: FilterQuery<RegistrationDoc> = {};
@@ -331,12 +470,12 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
-export const adminUpdateStatus = catchAsync(async (req: Request, res: Response) => {
+export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) {
     throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
   }
-  const { status } = updateRegistrationStatusSchema.parse({ body: req.body }).body;
-  const before = await Registration.findById(req.params.id).select('status qrToken type');
+  const { status, isActive } = updateRegistrationStatusSchema.parse({ body: req.body }).body;
+  const before = await Registration.findById(req.params.id).select('status qrToken type isActive');
   if (!before) {
     throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
   }
@@ -345,29 +484,59 @@ export const adminUpdateStatus = catchAsync(async (req: Request, res: Response) 
   }
   // Any registration type earns a check-in QR the moment it's confirmed, whichever
   // path got it there (payment, volunteer code, or a manual admin decision here).
-  const update: { status: typeof status; qrToken?: string } = { status };
+  const update: { status?: typeof status; isActive?: boolean; qrToken?: string } = {};
+  if (status !== undefined) update.status = status;
+  if (isActive !== undefined) update.isActive = isActive;
   if (status === 'confirmed' && !before.qrToken) update.qrToken = generateQrToken();
+
   const registration = await Registration.findByIdAndUpdate(req.params.id, update, { new: true });
   if (!registration) {
     throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
   }
   await recordAudit({
     req,
-    action: 'registration.status_changed',
+    action: 'registration.updated',
     resourceType: 'Registration',
     resourceId: registration.id,
-    before: { status: before.status },
-    after: { status: registration.status },
+    before: { status: before.status, isActive: before.isActive },
+    after: { status: registration.status, isActive: registration.isActive },
   });
 
-  // Volunteers confirmed straight from this status action (not through a
-  // self-redeemed access code) get no other notification of any kind otherwise —
-  // this is the only place that tells them they were chosen.
-  if (registration.type === 'volunteer' && status === 'confirmed' && before.status !== 'confirmed') {
+  const justConfirmed = status === 'confirmed' && before.status !== 'confirmed';
+  if (justConfirmed && registration.type === 'volunteer') {
+    // Volunteers confirmed straight from this status action (not through a
+    // self-redeemed access code) get no other notification of any kind otherwise —
+    // this is the only place that tells them they were chosen.
     void confirmVolunteerDirectly(registration, req.user!.sub);
+  } else if (justConfirmed) {
+    // Same deal for any other type an admin approves here directly (e.g. a free
+    // ticket category attendee, or an exhibitor/sponsor) — no other path notifies
+    // them otherwise.
+    void sendConfirmationAndTicketEmails(registration);
   }
 
   res.json(new ApiResponse(registration));
+});
+
+// Route-gated to super_admin/registrations_officer only (admin.routes.ts) — a
+// step above what content_editor can touch elsewhere in this controller, so no
+// in-handler role check is needed here the way the others above have one.
+export const adminDelete = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) {
+    throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
+  }
+  const registration = await Registration.findByIdAndDelete(req.params.id);
+  if (!registration) {
+    throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
+  }
+  await recordAudit({
+    req,
+    action: 'registration.deleted',
+    resourceType: 'Registration',
+    resourceId: req.params.id,
+    before: registration.toObject(),
+  });
+  res.json(new ApiResponse({ id: req.params.id }));
 });
 
 const CSV_COLUMNS = [
