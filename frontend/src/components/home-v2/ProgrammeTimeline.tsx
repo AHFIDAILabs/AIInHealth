@@ -1,14 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarCheck } from 'lucide-react';
 import { Reveal } from '../ui/Reveal';
 import { ButtonLink } from '../ui/Button';
 import { SessionRsvpModal } from '../ui/SessionRsvpModal';
+import { SpeakerModal } from '../ui/SpeakerModal';
 import { listPublicSessions, type AdminSession, type SessionDay } from '../../services/session.service';
+import { listPublicSpeakers, type AdminSpeaker, type Track } from '../../services/speaker.service';
 
 interface RowSpeaker {
   _id: string;
   fullName: string;
+  title?: string;
   photoUrl?: string;
 }
 
@@ -62,12 +65,39 @@ export const ProgrammeTimeline = () => {
   const [dayKey, setDayKey] = useState<SessionDay>('day1');
   const [realSessions, setRealSessions] = useState<AdminSession[] | null>(null);
   const [rsvpSession, setRsvpSession] = useState<{ _id: string; title: string } | null>(null);
+  const [allSpeakers, setAllSpeakers] = useState<AdminSpeaker[]>([]);
+  const [activeSpeaker, setActiveSpeaker] = useState<AdminSpeaker | null>(null);
 
   useEffect(() => {
     listPublicSessions()
       .then(setRealSessions)
       .catch(() => setRealSessions([]));
+    listPublicSpeakers()
+      .then(setAllSpeakers)
+      .catch(() => setAllSpeakers([]));
   }, []);
+
+  // Rows only carry a speaker's _id/fullName/title/photoUrl; the full profile
+  // (track/organization/bio) SpeakerModal shows lives on the speaker record
+  // itself, fetched separately and matched up here — same approach as Agenda.tsx.
+  const speakerMap = useMemo(() => {
+    const map = new Map<string, AdminSpeaker>();
+    allSpeakers.forEach((sp) => map.set(sp._id, sp));
+    return map;
+  }, [allSpeakers]);
+
+  const resolveSpeaker = (sp: RowSpeaker, rowTrack: string): AdminSpeaker =>
+    speakerMap.get(sp._id) ?? {
+      _id: sp._id,
+      fullName: sp.fullName,
+      title: sp.title ?? '',
+      track: rowTrack as Track,
+      photoUrl: sp.photoUrl,
+      isPublished: true,
+      order: 0,
+      createdAt: '',
+      updatedAt: '',
+    };
 
   const realForDay = (realSessions ?? [])
     .filter((s) => s.day === dayKey)
@@ -140,19 +170,23 @@ export const ProgrammeTimeline = () => {
                   <h3 className="mt-2 font-display text-lg font-semibold text-navy">{row.title}</h3>
                   {row.description && <p className="mt-2 text-sm leading-relaxed text-slate-500">{row.description}</p>}
                   {row.speakers && row.speakers.length > 0 && (
-                    <div className="mt-3 flex -space-x-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       {row.speakers.map((sp) => (
-                        <span
+                        <button
                           key={sp._id}
-                          title={sp.fullName}
-                          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-navy text-[11px] font-semibold text-white"
+                          type="button"
+                          onClick={() => setActiveSpeaker(resolveSpeaker(sp, row.track))}
+                          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3 text-left transition-colors hover:border-orange/40 hover:bg-orange/5"
                         >
-                          {sp.photoUrl ? (
-                            <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full rounded-full object-cover" />
-                          ) : (
-                            sp.fullName[0]
-                          )}
-                        </span>
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy text-[11px] font-semibold text-white">
+                            {sp.photoUrl ? (
+                              <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full object-cover" />
+                            ) : (
+                              sp.fullName[0]
+                            )}
+                          </span>
+                          <span className="text-xs font-medium text-navy">{sp.fullName}</span>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -174,6 +208,7 @@ export const ProgrammeTimeline = () => {
       </div>
 
       <SessionRsvpModal session={rsvpSession} onClose={() => setRsvpSession(null)} />
+      <SpeakerModal speaker={activeSpeaker} onClose={() => setActiveSpeaker(null)} />
     </section>
   );
 };
