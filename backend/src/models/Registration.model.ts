@@ -49,6 +49,13 @@ const registrationSchema = new Schema(
     // Sponsor only
     message: { type: String, trim: true },
 
+    // Attendee only — catering/accessibility needs. Only ever populated today via
+    // the Floot import (scripts/syncFlootRegistrations.ts); no public form field
+    // writes this yet.
+    dietaryRequirements: { type: String, trim: true },
+    // Free-form admin categorization tags — same provenance note as above.
+    tags: { type: [String], default: undefined },
+
     // Volunteer and scholarship-attendee only — the redeemed AccessCode's
     // human-readable code, kept here too (not just on the AccessCode doc) so a
     // registration record is self-explanatory on its own in exports/audits without
@@ -100,6 +107,35 @@ const registrationSchema = new Schema(
     // /delegate/uploads/image) from the portal — primarily for volunteer/staff
     // recognition at the event.
     avatarUrl: { type: String, trim: true },
+
+    // Present ONLY on registrations that originated from (or were ever touched
+    // by) scripts/syncFlootRegistrations.ts, during the transition period where
+    // Floot and this system both take live registrations. Its purpose is to let
+    // a re-sync tell the difference between "Floot is still the only writer of
+    // this record's status/paymentStatus" (safe to refresh from the new export)
+    // and "this system has independently moved the record on since the last
+    // sync" (an admin confirmed/declined it, or it was paid for here — a re-sync
+    // must NOT stomp that back to whatever Floot's export still says). See that
+    // script for the exact comparison. Never read by anything else in the app;
+    // safe to $unset from every document once Floot is fully retired.
+    flootSync: {
+      _id: false,
+      importedAt: { type: Date },
+      lastSyncedAt: { type: Date },
+      // This system's status/paymentStatus AS OF the last sync — NOT
+      // necessarily what was applied (see the divergence check in the
+      // script). Compared against the registration's CURRENT status/
+      // paymentStatus on the next run to detect independent changes.
+      lastKnownStatus: { type: String, enum: REGISTRATION_STATUSES },
+      lastKnownPaymentStatus: { type: String, enum: PAYMENT_STATUSES },
+      // Floot's own payment bookkeeping — a different processor than
+      // Paystack, so deliberately kept out of the live paymentReference field
+      // (which payment.controller.ts's webhook/verify flow looks up by) to
+      // avoid any confusion between the two.
+      invoiceId: { type: String, trim: true },
+      gatewayReference: { type: String, trim: true },
+      rawNotes: { type: String, trim: true },
+    },
   },
   { timestamps: true }
 );
