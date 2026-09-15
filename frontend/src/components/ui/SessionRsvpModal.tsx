@@ -23,7 +23,8 @@ interface SessionRsvpModalProps {
 // copied from SpeakerModal.tsx (same backdrop/card/close-button convention), but
 // single-column and form-shaped like VolunteerForm.tsx's one-field pattern. A
 // submit either confirms an existing entry, claims a new one if there's still
-// room, or reports the session is full — see session.controller.ts's publicRsvp.
+// room and the email belongs to a confirmed registrant, or reports why not
+// (full, or not a registered attendee) — see session.controller.ts's publicRsvp.
 export const SessionRsvpModal = ({ session, onClose }: SessionRsvpModalProps) => {
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const {
@@ -102,10 +103,16 @@ export const SessionRsvpModal = ({ session, onClose }: SessionRsvpModalProps) =>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-5 space-y-4">
                 <p className="text-sm text-slate-500">
-                  This session has limited seating. Enter your email to check if you&rsquo;re on the list — or claim a
-                  spot if there&rsquo;s still room.
+                  This session has limited seating and is open to confirmed Summit registrants. Enter the email you
+                  registered with to check if you&rsquo;re on the list — or claim a spot if there&rsquo;s still room.
                 </p>
-                <LightField label="Email" type="email" error={errors.email?.message} {...register('email')} />
+                <LightField
+                  label="Email"
+                  type="email"
+                  placeholder="The email you registered with"
+                  error={errors.email?.message}
+                  {...register('email')}
+                />
                 <Button type="submit" variant="primary" loading={isSubmitting} className="!w-full">
                   Check / RSVP
                 </Button>
