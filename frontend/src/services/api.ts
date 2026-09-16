@@ -16,9 +16,10 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config;
     const url = typeof original?.url === 'string' ? original.url : '';
-    // Delegate-portal requests use their own cookie/session and must never trigger
-    // the admin refresh-token dance or bounce the visitor to /admin/login.
-    const isAuthRoute = url.includes('/auth/') || url.includes('/delegate/');
+    // Delegate-portal and reviewer-portal requests use their own cookie/session
+    // and must never trigger the admin refresh-token dance or bounce the visitor
+    // to /admin/login.
+    const isAuthRoute = url.includes('/auth/') || url.includes('/delegate/') || url.includes('/reviewer/');
 
     if (error.response?.status === 401 && !original._retry && !isAuthRoute) {
       original._retry = true;

@@ -1,5 +1,4 @@
 import { api } from './api';
-import type { PartnerTier } from './partner.service';
 
 export const INQUIRY_STATUSES = ['New', 'Contacted', 'Converted', 'Declined'] as const;
 export type InquiryStatus = (typeof INQUIRY_STATUSES)[number];
@@ -9,7 +8,9 @@ export interface AdminInquiry {
   organizationName: string;
   contactName: string;
   contactEmail: string;
-  tierInterested?: PartnerTier;
+  // Free text now — packages are admin-editable, not a fixed enum (see
+  // partner.service.ts / sponsorshipPackage.service.ts).
+  tierInterested?: string;
   message?: string;
   status: InquiryStatus;
   createdAt: string;

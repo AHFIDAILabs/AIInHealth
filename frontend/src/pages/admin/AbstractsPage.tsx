@@ -3,13 +3,15 @@ import { AdminTabs } from '../../components/ui/AdminTabs';
 import { AbstractsListTab } from './abstracts/AbstractsListTab';
 import { ReviewMatrixTab } from './abstracts/ReviewMatrixTab';
 import { RubricTab } from './abstracts/RubricTab';
+import { CommunicationsTab } from './abstracts/CommunicationsTab';
+import { AnalyticsTab } from './abstracts/AnalyticsTab';
 
-// Communications and Analytics tabs are a separate, later phase — see the
-// "Abstracts & Reviews" plan. This shell only wires up the three Phase 1 tabs.
 const TABS = [
   { key: 'abstracts', label: 'Abstracts' },
   { key: 'review-matrix', label: 'Review Matrix' },
   { key: 'rubric', label: 'Rubric' },
+  { key: 'communications', label: 'Communications' },
+  { key: 'analytics', label: 'Analytics' },
 ];
 
 export const AbstractsPage = () => {
@@ -19,7 +21,7 @@ export const AbstractsPage = () => {
     <div className="mx-auto max-w-6xl">
       <div>
         <h1 className="font-display text-2xl font-semibold text-navy">Abstracts &amp; Reviews</h1>
-        <p className="text-sm text-slate-500">Manage submissions, reviewer assignments, and the scoring rubric.</p>
+        <p className="text-sm text-slate-500">Manage submissions, reviewer assignments, the scoring rubric, decision notifications, and analytics.</p>
       </div>
 
       <div className="mt-6">
@@ -30,6 +32,8 @@ export const AbstractsPage = () => {
         {tab === 'abstracts' && <AbstractsListTab />}
         {tab === 'review-matrix' && <ReviewMatrixTab />}
         {tab === 'rubric' && <RubricTab />}
+        {tab === 'communications' && <CommunicationsTab />}
+        {tab === 'analytics' && <AnalyticsTab />}
       </div>
     </div>
   );

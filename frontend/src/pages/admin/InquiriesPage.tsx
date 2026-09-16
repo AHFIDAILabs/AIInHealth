@@ -62,7 +62,8 @@ export const InquiriesPage = () => {
       state: {
         prefill: {
           name: inquiry.organizationName,
-          tier: inquiry.tierInterested,
+          contactName: inquiry.contactName,
+          contactEmail: inquiry.contactEmail,
         },
       },
     });

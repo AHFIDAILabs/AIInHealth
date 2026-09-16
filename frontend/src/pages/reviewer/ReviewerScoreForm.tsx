@@ -5,8 +5,10 @@ import {
   fetchMyAssignments,
   fetchReviewerRubric,
   submitReviewScores,
+  ABSTRACT_DECISIONS,
   type MyAssignment,
   type RubricCriterion,
+  type AbstractDecision,
 } from '../../services/reviewer.service';
 import { Button } from '../../components/ui/Button';
 import { Banner } from '../../components/ui/Banner';
@@ -21,6 +23,13 @@ const SCALE = [
   { value: 1, label: 'Poor' },
 ];
 
+const RECOMMENDATION_LABEL: Record<AbstractDecision, string> = {
+  accepted_oral: 'Accept – Oral Presentation',
+  accepted_poster: 'Accept – Poster Presentation',
+  rejected: 'Reject',
+  waitlisted: 'Waitlist',
+};
+
 export const ReviewerScoreForm = () => {
   const { id: reviewId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -28,6 +37,7 @@ export const ReviewerScoreForm = () => {
   const [assignment, setAssignment] = useState<MyAssignment | null>(null);
   const [criteria, setCriteria] = useState<RubricCriterion[] | null>(null);
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [recommendation, setRecommendation] = useState<AbstractDecision | null>(null);
   const [loadError, setLoadError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -45,17 +55,18 @@ export const ReviewerScoreForm = () => {
         setAssignment(match);
         setCriteria(rubricCriteria);
         setScores(Object.fromEntries(match.scores.map((s) => [s.criterionId, s.score])));
+        setRecommendation(match.recommendation ?? null);
       })
       .catch((err) => setLoadError(getApiErrorMessage(err)));
   }, [reviewId]);
 
   const onSubmit = async () => {
-    if (!reviewId || !criteria) return;
+    if (!reviewId || !criteria || !recommendation) return;
     setSubmitError('');
     setSubmitting(true);
     try {
       const payload = criteria.map((c) => ({ criterionId: c._id, score: scores[c._id] }));
-      const res = await submitReviewScores(reviewId, payload);
+      const res = await submitReviewScores(reviewId, payload, recommendation);
       setResult({ weightedScore: res.weightedScore });
     } catch (err) {
       setSubmitError(getApiErrorMessage(err));
@@ -101,6 +112,7 @@ export const ReviewerScoreForm = () => {
   }
 
   const allScored = criteria.every((c) => scores[c._id]);
+  const canSubmit = allScored && !!recommendation;
 
   return (
     <div>
@@ -143,16 +155,35 @@ export const ReviewerScoreForm = () => {
         ))}
       </div>
 
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
+        <h3 className="font-display text-sm font-semibold text-navy">Your Recommendation</h3>
+        <p className="mt-1 text-sm text-slate-500">Your overall recommendation for this abstract.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {ABSTRACT_DECISIONS.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setRecommendation(d)}
+              className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                recommendation === d ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
+              }`}
+            >
+              {RECOMMENDATION_LABEL[d]}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {submitError && (
         <div className="mt-4">
           <Banner variant="error">{submitError}</Banner>
         </div>
       )}
 
-      <Button variant="primary" className="mt-6 w-full justify-center" loading={submitting} disabled={!allScored} onClick={onSubmit}>
+      <Button variant="primary" className="mt-6 w-full justify-center" loading={submitting} disabled={!canSubmit} onClick={onSubmit}>
         {assignment.status === 'completed' ? 'Update Scores' : 'Submit Review'}
       </Button>
-      {!allScored && <p className="mt-2 text-center text-xs text-slate-400">Score every criterion to submit.</p>}
+      {!canSubmit && <p className="mt-2 text-center text-xs text-slate-400">Score every criterion and pick a recommendation to submit.</p>}
     </div>
   );
 };

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, Megaphone, Link2, TrendingUp, Award, Star, Gem, Send } from 'lucide-react';
+import { Eye, Megaphone, Link2, TrendingUp, Award, Star, Gem, Send, type LucideIcon } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Button, ButtonLink } from '../../components/ui/Button';
@@ -11,7 +11,8 @@ import { LightField, LightTextArea, LightSelect } from '../../components/ui/Ligh
 import ahfidMark from '../../assets/images/Icon@4x.png';
 import { submitPartnershipInquiry } from '../../services/inquiry.service';
 import { getApiErrorMessage } from '../../services/api';
-import { listPublicPartners, PARTNER_TIERS, type AdminPartner } from '../../services/partner.service';
+import { listPublicPartners, type AdminPartner } from '../../services/partner.service';
+import { listPublicPackages, type PublicSponsorshipPackage } from '../../services/sponsorshipPackage.service';
 
 const WHY_PARTNER = [
   { icon: Eye, label: 'Visibility & Positioning', body: 'Brand presence in front of 500+ delegates from 45+ African nations.' },
@@ -20,44 +21,31 @@ const WHY_PARTNER = [
   { icon: TrendingUp, label: 'Impact', body: 'Association with a summit built to deliver measurable health-system outcomes.' },
 ];
 
-const TIERS = [
-  {
-    icon: Gem,
-    name: 'Strategic Partner',
-    tag: 'Highest visibility',
-    perks: ['Top-tier branding across venue, stage, and materials', 'Speaking slot in a plenary or keynote session', 'Dedicated exhibition space', 'VIP delegate passes'],
-  },
-  {
-    icon: Star,
-    name: 'Programme Partner',
-    tag: 'Track & session alignment',
-    perks: ['Branding on a specific track or session series', 'Panel seat aligned to your focus area', 'Exhibition space', 'Delegate passes'],
-  },
-  {
-    icon: Award,
-    name: 'Supporting Partner',
-    tag: 'Community & visibility',
-    perks: ['Logo placement across digital and print materials', 'Networking session access', 'Delegate passes'],
-  },
-];
+// Purely decorative — cycles across however many real packages come back,
+// so the card grid still reads well regardless of how many an admin defines.
+const TIER_ICONS: LucideIcon[] = [Gem, Star, Award];
 
 const inquirySchema = z.object({
   organizationName: z.string().trim().min(2, "Enter your organization's name"),
   contactName: z.string().trim().min(2, 'Enter a contact name'),
   contactEmail: z.string().trim().toLowerCase().email('Enter a valid email'),
-  tierInterested: z.enum(PARTNER_TIERS).optional(),
+  tierInterested: z.string().trim().optional(),
   message: z.string().trim().max(2000).optional(),
 });
 type InquiryValues = z.infer<typeof inquirySchema>;
 
 export const Partners = () => {
   const [partners, setPartners] = useState<AdminPartner[]>([]);
+  const [packages, setPackages] = useState<PublicSponsorshipPackage[]>([]);
   const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     listPublicPartners()
       .then(setPartners)
       .catch(() => setPartners([]));
+    listPublicPackages()
+      .then(setPackages)
+      .catch(() => setPackages([]));
   }, []);
 
   const {
@@ -146,40 +134,46 @@ export const Partners = () => {
       </div>
     </section>
 
-    {/* Partnership tiers */}
-    <section className="bg-white py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <Reveal>
-          <p className="text-xs font-semibold uppercase tracking-widest text-orange">Partnership Tiers</p>
-          <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">Choose Your Level of Involvement</h2>
-          <p className="mt-2 max-w-xl text-slate-600">
-            Indicative tiers — final packages and pricing are confirmed with our partnerships team.
-          </p>
-        </Reveal>
+    {/* Partnership tiers — real, admin-managed packages (GET /packages), not
+        hardcoded copy, so pricing/benefits changes in the admin show up here
+        without a code change. */}
+    {packages.length > 0 && (
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <Reveal>
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange">Partnership Packages</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">Choose Your Level of Involvement</h2>
+          </Reveal>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          {TIERS.map((tier, i) => (
-            <Reveal key={tier.name} delay={i * 0.08}>
-              <div className="flex h-full flex-col rounded-2xl border border-slate-200 p-7 transition-colors hover:border-orange/40">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-navy-secondary text-orange">
-                  <tier.icon size={20} />
-                </span>
-                <p className="mt-4 font-display text-lg font-semibold text-navy">{tier.name}</p>
-                <p className="text-xs font-semibold uppercase tracking-wide text-orange">{tier.tag}</p>
-                <ul className="mt-4 flex-1 space-y-2.5">
-                  {tier.perks.map((perk) => (
-                    <li key={perk} className="flex items-start gap-2.5 text-sm text-slate-600">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange" />
-                      {perk}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Reveal>
-          ))}
+          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+            {packages.map((pkg, i) => {
+              const Icon = TIER_ICONS[i % TIER_ICONS.length];
+              return (
+                <Reveal key={pkg._id} delay={i * 0.08}>
+                  <div className="flex h-full flex-col rounded-2xl border border-slate-200 p-7 transition-colors hover:border-orange/40">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-navy-secondary text-orange">
+                      <Icon size={20} />
+                    </span>
+                    <p className="mt-4 font-display text-lg font-semibold text-navy">{pkg.name}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-orange">&#8358;{pkg.price.toLocaleString('en-NG')}</p>
+                    {pkg.benefits && pkg.benefits.length > 0 && (
+                      <ul className="mt-4 flex-1 space-y-2.5">
+                        {pkg.benefits.map((perk) => (
+                          <li key={perk} className="flex items-start gap-2.5 text-sm text-slate-600">
+                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange" />
+                            {perk}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    )}
 
     <section className="relative overflow-hidden bg-navy py-20">
       <div className="relative mx-auto grid max-w-5xl gap-10 px-4 sm:px-6 lg:grid-cols-12 lg:px-8">
@@ -214,11 +208,11 @@ export const Partners = () => {
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
                 <LightField label="Email" type="email" error={errors.contactEmail?.message} {...register('contactEmail')} />
-                <LightSelect label="Tier Interested" error={errors.tierInterested?.message} {...register('tierInterested')}>
+                <LightSelect label="Package Interested" error={errors.tierInterested?.message} {...register('tierInterested')}>
                   <option value="">Not sure yet</option>
-                  {PARTNER_TIERS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
+                  {packages.map((pkg) => (
+                    <option key={pkg._id} value={pkg.name}>
+                      {pkg.name}
                     </option>
                   ))}
                 </LightSelect>

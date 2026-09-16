@@ -6,6 +6,7 @@ import {
   adminUnassignReviewer,
   type ReviewMatrixRow,
   type ScoreBand,
+  type CommunicationStatus,
 } from '../../../services/abstract.service';
 import { adminListReviewers, adminCreateReviewer, type AdminReviewer } from '../../../services/reviewerAdmin.service';
 import { getApiErrorMessage } from '../../../services/api';
@@ -26,6 +27,20 @@ const BAND_COLOR: Record<ScoreBand, string> = {
   accept: 'bg-orange/10 text-orange',
   borderline: 'bg-warning/10 text-warning',
   reject: 'bg-danger/10 text-danger',
+};
+
+const NOTIFICATION_LABEL: Record<CommunicationStatus, string> = {
+  draft: 'Draft',
+  sent: 'Sent',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+};
+
+const NOTIFICATION_COLOR: Record<CommunicationStatus, string> = {
+  draft: 'bg-warning/10 text-warning',
+  sent: 'bg-success/10 text-success',
+  failed: 'bg-danger/10 text-danger',
+  cancelled: 'bg-slate-100 text-slate-500',
 };
 
 const AssignReviewerForm = ({
@@ -190,6 +205,7 @@ export const ReviewMatrixTab = () => {
                 <th className="px-3 py-3 font-semibold">Reviewers</th>
                 <th className="px-3 py-3 font-semibold">Reviews</th>
                 <th className="px-3 py-3 font-semibold">Consensus</th>
+                <th className="px-3 py-3 font-semibold">Notification</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -242,11 +258,20 @@ export const ReviewMatrixTab = () => {
                           <span className="text-slate-300">&mdash;</span>
                         )}
                       </td>
+                      <td className="px-3 py-3">
+                        {row.notificationStatus ? (
+                          <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${NOTIFICATION_COLOR[row.notificationStatus]}`}>
+                            {NOTIFICATION_LABEL[row.notificationStatus]}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">&mdash;</span>
+                        )}
+                      </td>
                     </tr>
                     {isOpen && (
                       <tr className="bg-offwhite/40">
                         <td />
-                        <td colSpan={4} className="space-y-3 px-3 py-4">
+                        <td colSpan={5} className="space-y-3 px-3 py-4">
                           {row.reviews.length > 0 && (
                             <div className="space-y-1.5">
                               {row.reviews.map((r) => (

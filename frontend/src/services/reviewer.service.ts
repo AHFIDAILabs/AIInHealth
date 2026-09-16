@@ -1,5 +1,8 @@
 import { api } from './api';
 
+export const ABSTRACT_DECISIONS = ['accepted_oral', 'accepted_poster', 'rejected', 'waitlisted'] as const;
+export type AbstractDecision = (typeof ABSTRACT_DECISIONS)[number];
+
 export interface ReviewerMe {
   id: string;
   fullName: string;
@@ -54,6 +57,7 @@ export interface MyAssignment {
   };
   scores: ReviewScore[];
   weightedScore: number | null;
+  recommendation?: AbstractDecision;
   status: 'pending' | 'completed';
   completedAt?: string;
 }
@@ -65,11 +69,12 @@ export const fetchMyAssignments = async (): Promise<MyAssignment[]> => {
 
 export const submitReviewScores = async (
   reviewId: string,
-  scores: ReviewScore[]
-): Promise<{ weightedScore: number; status: string }> => {
-  const res = await api.put<{ success: true; data: { reviewId: string; weightedScore: number; status: string } }>(
-    `/reviewer/assignments/${reviewId}/scores`,
-    { scores }
-  );
+  scores: ReviewScore[],
+  recommendation: AbstractDecision
+): Promise<{ weightedScore: number; recommendation: AbstractDecision; status: string }> => {
+  const res = await api.put<{
+    success: true;
+    data: { reviewId: string; weightedScore: number; recommendation: AbstractDecision; status: string };
+  }>(`/reviewer/assignments/${reviewId}/scores`, { scores, recommendation });
   return res.data.data;
 };

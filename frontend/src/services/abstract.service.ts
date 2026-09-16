@@ -1,8 +1,8 @@
 import { api } from './api';
 import type { Track } from './innovation.service';
 
-// Coarse workflow state — see backend/src/types/enums.ts's comment.
-export const ABSTRACT_STATUSES = ['pending', 'under_review', 'decided'] as const;
+// Workflow state — see backend/src/types/enums.ts's comment.
+export const ABSTRACT_STATUSES = ['submitted', 'under_review', 'revision_requested', 'accepted', 'rejected'] as const;
 export type AbstractStatus = (typeof ABSTRACT_STATUSES)[number];
 
 export const ABSTRACT_DECISIONS = ['accepted_oral', 'accepted_poster', 'rejected', 'waitlisted'] as const;
@@ -10,6 +10,8 @@ export type AbstractDecision = (typeof ABSTRACT_DECISIONS)[number];
 
 export const SCORE_BANDS = ['strong_accept', 'accept', 'borderline', 'reject'] as const;
 export type ScoreBand = (typeof SCORE_BANDS)[number];
+
+export type CommunicationStatus = 'draft' | 'sent' | 'failed' | 'cancelled';
 
 export interface SubmitAbstractInput {
   title: string;
@@ -38,6 +40,7 @@ export interface AdminAbstract extends SubmitAbstractInput {
   reviewsTotal: number;
   consensus: number | null;
   scoreBand: ScoreBand | null;
+  notificationStatus: CommunicationStatus | null;
 }
 
 export interface Paginated<T> {
@@ -84,6 +87,7 @@ export interface ReviewMatrixRow {
   reviewsTotal: number;
   consensus: number | null;
   scoreBand: ScoreBand | null;
+  notificationStatus: CommunicationStatus | null;
 }
 
 export const adminListReviewMatrix = async (params: {
@@ -106,4 +110,33 @@ export const adminAssignReviewer = async (abstractId: string, reviewerId: string
 
 export const adminUnassignReviewer = async (abstractId: string, reviewId: string, force = false): Promise<void> => {
   await api.delete(`/admin/abstracts/${abstractId}/assignments/${reviewId}`, { params: force ? { force: 'true' } : undefined });
+};
+
+// --- Analytics ---
+
+export interface AbstractAnalytics {
+  total: number;
+  statusCounts: Record<AbstractStatus, number>;
+  decisionCounts: Record<AbstractDecision, number>;
+  trackCounts: Record<string, number>;
+  reviewCompletion: { completed: number; total: number };
+  averageScoreByTrack: Array<{ track: string; averageScore: number; abstractCount: number }>;
+  scoreBandCounts: Record<ScoreBand, number>;
+  scoreDistribution: Array<{ bucket: string; count: number }>;
+  recommendationCounts: Record<AbstractDecision, number>;
+  criterionPerformance: Array<{ criterionId: string; label: string; weight: number; average: number | null; scoredCount: number }>;
+  reviewerWorkload: Array<{
+    reviewer: { _id: string; fullName: string; email: string };
+    assigned: number;
+    completed: number;
+    pending: number;
+    averageScore: number | null;
+    averageTurnaroundHours: number | null;
+  }>;
+  communicationPipeline: { draft: number; sent: number; failed: number; cancelled: number };
+}
+
+export const fetchAbstractsAnalytics = async (): Promise<AbstractAnalytics> => {
+  const res = await api.get<{ success: true; data: AbstractAnalytics }>('/admin/abstracts-analytics');
+  return res.data.data;
 };

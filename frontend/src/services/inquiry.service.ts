@@ -1,11 +1,10 @@
 import { api } from './api';
-import type { PartnerTier } from './partner.service';
 
 export interface PartnershipInquiryPayload {
   organizationName: string;
   contactName: string;
   contactEmail: string;
-  tierInterested?: PartnerTier;
+  tierInterested?: string;
   message?: string;
 }
 

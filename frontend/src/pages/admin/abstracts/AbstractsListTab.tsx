@@ -19,15 +19,19 @@ import { useToast } from '../../../contexts/ToastContext';
 import { CARD_CLASS } from '../../../lib/adminUi';
 
 const STATUS_COLOR: Record<AbstractStatus, string> = {
-  pending: 'bg-warning/10 text-warning',
+  submitted: 'bg-warning/10 text-warning',
   under_review: 'bg-info/10 text-info',
-  decided: 'bg-success/10 text-success',
+  revision_requested: 'bg-chart-amber/10 text-chart-amber',
+  accepted: 'bg-success/10 text-success',
+  rejected: 'bg-danger/10 text-danger',
 };
 
 const STATUS_LABEL: Record<AbstractStatus, string> = {
-  pending: 'Pending',
+  submitted: 'Submitted',
   under_review: 'Under Review',
-  decided: 'Decided',
+  revision_requested: 'Revision Requested',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
 };
 
 const DECISION_LABEL: Record<AbstractDecision, string> = {
@@ -134,7 +138,7 @@ export const AbstractsListTab = () => {
     }
   };
 
-  const decidedCount = items.filter((a) => a.status === 'decided').length;
+  const decidedCount = items.filter((a) => a.status === 'accepted' || a.status === 'rejected').length;
   const underReviewCount = items.filter((a) => a.status === 'under_review').length;
   const reviewsCompletedTotal = items.reduce((sum, a) => sum + a.reviewsCompleted, 0);
 
@@ -301,7 +305,7 @@ export const AbstractsListTab = () => {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Status</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {ABSTRACT_STATUSES.filter((s) => s !== 'decided').map((s) => (
+                    {ABSTRACT_STATUSES.map((s) => (
                       <button
                         key={s}
                         disabled={updating}

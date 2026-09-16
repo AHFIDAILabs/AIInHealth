@@ -1,39 +1,53 @@
 import { api } from './api';
 
-export const PARTNER_TIERS = ['Strategic Partner', 'Programme Partner', 'Supporting Partner'] as const;
-export type PartnerTier = (typeof PARTNER_TIERS)[number];
-
 export const PARTNER_CATEGORIES = ['Government', 'Multilateral', 'Private Sector', 'Academia'] as const;
 export type PartnerCategory = (typeof PARTNER_CATEGORIES)[number];
+
+export const PARTNER_STATUSES = ['lead', 'contacted', 'negotiating', 'confirmed', 'active'] as const;
+export type PartnerStatus = (typeof PARTNER_STATUSES)[number];
 
 export interface AdminPartner {
   _id: string;
   name: string;
-  tier: PartnerTier;
   category: PartnerCategory;
   website?: string;
   description?: string;
   logoUrl?: string;
   order: number;
   isPublished: boolean;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  status: PartnerStatus;
+  package?: { _id: string; name: string; price: number } | null;
+  amountPaidKobo: number;
+  // Attached server-side so the Sponsors table doesn't need a second
+  // round-trip per row.
+  deliverablesCompleted: number;
+  deliverablesTotal: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface PartnerInput {
   name: string;
-  tier: PartnerTier;
   category: PartnerCategory;
   website?: string;
   description?: string;
   logoUrl?: string;
   order?: number;
   isPublished?: boolean;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  status?: PartnerStatus;
+  package?: string | null;
+  amountPaidKobo?: number;
 }
 
 export interface ListPartnersParams {
-  tier?: PartnerTier;
   category?: PartnerCategory;
+  status?: PartnerStatus;
   published?: 'true' | 'false';
   q?: string;
   page?: number;
@@ -73,4 +87,29 @@ export const adminUpdatePartner = async (id: string, input: Partial<PartnerInput
 
 export const adminDeletePartner = async (id: string): Promise<void> => {
   await api.delete(`/admin/partners/${id}`);
+};
+
+// --- Analytics (Sponsors stat cards, Outreach tab, Deliverables Overview) ---
+
+export interface PartnerAnalytics {
+  totalSponsors: number;
+  activeSponsors: number;
+  totalRevenueNaira: number;
+  pendingDeliverables: number;
+  totalInteractions: number;
+  pendingFollowUps: number;
+  conversionFunnel: Record<PartnerStatus, number>;
+  deliverableProgress: { completed: number; pending: number; overdue: number };
+  recentDeliverables: Array<{
+    _id: string;
+    partner: { _id: string; name: string };
+    description: string;
+    dueDate: string;
+    status: 'pending' | 'completed';
+  }>;
+}
+
+export const fetchPartnerAnalytics = async (): Promise<PartnerAnalytics> => {
+  const res = await api.get<{ success: true; data: PartnerAnalytics }>('/admin/partners-analytics');
+  return res.data.data;
 };
