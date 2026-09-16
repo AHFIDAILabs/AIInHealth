@@ -50,12 +50,19 @@ export const SESSION_FORMATS = [
 ] as const;
 export type SessionFormat = (typeof SESSION_FORMATS)[number];
 
-// Mirrors the tiers already live on the public Partners page (Partners.tsx TIERS).
-export const PARTNER_TIERS = ['Strategic Partner', 'Programme Partner', 'Supporting Partner'] as const;
-export type PartnerTier = (typeof PARTNER_TIERS)[number];
-
 export const PARTNER_CATEGORIES = ['Government', 'Multilateral', 'Private Sector', 'Academia'] as const;
 export type PartnerCategory = (typeof PARTNER_CATEGORIES)[number];
+
+// CRM pipeline stage — independent of Partner.isPublished (which controls
+// whether the logo shows on the public site, a separate admin decision).
+export const PARTNER_STATUSES = ['lead', 'contacted', 'negotiating', 'confirmed', 'active'] as const;
+export type PartnerStatus = (typeof PARTNER_STATUSES)[number];
+
+export const DELIVERABLE_STATUSES = ['pending', 'completed'] as const;
+export type DeliverableStatus = (typeof DELIVERABLE_STATUSES)[number];
+
+export const PARTNER_INTERACTION_TYPES = ['call', 'email', 'meeting', 'note'] as const;
+export type PartnerInteractionType = (typeof PARTNER_INTERACTION_TYPES)[number];
 
 export const INQUIRY_STATUSES = ['New', 'Contacted', 'Converted', 'Declined'] as const;
 export type InquiryStatus = (typeof INQUIRY_STATUSES)[number];
@@ -99,12 +106,13 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export const MEETING_REQUEST_STATUSES = ['pending', 'accepted', 'declined', 'cancelled'] as const;
 export type MeetingRequestStatus = (typeof MEETING_REQUEST_STATUSES)[number];
 
-// Coarse workflow state — auto-advances as reviews/decisions happen (see
-// abstract.controller.ts): 'pending' until a reviewer is first assigned,
-// 'under_review' while review is in progress, 'decided' once a `decision`
-// (below) has been recorded. Distinct from `decision` itself, which is the
-// actual committee call.
-export const ABSTRACT_STATUSES = ['pending', 'under_review', 'decided'] as const;
+// Workflow state. 'submitted' until a reviewer is first assigned, then
+// 'under_review'; 'revision_requested' is a manual admin action (asks the
+// author to revise, independent of any decision); 'accepted'/'rejected' are
+// normally reached automatically when a `decision` (below) is recorded
+// (accepted_oral/accepted_poster -> 'accepted', rejected -> 'rejected'), but
+// can also be set directly. See abstract.controller.ts's adminUpdate.
+export const ABSTRACT_STATUSES = ['submitted', 'under_review', 'revision_requested', 'accepted', 'rejected'] as const;
 export type AbstractStatus = (typeof ABSTRACT_STATUSES)[number];
 
 // The committee's final call on an abstract, including presentation format —

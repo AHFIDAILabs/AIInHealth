@@ -1,4 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
+import { ABSTRACT_DECISIONS } from '../types/enums.js';
 
 // One document per (abstract, reviewer) pair — created by an admin at
 // ASSIGNMENT time (status 'pending', scores empty) and completed by the
@@ -22,6 +23,10 @@ const abstractReviewSchema = new Schema(
     // 0-100, computed by utils/reviewScoring.ts's computeWeightedScore against
     // the rubric AS OF submission time — null until the reviewer submits.
     weightedScore: { type: Number, min: 0, max: 100 },
+    // The reviewer's own explicit call (distinct from the numeric score,
+    // which drives consensus/bands) — feeds the Analytics tab's "Reviewer
+    // Recommendations" panel. Required alongside scores on submission.
+    recommendation: { type: String, enum: ABSTRACT_DECISIONS },
     status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
     completedAt: { type: Date },
   },

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ABSTRACT_DECISIONS } from '../types/enums.js';
 
 export const requestReviewerMagicLinkSchema = z.object({
   body: z.object({
@@ -27,6 +28,7 @@ export const submitReviewScoresSchema = z.object({
         })
       )
       .min(1, 'At least one score is required'),
+    recommendation: z.enum(ABSTRACT_DECISIONS),
   }),
 });
 export type SubmitReviewScoresInput = z.infer<typeof submitReviewScoresSchema>['body'];

@@ -18,6 +18,7 @@ import * as delegateAnnouncementController from '../../controllers/delegateAnnou
 import * as abstractController from '../../controllers/abstract.controller.js';
 import * as rubricController from '../../controllers/rubric.controller.js';
 import * as reviewerController from '../../controllers/reviewer.controller.js';
+import * as communicationController from '../../controllers/communication.controller.js';
 import * as eventTeamController from '../../controllers/eventTeam.controller.js';
 import * as portalTokenController from '../../controllers/portalToken.controller.js';
 import * as reconciliationController from '../../controllers/reconciliation.controller.js';
@@ -27,6 +28,9 @@ import * as newsletterController from '../../controllers/newsletter.controller.j
 import * as uploadController from '../../controllers/upload.controller.js';
 import * as searchController from '../../controllers/search.controller.js';
 import * as mediaController from '../../controllers/media.controller.js';
+import * as sponsorshipPackageController from '../../controllers/sponsorshipPackage.controller.js';
+import * as deliverableController from '../../controllers/deliverable.controller.js';
+import * as partnerInteractionController from '../../controllers/partnerInteraction.controller.js';
 import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
@@ -35,6 +39,10 @@ import { subscribePushSchema, unsubscribePushSchema } from '../../validations/pu
 import { sendAnnouncementSchema } from '../../validations/delegateAnnouncement.validation.js';
 import { replaceRubricSchema } from '../../validations/rubric.validation.js';
 import { adminCreateReviewerSchema, adminAssignReviewerSchema } from '../../validations/reviewer.validation.js';
+import { adminUpdateCommunicationSchema } from '../../validations/communication.validation.js';
+import { createSponsorshipPackageSchema, updateSponsorshipPackageSchema } from '../../validations/sponsorshipPackage.validation.js';
+import { createDeliverableSchema, updateDeliverableSchema } from '../../validations/deliverable.validation.js';
+import { createPartnerInteractionSchema } from '../../validations/partnerInteraction.validation.js';
 
 const router = Router();
 
@@ -123,6 +131,45 @@ router.get('/partners', requireRole(...contentRoles), partnerController.adminLis
 router.post('/partners', requireRole(...contentRoles), partnerController.adminCreate);
 router.patch('/partners/:id', requireRole(...contentRoles), partnerController.adminUpdate);
 router.delete('/partners/:id', requireRole(...contentRoles), partnerController.adminDelete);
+router.get('/partners-analytics', requireRole(...contentRoles), partnerController.analytics);
+
+router.get('/sponsorship-packages', requireRole(...contentRoles), sponsorshipPackageController.adminList);
+router.post(
+  '/sponsorship-packages',
+  requireRole(...contentRoles),
+  validate(createSponsorshipPackageSchema),
+  sponsorshipPackageController.adminCreate
+);
+router.patch(
+  '/sponsorship-packages/:id',
+  requireRole(...contentRoles),
+  validate(updateSponsorshipPackageSchema),
+  sponsorshipPackageController.adminUpdate
+);
+router.delete('/sponsorship-packages/:id', requireRole(...contentRoles), sponsorshipPackageController.adminDelete);
+
+router.get('/deliverables', requireRole(...contentRoles), deliverableController.adminList);
+router.post(
+  '/partners/:id/deliverables',
+  requireRole(...contentRoles),
+  validate(createDeliverableSchema),
+  deliverableController.adminCreate
+);
+router.patch('/deliverables/:id', requireRole(...contentRoles), validate(updateDeliverableSchema), deliverableController.adminUpdate);
+router.delete('/deliverables/:id', requireRole(...contentRoles), deliverableController.adminDelete);
+
+router.get('/interactions', requireRole(...contentRoles), partnerInteractionController.adminList);
+router.post(
+  '/partners/:id/interactions',
+  requireRole(...contentRoles),
+  validate(createPartnerInteractionSchema),
+  partnerInteractionController.adminCreate
+);
+router.patch(
+  '/interactions/:id/follow-up-done',
+  requireRole(...contentRoles),
+  partnerInteractionController.adminMarkFollowUpDone
+);
 
 router.get('/innovations', requireRole(...contentRoles), innovationController.adminList);
 router.post('/innovations', requireRole(...contentRoles), innovationController.adminCreate);
@@ -147,6 +194,18 @@ router.post('/rubric/restore-standard', requireRole(...contentRoles), rubricCont
 
 router.get('/reviewers', requireRole(...contentRoles), reviewerController.adminList);
 router.post('/reviewers', requireRole(...contentRoles), validate(adminCreateReviewerSchema), reviewerController.adminCreate);
+
+router.get('/abstracts-analytics', requireRole(...contentRoles), abstractController.analytics);
+
+router.get('/communications', requireRole(...contentRoles), communicationController.adminList);
+router.patch(
+  '/communications/:id',
+  requireRole(...contentRoles),
+  validate(adminUpdateCommunicationSchema),
+  communicationController.adminUpdate
+);
+router.post('/communications/:id/send', requireRole(...contentRoles), communicationController.adminSend);
+router.post('/communications/:id/cancel', requireRole(...contentRoles), communicationController.adminCancel);
 
 router.get('/media', requireRole(...contentRoles), mediaController.adminList);
 router.post('/media', requireRole(...contentRoles), mediaController.adminCreate);

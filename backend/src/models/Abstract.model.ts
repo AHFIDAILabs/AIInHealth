@@ -10,10 +10,11 @@ const abstractSchema = new Schema(
     coAuthors: { type: String, trim: true, maxlength: 500 },
     track: { type: String, enum: TRACKS, required: true },
     abstractText: { type: String, required: true, trim: true, maxlength: 3000 },
-    status: { type: String, enum: ABSTRACT_STATUSES, default: 'pending' },
+    status: { type: String, enum: ABSTRACT_STATUSES, default: 'submitted' },
     // The committee's final call (see enums.ts) — unset until a decision is
     // recorded via abstractController.adminUpdate, which also bumps `status`
-    // to 'decided' at the same time.
+    // to 'accepted'/'rejected' at the same time for accepted_oral/
+    // accepted_poster/rejected ('waitlisted' has no status equivalent).
     decision: { type: String, enum: ABSTRACT_DECISIONS },
     reviewNotes: { type: String, trim: true, maxlength: 1000 }, // admin-only, never shown to the submitter
   },

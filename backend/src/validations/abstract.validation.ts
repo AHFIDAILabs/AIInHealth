@@ -19,8 +19,8 @@ export type CreateAbstractInput = z.infer<typeof createAbstractSchema>['body'];
 export const adminUpdateAbstractSchema = z.object({
   body: z.object({
     status: z.enum(ABSTRACT_STATUSES).optional(),
-    // Setting this also auto-advances status to 'decided' — see
-    // abstractController.adminUpdate.
+    // Setting this also auto-advances status to 'accepted'/'rejected' for
+    // accepted_oral/accepted_poster/rejected — see abstractController.adminUpdate.
     decision: z.enum(ABSTRACT_DECISIONS).optional(),
     reviewNotes: z.string().trim().max(1000).optional(),
   }),

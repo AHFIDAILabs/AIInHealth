@@ -82,6 +82,7 @@ export const listMyAssignments = catchAsync(async (req: Request, res: Response) 
         abstract: r.abstract,
         scores: r.scores,
         weightedScore: r.weightedScore,
+        recommendation: r.recommendation,
         status: r.status,
         completedAt: r.completedAt,
       }))
@@ -95,7 +96,7 @@ export const listMyAssignments = catchAsync(async (req: Request, res: Response) 
 // re-review" being the only other path back to pending).
 export const submitScores = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Review assignment not found', 'NOT_FOUND');
-  const { scores } = req.body as SubmitReviewScoresInput;
+  const { scores, recommendation } = req.body as SubmitReviewScoresInput;
 
   const review = await AbstractReview.findOne({ _id: req.params.id, reviewer: req.reviewer!.reviewerId });
   if (!review) throw new ApiError(404, 'Review assignment not found', 'NOT_FOUND');
@@ -110,11 +111,14 @@ export const submitScores = catchAsync(async (req: Request, res: Response) => {
 
   review.scores = scores.map((s) => ({ criterionId: s.criterionId, score: s.score })) as unknown as typeof review.scores;
   review.weightedScore = computeWeightedScore(scores, rubricDoc.criteria);
+  review.recommendation = recommendation;
   review.status = 'completed';
   review.completedAt = new Date();
   await review.save();
 
-  res.json(new ApiResponse({ reviewId: review.id, weightedScore: review.weightedScore, status: review.status }));
+  res.json(
+    new ApiResponse({ reviewId: review.id, weightedScore: review.weightedScore, recommendation: review.recommendation, status: review.status })
+  );
 });
 
 // --- Admin-side reviewer roster management ---

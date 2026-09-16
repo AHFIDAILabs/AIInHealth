@@ -37,16 +37,78 @@ interface SendEmailInput {
   html: string;
 }
 
+// Static brand assets served straight from the frontend's public/ folder
+// (unhashed, unlike the Vite-bundled src/assets/images/ copies these were
+// sourced from — an email sent today must keep working after a future
+// frontend rebuild changes asset hashes, so these live at stable filenames).
+const EMAIL_LOGO_URL = `${env.FRONTEND_ORIGIN}/summit-logo-mark.png`;
+const EMAIL_SIGNATURE_URL = `${env.FRONTEND_ORIGIN}/email-signature.png`;
+
+// Every email gets the same branded shell: a coded (not image-based) header
+// banner — Outlook desktop's Word rendering engine doesn't support CSS
+// gradients or many modern properties, so this deliberately uses plain solid
+// colors and a table layout rather than trying to reproduce a photographic
+// banner — plus the real signature graphic as a footer, with a plain-text
+// line under it so the branding still comes through for recipients who have
+// remote images blocked (the common default in most mail clients).
+const wrapEmailBody = (innerHtml: string): string => `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;">
+    <tr>
+      <td style="border:1px solid #E2E8F0;border-radius:10px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Arial,Helvetica,sans-serif;">
+          <tr>
+            <td style="background-color:#0F172A;padding:22px 28px;border-radius:10px 10px 0 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background-color:#E8792C;width:44px;height:44px;border-radius:8px;text-align:center;vertical-align:middle;">
+                    <img src="${EMAIL_LOGO_URL}" width="26" alt="AI" style="display:block;margin:9px auto;border:0;" />
+                  </td>
+                  <td style="padding-left:14px;">
+                    <p style="margin:0;color:#ffffff;font-size:13px;font-weight:bold;letter-spacing:0.4px;">ARTIFICIAL INTELLIGENCE IN HEALTH SUMMIT 2026</p>
+                    <p style="margin:3px 0 0;color:#F3A56A;font-size:11px;">19&ndash;20 October 2026 &middot; Abuja, Nigeria</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;padding:28px;color:#1F2937;font-size:14px;line-height:1.65;">
+              ${innerHtml}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;padding:0 28px 26px;text-align:center;border-radius:0 0 10px 10px;">
+              <a href="${env.FRONTEND_ORIGIN}" style="text-decoration:none;">
+                <img src="${EMAIL_SIGNATURE_URL}" width="400" alt="AI in Health Summit 2026 &mdash; 19-20 October 2026, Abuja, Nigeria" style="max-width:100%;border:0;border-radius:6px;" />
+              </a>
+              <p style="margin:12px 0 0;color:#94A3B8;font-size:11px;">
+                <a href="${env.FRONTEND_ORIGIN}" style="color:#94A3B8;text-decoration:none;">AI in Health Summit 2026</a> &middot; Convened by AHFID &middot; Abuja, Nigeria
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+`;
+
 /**
  * Sends via Microsoft Graph's /sendMail on the MS_SENDER_EMAIL mailbox (app-only auth —
  * requires an admin-consented Mail.Send *application* permission on the Entra app
  * registration, not delegated). Falls back to logging the email in dev when Graph
  * credentials aren't configured, so the forgot-password flow is still testable locally
  * without needing real Microsoft 365 credentials.
+ *
+ * Every caller's `html` is just their own message content — the branded
+ * header/signature shell (wrapEmailBody above) is applied here, once, so
+ * every email this app ever sends looks consistently like it's coming from
+ * the AI in Health Summit without each template needing to remember to add it.
  */
 export const sendEmail = async ({ to, subject, html }: SendEmailInput): Promise<void> => {
+  const brandedHtml = wrapEmailBody(html);
+
   if (!graphConfigured) {
-    logger.info({ to, subject, html }, '📧 [DEV EMAIL — not actually sent, Microsoft Graph credentials unset]');
+    logger.info({ to, subject, html: brandedHtml }, '📧 [DEV EMAIL — not actually sent, Microsoft Graph credentials unset]');
     return;
   }
 
@@ -57,7 +119,7 @@ export const sendEmail = async ({ to, subject, html }: SendEmailInput): Promise<
     body: JSON.stringify({
       message: {
         subject,
-        body: { contentType: 'HTML', content: html },
+        body: { contentType: 'HTML', content: brandedHtml },
         toRecipients: [{ emailAddress: { address: to } }],
       },
       saveToSentItems: false,

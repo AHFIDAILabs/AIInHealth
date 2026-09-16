@@ -102,11 +102,11 @@ const RESOURCES: SearchResource[] = [
     label: 'Partners',
     roles: ['super_admin', 'content_editor'],
     search: async (rx, q) => {
-      const docs = await Partner.find({ name: rx }).sort({ name: 1 }).limit(RESULT_LIMIT).select('name tier category');
+      const docs = await Partner.find({ name: rx }).sort({ name: 1 }).limit(RESULT_LIMIT).select('name status category');
       return docs.map((d) => ({
         id: d.id as string,
         title: d.name,
-        subtitle: [d.tier, d.category].filter(Boolean).join(' · '),
+        subtitle: [d.status, d.category].filter(Boolean).join(' · '),
         path: `/admin/partners?q=${encodeURIComponent(q)}`,
       }));
     },

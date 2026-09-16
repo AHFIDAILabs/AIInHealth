@@ -14,6 +14,7 @@ import delegateRoutes from './delegate.routes.js';
 import abstractRoutes from './abstract.routes.js';
 import mediaRoutes from './media.routes.js';
 import reviewerRoutes from './reviewer.routes.js';
+import sponsorshipPackageRoutes from './sponsorshipPackage.routes.js';
 
 const router = Router();
 
@@ -32,5 +33,6 @@ router.use('/delegate', delegateRoutes);
 router.use('/abstracts', abstractRoutes);
 router.use('/media', mediaRoutes);
 router.use('/reviewer', reviewerRoutes);
+router.use('/packages', sponsorshipPackageRoutes);
 
 export default router;
