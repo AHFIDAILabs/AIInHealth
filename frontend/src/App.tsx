@@ -3,12 +3,15 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { DelegateAuthProvider } from './contexts/DelegateAuthContext';
+import { ReviewerAuthProvider } from './contexts/ReviewerAuthContext';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { PortalLayout } from './components/layout/PortalLayout';
+import { ReviewerPortalLayout } from './components/layout/ReviewerPortalLayout';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { RequireRole } from './routes/RequireRole';
 import { PortalProtectedRoute } from './routes/PortalProtectedRoute';
+import { ReviewerProtectedRoute } from './routes/ReviewerProtectedRoute';
 import { Home } from './pages/public/Home';
 import { NewHome } from './pages/public/NewHome';
 import { About } from './pages/public/About';
@@ -56,6 +59,10 @@ import { PortalVerify } from './pages/portal/PortalVerify';
 import { PortalHome } from './pages/portal/PortalHome';
 import { PortalDirectory } from './pages/portal/PortalDirectory';
 import { PortalMeetings } from './pages/portal/PortalMeetings';
+import { ReviewerLogin } from './pages/reviewer/ReviewerLogin';
+import { ReviewerVerify } from './pages/reviewer/ReviewerVerify';
+import { ReviewerDashboard } from './pages/reviewer/ReviewerDashboard';
+import { ReviewerScoreForm } from './pages/reviewer/ReviewerScoreForm';
 
 const CONTENT_ROLES = ['super_admin', 'content_editor'] as const;
 const REGISTRATION_ROLES = ['super_admin', 'registrations_officer'] as const;
@@ -66,6 +73,7 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
         <DelegateAuthProvider>
+        <ReviewerAuthProvider>
         <Routes>
           <Route element={<PublicLayout />}>
             {/* <Route path="/" element={<Home />} /> */}
@@ -161,7 +169,19 @@ function App() {
               <Route path="/portal/meetings" element={<PortalMeetings />} />
             </Route>
           </Route>
+
+          {/* Reviewer portal — same pattern as the delegate portal above, its
+              own separate auth/layout tree for external abstract reviewers. */}
+          <Route path="/review/login" element={<ReviewerLogin />} />
+          <Route path="/review/verify" element={<ReviewerVerify />} />
+          <Route element={<ReviewerProtectedRoute />}>
+            <Route element={<ReviewerPortalLayout />}>
+              <Route path="/review" element={<ReviewerDashboard />} />
+              <Route path="/review/abstracts/:id" element={<ReviewerScoreForm />} />
+            </Route>
+          </Route>
         </Routes>
+        </ReviewerAuthProvider>
         </DelegateAuthProvider>
         </NotificationProvider>
       </AuthProvider>

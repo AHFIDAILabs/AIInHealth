@@ -1,8 +1,15 @@
 import { api } from './api';
 import type { Track } from './innovation.service';
 
-export const ABSTRACT_STATUSES = ['pending', 'accepted', 'rejected'] as const;
+// Coarse workflow state — see backend/src/types/enums.ts's comment.
+export const ABSTRACT_STATUSES = ['pending', 'under_review', 'decided'] as const;
 export type AbstractStatus = (typeof ABSTRACT_STATUSES)[number];
+
+export const ABSTRACT_DECISIONS = ['accepted_oral', 'accepted_poster', 'rejected', 'waitlisted'] as const;
+export type AbstractDecision = (typeof ABSTRACT_DECISIONS)[number];
+
+export const SCORE_BANDS = ['strong_accept', 'accept', 'borderline', 'reject'] as const;
+export type ScoreBand = (typeof SCORE_BANDS)[number];
 
 export interface SubmitAbstractInput {
   title: string;
@@ -22,8 +29,15 @@ export const submitAbstract = async (input: SubmitAbstractInput): Promise<string
 export interface AdminAbstract extends SubmitAbstractInput {
   _id: string;
   status: AbstractStatus;
+  decision?: AbstractDecision;
   reviewNotes?: string;
   createdAt: string;
+  // Review summary — attached server-side so the list table doesn't need a
+  // second round-trip per row.
+  reviewsCompleted: number;
+  reviewsTotal: number;
+  consensus: number | null;
+  scoreBand: ScoreBand | null;
 }
 
 export interface Paginated<T> {
@@ -36,6 +50,7 @@ export interface Paginated<T> {
 
 export const adminListAbstracts = async (params: {
   status?: AbstractStatus;
+  decision?: AbstractDecision;
   track?: Track;
   q?: string;
   limit?: number;
@@ -49,8 +64,46 @@ export const adminListAbstracts = async (params: {
 
 export const adminUpdateAbstract = async (
   id: string,
-  input: { status?: AbstractStatus; reviewNotes?: string }
+  input: { status?: AbstractStatus; decision?: AbstractDecision; reviewNotes?: string }
 ): Promise<AdminAbstract> => {
   const res = await api.patch<{ success: true; data: AdminAbstract }>(`/admin/abstracts/${id}`, input);
   return res.data.data;
+};
+
+// --- Review Matrix ---
+
+export interface ReviewMatrixRow {
+  abstract: { _id: string; title: string; authorName: string; track: Track; decision?: AbstractDecision };
+  reviews: Array<{
+    reviewId: string;
+    reviewer: { _id: string; fullName: string; email: string };
+    weightedScore: number | null;
+    status: 'pending' | 'completed';
+  }>;
+  reviewsCompleted: number;
+  reviewsTotal: number;
+  consensus: number | null;
+  scoreBand: ScoreBand | null;
+}
+
+export const adminListReviewMatrix = async (params: {
+  status?: AbstractStatus;
+  decision?: AbstractDecision;
+  track?: Track;
+  q?: string;
+  limit?: number;
+}): Promise<Paginated<ReviewMatrixRow>> => {
+  const res = await api.get<{ success: true; data: ReviewMatrixRow[]; meta: Omit<Paginated<never>, 'items'> }>(
+    '/admin/review-matrix',
+    { params }
+  );
+  return { items: res.data.data, ...res.data.meta };
+};
+
+export const adminAssignReviewer = async (abstractId: string, reviewerId: string): Promise<void> => {
+  await api.post(`/admin/abstracts/${abstractId}/assignments`, { reviewerId });
+};
+
+export const adminUnassignReviewer = async (abstractId: string, reviewId: string, force = false): Promise<void> => {
+  await api.delete(`/admin/abstracts/${abstractId}/assignments/${reviewId}`, { params: force ? { force: 'true' } : undefined });
 };
