@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { PARTNER_CATEGORIES, PARTNER_STATUSES } from '../types/enums.js';
+import { PARTNER_STATUSES } from '../types/enums.js';
 
 // logoUrl is a plain string — same upload.controller.ts flow as Speaker.photoUrl.
 // One model covers both paying sponsors and non-financial partners (the
@@ -9,7 +9,10 @@ import { PARTNER_CATEGORIES, PARTNER_STATUSES } from '../types/enums.js';
 const partnerSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
-    category: { type: String, enum: PARTNER_CATEGORIES, required: true },
+    // Free text, not a fixed enum — an admin can type any organization type.
+    // PARTNER_CATEGORY_SUGGESTIONS (enums.ts) offers the original 4 values as
+    // autocomplete suggestions in the admin form, not an enforced list.
+    category: { type: String, required: true, trim: true },
     website: { type: String, trim: true },
     description: { type: String, trim: true, maxlength: 1000 },
     logoUrl: { type: String, trim: true },

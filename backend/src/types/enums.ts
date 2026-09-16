@@ -50,8 +50,10 @@ export const SESSION_FORMATS = [
 ] as const;
 export type SessionFormat = (typeof SESSION_FORMATS)[number];
 
-export const PARTNER_CATEGORIES = ['Government', 'Multilateral', 'Private Sector', 'Academia'] as const;
-export type PartnerCategory = (typeof PARTNER_CATEGORIES)[number];
+// Not enforced — Partner.category is free text (an admin can type any
+// organization type). These are just autocomplete suggestions shown in the
+// admin form.
+export const PARTNER_CATEGORY_SUGGESTIONS = ['Government', 'Multilateral', 'Private Sector', 'Academia'] as const;
 
 // CRM pipeline stage — independent of Partner.isPublished (which controls
 // whether the logo shows on the public site, a separate admin decision).
