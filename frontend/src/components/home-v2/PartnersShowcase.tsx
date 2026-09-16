@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Reveal } from '../ui/Reveal';
-import { listPublicPartners, PARTNER_CATEGORIES, type AdminPartner } from '../../services/partner.service';
+import { listPublicPartners, type AdminPartner } from '../../services/partner.service';
 
 // Matches the reference layout: a plain, bold centered headline per group,
 // then a wide multi-column grid of full-color logos with no card wrappers,
@@ -8,10 +8,11 @@ import { listPublicPartners, PARTNER_CATEGORIES, type AdminPartner } from '../..
 // left-aligned within their grid cells. No "Become a Partner" CTA here —
 // that ask lives in the hero and closing CTA sections instead.
 //
-// Grouped by the real PartnerCategory field (Government / Multilateral /
-// Private Sector / Academia) — only categories with at least one published
-// partner render. Whole section stays hidden if there are zero published
-// partners at all, same self-hiding rule as ConvenedWith.
+// Grouped by the real (free-text) category field — an admin can type any
+// organization type, so categories are discovered from whatever's actually
+// present in the published partners rather than a fixed list. Whole section
+// stays hidden if there are zero published partners at all, same
+// self-hiding rule as ConvenedWith.
 export const PartnersShowcase = () => {
   const [partners, setPartners] = useState<AdminPartner[]>([]);
 
@@ -23,10 +24,11 @@ export const PartnersShowcase = () => {
 
   if (partners.length === 0) return null;
 
-  const grouped = PARTNER_CATEGORIES.map((category) => ({
+  const categories = Array.from(new Set(partners.map((p) => p.category)));
+  const grouped = categories.map((category) => ({
     category,
     items: partners.filter((p) => p.category === category),
-  })).filter((g) => g.items.length > 0);
+  }));
 
   return (
     <section className="w-full justify-center bg-white py-24">

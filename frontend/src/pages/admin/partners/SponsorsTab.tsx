@@ -8,7 +8,7 @@ import {
   adminUpdatePartner,
   adminDeletePartner,
   fetchPartnerAnalytics,
-  PARTNER_CATEGORIES,
+  PARTNER_CATEGORY_SUGGESTIONS,
   PARTNER_STATUSES,
   type AdminPartner,
   type PartnerInput,
@@ -60,7 +60,7 @@ const STATUS_COLOR: Record<PartnerStatus, string> = {
 
 const EMPTY_FORM: PartnerInput = {
   name: '',
-  category: PARTNER_CATEGORIES[0],
+  category: PARTNER_CATEGORY_SUGGESTIONS[0],
   website: '',
   description: '',
   logoUrl: '',
@@ -451,13 +451,20 @@ export const SponsorsTab = () => {
                 {formError && <Banner variant="error">{formError}</Banner>}
                 <AdminInput label="Company Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="World Health Organization" />
                 <div className="grid grid-cols-2 gap-3">
-                  <AdminSelect label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as PartnerInput['category'] })}>
-                    {PARTNER_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </AdminSelect>
+                  <div>
+                    <AdminInput
+                      label="Category"
+                      list="category-suggestions"
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      placeholder="e.g. Government"
+                    />
+                    <datalist id="category-suggestions">
+                      {PARTNER_CATEGORY_SUGGESTIONS.map((c) => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
+                  </div>
                   <AdminSelect label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as PartnerStatus })}>
                     {PARTNER_STATUSES.map((s) => (
                       <option key={s} value={s}>

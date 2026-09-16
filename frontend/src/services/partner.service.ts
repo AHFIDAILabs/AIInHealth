@@ -1,7 +1,8 @@
 import { api } from './api';
 
-export const PARTNER_CATEGORIES = ['Government', 'Multilateral', 'Private Sector', 'Academia'] as const;
-export type PartnerCategory = (typeof PARTNER_CATEGORIES)[number];
+// Not enforced — Partner.category is free text. These are just autocomplete
+// suggestions offered in the admin form (see SponsorsTab.tsx's <datalist>).
+export const PARTNER_CATEGORY_SUGGESTIONS = ['Government', 'Multilateral', 'Private Sector', 'Academia'];
 
 export const PARTNER_STATUSES = ['lead', 'contacted', 'negotiating', 'confirmed', 'active'] as const;
 export type PartnerStatus = (typeof PARTNER_STATUSES)[number];
@@ -9,7 +10,7 @@ export type PartnerStatus = (typeof PARTNER_STATUSES)[number];
 export interface AdminPartner {
   _id: string;
   name: string;
-  category: PartnerCategory;
+  category: string;
   website?: string;
   description?: string;
   logoUrl?: string;
@@ -31,7 +32,7 @@ export interface AdminPartner {
 
 export interface PartnerInput {
   name: string;
-  category: PartnerCategory;
+  category: string;
   website?: string;
   description?: string;
   logoUrl?: string;
@@ -46,7 +47,7 @@ export interface PartnerInput {
 }
 
 export interface ListPartnersParams {
-  category?: PartnerCategory;
+  category?: string;
   status?: PartnerStatus;
   published?: 'true' | 'false';
   q?: string;
@@ -62,7 +63,7 @@ export interface Paginated<T> {
   pages: number;
 }
 
-export const listPublicPartners = async (category?: PartnerCategory): Promise<AdminPartner[]> => {
+export const listPublicPartners = async (category?: string): Promise<AdminPartner[]> => {
   const res = await api.get<{ success: true; data: AdminPartner[] }>('/partners', { params: category ? { category } : {} });
   return res.data.data;
 };

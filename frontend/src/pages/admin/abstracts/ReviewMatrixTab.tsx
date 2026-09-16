@@ -61,13 +61,29 @@ const AssignReviewerForm = ({
   const [newEmail, setNewEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Does the actual assign call — no `submitting` guard of its own, since
+  // both call sites below already manage that flag around whatever else
+  // they need to do first (createAndAssign creates the reviewer first).
+  const doAssign = async (reviewerId: string) => {
+    await adminAssignReviewer(abstractId, reviewerId);
+    toast('success', 'Reviewer assigned — an invite email has been sent');
+    onAssigned();
+    setSelectedId('');
+  };
+
   const assign = async (reviewerId: string) => {
+    // Synchronous re-entrance guard — `disabled={submitting}` on the button
+    // closes this for a normal click, but React only applies that to the DOM
+    // on the next render, leaving a brief window where a fast double-click
+    // (or an impatient second click on a slow connection) can fire this twice
+    // before the button visually disables. That second call would otherwise
+    // succeed at the API layer too — assignment is idempotent from the
+    // backend's point of view — but it'd surface a confusing "already
+    // assigned" error even though the first call already succeeded.
+    if (submitting) return;
     setSubmitting(true);
     try {
-      await adminAssignReviewer(abstractId, reviewerId);
-      toast('success', 'Reviewer assigned — an invite email has been sent');
-      onAssigned();
-      setSelectedId('');
+      await doAssign(reviewerId);
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -76,17 +92,18 @@ const AssignReviewerForm = ({
   };
 
   const createAndAssign = async () => {
-    if (!newName.trim() || !newEmail.trim()) return;
+    if (!newName.trim() || !newEmail.trim() || submitting) return;
     setSubmitting(true);
     try {
       const reviewer = await adminCreateReviewer({ fullName: newName.trim(), email: newEmail.trim() });
       onReviewerCreated(reviewer);
-      await assign(reviewer._id);
+      await doAssign(reviewer._id);
       setNewName('');
       setNewEmail('');
       setShowNew(false);
     } catch (err) {
       toast('error', getApiErrorMessage(err));
+    } finally {
       setSubmitting(false);
     }
   };
@@ -105,7 +122,7 @@ const AssignReviewerForm = ({
           disabled={submitting || !newName.trim() || !newEmail.trim()}
           className="rounded-lg bg-orange px-3.5 py-2.5 text-xs font-semibold text-white disabled:opacity-50"
         >
-          Add &amp; Assign
+          {submitting ? 'Adding…' : 'Add & Assign'}
         </button>
         <button onClick={() => setShowNew(false)} className="text-xs font-medium text-slate-500 hover:text-navy">
           Cancel
@@ -133,7 +150,7 @@ const AssignReviewerForm = ({
         disabled={!selectedId || submitting}
         className="rounded-lg border border-orange px-3.5 py-2 text-xs font-semibold text-orange hover:bg-orange/10 disabled:opacity-50"
       >
-        Assign
+        {submitting ? 'Assigning…' : 'Assign'}
       </button>
       <button
         onClick={() => setShowNew(true)}
