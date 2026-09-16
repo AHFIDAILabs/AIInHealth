@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TRACKS, ABSTRACT_STATUSES } from '../types/enums.js';
+import { TRACKS, ABSTRACT_STATUSES, ABSTRACT_DECISIONS } from '../types/enums.js';
 
 export const createAbstractSchema = z.object({
   body: z.object({
@@ -19,6 +19,9 @@ export type CreateAbstractInput = z.infer<typeof createAbstractSchema>['body'];
 export const adminUpdateAbstractSchema = z.object({
   body: z.object({
     status: z.enum(ABSTRACT_STATUSES).optional(),
+    // Setting this also auto-advances status to 'decided' — see
+    // abstractController.adminUpdate.
+    decision: z.enum(ABSTRACT_DECISIONS).optional(),
     reviewNotes: z.string().trim().max(1000).optional(),
   }),
 });
@@ -26,6 +29,7 @@ export type AdminUpdateAbstractInput = z.infer<typeof adminUpdateAbstractSchema>
 
 export const listAbstractsQuerySchema = z.object({
   status: z.enum(ABSTRACT_STATUSES).optional(),
+  decision: z.enum(ABSTRACT_DECISIONS).optional(),
   track: z.enum(TRACKS).optional(),
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),

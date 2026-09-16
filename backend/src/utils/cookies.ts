@@ -36,3 +36,14 @@ export const setDelegateCookie = (res: Response, token: string, maxAgeMs: number
 export const clearDelegateCookie = (res: Response): void => {
   res.clearCookie('delegate_token', delegateCookieOptions);
 };
+
+// Reviewer portal — same idea, its own namespace scoped to /api/v1/reviewer.
+const reviewerCookieOptions = { ...baseCookieOptions, path: '/api/v1/reviewer' };
+
+export const setReviewerCookie = (res: Response, token: string, maxAgeMs: number): void => {
+  res.cookie('reviewer_token', token, { ...reviewerCookieOptions, maxAge: maxAgeMs });
+};
+
+export const clearReviewerCookie = (res: Response): void => {
+  res.clearCookie('reviewer_token', reviewerCookieOptions);
+};

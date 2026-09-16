@@ -16,6 +16,8 @@ import * as innovationController from '../../controllers/innovation.controller.j
 import * as checkinController from '../../controllers/checkin.controller.js';
 import * as delegateAnnouncementController from '../../controllers/delegateAnnouncement.controller.js';
 import * as abstractController from '../../controllers/abstract.controller.js';
+import * as rubricController from '../../controllers/rubric.controller.js';
+import * as reviewerController from '../../controllers/reviewer.controller.js';
 import * as eventTeamController from '../../controllers/eventTeam.controller.js';
 import * as portalTokenController from '../../controllers/portalToken.controller.js';
 import * as reconciliationController from '../../controllers/reconciliation.controller.js';
@@ -31,6 +33,8 @@ import { validate } from '../../middlewares/validate.middleware.js';
 import { uploadImage, uploadMedia } from '../../middlewares/upload.middleware.js';
 import { subscribePushSchema, unsubscribePushSchema } from '../../validations/push.validation.js';
 import { sendAnnouncementSchema } from '../../validations/delegateAnnouncement.validation.js';
+import { replaceRubricSchema } from '../../validations/rubric.validation.js';
+import { adminCreateReviewerSchema, adminAssignReviewerSchema } from '../../validations/reviewer.validation.js';
 
 const router = Router();
 
@@ -127,6 +131,22 @@ router.delete('/innovations/:id', requireRole(...contentRoles), innovationContro
 
 router.get('/abstracts', requireRole(...contentRoles), abstractController.adminList);
 router.patch('/abstracts/:id', requireRole(...contentRoles), abstractController.adminUpdate);
+router.post(
+  '/abstracts/:id/assignments',
+  requireRole(...contentRoles),
+  validate(adminAssignReviewerSchema),
+  abstractController.assignReviewer
+);
+router.delete('/abstracts/:id/assignments/:reviewId', requireRole(...contentRoles), abstractController.unassignReviewer);
+
+router.get('/review-matrix', requireRole(...contentRoles), abstractController.reviewMatrix);
+
+router.get('/rubric', requireRole(...contentRoles), rubricController.get);
+router.put('/rubric', requireRole(...contentRoles), validate(replaceRubricSchema), rubricController.replace);
+router.post('/rubric/restore-standard', requireRole(...contentRoles), rubricController.restoreStandard);
+
+router.get('/reviewers', requireRole(...contentRoles), reviewerController.adminList);
+router.post('/reviewers', requireRole(...contentRoles), validate(adminCreateReviewerSchema), reviewerController.adminCreate);
 
 router.get('/media', requireRole(...contentRoles), mediaController.adminList);
 router.post('/media', requireRole(...contentRoles), mediaController.adminCreate);

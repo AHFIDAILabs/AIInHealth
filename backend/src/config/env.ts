@@ -38,6 +38,15 @@ const envSchema = z.object({
   DELEGATE_MAGIC_LINK_TTL_MINUTES: z.coerce.number().int().default(15),
   DELEGATE_SESSION_TTL_DAYS: z.coerce.number().int().default(45),
 
+  // Reviewer portal — same magic-link pattern as the delegate portal above, its
+  // own secret/cookie so the two auth systems can never be confused for each
+  // other. Longer windows than the delegate portal: a review period runs for
+  // weeks, not the length of a single event, and a reviewer may not click
+  // through immediately.
+  REVIEWER_TOKEN_SECRET: z.string().min(32),
+  REVIEWER_MAGIC_LINK_TTL_MINUTES: z.coerce.number().int().default(30),
+  REVIEWER_SESSION_TTL_DAYS: z.coerce.number().int().default(60),
+
   // Paystack — empty in dev disables real checkout (initialize just no-ops with a
   // log line and a fake authorization_url), same fallback style as email/push above.
   PAYSTACK_SECRET_KEY: z.string().optional().default(''),

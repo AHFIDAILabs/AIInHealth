@@ -99,8 +99,23 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export const MEETING_REQUEST_STATUSES = ['pending', 'accepted', 'declined', 'cancelled'] as const;
 export type MeetingRequestStatus = (typeof MEETING_REQUEST_STATUSES)[number];
 
-export const ABSTRACT_STATUSES = ['pending', 'accepted', 'rejected'] as const;
+// Coarse workflow state — auto-advances as reviews/decisions happen (see
+// abstract.controller.ts): 'pending' until a reviewer is first assigned,
+// 'under_review' while review is in progress, 'decided' once a `decision`
+// (below) has been recorded. Distinct from `decision` itself, which is the
+// actual committee call.
+export const ABSTRACT_STATUSES = ['pending', 'under_review', 'decided'] as const;
 export type AbstractStatus = (typeof ABSTRACT_STATUSES)[number];
+
+// The committee's final call on an abstract, including presentation format —
+// null/unset until decided. Set via abstractController.adminUpdate.
+export const ABSTRACT_DECISIONS = ['accepted_oral', 'accepted_poster', 'rejected', 'waitlisted'] as const;
+export type AbstractDecision = (typeof ABSTRACT_DECISIONS)[number];
+
+// Fixed thresholds a consensus (or individual reviewer) score is bucketed
+// into — see utils/reviewScoring.ts's getScoreBand. 80+/70+/60+/below.
+export const SCORE_BANDS = ['strong_accept', 'accept', 'borderline', 'reject'] as const;
+export type ScoreBand = (typeof SCORE_BANDS)[number];
 
 // Which event day(s) an Event Team member is rostered for — mirrors SESSION_DAYS
 // plus a 'both' option since most core staff work the whole summit.

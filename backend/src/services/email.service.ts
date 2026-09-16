@@ -138,6 +138,30 @@ export const sendDelegateMagicLinkEmail = async (to: string, fullName: string, l
   });
 };
 
+// Doubles as both "you've been assigned an abstract to review" and "here's
+// your sign-in link" — a reviewer gets one of these whenever they're newly
+// assigned, and can request a fresh one anytime from /review/login if their
+// session has expired (reviewController.requestMagicLink reuses this too).
+export const sendReviewerAssignmentEmail = async (
+  to: string,
+  fullName: string,
+  data: { abstractTitle?: string; linkUrl: string }
+): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: data.abstractTitle
+      ? 'New abstract assigned for your review — AI in Health Summit 2026'
+      : 'Your AI in Health Summit 2026 reviewer portal sign-in link',
+    html: `
+      <p>Hi ${fullName},</p>
+      ${data.abstractTitle ? `<p>You've been assigned to review the abstract: <strong>${data.abstractTitle}</strong>.</p>` : ''}
+      <p><a href="${data.linkUrl}">Click here to sign in to your reviewer portal</a> (expires in ${env.REVIEWER_MAGIC_LINK_TTL_MINUTES} minutes).</p>
+      <p>From there you can see every abstract assigned to you and submit your scores against the review rubric.</p>
+      <p>If you didn't expect this, you can safely ignore this email, or contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 export const sendVolunteerConfirmedEmail = async (
   to: string,
   fullName: string,

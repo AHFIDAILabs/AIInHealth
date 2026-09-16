@@ -6,6 +6,7 @@ declare global {
       id: string;
       user?: { sub: string; role: Role };
       delegate?: { registrationId: string };
+      reviewer?: { reviewerId: string };
       rawBody?: Buffer;
     }
   }
