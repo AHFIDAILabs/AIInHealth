@@ -32,10 +32,12 @@ const envSchema = z.object({
 
   RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().default(30),
 
-  // Delegate portal — magic-link email auth is separate from the admin User/JWT
+  // Delegate portal — access-code auth is separate from the admin User/JWT
   // system entirely, so it gets its own signing secret and session cookie.
+  // Auth is a stable access code (config/event.ts's DELEGATE_ACCESS_CODE_EXPIRES_AT
+  // governs how long a code itself stays valid); DELEGATE_SESSION_TTL_DAYS is
+  // separately how long a signed-in session/cookie lasts once entered.
   DELEGATE_TOKEN_SECRET: z.string().min(32),
-  DELEGATE_MAGIC_LINK_TTL_MINUTES: z.coerce.number().int().default(15),
   DELEGATE_SESSION_TTL_DAYS: z.coerce.number().int().default(45),
 
   // Reviewer portal — own secret/cookie so it can never be confused with the

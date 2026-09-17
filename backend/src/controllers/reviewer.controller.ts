@@ -22,8 +22,8 @@ import type {
   AdminCreateReviewerInput,
 } from '../validations/reviewer.validation.js';
 
-// --- Public: access-code auth (mirrors delegate.controller.ts's magic-link
-// shape, but the code is stable/reusable rather than single-use) ---
+// --- Public: access-code auth (mirrors delegate.controller.ts's own
+// access-code auth exactly) ---
 
 export const requestAccessCode = catchAsync(async (req: Request, res: Response) => {
   const { email } = req.body as RequestReviewerAccessCodeInput;

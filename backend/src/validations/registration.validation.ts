@@ -56,6 +56,8 @@ const volunteerSchema = z.object({
   email: z.string().trim().toLowerCase().email('Enter a valid email'),
   phone: z.string().trim().min(6, 'Enter a valid phone number'),
   accessCode: z.string().trim().max(32).optional().or(z.literal('')),
+  tshirtSize: z.string().trim().max(20).optional(),
+  trackSelected: z.string().trim().max(200).optional(),
 });
 
 export const createRegistrationSchema = z.object({
@@ -112,6 +114,9 @@ const adminVolunteerSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter your full name'),
   email: z.string().trim().toLowerCase().email('Enter a valid email'),
   phone: z.string().trim().min(6, 'Enter a valid phone number'),
+  tshirtSize: z.string().trim().max(20).optional(),
+  trackSelected: z.string().trim().max(200).optional(),
+  trackAssigned: z.string().trim().max(200).optional(),
 });
 
 export const adminCreateRegistrationSchema = z.object({

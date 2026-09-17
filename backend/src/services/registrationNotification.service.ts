@@ -1,8 +1,7 @@
 import type { HydratedDocument } from 'mongoose';
-import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import type { RegistrationDoc } from '../models/Registration.model.js';
-import { issueMagicLinkToken } from './delegateToken.service.js';
+import { ensureDelegateAccessCode } from './delegateToken.service.js';
 import { qrDataUrlForToken } from './qr.service.js';
 import { sendPaymentConfirmationEmail, sendRegistrationConfirmedEmail, sendTicketQrEmail } from './email.service.js';
 
@@ -35,20 +34,19 @@ export const sendConfirmationAndTicketEmails = async (
   const to = recipientEmail(registration);
   if (!to) return;
   try {
-    const rawToken = await issueMagicLinkToken(registration.id);
-    const portalUrl = `${env.FRONTEND_ORIGIN}/portal/verify?token=${rawToken}`;
+    const accessCode = await ensureDelegateAccessCode(registration);
     const fullName = recipientName(registration);
 
     if (options.amountNaira !== undefined) {
       await sendPaymentConfirmationEmail(to, fullName, {
         amountNaira: options.amountNaira,
         ticketCategory: registration.ticketCategory ?? '',
-        portalUrl,
+        accessCode,
       });
     } else {
       await sendRegistrationConfirmedEmail(to, fullName, {
         ticketCategory: registration.ticketCategory ?? undefined,
-        portalUrl,
+        accessCode,
       });
     }
 

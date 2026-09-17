@@ -6,12 +6,12 @@ import { Registration } from '../models/Registration.model.js';
 import { DelegatePushSubscription } from '../models/DelegatePushSubscription.model.js';
 import { env } from '../config/env.js';
 import { setDelegateCookie, clearDelegateCookie } from '../utils/cookies.js';
-import { issueMagicLinkToken, consumeMagicLinkToken, signDelegateSessionToken } from '../services/delegateToken.service.js';
-import { sendDelegateMagicLinkEmail } from '../services/email.service.js';
+import { ensureDelegateAccessCode, verifyDelegateAccessCode, signDelegateSessionToken } from '../services/delegateToken.service.js';
+import { sendDelegateAccessCodeEmail } from '../services/email.service.js';
 import { qrDataUrlForToken } from '../services/qr.service.js';
 import type {
-  RequestMagicLinkInput,
-  VerifyMagicLinkInput,
+  RequestAccessCodeInput,
+  VerifyAccessCodeInput,
   DelegatePushSubscribeInput,
   DelegatePushUnsubscribeInput,
   UpdateDirectoryOptInInput,
@@ -23,8 +23,8 @@ const delegateName = (r: { fullName?: string | null; contactName?: string | null
 
 const delegateEmail = (r: { email?: string | null; contactEmail?: string | null }) => r.email || r.contactEmail || null;
 
-export const requestMagicLink = catchAsync(async (req: Request, res: Response) => {
-  const { email } = req.body as RequestMagicLinkInput;
+export const requestAccessCode = catchAsync(async (req: Request, res: Response) => {
+  const { email } = req.body as RequestAccessCodeInput;
 
   const registration = await Registration.findOne({
     status: 'confirmed',
@@ -35,21 +35,20 @@ export const requestMagicLink = catchAsync(async (req: Request, res: Response) =
   if (registration) {
     const to = delegateEmail(registration);
     if (to) {
-      const rawToken = await issueMagicLinkToken(registration.id);
-      const linkUrl = `${env.FRONTEND_ORIGIN}/portal/verify?token=${rawToken}`;
-      await sendDelegateMagicLinkEmail(to, delegateName(registration), linkUrl);
+      const accessCode = await ensureDelegateAccessCode(registration);
+      await sendDelegateAccessCodeEmail(to, delegateName(registration), accessCode);
       registration.portalLastLinkSentAt = new Date();
       await registration.save();
     }
   }
 
   // Enumeration-safe: identical response whether or not a confirmed registration exists.
-  res.json(new ApiResponse({ message: 'If that email has a confirmed registration, a sign-in link has been sent.' }));
+  res.json(new ApiResponse({ message: 'If that email has a confirmed registration, your access code has been sent.' }));
 });
 
-export const verifyMagicLink = catchAsync(async (req: Request, res: Response) => {
-  const { token } = req.body as VerifyMagicLinkInput;
-  const registrationId = await consumeMagicLinkToken(token);
+export const verifyAccessCode = catchAsync(async (req: Request, res: Response) => {
+  const { email, code } = req.body as VerifyAccessCodeInput;
+  const registrationId = await verifyDelegateAccessCode(email, code);
 
   const sessionToken = signDelegateSessionToken(registrationId);
   setDelegateCookie(res, sessionToken, env.DELEGATE_SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);

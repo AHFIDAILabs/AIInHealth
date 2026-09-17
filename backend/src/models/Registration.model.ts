@@ -56,6 +56,18 @@ const registrationSchema = new Schema(
     // Free-form admin categorization tags — same provenance note as above.
     tags: { type: [String], default: undefined },
 
+    // Volunteer only — free text rather than a fixed enum, same reasoning as
+    // Partner.category before it was retired: an admin/volunteer can write
+    // whatever's true rather than being blocked by a list that doesn't quite
+    // fit. Originally collected via a one-off application spreadsheet
+    // (scripts/syncVolunteerApplications.ts) before these had real fields to
+    // live in; the public VolunteerForm doesn't collect them yet.
+    tshirtSize: { type: String, trim: true },
+    trackSelected: { type: String, trim: true },
+    // Set by staff once a volunteer's actual role/track is decided — distinct
+    // from trackSelected (their own preference at apply time).
+    trackAssigned: { type: String, trim: true },
+
     // Volunteer and scholarship-attendee only — the redeemed AccessCode's
     // human-readable code, kept here too (not just on the AccessCode doc) so a
     // registration record is self-explanatory on its own in exports/audits without
@@ -95,13 +107,25 @@ const registrationSchema = new Schema(
     // Independent of `status` — a confirmed/declined registration can still be
     // toggled active/inactive by an admin (e.g. suspected fraud, a request to
     // pause someone) without losing its status history. Gates
-    // delegate.controller.ts's requestMagicLink and checkin.controller.ts's
+    // delegate.controller.ts's requestAccessCode and checkin.controller.ts's
     // scan/manualCheckIn; same shape/intent as User.model.ts's isActive.
     isActive: { type: Boolean, default: true },
 
-    // Portal Tokens (admin) — last time a magic-link sign-in email went out, whether
+    // Portal Tokens (admin) — last time a portal sign-in email went out, whether
     // self-requested or triggered by staff. Purely informational, not a session record.
     portalLastLinkSentAt: { type: Date },
+
+    // Delegate portal login credential — generated once (lazily, on first
+    // confirmation email or resend request) and reused for the registration's
+    // whole lifetime, same pattern as Reviewer.model.ts's accessCode. Replaces
+    // the old single-use magic-link token: this code is stable and reusable,
+    // so a delegate can sign back in anytime up to portalAccessCodeExpiresAt
+    // without needing a fresh email each time. See delegateToken.service.ts's
+    // ensureDelegateAccessCode/verifyDelegateAccessCode.
+    portalAccessCode: { type: String, trim: true, uppercase: true, unique: true, sparse: true },
+    // Same fixed cutoff for every registration (DELEGATE_ACCESS_CODE_EXPIRES_AT,
+    // a week after the Summit) rather than a rolling per-issue timer.
+    portalAccessCodeExpiresAt: { type: Date },
 
     // Delegate-editable profile photo, uploaded through upload.controller.ts (POST
     // /delegate/uploads/image) from the portal — primarily for volunteer/staff
@@ -148,7 +172,7 @@ registrationSchema.index({ type: 1, createdAt: -1 });
 registrationSchema.index({ paymentReference: 1 }, { unique: true, sparse: true });
 
 // At most one registration per (type, email/contactEmail) — closes the gap that
-// let delegate.controller.ts's requestMagicLink silently pick the *most recent*
+// let delegate.controller.ts's requestAccessCode silently pick the *most recent*
 // of several duplicate confirmed registrations for the same email, orphaning any
 // older one.
 //

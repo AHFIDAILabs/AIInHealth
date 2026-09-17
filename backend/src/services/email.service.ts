@@ -1,6 +1,6 @@
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
-import { REVIEWER_ACCESS_CODE_EXPIRES_AT } from '../config/event.js';
+import { REVIEWER_ACCESS_CODE_EXPIRES_AT, DELEGATE_ACCESS_CODE_EXPIRES_AT } from '../config/event.js';
 
 const graphConfigured = Boolean(env.MS_TENANT_ID && env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.MS_SENDER_EMAIL);
 export const emailConfigured = graphConfigured;
@@ -188,13 +188,25 @@ export const sendInviteEmail = async (to: string, fullName: string, setPasswordU
   });
 };
 
-export const sendDelegateMagicLinkEmail = async (to: string, fullName: string, linkUrl: string): Promise<void> => {
+// Every delegate-portal email below (volunteer confirmation, payment/free
+// confirmation, and this one) shows the SAME reusable access code — see
+// ensureDelegateAccessCode — with this one label shared across all of them.
+const delegateAccessCodeExpiresLabel = DELEGATE_ACCESS_CODE_EXPIRES_AT.toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+
+export const sendDelegateAccessCodeEmail = async (to: string, fullName: string, accessCode: string): Promise<void> => {
+  const portalUrl = `${env.FRONTEND_ORIGIN}/portal/login`;
   await sendEmail({
     to,
-    subject: 'Your AI in Health Summit 2026 delegate portal sign-in link',
+    subject: 'Your AI in Health Summit 2026 delegate portal access code',
     html: `
       <p>Hi ${fullName},</p>
-      <p><a href="${linkUrl}">Click here to sign in to your delegate portal</a> (expires in ${env.DELEGATE_MAGIC_LINK_TTL_MINUTES} minutes).</p>
+      <p>Your delegate portal access code is:</p>
+      <p style="font-size:20px;font-weight:700;letter-spacing:1px;">${accessCode}</p>
+      <p><a href="${portalUrl}">Click here to go to the delegate portal</a>, then enter your email and this code to sign in. This code doesn't expire on a timer — it stays valid through ${delegateAccessCodeExpiresLabel} (about a week after the Summit).</p>
       <p>From there you can view your e-ticket and QR check-in code, browse the delegate directory, and manage meeting requests.</p>
       <p>If you didn't request this, you can safely ignore this email, or contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
@@ -239,16 +251,18 @@ export const sendReviewerAssignmentEmail = async (
 export const sendVolunteerConfirmedEmail = async (
   to: string,
   fullName: string,
-  data: { portalUrl: string; code?: string }
+  data: { accessCode: string }
 ): Promise<void> => {
+  const portalUrl = `${env.FRONTEND_ORIGIN}/portal/login`;
   await sendEmail({
     to,
     subject: "You've been selected — AI in Health Summit 2026 Volunteer",
     html: `
       <p>Hi ${fullName},</p>
       <p>Congratulations — you've been chosen as a volunteer for the AI in Health Summit 2026!</p>
-      ${data.code ? `<p>Your access code: <strong style="font-size: 18px; letter-spacing: 1px;">${data.code}</strong></p>` : ''}
-      <p><a href="${data.portalUrl}">Click here to complete your profile</a> and add a photo — this helps our team recognize you at the event (link expires in ${env.DELEGATE_MAGIC_LINK_TTL_MINUTES} minutes; if it expires, just request a new one from the portal sign-in page).</p>
+      <p>Your portal access code is:</p>
+      <p style="font-size:20px;font-weight:700;letter-spacing:1px;">${data.accessCode}</p>
+      <p><a href="${portalUrl}">Click here to go to the delegate portal</a>, then enter your email and this code to sign in and complete your profile — add a photo, so our team can recognize you at the event. The code stays valid through ${delegateAccessCodeExpiresLabel} (about a week after the Summit), so there's no rush.</p>
       <p>From there you can also view your e-ticket and QR check-in code.</p>
       <p>See you in Abuja, 19&ndash;20 October 2026.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
@@ -259,15 +273,17 @@ export const sendVolunteerConfirmedEmail = async (
 export const sendPaymentConfirmationEmail = async (
   to: string,
   fullName: string,
-  data: { amountNaira: number; ticketCategory: string; portalUrl: string }
+  data: { amountNaira: number; ticketCategory: string; accessCode: string }
 ): Promise<void> => {
+  const portalUrl = `${env.FRONTEND_ORIGIN}/portal/login`;
   await sendEmail({
     to,
     subject: "You're confirmed — AI in Health Summit 2026",
     html: `
       <p>Hi ${fullName},</p>
       <p>Your payment of <strong>&#8358;${data.amountNaira.toLocaleString('en-NG')}</strong> (${data.ticketCategory.replace(/_/g, ' ')}) was successful and your registration is confirmed.</p>
-      <p><a href="${data.portalUrl}">Visit the delegate portal</a> to sign in with your email and access your e-ticket / QR check-in code.</p>
+      <p>Your delegate portal access code is: <strong style="font-size:18px;letter-spacing:1px;">${data.accessCode}</strong></p>
+      <p><a href="${portalUrl}">Visit the delegate portal</a> and enter your email and this code to sign in — it's yours to reuse anytime through ${delegateAccessCodeExpiresLabel}, no rush and no re-requesting needed. From there you can access your e-ticket / QR check-in code.</p>
       <p>See you in Abuja, 19&ndash;20 October 2026.</p>
     `,
   });
@@ -280,15 +296,17 @@ export const sendPaymentConfirmationEmail = async (
 export const sendRegistrationConfirmedEmail = async (
   to: string,
   fullName: string,
-  data: { ticketCategory?: string; portalUrl: string }
+  data: { ticketCategory?: string; accessCode: string }
 ): Promise<void> => {
+  const portalUrl = `${env.FRONTEND_ORIGIN}/portal/login`;
   await sendEmail({
     to,
     subject: "You're confirmed — AI in Health Summit 2026",
     html: `
       <p>Hi ${fullName},</p>
       <p>Your registration${data.ticketCategory ? ` (${data.ticketCategory.replace(/_/g, ' ')})` : ''} for the AI in Health Summit 2026 is confirmed — no payment is required.</p>
-      <p><a href="${data.portalUrl}">Visit the delegate portal</a> to sign in with your email and access your e-ticket / QR check-in code.</p>
+      <p>Your delegate portal access code is: <strong style="font-size:18px;letter-spacing:1px;">${data.accessCode}</strong></p>
+      <p><a href="${portalUrl}">Visit the delegate portal</a> and enter your email and this code to sign in — it's yours to reuse anytime through ${delegateAccessCodeExpiresLabel}, no rush and no re-requesting needed. From there you can access your e-ticket / QR check-in code.</p>
       <p>See you in Abuja, 19&ndash;20 October 2026.</p>
     `,
   });

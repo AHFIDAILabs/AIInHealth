@@ -4,9 +4,8 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Registration } from '../models/Registration.model.js';
-import { env } from '../config/env.js';
-import { issueMagicLinkToken } from '../services/delegateToken.service.js';
-import { sendDelegateMagicLinkEmail } from '../services/email.service.js';
+import { ensureDelegateAccessCode } from '../services/delegateToken.service.js';
+import { sendDelegateAccessCodeEmail } from '../services/email.service.js';
 import { recordAudit } from '../services/audit.service.js';
 
 const delegateName = (r: { fullName?: string | null; contactName?: string | null; companyName?: string | null }) =>
@@ -44,9 +43,9 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
-// POST /admin/portal-tokens/:id/send-link — staff-triggered magic-link email, for a
-// delegate who never got (or lost) their self-service sign-in link.
-export const adminSendLink = catchAsync(async (req: Request, res: Response) => {
+// POST /admin/portal-tokens/:id/send-code — staff-triggered access-code email, for
+// a delegate who never got (or lost) their portal access code.
+export const adminSendCode = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
   const registration = await Registration.findById(req.params.id);
   if (!registration) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
@@ -56,9 +55,8 @@ export const adminSendLink = catchAsync(async (req: Request, res: Response) => {
   const to = delegateEmail(registration);
   if (!to) throw new ApiError(400, 'This registration has no email on file.', 'NO_EMAIL');
 
-  const rawToken = await issueMagicLinkToken(registration.id);
-  const linkUrl = `${env.FRONTEND_ORIGIN}/portal/verify?token=${rawToken}`;
-  await sendDelegateMagicLinkEmail(to, delegateName(registration), linkUrl);
+  const accessCode = await ensureDelegateAccessCode(registration);
+  await sendDelegateAccessCodeEmail(to, delegateName(registration), accessCode);
 
   registration.portalLastLinkSentAt = new Date();
   await registration.save();

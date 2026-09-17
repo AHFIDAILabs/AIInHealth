@@ -18,10 +18,9 @@ import { isFreeTicketCategory } from '../config/pricing.js';
 import { generateQrToken, qrDataUrlForToken } from '../services/qr.service.js';
 import { generateCode } from './accessCode.controller.js';
 import { initializePaymentForRegistration } from './payment.controller.js';
-import { issueMagicLinkToken } from '../services/delegateToken.service.js';
 import { sendVolunteerConfirmedEmail, sendTicketQrEmail, sendRegistrationPaymentLinkEmail } from '../services/email.service.js';
 import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
-import { env } from '../config/env.js';
+import { ensureDelegateAccessCode } from '../services/delegateToken.service.js';
 import { logger } from '../config/logger.js';
 import type { TicketCategory } from '../types/enums.js';
 import type { HydratedDocument } from 'mongoose';
@@ -47,13 +46,16 @@ const DUPLICATE_SUBMIT_WINDOW_MS = 2 * 60 * 1000;
 // Fires the "you're in — complete your profile (with a photo)" email for a
 // newly-confirmed volunteer, whichever path got them there (self-redeemed code,
 // or an admin confirming them directly). Best-effort — a send failure here
-// shouldn't fail the request that just confirmed them.
-const notifyVolunteerConfirmed = async (registration: HydratedDocument<RegistrationDoc>, code?: string): Promise<void> => {
+// shouldn't fail the request that just confirmed them. The code shown here is
+// the reusable delegate portal access code (ensureDelegateAccessCode) — NOT
+// the AccessCode-collection code that may have been redeemed to get to this
+// confirmed state (confirmVolunteerDirectly below mints one of those purely
+// for its own audit trail; it's never itself a login credential).
+const notifyVolunteerConfirmed = async (registration: HydratedDocument<RegistrationDoc>): Promise<void> => {
   if (!registration.email) return;
   try {
-    const rawToken = await issueMagicLinkToken(registration.id);
-    const portalUrl = `${env.FRONTEND_ORIGIN}/portal/verify?token=${rawToken}`;
-    await sendVolunteerConfirmedEmail(registration.email, registration.fullName || 'there', { portalUrl, code });
+    const accessCode = await ensureDelegateAccessCode(registration);
+    await sendVolunteerConfirmedEmail(registration.email, registration.fullName || 'there', { accessCode });
     // Separate email, sent right after the confirmation above — their actual
     // check-in QR, not just a link to go fetch it from the portal (matches the
     // same two-email pattern every other confirmation path uses — see
@@ -70,14 +72,14 @@ const notifyVolunteerConfirmed = async (registration: HydratedDocument<Registrat
 };
 
 // When an admin confirms a volunteer directly (RegistrationsPage's status action)
-// rather than the volunteer self-redeeming an emailed code, there's no code on
-// record yet. Issue one now — marked used immediately, since there's no
-// self-redemption step left to do — purely so Access Codes stays a consistent
-// audit trail, then send the same confirmation email a code redemption would have.
+// rather than the volunteer self-redeeming an emailed code, there's no
+// AccessCode-collection record yet. Issue one now — marked used immediately,
+// since there's no self-redemption step left to do — purely so Access Codes
+// stays a consistent audit trail (this code is never shown as a portal login
+// credential — see notifyVolunteerConfirmed above).
 const confirmVolunteerDirectly = async (registration: HydratedDocument<RegistrationDoc>, adminUserId: string): Promise<void> => {
   try {
-    let code = registration.accessCode ?? undefined;
-    if (!code) {
+    if (!registration.accessCode) {
       let generated = generateCode('volunteer');
       // eslint-disable-next-line no-await-in-loop
       while (await AccessCode.exists({ code: generated })) generated = generateCode('volunteer');
@@ -92,9 +94,8 @@ const confirmVolunteerDirectly = async (registration: HydratedDocument<Registrat
       });
       registration.accessCode = accessCode.code;
       await registration.save();
-      code = accessCode.code;
     }
-    await notifyVolunteerConfirmed(registration, code);
+    await notifyVolunteerConfirmed(registration);
   } catch (err) {
     logger.error({ err, registrationId: registration.id }, 'Failed to issue/send volunteer confirmation');
   }
@@ -178,7 +179,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     // Fire-and-forget — the browser confirmation message already told them they're
     // in; this email is the durable follow-up (in case the tab is closed) prompting
     // them to add a profile photo.
-    void notifyVolunteerConfirmed(registration, trimmedCode);
+    void notifyVolunteerConfirmed(registration);
 
     await emitAdminNotification({
       type: 'registration.new',

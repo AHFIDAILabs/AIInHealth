@@ -110,7 +110,7 @@ router.get('/payments/reconciliations', requireRole('super_admin', 'registration
 router.post('/payments/reconciliations/:reference/resync', requireRole('super_admin', 'registrations_officer'), reconciliationController.resync);
 
 router.get('/portal-tokens', requireRole('super_admin', 'registrations_officer'), portalTokenController.adminList);
-router.post('/portal-tokens/:id/send-link', requireRole('super_admin', 'registrations_officer'), portalTokenController.adminSendLink);
+router.post('/portal-tokens/:id/send-code', requireRole('super_admin', 'registrations_officer'), portalTokenController.adminSendCode);
 
 const contentRoles = ['super_admin', 'content_editor'] as const;
 

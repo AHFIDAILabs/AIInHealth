@@ -7,8 +7,8 @@ import { uploadImage } from '../../middlewares/upload.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { loginLimiter } from '../../middlewares/rateLimiter.middleware.js';
 import {
-  requestMagicLinkSchema,
-  verifyMagicLinkSchema,
+  requestAccessCodeSchema,
+  verifyAccessCodeSchema,
   delegatePushSubscribeSchema,
   delegatePushUnsubscribeSchema,
   updateDirectoryOptInSchema,
@@ -18,9 +18,9 @@ import { createMeetingRequestSchema, respondMeetingRequestSchema } from '../../v
 
 const router = Router();
 
-// --- Public: magic-link auth ---
-router.post('/request-link', loginLimiter, validate(requestMagicLinkSchema), delegateController.requestMagicLink);
-router.post('/verify-link', loginLimiter, validate(verifyMagicLinkSchema), delegateController.verifyMagicLink);
+// --- Public: access-code auth ---
+router.post('/request-code', loginLimiter, validate(requestAccessCodeSchema), delegateController.requestAccessCode);
+router.post('/verify-code', loginLimiter, validate(verifyAccessCodeSchema), delegateController.verifyAccessCode);
 
 // --- Delegate-authenticated ---
 router.use(requireDelegateAuth);

@@ -1,31 +1,55 @@
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
+import type { HydratedDocument } from 'mongoose';
 import { env } from '../config/env.js';
-import { DelegateMagicLinkToken } from '../models/DelegateMagicLinkToken.model.js';
+import { DELEGATE_ACCESS_CODE_EXPIRES_AT } from '../config/event.js';
+import { Registration, type RegistrationDoc } from '../models/Registration.model.js';
 import { ApiError } from '../utils/ApiError.js';
 
-const sha256 = (value: string): string => crypto.createHash('sha256').update(value).digest('hex');
+// --- Access code (stable, reusable, hand-typed — replaces the old single-use
+// magic-link token) ---
 
-// --- Magic link (single-use, short-lived, hashed at rest — mirrors token.service.ts's password reset tokens) ---
+// Excludes visually ambiguous characters (0/O, 1/I) — same alphabet as
+// accessCode.controller.ts's generateCode and reviewerToken.service.ts's
+// reviewer codes; a delegate may read/type this by hand off an email weeks
+// after receiving it.
+const SAFE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const randomCode = (): string =>
+  `DL-${Array.from({ length: 6 }, () => SAFE_ALPHABET[crypto.randomInt(SAFE_ALPHABET.length)]).join('')}`;
 
-export const issueMagicLinkToken = async (registrationId: string): Promise<string> => {
-  const raw = crypto.randomBytes(32).toString('hex');
-  await DelegateMagicLinkToken.create({
-    registration: registrationId,
-    tokenHash: sha256(raw),
-    expiresAt: new Date(Date.now() + env.DELEGATE_MAGIC_LINK_TTL_MINUTES * 60 * 1000),
-  });
-  return raw;
+// Generates a delegate's portal access code once and reuses it forever after
+// — every future confirmation email or resend request hands back the SAME
+// code. Every registration's code expires at the same fixed cutoff
+// (DELEGATE_ACCESS_CODE_EXPIRES_AT, a week after the Summit), not on a
+// rolling per-issue timer.
+export const ensureDelegateAccessCode = async (registration: HydratedDocument<RegistrationDoc>): Promise<string> => {
+  if (registration.portalAccessCode) return registration.portalAccessCode;
+  let code = randomCode();
+  // Collision odds at this alphabet/length are astronomically low, but check anyway.
+  // eslint-disable-next-line no-await-in-loop
+  while (await Registration.exists({ portalAccessCode: code })) code = randomCode();
+  registration.portalAccessCode = code;
+  registration.portalAccessCodeExpiresAt = DELEGATE_ACCESS_CODE_EXPIRES_AT;
+  await registration.save();
+  return code;
 };
 
-export const consumeMagicLinkToken = async (rawToken: string): Promise<string> => {
-  const record = await DelegateMagicLinkToken.findOne({ tokenHash: sha256(rawToken) });
-  if (!record || record.usedAt || record.expiresAt < new Date()) {
-    throw new ApiError(400, 'This sign-in link is invalid or has expired.', 'MAGIC_LINK_INVALID');
+export const verifyDelegateAccessCode = async (email: string, code: string): Promise<string> => {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedCode = code.trim().toUpperCase();
+  const registration = await Registration.findOne({
+    status: 'confirmed',
+    isActive: true,
+    $or: [{ email: normalizedEmail }, { contactEmail: normalizedEmail }],
+  }).sort({ createdAt: -1 });
+
+  if (!registration || !registration.portalAccessCode || registration.portalAccessCode !== normalizedCode) {
+    throw new ApiError(400, 'That email/access code combination is invalid.', 'ACCESS_CODE_INVALID');
   }
-  record.usedAt = new Date();
-  await record.save();
-  return record.registration.toString();
+  if (!registration.portalAccessCodeExpiresAt || registration.portalAccessCodeExpiresAt < new Date()) {
+    throw new ApiError(400, 'This access code has expired.', 'ACCESS_CODE_EXPIRED');
+  }
+  return registration.id;
 };
 
 // --- Session token (long-lived JWT cookie, no rotation — low-stakes, short event window) ---
