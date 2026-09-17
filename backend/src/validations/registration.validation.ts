@@ -34,6 +34,12 @@ const exhibitorSchema = z.object({
   website: optionalUrlField,
   boothSize: z.enum(BOOTH_SIZES).optional(),
   productsDescription: z.string().trim().max(2000).optional(),
+  // Answers to whatever CustomFormField questions are currently configured
+  // (see customFormField.controller.ts's public list) — keyed by field _id,
+  // shape-validated only here; not cross-checked against the live question
+  // set, same "don't block a submission over an admin-side edit race" reasoning
+  // as free-text fields elsewhere in this app.
+  customFieldAnswers: z.record(z.string(), z.string()).optional(),
 });
 
 const sponsorSchema = z.object({
@@ -79,15 +85,29 @@ export const listRegistrationsQuerySchema = z.object({
 });
 export type ListRegistrationsQuery = z.infer<typeof listRegistrationsQuerySchema>;
 
+// Despite the name, also covers editing an exhibitor's own detail fields
+// (the reference Exhibitors page's "Edit Exhibitor" action needs this — there
+// was previously no way to fix a typo'd contact email after creation at all).
+// Every field here is optional and type-agnostic; Registration.model.ts
+// already scopes each one to the registration type that actually uses it,
+// so sending e.g. boothSize on an attendee record is harmless, just unused.
 export const updateRegistrationStatusSchema = z.object({
   body: z
     .object({
       status: z.enum(REGISTRATION_STATUSES).optional(),
       // Independent of status — see Registration.model.ts's isActive comment.
       isActive: z.boolean().optional(),
+      companyName: z.string().trim().min(2).optional(),
+      contactName: z.string().trim().min(2).optional(),
+      contactEmail: z.string().trim().toLowerCase().email('Enter a valid email').optional(),
+      contactPhone: z.string().trim().optional(),
+      website: optionalUrlField,
+      boothSize: z.enum(BOOTH_SIZES).optional(),
+      productsDescription: z.string().trim().max(2000).optional(),
+      customFieldAnswers: z.record(z.string(), z.string()).optional(),
     })
-    .refine((data) => data.status !== undefined || data.isActive !== undefined, {
-      message: 'Provide a status or isActive to update.',
+    .refine((data) => Object.values(data).some((v) => v !== undefined), {
+      message: 'Provide at least one field to update.',
     }),
 });
 export type UpdateRegistrationInput = z.infer<typeof updateRegistrationStatusSchema>['body'];

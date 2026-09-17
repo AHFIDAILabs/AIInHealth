@@ -24,6 +24,21 @@ export type TicketCategory = (typeof TICKET_CATEGORIES)[number];
 export const BOOTH_SIZES = ['small', 'medium', 'large'] as const;
 export type BoothSize = (typeof BOOTH_SIZES)[number];
 
+// Exhibitor lead capture — see Lead.model.ts. Manual entry for now (an admin
+// or exhibitor logs a booth visitor's details); badge/QR-scan capture is a
+// possible later step, not built here.
+export const LEAD_INTEREST_LEVELS = ['hot', 'warm', 'cold'] as const;
+export type LeadInterestLevel = (typeof LEAD_INTEREST_LEVELS)[number];
+
+// Admin-configurable exhibitor signup questions — see CustomFormField.model.ts.
+// Scoped to 'exhibitor' only for now; the union leaves room to extend to other
+// registration types later without a schema migration.
+export const CUSTOM_FORM_TYPES = ['exhibitor'] as const;
+export type CustomFormType = (typeof CUSTOM_FORM_TYPES)[number];
+
+export const CUSTOM_FIELD_TYPES = ['text', 'textarea', 'select', 'checkbox'] as const;
+export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
+
 // Mirrors the Session.track values used across the public site's Find Your Journey
 // widget and the System Design Document's agenda track taxonomy — kept in one place
 // so Speakers and (later) Sessions never drift into two different track vocabularies.

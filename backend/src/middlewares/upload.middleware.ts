@@ -44,3 +44,21 @@ export const uploadMedia = multer({
     cb(null, true);
   },
 }).single('file');
+
+// Exhibitors' "Import CSV" bulk-create — exhibitor.controller.ts's
+// adminImport parses the buffer with csv-parse; a small file is expected
+// (tens to low hundreds of rows), so a low size cap is plenty and catches an
+// accidental wrong-file upload early. Browsers report a .csv file's mimetype
+// inconsistently (text/csv, application/vnd.ms-excel, or even text/plain),
+// so this checks the filename extension instead of trusting the mimetype.
+export const uploadCsv = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (_req, file, cb) => {
+    if (!file.originalname.toLowerCase().endsWith('.csv')) {
+      cb(new ApiError(422, 'Only .csv files are allowed.', 'INVALID_FILE_TYPE'));
+      return;
+    }
+    cb(null, true);
+  },
+}).single('file');

@@ -49,6 +49,12 @@ const registrationSchema = new Schema(
     // Sponsor only
     message: { type: String, trim: true },
 
+    // Exhibitor only — answers to admin-defined CustomFormField questions
+    // (see that model), keyed by the field's own _id string. A plain Mixed
+    // map rather than a typed sub-schema since the question set itself is
+    // admin-configurable and open-ended.
+    customFieldAnswers: { type: Schema.Types.Mixed, default: undefined },
+
     // Attendee only — catering/accessibility needs. Only ever populated today via
     // the Floot import (scripts/syncFlootRegistrations.ts); no public form field
     // writes this yet.

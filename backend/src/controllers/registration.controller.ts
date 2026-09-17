@@ -475,7 +475,7 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) {
     throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
   }
-  const { status, isActive } = updateRegistrationStatusSchema.parse({ body: req.body }).body;
+  const { status, isActive, ...detailFields } = updateRegistrationStatusSchema.parse({ body: req.body }).body;
   const before = await Registration.findById(req.params.id).select('status qrToken type isActive');
   if (!before) {
     throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
@@ -485,7 +485,11 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   }
   // Any registration type earns a check-in QR the moment it's confirmed, whichever
   // path got it there (payment, volunteer code, or a manual admin decision here).
-  const update: { status?: typeof status; isActive?: boolean; qrToken?: string } = {};
+  // detailFields (companyName/contactEmail/boothSize/customFieldAnswers/etc — see
+  // the validation schema) is a generic pass-through: exhibitor-oriented today,
+  // but harmless to spread onto any type since every field is optional and
+  // Registration.model.ts already scopes each to the type that actually uses it.
+  const update: Record<string, unknown> = { ...detailFields };
   if (status !== undefined) update.status = status;
   if (isActive !== undefined) update.isActive = isActive;
   if (status === 'confirmed' && !before.qrToken) update.qrToken = generateQrToken();

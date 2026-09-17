@@ -32,10 +32,14 @@ import * as sponsorshipPackageController from '../../controllers/sponsorshipPack
 import * as deliverableController from '../../controllers/deliverable.controller.js';
 import * as partnerInteractionController from '../../controllers/partnerInteraction.controller.js';
 import * as trackController from '../../controllers/track.controller.js';
+import * as leadController from '../../controllers/lead.controller.js';
+import * as customFormFieldController from '../../controllers/customFormField.controller.js';
+import * as exhibitorController from '../../controllers/exhibitor.controller.js';
+import * as attendeeController from '../../controllers/attendee.controller.js';
 import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { uploadImage, uploadMedia } from '../../middlewares/upload.middleware.js';
+import { uploadImage, uploadMedia, uploadCsv } from '../../middlewares/upload.middleware.js';
 import { subscribePushSchema, unsubscribePushSchema } from '../../validations/push.validation.js';
 import { sendAnnouncementSchema } from '../../validations/delegateAnnouncement.validation.js';
 import { replaceRubricSchema } from '../../validations/rubric.validation.js';
@@ -132,6 +136,21 @@ router.get('/tracks', requireRole(...contentRoles), trackController.adminList);
 router.post('/tracks', requireRole(...contentRoles), trackController.adminCreate);
 router.patch('/tracks/:id', requireRole(...contentRoles), trackController.adminUpdate);
 router.delete('/tracks/:id', requireRole(...contentRoles), trackController.adminDelete);
+
+router.get('/exhibitors-stats', requireRole('super_admin', 'registrations_officer', 'viewer'), exhibitorController.adminStats);
+router.get('/exhibitors-analytics', requireRole('super_admin', 'registrations_officer', 'viewer'), exhibitorController.adminAnalytics);
+router.post('/exhibitors/import', requireRole('super_admin', 'registrations_officer'), uploadCsv, exhibitorController.adminImport);
+router.get('/exhibitors/:exhibitorId/leads', requireRole('super_admin', 'registrations_officer', 'viewer'), leadController.adminListForExhibitor);
+router.post('/exhibitors/:exhibitorId/leads', requireRole('super_admin', 'registrations_officer'), leadController.adminCreate);
+router.patch('/leads/:id', requireRole('super_admin', 'registrations_officer'), leadController.adminUpdate);
+router.delete('/leads/:id', requireRole('super_admin', 'registrations_officer'), leadController.adminDelete);
+
+router.get('/attendees-stats', requireRole('super_admin', 'registrations_officer', 'viewer'), attendeeController.adminStats);
+
+router.get('/custom-fields', requireRole('super_admin', 'registrations_officer', 'viewer'), customFormFieldController.adminList);
+router.post('/custom-fields', requireRole('super_admin', 'registrations_officer'), customFormFieldController.adminCreate);
+router.patch('/custom-fields/:id', requireRole('super_admin', 'registrations_officer'), customFormFieldController.adminUpdate);
+router.delete('/custom-fields/:id', requireRole('super_admin', 'registrations_officer'), customFormFieldController.adminDelete);
 
 router.get('/partners', requireRole(...contentRoles), partnerController.adminList);
 router.post('/partners', requireRole(...contentRoles), partnerController.adminCreate);
