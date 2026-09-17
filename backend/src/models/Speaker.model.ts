@@ -1,5 +1,4 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { TRACKS } from '../types/enums.js';
 
 // photoUrl is a plain string — populated by uploading a file through
 // upload.controller.ts (POST /admin/uploads/image), which hands back a hosted URL.
@@ -9,7 +8,10 @@ const speakerSchema = new Schema(
     title: { type: String, required: true, trim: true },
     organization: { type: String, trim: true },
     bio: { type: String, trim: true, maxlength: 2000 },
-    track: { type: String, enum: TRACKS, required: true },
+    // Free text, not the old fixed TRACKS enum — validated against the live
+    // Track collection at the request layer instead (speaker.controller.ts),
+    // same reasoning as Abstract.model.ts's track field.
+    track: { type: String, required: true, trim: true },
     photoUrl: { type: String, trim: true },
     isPublished: { type: Boolean, default: false },
     order: { type: Number, default: 0 },

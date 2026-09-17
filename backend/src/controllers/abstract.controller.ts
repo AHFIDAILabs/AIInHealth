@@ -7,12 +7,13 @@ import { Abstract, type AbstractDoc } from '../models/Abstract.model.js';
 import { AbstractReview } from '../models/AbstractReview.model.js';
 import { Reviewer } from '../models/Reviewer.model.js';
 import { AbstractCommunication } from '../models/AbstractCommunication.model.js';
+import { Track } from '../models/Track.model.js';
 import { sendReviewerAssignmentEmail } from '../services/email.service.js';
 import { ensureReviewerAccessCode } from '../services/reviewerToken.service.js';
 import { draftDecisionCommunication } from '../services/communication.service.js';
 import { getScoreBand } from '../utils/reviewScoring.js';
 import { getOrCreateRubric } from '../models/Rubric.model.js';
-import { ABSTRACT_STATUSES, ABSTRACT_DECISIONS, SCORE_BANDS, TRACKS } from '../types/enums.js';
+import { ABSTRACT_STATUSES, ABSTRACT_DECISIONS, SCORE_BANDS } from '../types/enums.js';
 import type {
   CreateAbstractInput,
   ListAbstractsQuery,
@@ -33,6 +34,9 @@ const SUBMISSION_MESSAGE = "Thanks for your submission — our programme committ
 export const create = catchAsync(async (req: Request, res: Response) => {
   const { website: _honeypot, ...input } = req.body as CreateAbstractInput & { website?: string };
 
+  const trackExists = await Track.exists({ name: input.track });
+  if (!trackExists) throw new ApiError(422, 'Select a valid track.', 'INVALID_TRACK');
+
   const recentDuplicate = await Abstract.findOne({
     authorEmail: input.authorEmail,
     title: input.title,
@@ -47,7 +51,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   const abstract = await Abstract.create(input);
 
   await emitAdminNotification({
-    type: 'inquiry.new',
+    type: 'abstract.new',
     title: 'New abstract submission',
     body: input.title,
     resourceType: 'Abstract',
@@ -281,16 +285,22 @@ export const unassignReviewer = catchAsync(async (req: Request, res: Response) =
 // scale (tens to low hundreds of abstracts), rather than several bespoke
 // aggregation pipelines.
 export const analytics = catchAsync(async (_req: Request, res: Response) => {
-  const [abstracts, reviews, rubricDoc, communications] = await Promise.all([
+  const [abstracts, reviews, rubricDoc, communications, tracks] = await Promise.all([
     Abstract.find().select('status track decision').lean(),
     AbstractReview.find().populate('reviewer', 'fullName email').lean(),
     getOrCreateRubric(),
     AbstractCommunication.find().select('status').lean(),
+    Track.find().sort({ order: 1 }).select('name').lean(),
   ]);
+  const liveTrackNames = tracks.map((t) => t.name);
 
   const statusCounts = Object.fromEntries(ABSTRACT_STATUSES.map((s) => [s, 0])) as Record<string, number>;
   const decisionCounts = Object.fromEntries(ABSTRACT_DECISIONS.map((d) => [d, 0])) as Record<string, number>;
-  const trackCounts = Object.fromEntries(TRACKS.map((t) => [t, 0])) as Record<string, number>;
+  // Prefilled from the live Track collection, not a fixed list — an abstract
+  // whose stored track predates the admin's current tracks (renamed/deleted
+  // since) still counts, just under its own extra key, rather than being
+  // silently dropped.
+  const trackCounts = Object.fromEntries(liveTrackNames.map((t) => [t, 0])) as Record<string, number>;
   for (const a of abstracts) {
     statusCounts[a.status] = (statusCounts[a.status] ?? 0) + 1;
     if (a.decision) decisionCounts[a.decision] = (decisionCounts[a.decision] ?? 0) + 1;
@@ -325,7 +335,8 @@ export const analytics = catchAsync(async (_req: Request, res: Response) => {
     entry.count += 1;
     trackScoreSums.set(a.track, entry);
   }
-  const averageScoreByTrack = TRACKS.filter((t) => trackScoreSums.has(t)).map((t) => {
+  const orderedTrackNames = [...liveTrackNames, ...Array.from(trackScoreSums.keys()).filter((t) => !liveTrackNames.includes(t))];
+  const averageScoreByTrack = orderedTrackNames.filter((t) => trackScoreSums.has(t)).map((t) => {
     const { sum, count } = trackScoreSums.get(t)!;
     return { track: t, averageScore: Math.round((sum / count) * 10) / 10, abstractCount: count };
   });

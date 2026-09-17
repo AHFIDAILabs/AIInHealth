@@ -4,6 +4,7 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Speaker, type SpeakerDoc } from '../models/Speaker.model.js';
+import { Track } from '../models/Track.model.js';
 import {
   createSpeakerSchema,
   updateSpeakerSchema,
@@ -11,6 +12,15 @@ import {
   type ListSpeakersQuery,
 } from '../validations/speaker.validation.js';
 import { recordAudit } from '../services/audit.service.js';
+
+// Shared by adminCreate/adminUpdate — track is free text now (see
+// Speaker.model.ts), so validity is checked here against the live Track
+// collection instead of a fixed enum.
+const assertValidTrack = async (track: string | undefined): Promise<void> => {
+  if (track === undefined) return;
+  const exists = await Track.exists({ name: track });
+  if (!exists) throw new ApiError(422, 'Select a valid track.', 'INVALID_TRACK');
+};
 
 // GET /speakers — public, published only, no auth
 export const list = catchAsync(async (req: Request, res: Response) => {
@@ -48,6 +58,7 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
 
 export const adminCreate = catchAsync(async (req: Request, res: Response) => {
   const input = createSpeakerSchema.parse({ body: req.body }).body;
+  await assertValidTrack(input.track);
   const speaker = await Speaker.create(input);
   await recordAudit({ req, action: 'speaker.created', resourceType: 'Speaker', resourceId: speaker.id, after: speaker.toObject() });
   res.status(201).json(new ApiResponse(speaker));
@@ -56,6 +67,7 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
 export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Speaker not found', 'NOT_FOUND');
   const input = updateSpeakerSchema.parse({ body: req.body }).body;
+  await assertValidTrack(input.track);
   const before = await Speaker.findById(req.params.id);
   if (!before) throw new ApiError(404, 'Speaker not found', 'NOT_FOUND');
   const speaker = await Speaker.findByIdAndUpdate(req.params.id, input, { new: true });

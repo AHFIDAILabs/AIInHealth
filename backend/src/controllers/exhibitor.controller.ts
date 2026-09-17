@@ -5,6 +5,7 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Registration } from '../models/Registration.model.js';
 import { Lead } from '../models/Lead.model.js';
+import { CustomFormField } from '../models/CustomFormField.model.js';
 import { LEAD_INTEREST_LEVELS, BOOTH_SIZES } from '../types/enums.js';
 import { recordAudit } from '../services/audit.service.js';
 
@@ -71,15 +72,29 @@ export const adminImport = catchAsync(async (req: Request, res: Response) => {
     return key ? row[key]?.trim() : undefined;
   };
 
+  // Admin-configured exhibitor questions (FormFieldsTab.tsx) — matched against a
+  // CSV column whose header is the field's own label (case/whitespace-insensitive),
+  // since that's the only name a spreadsheet could plausibly use for it. Previously
+  // this endpoint didn't look at custom fields at all, so a required question
+  // enforced on the manual Add/Edit form and the public form was silently skipped
+  // for anyone imported via CSV.
+  const customFields = await CustomFormField.find({ formType: 'exhibitor' });
+  const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+  const findCustomCol = (row: Record<string, string>, label: string): string | undefined => {
+    const target = normalize(label);
+    const key = Object.keys(row).find((k) => normalize(k) === target);
+    return key ? row[key]?.trim() : undefined;
+  };
+
   const report: ImportReport = { totalRows: records.length, inserted: [], skippedDuplicates: [], validationFailures: [] };
   const boothSizeSet = new Set<string>(BOOTH_SIZES);
 
-  for (let i = 0; i < records.length; i += 1) {
+  rows: for (let i = 0; i < records.length; i += 1) {
     const row = records[i];
     const rowNum = i + 2; // header is row 1
     const companyName = findCol(row, /company/i);
     const contactName = findCol(row, /contact.?name/i);
-    const contactEmail = findCol(row, /contact.?email|^email$/i)?.toLowerCase();
+    const contactEmail = findCol(row, /contact.?email|^email(\s*address)?$/i)?.toLowerCase();
     const contactPhone = findCol(row, /phone/i);
     const website = findCol(row, /website|url/i);
     const boothSizeRaw = findCol(row, /booth.?size/i)?.toLowerCase();
@@ -95,6 +110,35 @@ export const adminImport = catchAsync(async (req: Request, res: Response) => {
     if (!contactEmail || !/^\S+@\S+\.\S+$/.test(contactEmail)) {
       report.validationFailures.push({ row: rowNum, error: 'Missing or invalid Contact Email' });
       continue;
+    }
+
+    const customFieldAnswers: Record<string, string> = {};
+    for (const field of customFields) {
+      const raw = findCustomCol(row, field.label);
+      if (field.fieldType === 'checkbox') {
+        customFieldAnswers[field.id] = /^(true|yes|1)$/i.test(raw ?? '') ? 'true' : 'false';
+        continue;
+      }
+      if (!raw) {
+        if (field.required) {
+          report.validationFailures.push({ row: rowNum, error: `Missing required field "${field.label}"` });
+          continue rows;
+        }
+        continue;
+      }
+      if (field.fieldType === 'select') {
+        const matchedOption = field.options?.find((o) => normalize(o) === normalize(raw));
+        if (!matchedOption) {
+          report.validationFailures.push({
+            row: rowNum,
+            error: `"${raw}" is not a valid option for "${field.label}" (expected one of: ${(field.options ?? []).join(', ')})`,
+          });
+          continue rows;
+        }
+        customFieldAnswers[field.id] = matchedOption;
+        continue;
+      }
+      customFieldAnswers[field.id] = raw;
     }
 
     // eslint-disable-next-line no-await-in-loop
@@ -114,6 +158,7 @@ export const adminImport = catchAsync(async (req: Request, res: Response) => {
       contactPhone: contactPhone || undefined,
       website: website || undefined,
       boothSize: boothSizeRaw && boothSizeSet.has(boothSizeRaw) ? boothSizeRaw : undefined,
+      customFieldAnswers: Object.keys(customFieldAnswers).length ? customFieldAnswers : undefined,
     });
     report.inserted.push({ companyName, contactEmail });
   }

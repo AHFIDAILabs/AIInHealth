@@ -27,10 +27,15 @@ export const list = catchAsync(async (req: Request, res: Response) => {
   const day = typeof req.query.day === 'string' ? req.query.day : undefined;
   const track = typeof req.query.track === 'string' ? req.query.track : undefined;
   const filter: FilterQuery<SessionDoc> = { isPublished: true, ...(day ? { day } : {}), ...(track ? { track } : {}) };
+  // match: isPublished:true on the speakers populate — without it, a session
+  // correctly gated on its OWN isPublished still exposed every attached
+  // speaker's name/photo regardless of that speaker's own publish state (a
+  // withdrawn/not-yet-approved speaker would still show up here even though
+  // they never appear on /speakers).
   const sessions = await Session.find(filter)
     .select('-rsvpList')
     .sort({ day: 1, startTime: 1 })
-    .populate('speakers', SPEAKER_FIELDS)
+    .populate({ path: 'speakers', select: SPEAKER_FIELDS, match: { isPublished: true } })
     .populate('track', 'name color');
   res.json(new ApiResponse(sessions));
 });

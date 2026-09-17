@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { TRACKS } from '../types/enums.js';
 
 const optionalUrl = z.string().trim().url('Enter a valid URL').optional().or(z.literal(''));
 
@@ -9,7 +8,8 @@ export const createSpeakerSchema = z.object({
     title: z.string().trim().min(2, 'Enter a title'),
     organization: z.string().trim().optional(),
     bio: z.string().trim().max(2000).optional(),
-    track: z.enum(TRACKS),
+    // Checked against the live Track collection in speaker.controller.ts.
+    track: z.string().trim().min(1, 'Choose a track'),
     photoUrl: optionalUrl,
     isPublished: z.boolean().optional(),
     order: z.coerce.number().int().optional(),
@@ -21,7 +21,7 @@ export const updateSpeakerSchema = z.object({
 });
 
 export const listSpeakersQuerySchema = z.object({
-  track: z.enum(TRACKS).optional(),
+  track: z.string().trim().optional(),
   published: z.enum(['true', 'false']).optional(),
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),

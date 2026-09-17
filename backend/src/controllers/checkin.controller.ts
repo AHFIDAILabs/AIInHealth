@@ -18,6 +18,7 @@ const summarize = (r: {
   organization?: string | null;
   checkedIn: boolean;
   checkedInAt?: Date | null;
+  isActive?: boolean;
 }) => ({
   id: r.id ?? String(r._id),
   name: r.fullName || r.contactName || r.companyName || 'Unknown',
@@ -26,6 +27,7 @@ const summarize = (r: {
   organization: r.organization || r.companyName,
   checkedIn: r.checkedIn,
   checkedInAt: r.checkedInAt,
+  isActive: r.isActive,
 });
 
 // POST /admin/check-in/scan — body: { qrToken }
@@ -128,7 +130,12 @@ export const manualCheckIn = catchAsync(async (req: Request, res: Response) => {
   res.json(new ApiResponse(summary));
 });
 
-// GET /admin/check-in/stats — small counter for the CheckInPage header
+// GET /admin/check-in/stats — small counter for the CheckInPage header.
+// Deliberately spans every registration type (check-in itself does — see
+// scan()/manualCheckIn() above), unlike attendee.controller.ts's adminStats,
+// which is attendee-only. The two are shown under the same "Confirmed"/
+// "Checked In" labels on different pages, so CheckInPage.tsx marks these
+// "(All)" to avoid reading as a discrepancy.
 export const stats = catchAsync(async (_req: Request, res: Response) => {
   const [confirmed, checkedIn] = await Promise.all([
     Registration.countDocuments({ status: 'confirmed' }),

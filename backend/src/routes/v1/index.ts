@@ -17,6 +17,7 @@ import reviewerRoutes from './reviewer.routes.js';
 import sponsorshipPackageRoutes from './sponsorshipPackage.routes.js';
 import volunteerRoutes from './volunteer.routes.js';
 import customFormFieldRoutes from './customFormField.routes.js';
+import trackRoutes from './track.routes.js';
 
 const router = Router();
 
@@ -38,5 +39,6 @@ router.use('/reviewer', reviewerRoutes);
 router.use('/packages', sponsorshipPackageRoutes);
 router.use('/volunteers', volunteerRoutes);
 router.use('/custom-fields', customFormFieldRoutes);
+router.use('/tracks', trackRoutes);
 
 export default router;

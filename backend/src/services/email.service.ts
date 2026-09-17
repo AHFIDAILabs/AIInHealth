@@ -147,9 +147,17 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
     ? `You've been awarded a scholarship covering <strong>${discountPercent}%</strong> of your attendee registration fee for the AI in Health Summit 2026.`
     : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
 
-  const instructionLine = isScholarship
-    ? `Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, and enter this code to apply your discount${discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'} — it's tied to this email address, so please register using ${to}.`
-    : `Visit <a href="${registerUrl}">the registration page</a> and use this code to confirm your spot — it's tied to this email address, so please register using ${to}.`;
+  // 'volunteer' redeems on the Volunteer tab; the other three (scholarship,
+  // keynote_speaker, complimentary) all redeem on the Attendee tab — see
+  // registration.controller.ts's create() / ATTENDEE_ACCESS_CODE_TYPES.
+  const instructionLine =
+    type === 'volunteer'
+      ? `Visit <a href="${registerUrl}">the registration page</a> and use this code to confirm your spot — it's tied to this email address, so please register using ${to}.`
+      : `Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, and enter this code${
+          isScholarship
+            ? ` to apply your discount${discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'}`
+            : ' — it covers your registration fee in full, no payment needed'
+        } — it's tied to this email address, so please register using ${to}.`;
 
   await sendEmail({
     to,

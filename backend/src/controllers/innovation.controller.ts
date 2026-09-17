@@ -4,6 +4,7 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Innovation, type InnovationDoc } from '../models/Innovation.model.js';
+import { Track } from '../models/Track.model.js';
 import {
   createInnovationSchema,
   updateInnovationSchema,
@@ -11,6 +12,15 @@ import {
   type ListInnovationsQuery,
 } from '../validations/innovation.validation.js';
 import { recordAudit } from '../services/audit.service.js';
+
+// Shared by adminCreate/adminUpdate — see speaker.controller.ts's
+// assertValidTrack for why this checks the live Track collection instead of
+// a fixed enum.
+const assertValidTrack = async (track: string | undefined): Promise<void> => {
+  if (track === undefined) return;
+  const exists = await Track.exists({ name: track });
+  if (!exists) throw new ApiError(422, 'Select a valid track.', 'INVALID_TRACK');
+};
 
 // GET /innovations — public, published only
 export const list = catchAsync(async (req: Request, res: Response) => {
@@ -48,6 +58,7 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
 
 export const adminCreate = catchAsync(async (req: Request, res: Response) => {
   const input = createInnovationSchema.parse({ body: req.body }).body;
+  await assertValidTrack(input.track);
   const innovation = await Innovation.create(input);
   await recordAudit({ req, action: 'innovation.created', resourceType: 'Innovation', resourceId: innovation.id, after: innovation.toObject() });
   res.status(201).json(new ApiResponse(innovation));
@@ -56,6 +67,7 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
 export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Innovation not found', 'NOT_FOUND');
   const input = updateInnovationSchema.parse({ body: req.body }).body;
+  await assertValidTrack(input.track);
   const before = await Innovation.findById(req.params.id);
   if (!before) throw new ApiError(404, 'Innovation not found', 'NOT_FOUND');
   const innovation = await Innovation.findByIdAndUpdate(req.params.id, input, { new: true });

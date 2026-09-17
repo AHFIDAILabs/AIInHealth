@@ -7,10 +7,11 @@ const sessionSchema = new Schema(
     startTime: { type: String, required: true, trim: true }, // "09:00", 24h — validated in Zod
     endTime: { type: String, required: true, trim: true },
     title: { type: String, required: true, trim: true },
-    // References Track.model.ts — Sessions-only; Speaker/Abstract/Innovation
-    // still use the separate fixed TRACKS enum (types/enums.ts). See
-    // Track.model.ts's own comment for why these were kept apart. Optional —
-    // a session can sit outside any track ("No track" in the admin form).
+    // References Track.model.ts by id. Speaker/Abstract/Innovation also
+    // source their track from this same collection now, just by name (a
+    // plain validated string, not an ObjectId ref) rather than a populated
+    // relation — see Speaker.model.ts's track field comment. Optional — a
+    // session can sit outside any track ("No track" in the admin form).
     track: { type: Schema.Types.ObjectId, ref: 'Track' },
     format: { type: String, enum: SESSION_FORMATS, required: true },
     room: { type: String, required: true, trim: true },

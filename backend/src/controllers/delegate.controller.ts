@@ -81,6 +81,12 @@ export const me = catchAsync(async (req: Request, res: Response) => {
       hasTicket: Boolean(registration.qrToken),
       directoryOptIn: registration.directoryOptIn,
       avatarUrl: registration.avatarUrl,
+      // Volunteer only — admin manages these on RegistrationsPage.tsx, but until
+      // now a volunteer had no way to see their own assignment except by asking
+      // staff directly.
+      tshirtSize: registration.tshirtSize,
+      trackSelected: registration.trackSelected,
+      trackAssigned: registration.trackAssigned,
     })
   );
 });

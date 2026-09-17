@@ -1,11 +1,14 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
 
-// Sessions-only, deliberately — Speaker/Abstract/Innovation still use the
-// fixed TRACKS enum (types/enums.ts) rather than this model. Unifying all
-// four onto one shared Track collection was considered and explicitly
-// scoped out (bigger change, touches already-working analytics elsewhere);
-// this exists purely so the Agenda admin section can manage its own tracks
-// (rename, recolor, delete) the way sessions actually need.
+// Single source of truth for the event's tracks. Originally Sessions-only,
+// with Speaker/Abstract/Innovation on a separate fixed TRACKS enum
+// (types/enums.ts) — that split let the two drift apart (admins renaming
+// tracks here without the other three ever finding out), so all four now
+// read from this collection: Sessions by ObjectId ref, the other three by
+// name (a plain string, checked against Track.exists() at the request layer
+// — see Speaker/Innovation/Abstract controllers' assertValidTrack /
+// trackExists checks) rather than a populated relation, to avoid a bigger
+// migration of already-working analytics elsewhere.
 const trackSchema = new Schema(
   {
     name: { type: String, required: true, trim: true, unique: true },

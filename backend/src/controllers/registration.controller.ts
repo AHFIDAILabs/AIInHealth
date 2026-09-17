@@ -6,6 +6,8 @@ import { ApiError } from '../utils/ApiError.js';
 import { toCsv } from '../utils/toCsv.js';
 import { Registration, type RegistrationDoc } from '../models/Registration.model.js';
 import { AccessCode, type AccessCodeDoc } from '../models/AccessCode.model.js';
+import { CustomFormField } from '../models/CustomFormField.model.js';
+import { Lead } from '../models/Lead.model.js';
 import type { CreateRegistrationInput, ListRegistrationsQuery, AdminCreateRegistrationInput } from '../validations/registration.validation.js';
 import {
   listRegistrationsQuerySchema,
@@ -15,6 +17,7 @@ import {
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
 import { isFreeTicketCategory } from '../config/pricing.js';
+import { ATTENDEE_ACCESS_CODE_TYPES } from '../types/enums.js';
 import { generateQrToken, qrDataUrlForToken } from '../services/qr.service.js';
 import { generateCode } from './accessCode.controller.js';
 import { initializePaymentForRegistration } from './payment.controller.js';
@@ -210,17 +213,20 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     createdAt: { $gte: new Date(Date.now() - DUPLICATE_SUBMIT_WINDOW_MS) },
   }).sort({ createdAt: -1 });
 
-  // Scholarship code redemption — attendee-only, and only on a genuinely new
-  // submission (see the comment above). Same validation shape as the volunteer
-  // branch above (unknown/used/revoked/expired/email-mismatch), just against
-  // 'scholarship'-type codes instead of 'volunteer'.
+  // Comp-code redemption — attendee-only, and only on a genuinely new submission
+  // (see the comment above). Same validation shape as the volunteer branch above
+  // (unknown/used/revoked/expired/email-mismatch), just against any of the three
+  // attendee-side code types instead of 'volunteer'. keynote_speaker/complimentary
+  // carry no discountPercent of their own (AccessCode.model.ts) — they're a full
+  // comp seat, same end state as a 100%-scholarship, just tracked under their own
+  // type for reporting (e.g. "5 keynote speakers" vs "12 scholarships").
   let discountPercent: number | undefined;
   let redeemedCode: HydratedDocument<AccessCodeDoc> | null = null;
   const trimmedAttendeeCode = input.type === 'attendee' ? input.accessCode?.trim().toUpperCase() : undefined;
 
   if (!recentDuplicate && input.type === 'attendee' && trimmedAttendeeCode) {
     const code = await AccessCode.findOne({ code: trimmedAttendeeCode });
-    if (!code || code.type !== 'scholarship') {
+    if (!code || !ATTENDEE_ACCESS_CODE_TYPES.includes(code.type as (typeof ATTENDEE_ACCESS_CODE_TYPES)[number])) {
       throw new ApiError(422, 'That access code is not valid.', 'INVALID_ACCESS_CODE');
     }
     if (code.status === 'used') {
@@ -235,15 +241,16 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     if (code.issuedTo !== input.email.trim().toLowerCase()) {
       throw new ApiError(422, 'This access code was issued to a different email address. Please use the email it was sent to.', 'ACCESS_CODE_EMAIL_MISMATCH');
     }
-    discountPercent = code.discountPercent ?? undefined;
+    discountPercent = code.type === 'scholarship' ? code.discountPercent ?? undefined : 100;
     redeemedCode = code;
   }
 
   // Paid ticket categories start life unpaid — payment.controller.ts's initialize
   // flips this to 'paid'/'confirmed' once Paystack verifies the charge. Free
-  // categories (government_official, accredited_media), and a 100%-scholarship
-  // seat, keep the default 'not_required' — a 100% code is a full comp, not a
-  // ₦0 charge, so it never touches Paystack at all, same as a free category.
+  // categories (government_official, accredited_media), and any fully-comped
+  // code redemption (100%-scholarship, keynote_speaker, complimentary), keep
+  // the default 'not_required' — a full comp is not a ₦0 charge, so it never
+  // touches Paystack at all, same as a free category.
   const isFullyComped = input.type === 'attendee' && discountPercent === 100;
   const requiresPayment = input.type === 'attendee' && !isFreeTicketCategory(input.ticketCategory as TicketCategory) && !isFullyComped;
 
@@ -298,7 +305,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
 
     // The only auto-confirmed-with-no-payment path through this handler — a free
     // ticket category still goes through manual admin review (see the comment
-    // above), so this fires only for a 100%-scholarship seat.
+    // above), so this fires only for a fully-comped code redemption.
     if (isFullyComped) {
       void sendConfirmationAndTicketEmails(registration);
     }
@@ -313,7 +320,9 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   const appliedDiscount = registration.discountPercent ?? undefined;
   const message = (() => {
     if (input.type === 'attendee' && appliedDiscount === 100) {
-      return "Your scholarship code covers your registration fee in full — you're all set!";
+      // Covers all three ways a seat ends up fully comped (100%-scholarship,
+      // keynote_speaker, complimentary) without assuming which one it was.
+      return "Your registration fee is fully covered — you're all set!";
     }
     if (stillRequiresPayment) {
       return appliedDiscount
@@ -534,20 +543,41 @@ export const adminDelete = catchAsync(async (req: Request, res: Response) => {
   if (!registration) {
     throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
   }
+
+  // Exhibitor-only — Leads have no meaning without the exhibitor that captured
+  // them, and there's no UI to view/reference leads whose exhibitor no longer
+  // exists (they'd just permanently inflate the Leads stat cards as an
+  // unreachable "Unknown" bucket). Cascade so deleting an exhibitor actually
+  // means what its confirm dialog says.
+  let deletedLeads = 0;
+  if (registration.type === 'exhibitor') {
+    const leadResult = await Lead.deleteMany({ exhibitor: registration._id });
+    deletedLeads = leadResult.deletedCount ?? 0;
+  }
+
   await recordAudit({
     req,
     action: 'registration.deleted',
     resourceType: 'Registration',
     resourceId: req.params.id,
     before: registration.toObject(),
+    ...(deletedLeads > 0 && { after: { deletedLeads } }),
   });
   res.json(new ApiResponse({ id: req.params.id }));
 });
 
+// Every field an admin can actually see on RegistrationsPage.tsx/AttendeesPage.tsx —
+// this list drifted behind the UI over time (paymentStatus, checkedIn, isActive,
+// volunteer track/t-shirt fields, exhibitor custom answers, and more were all
+// visible on-screen but silently missing from the export). amountKobo/
+// customFieldAnswers/groupAttendees are pre-formatted into readable columns below
+// rather than exported as raw kobo/ObjectId-keyed-object/array — see toRow().
 const CSV_COLUMNS = [
-  '_id', 'type', 'status', 'createdAt', 'registrationMode', 'ticketCategory', 'fullName', 'email', 'phone',
-  'organization', 'jobTitle', 'country', 'companyName', 'contactName', 'contactEmail', 'contactPhone', 'website',
-  'boothSize', 'productsDescription', 'message', 'accessCode', 'discountPercent',
+  '_id', 'type', 'status', 'isActive', 'createdAt', 'registrationMode', 'ticketCategory', 'fullName', 'email', 'phone',
+  'organization', 'jobTitle', 'country', 'groupAttendees', 'companyName', 'contactName', 'contactEmail', 'contactPhone',
+  'website', 'boothSize', 'productsDescription', 'customFieldAnswers', 'message', 'accessCode', 'discountPercent',
+  'paymentStatus', 'amountNaira', 'paidAt', 'paymentReference', 'checkedIn', 'checkedInAt', 'directoryOptIn',
+  'tshirtSize', 'trackSelected', 'trackAssigned', 'avatarUrl',
 ];
 
 export const adminExport = catchAsync(async (req: Request, res: Response) => {
@@ -556,7 +586,24 @@ export const adminExport = catchAsync(async (req: Request, res: Response) => {
   const filter = buildAdminFilter(query, req);
   const items = await Registration.find(filter).sort({ createdAt: -1 }).lean();
 
-  const csv = toCsv(items as unknown as Record<string, unknown>[], CSV_COLUMNS);
+  // Custom field answers are keyed by CustomFormField _id, not label — look the
+  // labels up once so the export reads like the question, not a Mongo id.
+  const fieldLabelById = new Map(
+    (await CustomFormField.find({ formType: 'exhibitor' }).select('label').lean()).map((f) => [f._id.toString(), f.label])
+  );
+
+  const rows = items.map((item) => ({
+    ...item,
+    groupAttendees: (item.groupAttendees ?? []).map((a) => `${a.fullName ?? ''} <${a.email ?? ''}>`).join('; '),
+    customFieldAnswers: item.customFieldAnswers
+      ? Object.entries(item.customFieldAnswers)
+          .map(([id, value]) => `${fieldLabelById.get(id) ?? id}: ${value}`)
+          .join('; ')
+      : '',
+    amountNaira: typeof item.amountKobo === 'number' ? Math.round(item.amountKobo / 100) : '',
+  }));
+
+  const csv = toCsv(rows as unknown as Record<string, unknown>[], CSV_COLUMNS);
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="registrations-${Date.now()}.csv"`);
   res.send(csv);

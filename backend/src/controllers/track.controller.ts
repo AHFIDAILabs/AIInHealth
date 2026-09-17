@@ -8,6 +8,15 @@ import { Session } from '../models/Session.model.js';
 import { recordAudit } from '../services/audit.service.js';
 import { createTrackSchema, updateTrackSchema } from '../validations/track.validation.js';
 
+// GET /tracks — public, name/color/order only. Used by the Abstract
+// submission form (and any other public form that needs to offer the
+// event's real current tracks) so it never drifts from what the Agenda
+// admin's Tracks tab actually has — see Abstract.model.ts's track field.
+export const list = catchAsync(async (_req: Request, res: Response) => {
+  const tracks = await Track.find().sort({ order: 1, name: 1 }).select('name color order');
+  res.json(new ApiResponse(tracks));
+});
+
 // GET /admin/tracks — every track with its live session/speaker counts,
 // computed here (never stored) so they can't drift from what Sessions
 // actually has, same reasoning as SponsorshipPackage's utilization count.

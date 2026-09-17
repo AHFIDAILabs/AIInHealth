@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { TRACKS } from '../types/enums.js';
 import { optionalUrlField } from './common.js';
 
 export const createInnovationSchema = z.object({
@@ -9,7 +8,8 @@ export const createInnovationSchema = z.object({
     founderName: z.string().trim().optional(),
     tagline: z.string().trim().min(2, 'Enter a short tagline').max(150),
     description: z.string().trim().max(2000).optional(),
-    track: z.enum(TRACKS),
+    // Checked against the live Track collection in innovation.controller.ts.
+    track: z.string().trim().min(1, 'Choose a track'),
     website: optionalUrlField,
     logoUrl: optionalUrlField,
     order: z.coerce.number().int().optional(),
@@ -22,7 +22,7 @@ export const updateInnovationSchema = z.object({
 });
 
 export const listInnovationsQuerySchema = z.object({
-  track: z.enum(TRACKS).optional(),
+  track: z.string().trim().optional(),
   published: z.enum(['true', 'false']).optional(),
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),

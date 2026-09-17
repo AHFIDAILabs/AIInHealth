@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { TRACKS, ABSTRACT_STATUSES, ABSTRACT_DECISIONS } from '../types/enums.js';
+import { ABSTRACT_STATUSES, ABSTRACT_DECISIONS } from '../types/enums.js';
 
 const abstractSchema = new Schema(
   {
@@ -8,7 +8,12 @@ const abstractSchema = new Schema(
     authorEmail: { type: String, required: true, trim: true, lowercase: true },
     organization: { type: String, trim: true },
     coAuthors: { type: String, trim: true, maxlength: 500 },
-    track: { type: String, enum: TRACKS, required: true },
+    // Free text, not a fixed enum — validated against the live Track
+    // collection (see track.controller.ts) at the request layer instead, so
+    // the submission form and the Agenda admin's Tracks tab always agree on
+    // the current set of tracks rather than drifting apart like this and the
+    // old fixed TRACKS enum (still used by Speaker/Innovation) used to.
+    track: { type: String, required: true, trim: true },
     abstractText: { type: String, required: true, trim: true, maxlength: 3000 },
     status: { type: String, enum: ABSTRACT_STATUSES, default: 'submitted' },
     // The committee's final call (see enums.ts) — unset until a decision is

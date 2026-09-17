@@ -6,7 +6,8 @@ import { Partner } from '../models/Partner.model.js';
 import { Abstract } from '../models/Abstract.model.js';
 import { AbstractCommunication } from '../models/AbstractCommunication.model.js';
 import { NewsletterSubscriber } from '../models/NewsletterSubscriber.model.js';
-import { REGISTRATION_STATUSES, REGISTRATION_TYPES, PAYMENT_STATUSES, ABSTRACT_STATUSES, TRACKS } from '../types/enums.js';
+import { Track } from '../models/Track.model.js';
+import { REGISTRATION_STATUSES, REGISTRATION_TYPES, PAYMENT_STATUSES, ABSTRACT_STATUSES } from '../types/enums.js';
 
 const DAYS = 30;
 const since = () => new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000);
@@ -224,10 +225,11 @@ export const revenue = catchAsync(async (_req: Request, res: Response) => {
 // rule referenced in admin.controller.ts. What IS real and shown instead:
 // how many decision emails actually sent/failed, and newsletter growth.
 export const engagement = catchAsync(async (_req: Request, res: Response) => {
-  const [communications, newsletterSubscribers, abstracts] = await Promise.all([
+  const [communications, newsletterSubscribers, abstracts, tracks] = await Promise.all([
     AbstractCommunication.find().select('status').lean(),
     NewsletterSubscriber.countDocuments(),
     Abstract.find().select('status track').lean(),
+    Track.find().sort({ order: 1 }).select('name').lean(),
   ]);
 
   const emailPipeline = { draft: 0, sent: 0, failed: 0, cancelled: 0 };
@@ -236,7 +238,8 @@ export const engagement = catchAsync(async (_req: Request, res: Response) => {
   }
 
   const abstractsByStatus = Object.fromEntries(ABSTRACT_STATUSES.map((s) => [s, 0])) as Record<string, number>;
-  const abstractsByTrack = Object.fromEntries(TRACKS.map((t) => [t, 0])) as Record<string, number>;
+  // Prefilled from the live Track collection — see abstractController.analytics.
+  const abstractsByTrack = Object.fromEntries(tracks.map((t) => [t.name, 0])) as Record<string, number>;
   for (const a of abstracts) {
     abstractsByStatus[a.status] = (abstractsByStatus[a.status] ?? 0) + 1;
     abstractsByTrack[a.track] = (abstractsByTrack[a.track] ?? 0) + 1;

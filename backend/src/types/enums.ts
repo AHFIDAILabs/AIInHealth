@@ -95,21 +95,26 @@ export const NOTIFICATION_EVENTS = [
   'inquiry.new',
   'message.new',
   'newsletter.new',
+  'abstract.new',
   'abstract.reviewer_declined',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
-// Access codes gate the two self-service paths that skip payment entirely: a
-// volunteer redeems one to register for free, and a keynote speaker's code (issued
-// by staff, redeemed the same way) grants them access without going through the
-// paid attendee flow. "complimentary" covers anyone else staff choose to comp.
-// "scholarship" is different from the other three: it's redeemed through the
-// paid ATTENDEE flow (not a separate free path) and carries a discountPercent
-// (see ACCESS_CODE_DISCOUNTS) applied against that ticket's price instead of
-// bypassing payment outright — payment.controller.ts still charges the
-// remainder via Paystack unless discountPercent is 100.
+// Access codes gate self-service paths that skip payment entirely. A volunteer
+// redeems one on the Volunteer form to register for free. The other three are
+// all redeemed on the ATTENDEE form (registration.controller.ts's create()) —
+// 'keynote_speaker' and 'complimentary' always force a full (100%) comp, since
+// neither carries its own discountPercent; 'scholarship' carries a discountPercent
+// (see ACCESS_CODE_DISCOUNTS) and only fully bypasses Paystack at the 100% tier,
+// otherwise payment.controller.ts charges the discounted remainder. They're kept
+// as distinct types purely for admin-side reporting (e.g. "5 keynote speakers"
+// vs "12 scholarships"), not because redemption behaves differently.
 export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship'] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
+
+// The subset of ACCESS_CODE_TYPES redeemable on the attendee registration form —
+// see registration.controller.ts's create().
+export const ATTENDEE_ACCESS_CODE_TYPES = ['keynote_speaker', 'complimentary', 'scholarship'] as const;
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;
 export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];
