@@ -21,6 +21,7 @@ import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { AdminInput, AdminSelect, AdminTextarea } from '../../components/ui/AdminField';
+import { Avatar } from '../../components/ui/Avatar';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -56,6 +57,10 @@ interface AddFormState {
   boothSize: '' | BoothSize;
   productsDescription: string;
   message: string;
+  // volunteer
+  tshirtSize: string;
+  trackSelected: string;
+  trackAssigned: string;
 }
 
 const EMPTY_ADD_FORM: AddFormState = {
@@ -76,6 +81,9 @@ const EMPTY_ADD_FORM: AddFormState = {
   boothSize: '',
   productsDescription: '',
   message: '',
+  tshirtSize: '',
+  trackSelected: '',
+  trackAssigned: '',
 };
 
 const STATUS_OPTIONS: RegistrationStatus[] = ['pending', 'reviewed', 'confirmed', 'declined'];
@@ -275,7 +283,15 @@ export const RegistrationsPage = () => {
         setAddError('Full name, email, and phone are required.');
         return;
       }
-      payload = { type: 'volunteer', fullName: addForm.fullName.trim(), email: addForm.email.trim(), phone: addForm.phone.trim() };
+      payload = {
+        type: 'volunteer',
+        fullName: addForm.fullName.trim(),
+        email: addForm.email.trim(),
+        phone: addForm.phone.trim(),
+        tshirtSize: addForm.tshirtSize.trim() || undefined,
+        trackSelected: addForm.trackSelected.trim() || undefined,
+        trackAssigned: addForm.trackAssigned.trim() || undefined,
+      };
     } else {
       if (!addForm.companyName.trim() || !addForm.contactName.trim() || !addForm.contactEmail.trim()) {
         setAddError('Company name, contact name, and contact email are required.');
@@ -503,8 +519,13 @@ export const RegistrationsPage = () => {
                       <input type="checkbox" checked={selected.has(r._id)} onChange={() => toggleSelected(r._id)} />
                     </td>
                     <td className="px-3 py-3">
-                      <p className="font-medium text-navy">{displayName(r)}</p>
-                      <p className="text-xs text-slate-400">{displayEmail(r)}</p>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar name={displayName(r)} avatarUrl={r.avatarUrl} size={32} />
+                        <div>
+                          <p className="font-medium text-navy">{displayName(r)}</p>
+                          <p className="text-xs text-slate-400">{displayEmail(r)}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-slate-600">{displayOrg(r)}</td>
                     <td className="px-3 py-3">
@@ -528,14 +549,14 @@ export const RegistrationsPage = () => {
                         <button
                           onClick={() => setToToggleActive(r)}
                           title={r.isActive ? 'Deactivate' : 'Reactivate'}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-offwhite hover:text-navy"
+                          className="rounded-md p-2 text-slate-400 hover:bg-offwhite hover:text-navy"
                         >
                           <Ban size={15} />
                         </button>
                         <button
                           onClick={() => setToDelete(r)}
                           title="Delete"
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-danger/10 hover:text-danger"
+                          className="rounded-md p-2 text-slate-400 hover:bg-danger/10 hover:text-danger"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -597,14 +618,14 @@ export const RegistrationsPage = () => {
                   <button
                     onClick={() => setToToggleActive(active)}
                     title={active.isActive ? 'Deactivate' : 'Reactivate'}
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-offwhite hover:text-navy"
+                    className="rounded-md p-2 text-slate-400 hover:bg-offwhite hover:text-navy"
                   >
                     <Ban size={16} />
                   </button>
                   <button
                     onClick={() => setToDelete(active)}
                     title="Delete"
-                    className="rounded-md p-1.5 text-slate-400 hover:bg-danger/10 hover:text-danger"
+                    className="rounded-md p-2 text-slate-400 hover:bg-danger/10 hover:text-danger"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -621,8 +642,13 @@ export const RegistrationsPage = () => {
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">Inactive</span>
                   )}
                 </div>
-                <h2 className="mt-3 font-display text-xl font-semibold text-navy">{displayName(active)}</h2>
-                <p className="text-sm text-slate-500">{displayEmail(active)}</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <Avatar name={displayName(active)} avatarUrl={active.avatarUrl} size={48} />
+                  <div>
+                    <h2 className="font-display text-xl font-semibold text-navy">{displayName(active)}</h2>
+                    <p className="text-sm text-slate-500">{displayEmail(active)}</p>
+                  </div>
+                </div>
 
                 <div className="mt-5 space-y-3 border-t border-slate-100 pt-5 text-sm">
                   {displayOrg(active) !== '—' && (
@@ -635,6 +661,9 @@ export const RegistrationsPage = () => {
                   {active.registrationMode && <DetailRow label="Mode" value={active.registrationMode} />}
                   {active.ticketCategory && <DetailRow label="Ticket Category" value={active.ticketCategory.replace(/_/g, ' ')} />}
                   {active.boothSize && <DetailRow label="Booth Size" value={active.boothSize} />}
+                  {active.tshirtSize && <DetailRow label="T-Shirt Size" value={active.tshirtSize} />}
+                  {active.trackSelected && <DetailRow label="Track Selected" value={active.trackSelected} />}
+                  {active.trackAssigned && <DetailRow label="Track Assigned" value={active.trackAssigned} />}
                   {active.website && <DetailRow label="Website" value={active.website} />}
                   {active.productsDescription && <DetailRow label="Products" value={active.productsDescription} />}
                   {active.message && <DetailRow label="Message" value={active.message} />}
@@ -791,6 +820,9 @@ export const RegistrationsPage = () => {
                     <AdminInput label="Full Name" value={addForm.fullName} onChange={(e) => setAddForm({ ...addForm, fullName: e.target.value })} />
                     <AdminInput label="Email" type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} />
                     <AdminInput label="Phone" type="tel" value={addForm.phone} onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })} />
+                    <AdminInput label="T-Shirt Size" value={addForm.tshirtSize} onChange={(e) => setAddForm({ ...addForm, tshirtSize: e.target.value })} placeholder="e.g. L" />
+                    <AdminInput label="Track Selected" value={addForm.trackSelected} onChange={(e) => setAddForm({ ...addForm, trackSelected: e.target.value })} />
+                    <AdminInput label="Track Assigned" value={addForm.trackAssigned} onChange={(e) => setAddForm({ ...addForm, trackAssigned: e.target.value })} />
                   </div>
                 )}
 
@@ -877,6 +909,6 @@ export const RegistrationsPage = () => {
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <div>
     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-    <p className="mt-0.5 text-navy">{value}</p>
+    <p className="mt-0.5 break-words text-navy">{value}</p>
   </div>
 );

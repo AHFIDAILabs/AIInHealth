@@ -16,7 +16,7 @@ export const adminListPortalTokens = async (q?: string): Promise<PortalTokenRow[
   return res.data.data;
 };
 
-export const adminSendPortalLink = async (registrationId: string): Promise<{ ok: true; sentAt: string }> => {
-  const res = await api.post<{ success: true; data: { ok: true; sentAt: string } }>(`/admin/portal-tokens/${registrationId}/send-link`);
+export const adminSendPortalCode = async (registrationId: string): Promise<{ ok: true; sentAt: string }> => {
+  const res = await api.post<{ success: true; data: { ok: true; sentAt: string } }>(`/admin/portal-tokens/${registrationId}/send-code`);
   return res.data.data;
 };

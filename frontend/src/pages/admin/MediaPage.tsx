@@ -358,12 +358,14 @@ export const MediaPage = () => {
                     </span>
                   )}
                 </div>
-                <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                {/* Always visible below sm — a hover-only reveal is unreachable on a
+                    touchscreen, which has no hover state at all. */}
+                <div className="absolute right-2 top-2 flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                   <div className="relative">
                     <button
                       onClick={() => setShareOpenId(shareOpenId === item._id ? null : item._id)}
                       title="Share"
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange"
                     >
                       <Share2 size={13} />
                     </button>
@@ -372,14 +374,14 @@ export const MediaPage = () => {
                   <button
                     onClick={() => copyLinkInline(item)}
                     title="Copy link"
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange"
                   >
                     {copiedLinkId === item._id ? <Check size={13} className="text-success" /> : <Copy size={13} />}
                   </button>
-                  <button onClick={() => openEdit(item)} title="Edit" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange">
+                  <button onClick={() => openEdit(item)} title="Edit" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange">
                     <Pencil size={13} />
                   </button>
-                  <button onClick={() => setToDelete(item)} title="Delete" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-danger">
+                  <button onClick={() => setToDelete(item)} title="Delete" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-danger">
                     <Trash2 size={13} />
                   </button>
                 </div>

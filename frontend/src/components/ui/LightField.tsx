@@ -3,8 +3,10 @@ import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type T
 // Public-site input treatment (rounded-xl, soft border, light surface) — the
 // counterpart to FormField.tsx's dark admin-portal styling. Shared by Contact and
 // Register, the two public forms that live outside the admin portal.
+// text-base (16px) below sm, dropping to text-sm from sm up — iOS Safari
+// auto-zooms the page on focus for any input under 16px.
 const fieldClasses = (error?: string, className = '') =>
-  `w-full rounded-xl border bg-white px-4 py-3 text-sm text-navy placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange/40 ${
+  `w-full rounded-xl border bg-white px-4 py-3 text-base sm:text-sm text-navy placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange/40 ${
     error ? 'border-danger' : 'border-slate-200'
   } ${className}`;
 

@@ -4,7 +4,7 @@ import summitMark from '../../assets/images/summit_logo_mark.png';
 
 export const Footer = () => (
   <footer className="w-full justify-between border-t border-slate-800 bg-navy">
-    <div className="flex flex-row w-full justify-between  px-4 py-5 sm:px-6">
+    <div className="flex w-full flex-col gap-10 px-4 py-5 sm:flex-row sm:justify-between sm:px-6">
       <div className="flex flex-col items-start gap-2.5">
         <img src={summitMark} alt="" aria-hidden="true" className="h-9 w-9 rounded-md" />
         <p className="font-display text-lg font-semibold text-white">AI in Health Summit 2026</p>
@@ -14,7 +14,7 @@ export const Footer = () => (
         </p>
       </div>
 
-      <div className="mt-12 grid gap-10 sm:grid-cols-3">
+      <div className="grid gap-10 sm:grid-cols-3">
         <div>
           <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">About</p>
           <ul className="space-y-2.5 text-sm text-slate-300">

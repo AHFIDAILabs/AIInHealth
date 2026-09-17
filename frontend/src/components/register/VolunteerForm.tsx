@@ -4,10 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '../ui/Button';
 import { Banner } from '../ui/Banner';
-import { LightField } from '../ui/LightField';
+import { LightField, LightSelect } from '../ui/LightField';
 import { RegisterSuccess } from './RegisterSuccess';
 import { submitRegistration } from '../../services/registration.service';
 import { getApiErrorMessage } from '../../services/api';
+
+const TSHIRT_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 
 const schema = z.object({
   fullName: z.string().trim().min(2, 'Enter your full name'),
@@ -15,6 +17,8 @@ const schema = z.object({
   phone: z.string().trim().min(6, 'Enter a valid phone number'),
   // Optional — see the note above the field for why.
   accessCode: z.string().trim().max(32).optional().or(z.literal('')),
+  tshirtSize: z.string().trim().optional(),
+  trackSelected: z.string().trim().max(200).optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -70,16 +74,32 @@ export const VolunteerForm = () => {
 
       <div className="grid gap-5 sm:grid-cols-2">
         <LightField label="Phone" type="tel" error={errors.phone?.message} {...register('phone')} />
-        <div>
-          <LightField
-            label="Access Code (optional)"
-            placeholder="VOL-XXXXXX — leave blank to apply"
-            error={errors.accessCode?.message}
-            {...register('accessCode')}
-            className="uppercase tracking-wider"
-          />
-          <p className="mt-1.5 text-xs text-slate-400">Already have one? Enter it to confirm your spot instead of applying.</p>
-        </div>
+        <LightSelect label="T-Shirt Size (optional)" error={errors.tshirtSize?.message} {...register('tshirtSize')}>
+          <option value="">Select a size...</option>
+          {TSHIRT_SIZES.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </LightSelect>
+      </div>
+
+      <LightField
+        label="Which track are you interested in? (optional)"
+        placeholder="e.g. Guest Services, Technical Support, Event Coordination"
+        error={errors.trackSelected?.message}
+        {...register('trackSelected')}
+      />
+
+      <div>
+        <LightField
+          label="Access Code (optional)"
+          placeholder="VOL-XXXXXX — leave blank to apply"
+          error={errors.accessCode?.message}
+          {...register('accessCode')}
+          className="uppercase tracking-wider"
+        />
+        <p className="mt-1.5 text-xs text-slate-400">Already have one? Enter it to confirm your spot instead of applying.</p>
       </div>
 
       <div className="flex justify-end">

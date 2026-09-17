@@ -29,9 +29,9 @@ export const FloatingCTA = () => {
           <button
             onClick={() => setDismissed(true)}
             aria-label="Dismiss"
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
-            <X size={13} />
+            <X size={14} />
           </button>
         </motion.div>
       )}

@@ -29,20 +29,20 @@ export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
           exit={{ opacity: 0, y: 10, scale: 0.97 }}
           transition={{ duration: 0.25 }}
           onClick={(e) => e.stopPropagation()}
-          className="grid w-full max-w-lg grid-cols-1 overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-w-2xl sm:grid-cols-2"
+          className="grid w-full max-w-lg grid-cols-1 overflow-y-auto rounded-2xl bg-white shadow-2xl sm:max-w-2xl sm:grid-cols-2 max-h-[90vh]"
         >
-          <div className="relative aspect-[4/3] sm:aspect-auto">
+          <div className="relative aspect-[4/3] shrink-0 sm:aspect-auto">
             {speaker.photoUrl ? (
               <img src={speaker.photoUrl} alt={speaker.fullName} className="h-full w-full object-cover" />
             ) : (
               <InitialsAvatar name={speaker.fullName} className="h-full w-full" />
             )}
           </div>
-          <div className="relative max-h-[70vh] overflow-y-auto p-6 sm:p-7">
+          <div className="relative p-6 sm:p-7">
             <button
               onClick={onClose}
               aria-label="Close"
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
+              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-400 hover:bg-offwhite hover:text-navy"
             >
               <X size={18} />
             </button>

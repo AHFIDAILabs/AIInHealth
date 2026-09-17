@@ -255,7 +255,7 @@ export const AccessCodesPage = () => {
                         <span className="rounded-md bg-navy px-2 py-1 font-mono text-xs font-semibold tracking-wider text-white">{c.code}</span>
                         <button
                           onClick={() => copyCode(c)}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-offwhite hover:text-navy"
+                          className="rounded-md p-2 text-slate-400 hover:bg-offwhite hover:text-navy"
                           title="Copy code"
                         >
                           {copiedId === c._id ? <Check size={14} className="text-success" /> : <Copy size={14} />}
@@ -299,7 +299,7 @@ export const AccessCodesPage = () => {
                         <button
                           onClick={() => resend(c)}
                           disabled={c.status !== 'unused' || sendingId === c._id}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-info/10 hover:text-info disabled:cursor-not-allowed disabled:opacity-30"
+                          className="rounded-md p-2 text-slate-400 hover:bg-info/10 hover:text-info disabled:cursor-not-allowed disabled:opacity-30"
                           title={c.sentAt ? 'Resend code' : 'Send code'}
                         >
                           <Send size={15} />
@@ -307,7 +307,7 @@ export const AccessCodesPage = () => {
                         <button
                           onClick={() => setToRevoke(c)}
                           disabled={c.status !== 'unused'}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                          className="rounded-md p-2 text-slate-400 hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
                           title="Revoke code"
                         >
                           <Ban size={15} />

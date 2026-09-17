@@ -17,6 +17,7 @@ import { NewHome } from './pages/public/NewHome';
 import { About } from './pages/public/About';
 import { Agenda } from './pages/public/Agenda';
 import { Speakers } from './pages/public/Speakers';
+import { Volunteers } from './pages/public/Volunteers';
 import { InnovationShowcase } from './pages/public/InnovationShowcase';
 import { ParticipantsOutcomes } from './pages/public/ParticipantsOutcomes';
 import { Partners } from './pages/public/Partners';
@@ -55,7 +56,6 @@ import { AnalyticsPage } from './pages/admin/AnalyticsPage';
 import { IntegrationsPage } from './pages/admin/IntegrationsPage';
 import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage';
 import { PortalLogin } from './pages/portal/PortalLogin';
-import { PortalVerify } from './pages/portal/PortalVerify';
 import { PortalHome } from './pages/portal/PortalHome';
 import { PortalDirectory } from './pages/portal/PortalDirectory';
 import { PortalMeetings } from './pages/portal/PortalMeetings';
@@ -81,6 +81,7 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/speakers" element={<Speakers />} />
+            <Route path="/volunteers" element={<Volunteers />} />
             <Route path="/innovation-showcase" element={<InnovationShowcase />} />
             <Route path="/participants-outcomes" element={<ParticipantsOutcomes />} />
             <Route path="/partners" element={<Partners />} />
@@ -160,7 +161,6 @@ function App() {
               sibling <Routes>) so its static paths correctly outrank the public
               block's catch-all `*` NotFound route under ranked route matching. */}
           <Route path="/portal/login" element={<PortalLogin />} />
-          <Route path="/portal/verify" element={<PortalVerify />} />
           <Route element={<PortalProtectedRoute />}>
             <Route element={<PortalLayout />}>
               <Route path="/portal" element={<PortalHome />} />

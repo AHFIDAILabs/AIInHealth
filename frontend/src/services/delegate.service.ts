@@ -17,13 +17,13 @@ export interface DelegateMe {
   avatarUrl?: string;
 }
 
-export const requestMagicLink = async (email: string): Promise<string> => {
-  const res = await api.post<{ success: true; data: { message: string } }>('/delegate/request-link', { email });
+export const requestAccessCode = async (email: string): Promise<string> => {
+  const res = await api.post<{ success: true; data: { message: string } }>('/delegate/request-code', { email });
   return res.data.data.message;
 };
 
-export const verifyMagicLink = async (token: string): Promise<void> => {
-  await api.post('/delegate/verify-link', { token });
+export const verifyAccessCode = async (email: string, code: string): Promise<void> => {
+  await api.post('/delegate/verify-code', { email, code });
 };
 
 export const fetchDelegateMe = async (): Promise<DelegateMe> => {
@@ -47,7 +47,7 @@ export interface UpdateDelegateProfileInput {
   avatarUrl?: string;
 }
 
-// Email is deliberately not editable here — it's the magic-link identity anchor.
+// Email is deliberately not editable here — it's the access-code identity anchor.
 export const updateDelegateProfile = async (input: UpdateDelegateProfileInput): Promise<void> => {
   await api.patch('/delegate/profile', input);
 };

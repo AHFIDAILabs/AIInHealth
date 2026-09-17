@@ -25,6 +25,7 @@ const NAV_SEGMENTS: NavSegment[] = [
     links: [
       { label: 'Agenda', to: '/agenda', description: 'The full two-day programme and session tracks.' },
       { label: 'Speakers', to: '/speakers', description: 'Confirmed ministers, regulators, and global health leaders.' },
+      { label: 'Volunteers', to: '/volunteers', description: 'Meet the team helping make the Summit happen.' },
       { label: 'What to Expect', to: '/participants-outcomes', description: 'Who attends, and what the Summit delivers.' },
       { label: 'Submit an Abstract', to: '/abstracts/submit', description: 'Present peer-reviewed research on AI-in-health innovation.' },
     ],
@@ -87,6 +88,8 @@ export const Navbar = () => {
   const [openSegment, setOpenSegment] = useState<string | null>(null);
   const [mobileSegment, setMobileSegment] = useState<string | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(64);
   const location = useLocation();
 
   useEffect(() => {
@@ -94,6 +97,20 @@ export const Navbar = () => {
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Measured, not hardcoded — the header's own height changes between its
+  // scrolled (py-3) and unscrolled (py-4) states, and the mobile menu overlay
+  // below needs to start exactly where the header ends on every device/zoom
+  // level, not at a guessed pixel value.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const update = () => setHeaderHeight(el.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [scrolled]);
 
   // Close everything on route change and on outside click — a click-toggle mega-menu
   // (not hover-only) so it works the same on touch and keyboard as with a mouse.
@@ -113,6 +130,7 @@ export const Navbar = () => {
   return (
     <>
     <motion.header
+      ref={headerRef}
       initial={{ y: -24, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -174,7 +192,7 @@ export const Navbar = () => {
             Register Interest
           </Link>
           <button
-            className="text-white lg:hidden"
+            className="-mr-2 p-2 text-white lg:hidden"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
           >
@@ -196,7 +214,8 @@ export const Navbar = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 top-[60px] z-40 flex flex-col gap-1 overflow-y-auto bg-navy-nav px-6 py-6 lg:hidden"
+            style={{ top: headerHeight }}
+            className="fixed inset-x-0 bottom-0 z-40 flex flex-col gap-1 overflow-y-auto bg-navy-nav px-6 py-6 lg:hidden"
           >
             <NavLink
               to="/"

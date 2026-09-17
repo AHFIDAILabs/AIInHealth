@@ -214,6 +214,7 @@ export const ReviewMatrixTab = () => {
         {rows.length === 0 ? (
           <div className="py-16 text-center text-sm text-slate-500">No abstracts to review yet.</div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-[13px]">
             <thead className="border-b border-slate-100 bg-offwhite/60 text-[11px] uppercase tracking-wide text-slate-400">
               <tr>
@@ -320,6 +321,7 @@ export const ReviewMatrixTab = () => {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

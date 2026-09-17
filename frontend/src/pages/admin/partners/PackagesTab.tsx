@@ -134,10 +134,10 @@ export const PackagesTab = () => {
               <div className="flex items-start justify-between">
                 <p className="font-display text-base font-semibold text-navy">{pkg.name}</p>
                 <div className="flex gap-1">
-                  <button onClick={() => openEdit(pkg)} className="rounded-md p-1 text-slate-400 hover:bg-offwhite hover:text-navy">
+                  <button onClick={() => openEdit(pkg)} className="rounded-md p-2 text-slate-400 hover:bg-offwhite hover:text-navy">
                     <Pencil size={14} />
                   </button>
-                  <button onClick={() => setToDelete(pkg)} className="rounded-md p-1 text-slate-400 hover:bg-danger/10 hover:text-danger">
+                  <button onClick={() => setToDelete(pkg)} className="rounded-md p-2 text-slate-400 hover:bg-danger/10 hover:text-danger">
                     <Trash2 size={14} />
                   </button>
                 </div>

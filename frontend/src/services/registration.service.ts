@@ -63,6 +63,8 @@ export interface VolunteerPayload {
   // Optional — most submissions are a first-time application with no code yet;
   // an admin-issued code (emailed later) confirms the spot on a return visit.
   accessCode?: string;
+  tshirtSize?: string;
+  trackSelected?: string;
 }
 
 export type RegistrationPayload = AttendeePayload | ExhibitorPayload | SponsorPayload | VolunteerPayload;

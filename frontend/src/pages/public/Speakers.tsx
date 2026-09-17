@@ -83,7 +83,7 @@ export const Speakers = () => {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search speakers..."
-                  className="w-full rounded-full border border-slate-200 bg-offwhite py-2.5 pl-10 pr-4 text-sm text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+                  className="w-full rounded-full border border-slate-200 bg-offwhite py-2.5 pl-10 pr-4 text-base sm:text-sm text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
                 />
               </div>
               <div className="flex flex-wrap gap-2">

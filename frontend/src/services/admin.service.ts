@@ -34,6 +34,13 @@ export interface AdminRegistration {
   paidAt?: string;
   checkedIn?: boolean;
   checkedInAt?: string;
+  // Self-uploaded via the delegate portal — primarily for volunteer/staff
+  // recognition at the event, but available on any confirmed registration.
+  avatarUrl?: string;
+  // Volunteer only.
+  tshirtSize?: string;
+  trackSelected?: string;
+  trackAssigned?: string;
   // Independent of status — see backend Registration.model.ts's isActive comment.
   isActive: boolean;
 }
@@ -161,6 +168,9 @@ export interface AdminCreateVolunteerPayload {
   fullName: string;
   email: string;
   phone: string;
+  tshirtSize?: string;
+  trackSelected?: string;
+  trackAssigned?: string;
 }
 
 export type AdminCreateRegistrationPayload =

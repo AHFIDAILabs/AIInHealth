@@ -61,7 +61,7 @@ export const InnovationShowcase = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search innovations..."
-                className="w-full rounded-full border border-slate-200 bg-offwhite py-2.5 pl-10 pr-4 text-sm text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+                className="w-full rounded-full border border-slate-200 bg-offwhite py-2.5 pl-10 pr-4 text-base sm:text-sm text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
               />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -175,12 +175,12 @@ export const InnovationShowcase = () => {
               exit={{ opacity: 0, y: 10, scale: 0.97 }}
               transition={{ duration: 0.25 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg rounded-2xl bg-white p-7 shadow-2xl"
+              className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-7 shadow-2xl"
             >
               <button
                 onClick={() => setActive(null)}
                 aria-label="Close"
-                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
               >
                 <X size={18} />
               </button>

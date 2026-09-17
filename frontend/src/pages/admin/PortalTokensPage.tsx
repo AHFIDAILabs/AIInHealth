@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Search, Smartphone, Send, CheckCircle2 } from 'lucide-react';
-import { adminListPortalTokens, adminSendPortalLink, type PortalTokenRow } from '../../services/portalToken.service';
+import { adminListPortalTokens, adminSendPortalCode, type PortalTokenRow } from '../../services/portalToken.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
@@ -28,16 +28,16 @@ export const PortalTokensPage = () => {
     return () => clearTimeout(id);
   }, [load, q]);
 
-  const sendLink = async (row: PortalTokenRow) => {
+  const sendCode = async (row: PortalTokenRow) => {
     if (!row.email) {
       toast('error', 'This registration has no email on file.');
       return;
     }
     setSendingId(row.id);
     try {
-      const res = await adminSendPortalLink(row.id);
+      const res = await adminSendPortalCode(row.id);
       setItems((prev) => prev.map((r) => (r.id === row.id ? { ...r, portalLastLinkSentAt: res.sentAt } : r)));
-      toast('success', `Sign-in link sent to ${row.email}`);
+      toast('success', `Access code sent to ${row.email}`);
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -49,7 +49,7 @@ export const PortalTokensPage = () => {
     <div className="mx-auto max-w-5xl">
       <div>
         <h1 className="font-display text-2xl font-semibold text-navy">Portal Tokens</h1>
-        <p className="text-sm text-slate-500">Delegate portal access — resend a sign-in link for anyone who lost theirs.</p>
+        <p className="text-sm text-slate-500">Delegate portal access — resend an access code for anyone who lost theirs.</p>
       </div>
 
       <div className="mt-6 relative max-w-xs">
@@ -115,11 +115,11 @@ export const PortalTokensPage = () => {
                     <td className="px-3 py-3">
                       <div className="flex justify-end">
                         <button
-                          onClick={() => sendLink(r)}
+                          onClick={() => sendCode(r)}
                           disabled={sendingId === r.id || !r.email}
                           className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-navy transition-colors hover:border-orange/40 disabled:opacity-40"
                         >
-                          <Send size={13} /> Send Link
+                          <Send size={13} /> Send Code
                         </button>
                       </div>
                     </td>

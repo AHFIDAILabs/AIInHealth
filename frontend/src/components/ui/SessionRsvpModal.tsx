@@ -75,7 +75,7 @@ export const SessionRsvpModal = ({ session, onClose }: SessionRsvpModalProps) =>
             <button
               onClick={close}
               aria-label="Close"
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
+              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
             >
               <X size={18} />
             </button>

@@ -1,8 +1,12 @@
 import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 
 const labelClass = 'mb-1.5 block text-[13px] font-semibold text-navy';
+// text-base (16px) below sm, dropping to the denser 13px from sm up — iOS
+// Safari auto-zooms the page on focus for any input under 16px, which is a
+// real, reproducible glitch on the exact breakpoint admins are most likely
+// to hit this from (a phone).
 const baseClass =
-  'w-full rounded-lg border bg-white px-3.5 py-2.5 text-[13px] text-navy placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange/30';
+  'w-full rounded-lg border bg-white px-3.5 py-2.5 text-base sm:text-[13px] text-navy placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange/30';
 const errorRing = (error?: string) => (error ? 'border-danger' : 'border-slate-200 focus:border-orange/40');
 
 // Light, dense form primitives for the admin CRUD forms (Speakers/Sessions/Partners/

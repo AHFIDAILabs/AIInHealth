@@ -68,7 +68,7 @@ export const NewsletterCapture = ({ photo, eyebrow, title, body, cta, source, su
                 <input
                   {...register('firstName')}
                   placeholder="First name"
-                  className="w-full rounded-full border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-slate-400 backdrop-blur-sm focus:border-orange/50 focus:outline-none"
+                  className="w-full rounded-full border border-white/20 bg-white/10 px-4 py-3 text-base sm:text-sm text-white placeholder:text-slate-400 backdrop-blur-sm focus:border-orange/50 focus:outline-none"
                 />
                 {errors.firstName && <p className="mt-1.5 text-left text-xs text-danger">{errors.firstName.message}</p>}
               </div>
@@ -77,7 +77,7 @@ export const NewsletterCapture = ({ photo, eyebrow, title, body, cta, source, su
                   {...register('email')}
                   type="email"
                   placeholder="Email address"
-                  className="w-full rounded-full border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-slate-400 backdrop-blur-sm focus:border-orange/50 focus:outline-none"
+                  className="w-full rounded-full border border-white/20 bg-white/10 px-4 py-3 text-base sm:text-sm text-white placeholder:text-slate-400 backdrop-blur-sm focus:border-orange/50 focus:outline-none"
                 />
                 {errors.email && <p className="mt-1.5 text-left text-xs text-danger">{errors.email.message}</p>}
               </div>
