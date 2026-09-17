@@ -246,6 +246,9 @@ router.post('/integrations/test-push', requireRole('super_admin'), integrationsC
 const allRoles = ['super_admin', 'content_editor', 'registrations_officer', 'viewer'] as const;
 
 router.get('/analytics', requireRole(...allRoles), analyticsController.overview);
+router.get('/analytics-registrations', requireRole(...allRoles), analyticsController.registrations);
+router.get('/analytics-revenue', requireRole(...allRoles), analyticsController.revenue);
+router.get('/analytics-engagement', requireRole(...allRoles), analyticsController.engagement);
 
 router.get('/notifications', requireRole(...allRoles), notificationController.adminList);
 router.patch('/notifications/:id/read', requireRole(...allRoles), notificationController.adminMarkRead);
