@@ -96,13 +96,16 @@ export const CheckInPage = () => {
         </div>
         {stats && (
           <div className="flex gap-4 rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover px-4 py-2.5 text-center">
-            <div>
+            <div title="Across every registration type (attendees, exhibitors, sponsors, volunteers) — see the Attendees page for attendee-only figures.">
               <p className="font-display text-lg font-bold text-navy">{stats.checkedIn}</p>
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">Checked In</p>
+              <p className="text-[10px] uppercase tracking-wide text-slate-400">Checked In (All)</p>
             </div>
-            <div className="border-l border-slate-100 pl-4">
+            <div
+              className="border-l border-slate-100 pl-4"
+              title="Across every registration type (attendees, exhibitors, sponsors, volunteers) — see the Attendees page for attendee-only figures."
+            >
               <p className="font-display text-lg font-bold text-navy">{stats.confirmed}</p>
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">Confirmed</p>
+              <p className="text-[10px] uppercase tracking-wide text-slate-400">Confirmed (All)</p>
             </div>
           </div>
         )}
@@ -149,12 +152,19 @@ export const CheckInPage = () => {
               <p className="py-4 text-center text-xs text-slate-400">No confirmed registrations match.</p>
             )}
             {results.map((r) => (
-              <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2">
+              <div
+                key={r.id}
+                className={`flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 ${r.isActive === false ? 'opacity-60' : ''}`}
+              >
                 <div className="min-w-0">
                   <p className="truncate text-[13px] font-medium text-navy">{r.name}</p>
                   <p className="truncate text-xs text-slate-400">{r.organization || r.ticketCategory || r.type}</p>
                 </div>
-                {r.checkedIn ? (
+                {r.isActive === false ? (
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                    Inactive
+                  </span>
+                ) : r.checkedIn ? (
                   <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-success">
                     <CheckCircle2 size={14} /> In
                   </span>

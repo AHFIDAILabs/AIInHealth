@@ -6,7 +6,7 @@ import { ButtonLink } from '../ui/Button';
 import { SessionRsvpModal } from '../ui/SessionRsvpModal';
 import { SpeakerModal } from '../ui/SpeakerModal';
 import { listPublicSessions, type AdminSession, type SessionDay } from '../../services/session.service';
-import { listPublicSpeakers, type AdminSpeaker, type Track } from '../../services/speaker.service';
+import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 
 interface RowSpeaker {
   _id: string;
@@ -20,6 +20,7 @@ interface Row {
   time: string;
   title: string;
   track: string;
+  trackColor?: string;
   description?: string;
   speakers?: RowSpeaker[];
   requiresRsvp?: boolean;
@@ -52,6 +53,7 @@ const fromReal = (s: AdminSession): Row => ({
   time: `${s.startTime} – ${s.endTime}`,
   title: s.title,
   track: s.track?.name ?? 'General Session',
+  trackColor: s.track?.color,
   description: s.description,
   speakers: s.speakers,
   requiresRsvp: s.requiresRsvp,
@@ -91,7 +93,7 @@ export const ProgrammeTimeline = () => {
       _id: sp._id,
       fullName: sp.fullName,
       title: sp.title ?? '',
-      track: rowTrack as Track,
+      track: rowTrack,
       photoUrl: sp.photoUrl,
       isPublished: true,
       order: 0,
@@ -154,8 +156,10 @@ export const ProgrammeTimeline = () => {
                 <span className="absolute -left-8 top-6 h-[18px] w-[18px] rounded-full border-[3px] border-navy bg-white" />
                 <div className="rounded-2xl border border-slate-200 bg-white p-6">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-navy-secondary">
-                      {row.time} &middot; {row.track}
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-navy-secondary">
+                      {row.time} &middot;
+                      {row.trackColor && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: row.trackColor }} />}
+                      <span style={row.trackColor ? { color: row.trackColor } : undefined}>{row.track}</span>
                     </p>
                     {row.requiresRsvp && (
                       <button

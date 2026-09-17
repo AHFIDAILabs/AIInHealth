@@ -8,6 +8,7 @@ export const NOTIFICATION_EVENTS = [
   'inquiry.new',
   'message.new',
   'newsletter.new',
+  'abstract.new',
   'abstract.reviewer_declined',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];

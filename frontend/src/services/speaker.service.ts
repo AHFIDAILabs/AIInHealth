@@ -1,22 +1,15 @@
 import { api } from './api';
 
-export const TRACKS = [
-  'Policy & Governance',
-  'Clinical AI & Diagnostics',
-  'Infrastructure & Data',
-  'Venture & Investment',
-  'Research & Abstracts',
-  'Strategic Engagements',
-] as const;
-export type Track = (typeof TRACKS)[number];
-
 export interface AdminSpeaker {
   _id: string;
   fullName: string;
   title: string;
   organization?: string;
   bio?: string;
-  track: Track;
+  // Free text, matched against the live Track collection server-side —
+  // see backend Speaker.model.ts's track field comment. Fetch the current
+  // options via track.service.ts's listTracks().
+  track: string;
   photoUrl?: string;
   isPublished: boolean;
   order: number;
@@ -29,14 +22,14 @@ export interface SpeakerInput {
   title: string;
   organization?: string;
   bio?: string;
-  track: Track;
+  track: string;
   photoUrl?: string;
   isPublished?: boolean;
   order?: number;
 }
 
 export interface ListSpeakersParams {
-  track?: Track;
+  track?: string;
   published?: 'true' | 'false';
   q?: string;
   page?: number;
@@ -51,7 +44,7 @@ export interface Paginated<T> {
   pages: number;
 }
 
-export const listPublicSpeakers = async (track?: Track): Promise<AdminSpeaker[]> => {
+export const listPublicSpeakers = async (track?: string): Promise<AdminSpeaker[]> => {
   const res = await api.get<{ success: true; data: AdminSpeaker[] }>('/speakers', { params: track ? { track } : {} });
   return res.data.data;
 };

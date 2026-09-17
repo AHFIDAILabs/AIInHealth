@@ -7,11 +7,10 @@ import {
   adminCreateSpeaker,
   adminUpdateSpeaker,
   adminDeleteSpeaker,
-  TRACKS,
   type AdminSpeaker,
   type SpeakerInput,
-  type Track,
 } from '../../services/speaker.service';
+import { listTracks, type PublicTrack } from '../../services/track.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
@@ -21,15 +20,15 @@ import { ImagePicker } from '../../components/ui/ImagePicker';
 import { useToast } from '../../contexts/ToastContext';
 import { uploadAdminImage } from '../../services/upload.service';
 
-const EMPTY_FORM: SpeakerInput = {
+const emptyForm = (defaultTrack: string): SpeakerInput => ({
   fullName: '',
   title: '',
   organization: '',
   bio: '',
-  track: TRACKS[0],
+  track: defaultTrack,
   photoUrl: '',
   isPublished: false,
-};
+});
 
 export const SpeakersPage = () => {
   const toast = useToast();
@@ -38,17 +37,24 @@ export const SpeakersPage = () => {
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
   const [q, setQ] = useState(searchParams.get('q') ?? '');
-  const [track, setTrack] = useState<Track | ''>('');
+  const [track, setTrack] = useState('');
   const [published, setPublished] = useState<'' | 'true' | 'false'>('');
+  const [tracks, setTracks] = useState<PublicTrack[] | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AdminSpeaker | null>(null);
-  const [form, setForm] = useState<SpeakerInput>(EMPTY_FORM);
+  const [form, setForm] = useState<SpeakerInput>(emptyForm(''));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
   const [toDelete, setToDelete] = useState<AdminSpeaker | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    listTracks()
+      .then(setTracks)
+      .catch(() => setTracks([]));
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -66,7 +72,7 @@ export const SpeakersPage = () => {
 
   const openCreate = () => {
     setEditing(null);
-    setForm(EMPTY_FORM);
+    setForm(emptyForm(tracks?.[0]?.name ?? ''));
     setFormError('');
     setFormOpen(true);
   };
@@ -163,13 +169,13 @@ export const SpeakersPage = () => {
         </div>
         <select
           value={track}
-          onChange={(e) => setTrack(e.target.value as Track | '')}
+          onChange={(e) => setTrack(e.target.value)}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Tracks</option>
-          {TRACKS.map((t) => (
-            <option key={t} value={t}>
-              {t}
+          {tracks?.map((t) => (
+            <option key={t._id} value={t.name}>
+              {t.name}
             </option>
           ))}
         </select>
@@ -295,12 +301,16 @@ export const SpeakersPage = () => {
                 <AdminInput label="Full Name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="Dr. Jane Doe" />
                 <AdminInput label="Title / Role" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Minister of Health" />
                 <AdminInput label="Organization" value={form.organization} onChange={(e) => setForm({ ...form, organization: e.target.value })} placeholder="Federal Ministry of Health" />
-                <AdminSelect label="Track" value={form.track} onChange={(e) => setForm({ ...form, track: e.target.value as Track })}>
-                  {TRACKS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
+                <AdminSelect label="Track" value={form.track} onChange={(e) => setForm({ ...form, track: e.target.value })} disabled={!tracks}>
+                  {!tracks ? (
+                    <option value="">Loading tracks…</option>
+                  ) : (
+                    tracks.map((t) => (
+                      <option key={t._id} value={t.name}>
+                        {t.name}
+                      </option>
+                    ))
+                  )}
                 </AdminSelect>
                 <ImagePicker
                   label="Photo"

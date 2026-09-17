@@ -15,6 +15,7 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   'inquiry.new': 'New partnership inquiry',
   'message.new': 'New contact message',
   'newsletter.new': 'New newsletter signup',
+  'abstract.new': 'New abstract submission',
   'abstract.reviewer_declined': 'Reviewer declined an assignment',
 };
 

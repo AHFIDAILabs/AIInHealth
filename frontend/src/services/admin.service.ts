@@ -17,6 +17,9 @@ export interface AdminRegistration {
   organization?: string;
   jobTitle?: string;
   country?: string;
+  // Attendee group registrations only — the other members beyond the primary
+  // registrant above, who all share this one registration/payment/QR ticket.
+  groupAttendees?: { fullName?: string; email?: string }[];
   companyName?: string;
   contactName?: string;
   contactEmail?: string;

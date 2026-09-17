@@ -638,7 +638,7 @@ export const ExhibitorsTab = () => {
       <ConfirmDialog
         open={!!toDelete}
         title={`Delete ${toDelete?.companyName ?? 'this exhibitor'}?`}
-        description="This permanently removes the exhibitor and cannot be undone. Their captured leads are kept for reference."
+        description="This permanently removes the exhibitor and all of their captured leads. This can't be undone."
         confirmLabel="Delete"
         danger
         loading={deleting}

@@ -1,15 +1,5 @@
 import { api } from './api';
 
-export const TRACKS = [
-  'Policy & Governance',
-  'Clinical AI & Diagnostics',
-  'Infrastructure & Data',
-  'Venture & Investment',
-  'Research & Abstracts',
-  'Strategic Engagements',
-] as const;
-export type Track = (typeof TRACKS)[number];
-
 export interface Innovation {
   _id: string;
   name: string;
@@ -17,7 +7,10 @@ export interface Innovation {
   founderName?: string;
   tagline: string;
   description?: string;
-  track: Track;
+  // Free text, matched against the live Track collection server-side —
+  // see backend Innovation.model.ts's track field comment. Fetch the
+  // current options via track.service.ts's listTracks().
+  track: string;
   website?: string;
   logoUrl?: string;
   order: number;
@@ -31,7 +24,7 @@ export interface InnovationInput {
   founderName?: string;
   tagline: string;
   description?: string;
-  track: Track;
+  track: string;
   website?: string;
   logoUrl?: string;
   order?: number;
@@ -47,13 +40,13 @@ export interface Paginated<T> {
 }
 
 // Public — published only
-export const listInnovations = async (params?: { track?: Track }): Promise<Innovation[]> => {
+export const listInnovations = async (params?: { track?: string }): Promise<Innovation[]> => {
   const res = await api.get<{ success: true; data: Innovation[] }>('/innovations', { params });
   return res.data.data;
 };
 
 export const adminListInnovations = async (params: {
-  track?: Track;
+  track?: string;
   published?: 'true' | 'false';
   q?: string;
   limit?: number;

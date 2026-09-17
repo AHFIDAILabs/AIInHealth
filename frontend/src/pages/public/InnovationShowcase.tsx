@@ -5,7 +5,7 @@ import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
 import { Banner } from '../../components/ui/Banner';
-import { listInnovations, TRACKS, type Innovation } from '../../services/innovation.service';
+import { listInnovations, type Innovation } from '../../services/innovation.service';
 import { getApiErrorMessage } from '../../services/api';
 
 export const InnovationShowcase = () => {
@@ -13,7 +13,7 @@ export const InnovationShowcase = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
-  const [track, setTrack] = useState<'All' | (typeof TRACKS)[number]>('All');
+  const [track, setTrack] = useState('All');
   const [active, setActive] = useState<Innovation | null>(null);
 
   useEffect(() => {
@@ -23,10 +23,9 @@ export const InnovationShowcase = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const availableTracks = useMemo(
-    () => ['All', ...TRACKS.filter((t) => innovations.some((i) => i.track === t))] as const,
-    [innovations]
-  );
+  // Derived from whichever innovations are actually published, not a
+  // separate fixed list — see Speakers.tsx's filterTracks for why.
+  const availableTracks = useMemo(() => ['All', ...Array.from(new Set(innovations.map((i) => i.track)))], [innovations]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

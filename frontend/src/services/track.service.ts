@@ -1,7 +1,23 @@
 import { api } from './api';
 
-// Sessions/Agenda only — Speakers/Abstracts/Innovations still use the
-// separate fixed track list in speaker.service.ts/innovation.service.ts.
+export interface PublicTrack {
+  _id: string;
+  name: string;
+  color: string;
+  order: number;
+}
+
+// Public — the Abstract submission form uses this so its track dropdown
+// always matches what the Agenda admin's Tracks tab actually has, rather
+// than a separate hardcoded list (Speakers/Innovations still use their own
+// fixed list in speaker.service.ts/innovation.service.ts — narrower scope,
+// not addressed here).
+export const listTracks = async (): Promise<PublicTrack[]> => {
+  const res = await api.get<{ success: true; data: PublicTrack[] }>('/tracks');
+  return res.data.data;
+};
+
+// Sessions/Agenda admin CRUD below.
 export interface AdminTrack {
   _id: string;
   name: string;

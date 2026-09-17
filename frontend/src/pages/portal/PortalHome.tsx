@@ -261,6 +261,24 @@ export const PortalHome = () => {
                 <dd className="font-semibold capitalize text-navy">{delegate.ticketCategory.replace(/_/g, ' ')}</dd>
               </div>
             )}
+            {delegate.trackAssigned && (
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-500">Track Assigned</dt>
+                <dd className="font-semibold text-navy">{delegate.trackAssigned}</dd>
+              </div>
+            )}
+            {!delegate.trackAssigned && delegate.trackSelected && (
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-500">Track Selected</dt>
+                <dd className="font-semibold text-navy">{delegate.trackSelected}</dd>
+              </div>
+            )}
+            {delegate.tshirtSize && (
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-500">T-Shirt Size</dt>
+                <dd className="font-semibold text-navy">{delegate.tshirtSize}</dd>
+              </div>
+            )}
             {delegate.paymentStatus !== 'not_required' && (
               <div className="flex items-center justify-between">
                 <dt className="text-slate-500">Payment</dt>

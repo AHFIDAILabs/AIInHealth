@@ -660,6 +660,20 @@ export const RegistrationsPage = () => {
                   {active.contactPhone && <DetailRow label="Phone" value={active.contactPhone} />}
                   {active.registrationMode && <DetailRow label="Mode" value={active.registrationMode} />}
                   {active.ticketCategory && <DetailRow label="Ticket Category" value={active.ticketCategory.replace(/_/g, ' ')} />}
+                  {active.groupAttendees && active.groupAttendees.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        Group Attendees ({active.groupAttendees.length})
+                      </p>
+                      <ul className="mt-1 space-y-0.5">
+                        {active.groupAttendees.map((member, i) => (
+                          <li key={i} className="text-navy">
+                            {member.fullName || '—'} {member.email && <span className="text-slate-400">({member.email})</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {active.boothSize && <DetailRow label="Booth Size" value={active.boothSize} />}
                   {active.tshirtSize && <DetailRow label="T-Shirt Size" value={active.tshirtSize} />}
                   {active.trackSelected && <DetailRow label="Track Selected" value={active.trackSelected} />}
@@ -671,7 +685,7 @@ export const RegistrationsPage = () => {
                   {typeof active.discountPercent === 'number' && (
                     <DetailRow
                       label="Discount"
-                      value={active.discountPercent === 100 ? 'Full scholarship (100%)' : `${active.discountPercent}% scholarship`}
+                      value={active.discountPercent === 100 ? 'Fully comped (100%)' : `${active.discountPercent}% scholarship`}
                     />
                   )}
                   {active.paymentStatus && active.paymentStatus !== 'not_required' && (

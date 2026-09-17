@@ -8,6 +8,7 @@ export interface CheckInSummary {
   organization?: string;
   checkedIn: boolean;
   checkedInAt?: string;
+  isActive?: boolean;
 }
 
 export interface CheckInSearchResult extends CheckInSummary {

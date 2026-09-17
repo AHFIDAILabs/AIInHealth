@@ -425,8 +425,22 @@ export const AttendeesPage = () => {
                   {active.country && <DetailRow label="Country" value={active.country} />}
                   {active.phone && <DetailRow label="Phone" value={active.phone} />}
                   {active.ticketCategory && <DetailRow label="Ticket Category" value={active.ticketCategory.replace(/_/g, ' ')} />}
+                  {active.groupAttendees && active.groupAttendees.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        Group Attendees ({active.groupAttendees.length})
+                      </p>
+                      <ul className="mt-1 space-y-0.5">
+                        {active.groupAttendees.map((member, i) => (
+                          <li key={i} className="text-navy">
+                            {member.fullName || '—'} {member.email && <span className="text-slate-400">({member.email})</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {typeof active.discountPercent === 'number' && (
-                    <DetailRow label="Discount" value={active.discountPercent === 100 ? 'Full scholarship (100%)' : `${active.discountPercent}% scholarship`} />
+                    <DetailRow label="Discount" value={active.discountPercent === 100 ? 'Fully comped (100%)' : `${active.discountPercent}% scholarship`} />
                   )}
                   {active.paymentStatus && active.paymentStatus !== 'not_required' && <DetailRow label="Payment" value={active.paymentStatus} />}
                   {typeof active.amountKobo === 'number' && active.amountKobo > 0 && (

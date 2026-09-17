@@ -26,8 +26,9 @@ export interface SessionRsvpEntry {
   addedAt: string;
 }
 
-// Populated — see Track.model.ts (Sessions-only track, distinct from the
-// separate fixed track list Speakers/Abstracts/Innovations still use).
+// Populated — see Track.model.ts. Speakers/Abstracts/Innovations also source
+// their track from this same collection now, just by name rather than a
+// populated ref (see Speaker.model.ts's track field comment).
 export interface SessionTrackRef {
   _id: string;
   name: string;

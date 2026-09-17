@@ -1,5 +1,4 @@
 import { api } from './api';
-import type { Track } from './innovation.service';
 
 // Workflow state — see backend/src/types/enums.ts's comment.
 export const ABSTRACT_STATUSES = ['submitted', 'under_review', 'revision_requested', 'accepted', 'rejected'] as const;
@@ -19,7 +18,9 @@ export interface SubmitAbstractInput {
   authorEmail: string;
   organization?: string;
   coAuthors?: string;
-  track: Track;
+  // Free text, matched against the live Track collection server-side — see
+  // backend Abstract.model.ts's track field comment.
+  track: string;
   abstractText: string;
 }
 
@@ -54,7 +55,7 @@ export interface Paginated<T> {
 export const adminListAbstracts = async (params: {
   status?: AbstractStatus;
   decision?: AbstractDecision;
-  track?: Track;
+  track?: string;
   q?: string;
   limit?: number;
 }): Promise<Paginated<AdminAbstract>> => {
@@ -76,7 +77,7 @@ export const adminUpdateAbstract = async (
 // --- Review Matrix ---
 
 export interface ReviewMatrixRow {
-  abstract: { _id: string; title: string; authorName: string; track: Track; decision?: AbstractDecision };
+  abstract: { _id: string; title: string; authorName: string; track: string; decision?: AbstractDecision };
   reviews: Array<{
     reviewId: string;
     reviewer: { _id: string; fullName: string; email: string };
@@ -94,7 +95,7 @@ export interface ReviewMatrixRow {
 export const adminListReviewMatrix = async (params: {
   status?: AbstractStatus;
   decision?: AbstractDecision;
-  track?: Track;
+  track?: string;
   q?: string;
   limit?: number;
 }): Promise<Paginated<ReviewMatrixRow>> => {

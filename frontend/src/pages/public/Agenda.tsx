@@ -7,7 +7,7 @@ import { ButtonLink } from '../../components/ui/Button';
 import { SessionRsvpModal } from '../../components/ui/SessionRsvpModal';
 import { SpeakerModal } from '../../components/ui/SpeakerModal';
 import { listPublicSessions, type AdminSession, type SessionDay, type SessionFormat } from '../../services/session.service';
-import { listPublicSpeakers, type AdminSpeaker, type Track } from '../../services/speaker.service';
+import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 
 interface DisplaySpeaker {
   _id: string;
@@ -21,6 +21,7 @@ interface DisplaySession {
   time: string;
   title: string;
   track: string;
+  trackColor?: string;
   icon: LucideIcon;
   room?: string;
   speakers?: DisplaySpeaker[];
@@ -42,6 +43,7 @@ const fromRealSession = (s: AdminSession): DisplaySession => ({
   time: `${s.startTime} – ${s.endTime}`,
   title: s.title,
   track: s.track?.name ?? 'General Session',
+  trackColor: s.track?.color,
   icon: FORMAT_ICON[s.format] ?? Users,
   room: s.room,
   speakers: s.speakers,
@@ -121,7 +123,7 @@ export const Agenda = () => {
       _id: sp._id,
       fullName: sp.fullName,
       title: sp.title ?? '',
-      track: sessionTrack as Track,
+      track: sessionTrack,
       photoUrl: sp.photoUrl,
       isPublished: true,
       order: 0,
@@ -215,9 +217,10 @@ export const Agenda = () => {
                             </button>
                           )}
                         </div>
-                        <p className="mt-0.5 text-xs font-medium uppercase tracking-wide text-slate-400">
-                          {s.track}
-                          {s.room && <span className="normal-case tracking-normal"> &middot; {s.room}</span>}
+                        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">
+                          {s.trackColor && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: s.trackColor }} />}
+                          <span style={s.trackColor ? { color: s.trackColor } : undefined}>{s.track}</span>
+                          {s.room && <span className="normal-case tracking-normal text-slate-400"> &middot; {s.room}</span>}
                         </p>
                         {s.description && <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{s.description}</p>}
                         {s.speakers && s.speakers.length > 0 && (

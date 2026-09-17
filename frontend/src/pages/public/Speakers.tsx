@@ -6,9 +6,7 @@ import { ButtonLink } from '../../components/ui/Button';
 import { InitialsAvatar } from '../../components/ui/InitialsAvatar';
 import { SpeakerModal } from '../../components/ui/SpeakerModal';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { listPublicSpeakers, TRACKS as ALL_TRACKS, type AdminSpeaker } from '../../services/speaker.service';
-
-const FILTER_TRACKS = ['All', ...ALL_TRACKS];
+import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 
 // Broader categories the Summit convenes beyond the confirmed roster below — no
 // individuals invented here, just the groups the programme is built around.
@@ -53,6 +51,12 @@ export const Speakers = () => {
       .catch(() => setLoadError('Could not load speakers right now — please try again shortly.'));
   }, []);
 
+  // Derived from whichever speakers are actually published, not a separate
+  // fixed list — so the filter pills always match the real tracks in use
+  // (and only show ones with at least one speaker), same reasoning as
+  // InnovationShowcase's availableTracks.
+  const filterTracks = useMemo(() => ['All', ...Array.from(new Set((speakers ?? []).map((s) => s.track)))], [speakers]);
+
   const filtered = useMemo(() => {
     if (!speakers) return [];
     const q = query.trim().toLowerCase();
@@ -87,7 +91,7 @@ export const Speakers = () => {
                 />
               </div>
               <div className="flex flex-wrap gap-2">
-                {FILTER_TRACKS.map((t) => (
+                {filterTracks.map((t) => (
                   <button
                     key={t}
                     onClick={() => setTrack(t)}

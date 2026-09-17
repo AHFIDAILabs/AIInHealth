@@ -7,11 +7,10 @@ import {
   adminCreateInnovation,
   adminUpdateInnovation,
   adminDeleteInnovation,
-  TRACKS,
   type Innovation,
   type InnovationInput,
-  type Track,
 } from '../../services/innovation.service';
+import { listTracks, type PublicTrack } from '../../services/track.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
@@ -21,18 +20,18 @@ import { ImagePicker } from '../../components/ui/ImagePicker';
 import { useToast } from '../../contexts/ToastContext';
 import { uploadAdminImage } from '../../services/upload.service';
 
-const EMPTY_FORM: InnovationInput = {
+const emptyForm = (defaultTrack: string): InnovationInput => ({
   name: '',
   organization: '',
   founderName: '',
   tagline: '',
   description: '',
-  track: TRACKS[0],
+  track: defaultTrack,
   website: '',
   logoUrl: '',
   order: 0,
   isPublished: false,
-};
+});
 
 export const InnovationsPage = () => {
   const toast = useToast();
@@ -41,16 +40,23 @@ export const InnovationsPage = () => {
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
   const [q, setQ] = useState(searchParams.get('q') ?? '');
-  const [trackFilter, setTrackFilter] = useState<Track | ''>('');
+  const [trackFilter, setTrackFilter] = useState('');
+  const [tracks, setTracks] = useState<PublicTrack[] | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Innovation | null>(null);
-  const [form, setForm] = useState<InnovationInput>(EMPTY_FORM);
+  const [form, setForm] = useState<InnovationInput>(emptyForm(''));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
   const [toDelete, setToDelete] = useState<Innovation | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    listTracks()
+      .then(setTracks)
+      .catch(() => setTracks([]));
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -68,7 +74,7 @@ export const InnovationsPage = () => {
 
   const openCreate = () => {
     setEditing(null);
-    setForm(EMPTY_FORM);
+    setForm(emptyForm(tracks?.[0]?.name ?? ''));
     setFormError('');
     setFormOpen(true);
   };
@@ -172,13 +178,13 @@ export const InnovationsPage = () => {
         </div>
         <select
           value={trackFilter}
-          onChange={(e) => setTrackFilter(e.target.value as Track | '')}
+          onChange={(e) => setTrackFilter(e.target.value)}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Tracks</option>
-          {TRACKS.map((t) => (
-            <option key={t} value={t}>
-              {t}
+          {tracks?.map((t) => (
+            <option key={t._id} value={t.name}>
+              {t.name}
             </option>
           ))}
         </select>
@@ -296,12 +302,16 @@ export const InnovationsPage = () => {
                   <AdminInput label="Founder Name" value={form.founderName} onChange={(e) => setForm({ ...form, founderName: e.target.value })} />
                 </div>
                 <AdminInput label="Tagline" maxLength={150} value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="One-line summary" />
-                <AdminSelect label="Track" value={form.track} onChange={(e) => setForm({ ...form, track: e.target.value as Track })}>
-                  {TRACKS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
+                <AdminSelect label="Track" value={form.track} onChange={(e) => setForm({ ...form, track: e.target.value })} disabled={!tracks}>
+                  {!tracks ? (
+                    <option value="">Loading tracks…</option>
+                  ) : (
+                    tracks.map((t) => (
+                      <option key={t._id} value={t.name}>
+                        {t.name}
+                      </option>
+                    ))
+                  )}
                 </AdminSelect>
                 <AdminInput label="Website" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://..." />
                 <ImagePicker

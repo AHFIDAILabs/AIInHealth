@@ -143,6 +143,7 @@ const ACTIVITY_META: Record<string, { icon: typeof UserPlus; color: Chip }> = {
   'inquiry.new': { icon: Handshake, color: 'violet' },
   'message.new': { icon: MessageSquare, color: 'teal' },
   'newsletter.new': { icon: Mail, color: 'amber' },
+  'abstract.new': { icon: FileText, color: 'rose' },
 };
 
 const timeAgo = (iso: string): string => {
@@ -172,7 +173,7 @@ const RECENT_ACTIVITY_FILTER: Record<string, string[] | null> = {
   super_admin: null, // sees everything
   registrations_officer: ['registration.new'],
   viewer: ['registration.new'],
-  content_editor: ['inquiry.new', 'message.new'],
+  content_editor: ['inquiry.new', 'message.new', 'abstract.new'],
 };
 
 export const DashboardPage = () => {

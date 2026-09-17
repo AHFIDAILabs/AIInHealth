@@ -15,6 +15,10 @@ export interface DelegateMe {
   hasTicket: boolean;
   directoryOptIn: boolean;
   avatarUrl?: string;
+  // Volunteer only.
+  tshirtSize?: string;
+  trackSelected?: string;
+  trackAssigned?: string;
 }
 
 export const requestAccessCode = async (email: string): Promise<string> => {

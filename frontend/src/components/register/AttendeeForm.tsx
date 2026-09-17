@@ -209,15 +209,15 @@ export const AttendeeForm = () => {
 
             <div>
               <LightField
-                label="Scholarship / Access Code (optional)"
-                placeholder="SCH-XXXXXX — leave blank if you don't have one"
+                label="Access Code (optional)"
+                placeholder="e.g. SCH-XXXXXX — leave blank if you don't have one"
                 error={errors.accessCode?.message}
                 {...register('accessCode')}
                 className="uppercase tracking-wider"
               />
               <p className="mt-1.5 text-xs text-slate-400">
-                Have a scholarship code? Enter it to apply your discount — it's checked and applied automatically
-                before you're sent to payment.
+                Have a scholarship, keynote speaker, or complimentary code? Enter it here — it's checked and applied
+                automatically before you're sent to payment.
               </p>
             </div>
 

@@ -27,6 +27,7 @@ import {
   Plug,
   ShieldCheck,
   Images,
+  Rss,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -97,6 +98,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Partnership Inquiries', to: '/admin/inquiries', icon: Mail, roles: contentRoles },
       { label: 'Messages', to: '/admin/messages', icon: MessageSquare, roles: contentRoles },
+      { label: 'Newsletter', to: '/admin/newsletter', icon: Rss, roles: contentRoles },
     ],
   },
   {

@@ -44,6 +44,7 @@ import { InnovationsPage } from './pages/admin/InnovationsPage';
 import { AccessCodesPage } from './pages/admin/AccessCodesPage';
 import { InquiriesPage } from './pages/admin/InquiriesPage';
 import { MessagesPage } from './pages/admin/MessagesPage';
+import { NewsletterPage } from './pages/admin/NewsletterPage';
 import { AuditLogPage } from './pages/admin/AuditLogPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
@@ -137,6 +138,7 @@ function App() {
                 <Route path="/admin/partners" element={<PartnersPage />} />
                 <Route path="/admin/inquiries" element={<InquiriesPage />} />
                 <Route path="/admin/messages" element={<MessagesPage />} />
+                <Route path="/admin/newsletter" element={<NewsletterPage />} />
                 <Route path="/admin/abstracts" element={<AbstractsPage />} />
                 <Route path="/admin/media" element={<MediaPage />} />
               </Route>

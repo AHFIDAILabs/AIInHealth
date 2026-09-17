@@ -335,8 +335,8 @@ export const MediaPage = () => {
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {items.map((item) => (
-            <div key={item._id} className={`group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover ${!item.isPublished ? 'opacity-70' : ''}`}>
-              <div className="relative aspect-square overflow-hidden bg-navy">
+            <div key={item._id} className={`group relative rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover ${!item.isPublished ? 'opacity-70' : ''}`}>
+              <div className="relative aspect-square overflow-hidden rounded-t-2xl bg-navy">
                 <img src={item.thumbnailUrl || item.url} alt={item.caption || ''} className="h-full w-full object-cover" />
                 {item.type === 'video' && (
                   <span className="absolute inset-0 flex items-center justify-center bg-navy/20">
@@ -358,33 +358,35 @@ export const MediaPage = () => {
                     </span>
                   )}
                 </div>
-                {/* Always visible below sm — a hover-only reveal is unreachable on a
-                    touchscreen, which has no hover state at all. */}
-                <div className="absolute right-2 top-2 flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                  <div className="relative">
-                    <button
-                      onClick={() => setShareOpenId(shareOpenId === item._id ? null : item._id)}
-                      title="Share"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange"
-                    >
-                      <Share2 size={13} />
-                    </button>
-                    {shareOpenId === item._id && <ShareMenu item={item} onClose={() => setShareOpenId(null)} />}
-                  </div>
+              </div>
+              {/* Sits outside the image's own overflow-hidden (needed to clip the image to
+                  the card's rounded corners) — nesting the Share dropdown in there clipped
+                  its menu text. Always visible below sm — a hover-only reveal is unreachable
+                  on a touchscreen, which has no hover state at all. */}
+              <div className="absolute right-2 top-2 flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                <div className="relative">
                   <button
-                    onClick={() => copyLinkInline(item)}
-                    title="Copy link"
+                    onClick={() => setShareOpenId(shareOpenId === item._id ? null : item._id)}
+                    title="Share"
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange"
                   >
-                    {copiedLinkId === item._id ? <Check size={13} className="text-success" /> : <Copy size={13} />}
+                    <Share2 size={13} />
                   </button>
-                  <button onClick={() => openEdit(item)} title="Edit" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange">
-                    <Pencil size={13} />
-                  </button>
-                  <button onClick={() => setToDelete(item)} title="Delete" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-danger">
-                    <Trash2 size={13} />
-                  </button>
+                  {shareOpenId === item._id && <ShareMenu item={item} onClose={() => setShareOpenId(null)} />}
                 </div>
+                <button
+                  onClick={() => copyLinkInline(item)}
+                  title="Copy link"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange"
+                >
+                  {copiedLinkId === item._id ? <Check size={13} className="text-success" /> : <Copy size={13} />}
+                </button>
+                <button onClick={() => openEdit(item)} title="Edit" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-orange">
+                  <Pencil size={13} />
+                </button>
+                <button onClick={() => setToDelete(item)} title="Delete" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow hover:text-danger">
+                  <Trash2 size={13} />
+                </button>
               </div>
               <div className="px-3 py-2.5">
                 {(item.day !== 'general' || item.momentLabel) && (

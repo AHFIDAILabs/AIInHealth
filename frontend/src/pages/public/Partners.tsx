@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, Megaphone, Link2, TrendingUp, Award, Star, Gem, Send, type LucideIcon } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Eye, Megaphone, Link2, TrendingUp, Award, Star, Gem, Send, X, Globe2, type LucideIcon } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Button, ButtonLink } from '../../components/ui/Button';
@@ -38,6 +39,7 @@ export const Partners = () => {
   const [partners, setPartners] = useState<AdminPartner[]>([]);
   const [packages, setPackages] = useState<PublicSponsorshipPackage[]>([]);
   const [submitError, setSubmitError] = useState('');
+  const [activePartner, setActivePartner] = useState<AdminPartner | null>(null);
 
   useEffect(() => {
     listPublicPartners()
@@ -101,6 +103,17 @@ export const Partners = () => {
                   {partner.name}
                 </span>
               );
+              // A partner with a description is clickable to read it (admin fills
+              // this in expecting it to be visible somewhere public — previously it
+              // never was); one without just links straight to their site, same as
+              // before.
+              if (partner.description) {
+                return (
+                  <button key={partner._id} type="button" onClick={() => setActivePartner(partner)} aria-label={partner.name}>
+                    {img}
+                  </button>
+                );
+              }
               return partner.website ? (
                 <a key={partner._id} href={partner.website} target="_blank" rel="noopener noreferrer" aria-label={partner.name}>
                   {img}
@@ -226,6 +239,58 @@ export const Partners = () => {
         </Reveal>
       </div>
     </section>
+
+    <AnimatePresence>
+      {activePartner && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-navy/70 p-4 backdrop-blur-sm"
+          onClick={() => setActivePartner(null)}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.97 }}
+            transition={{ duration: 0.25 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md rounded-2xl bg-white p-7 shadow-2xl"
+          >
+            <button
+              onClick={() => setActivePartner(null)}
+              aria-label="Close"
+              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
+            >
+              <X size={18} />
+            </button>
+            <div className="flex items-center gap-3">
+              {activePartner.logoUrl ? (
+                <img src={activePartner.logoUrl} alt="" className="h-12 w-12 rounded-lg object-contain" />
+              ) : (
+                <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-navy-secondary text-orange">
+                  <Star size={20} />
+                </span>
+              )}
+              <h3 className="font-display text-xl font-semibold text-navy">{activePartner.name}</h3>
+            </div>
+            {activePartner.description && (
+              <p className="mt-4 text-sm leading-relaxed text-slate-600">{activePartner.description}</p>
+            )}
+            {activePartner.website && (
+              <a
+                href={activePartner.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"
+              >
+                <Globe2 size={15} /> Visit website
+              </a>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   </>
   );
 };

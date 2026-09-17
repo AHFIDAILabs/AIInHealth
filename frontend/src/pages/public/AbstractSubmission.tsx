@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +10,7 @@ import { Banner } from '../../components/ui/Banner';
 import { LightField, LightTextArea, LightSelect } from '../../components/ui/LightField';
 import { RegisterSuccess } from '../../components/register/RegisterSuccess';
 import { submitAbstract } from '../../services/abstract.service';
-import { TRACKS } from '../../services/innovation.service';
+import { listTracks, type PublicTrack } from '../../services/track.service';
 import { getApiErrorMessage } from '../../services/api';
 
 const schema = z.object({
@@ -19,7 +19,7 @@ const schema = z.object({
   authorEmail: z.string().trim().toLowerCase().email('Enter a valid email'),
   organization: z.string().trim().optional(),
   coAuthors: z.string().trim().max(500).optional(),
-  track: z.enum(TRACKS, { errorMap: () => ({ message: 'Choose a track' }) }),
+  track: z.string().trim().min(1, 'Choose a track'),
   abstractText: z.string().trim().min(100, 'Abstract should be at least 100 characters').max(3000),
 });
 type FormValues = z.infer<typeof schema>;
@@ -27,14 +27,28 @@ type FormValues = z.infer<typeof schema>;
 export const AbstractSubmission = () => {
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [tracks, setTracks] = useState<PublicTrack[] | null>(null);
 
   const {
     register,
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { track: 'Research & Abstracts' } });
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { track: '' } });
+
+  // The dropdown offers whatever tracks the Agenda admin currently has set up
+  // (Sessions & Tracks tab) rather than a separate hardcoded list, so this
+  // form never drifts out of sync with what the admin actually manages.
+  useEffect(() => {
+    listTracks()
+      .then((fetched) => {
+        setTracks(fetched);
+        if (fetched.length > 0) setValue('track', fetched[0].name);
+      })
+      .catch(() => setTracks([]));
+  }, [setValue]);
 
   const abstractText = watch('abstractText') ?? '';
 
@@ -49,7 +63,7 @@ export const AbstractSubmission = () => {
   };
 
   const resetAll = () => {
-    reset();
+    reset({ track: tracks?.[0]?.name ?? '' });
     setConfirmation(null);
   };
 
@@ -69,6 +83,9 @@ export const AbstractSubmission = () => {
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
                 {serverError && <Banner variant="error">{serverError}</Banner>}
+                {tracks?.length === 0 && (
+                  <Banner variant="error">No tracks are configured yet — please check back shortly.</Banner>
+                )}
 
                 <LightField label="Abstract Title" error={errors.title?.message} {...register('title')} />
 
@@ -79,12 +96,16 @@ export const AbstractSubmission = () => {
 
                 <div className="grid gap-5 sm:grid-cols-2">
                   <LightField label="Organization" error={errors.organization?.message} {...register('organization')} />
-                  <LightSelect label="Track" error={errors.track?.message} {...register('track')}>
-                    {TRACKS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
+                  <LightSelect label="Track" error={errors.track?.message} disabled={!tracks} {...register('track')}>
+                    {!tracks ? (
+                      <option value="">Loading tracks…</option>
+                    ) : (
+                      tracks.map((t) => (
+                        <option key={t._id} value={t.name}>
+                          {t.name}
+                        </option>
+                      ))
+                    )}
                   </LightSelect>
                 </div>
 
@@ -106,7 +127,7 @@ export const AbstractSubmission = () => {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit" variant="primary" loading={isSubmitting}>
+                  <Button type="submit" variant="primary" loading={isSubmitting} disabled={!tracks || tracks.length === 0}>
                     Submit Abstract <Send size={16} className="ml-1" />
                   </Button>
                 </div>
