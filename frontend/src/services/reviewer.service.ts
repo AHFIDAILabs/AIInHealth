@@ -10,13 +10,13 @@ export interface ReviewerMe {
   organization?: string;
 }
 
-export const requestMagicLink = async (email: string): Promise<string> => {
-  const res = await api.post<{ success: true; data: { message: string } }>('/reviewer/request-link', { email });
+export const requestAccessCode = async (email: string): Promise<string> => {
+  const res = await api.post<{ success: true; data: { message: string } }>('/reviewer/request-code', { email });
   return res.data.data.message;
 };
 
-export const verifyMagicLink = async (token: string): Promise<void> => {
-  await api.post('/reviewer/verify-link', { token });
+export const verifyAccessCode = async (email: string, code: string): Promise<void> => {
+  await api.post('/reviewer/verify-code', { email, code });
 };
 
 export const fetchReviewerMe = async (): Promise<ReviewerMe> => {

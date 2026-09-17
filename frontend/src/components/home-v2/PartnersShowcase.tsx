@@ -2,16 +2,21 @@ import { useEffect, useState } from 'react';
 import { Reveal } from '../ui/Reveal';
 import { listPublicPartners, type AdminPartner } from '../../services/partner.service';
 
-// Matches the reference layout: a plain, bold centered headline per group,
-// then a wide multi-column grid of full-color logos with no card wrappers,
-// no swatches, no grayscale-on-hover treatment — just the logos themselves,
-// left-aligned within their grid cells. No "Become a Partner" CTA here —
-// that ask lives in the hero and closing CTA sections instead.
+// A bold centered headline per tier, then a multi-column grid of logo
+// "swatches" — bordered white cards, each logo centered within its own card
+// (not left-aligned), grayscale by default and switching to full color on
+// hover (same treatment as the marquee in ConvenedWith and the "Current
+// Partners" strip on the public Partners page). No "Become a Partner" CTA
+// here — that ask lives in the hero and closing CTA sections instead.
 //
-// Grouped by the real (free-text) category field — an admin can type any
-// organization type, so categories are discovered from whatever's actually
-// present in the published partners rather than a fixed list. Whole section
-// stays hidden if there are zero published partners at all, same
+// Grouped by each partner's assigned sponsorship package (Title/Technical/
+// Supporting Partners — managed in the admin Packages tab), highest tier
+// first (lowest tierOrder). Title Partners (tierOrder 1) get a visibly
+// larger, bolder swatch/logo than the tiers below — the one place tier
+// literally translates to size on the page. A partner with no package
+// assigned has nowhere to be shown here — the package IS the heading — so
+// it's simply excluded; the admin Sponsors tab is where that gets fixed.
+// Whole section stays hidden if there's nobody left to show, same
 // self-hiding rule as ConvenedWith.
 export const PartnersShowcase = () => {
   const [partners, setPartners] = useState<AdminPartner[]>([]);
@@ -22,13 +27,20 @@ export const PartnersShowcase = () => {
       .catch(() => setPartners([]));
   }, []);
 
-  if (partners.length === 0) return null;
+  const withPackage = partners.filter(
+    (p): p is AdminPartner & { package: { _id: string; name: string; price: number; tierOrder?: number } } => !!p.package
+  );
 
-  const categories = Array.from(new Set(partners.map((p) => p.category)));
-  const grouped = categories.map((category) => ({
-    category,
-    items: partners.filter((p) => p.category === category),
-  }));
+  if (withPackage.length === 0) return null;
+
+  const packagesById = new Map(withPackage.map((p) => [p.package._id, p.package]));
+  const grouped = Array.from(packagesById.values())
+    .sort((a, b) => (a.tierOrder ?? 0) - (b.tierOrder ?? 0))
+    .map((pkg) => ({
+      label: pkg.name,
+      isTopTier: pkg.tierOrder === 1,
+      items: withPackage.filter((p) => p.package._id === pkg._id),
+    }));
 
   return (
     <section className="w-full justify-center bg-white py-24">
@@ -42,34 +54,41 @@ export const PartnersShowcase = () => {
 
         <div className="mt-14 space-y-16">
           {grouped.map((group, gi) => (
-            <div key={group.category}>
+            <div key={group.label}>
               <Reveal delay={gi * 0.06}>
                 <h3 className="text-center font-display text-xl font-bold text-navy sm:text-2xl">
-                  {group.category}
+                  {group.label}
                 </h3>
               </Reveal>
 
               <Reveal delay={gi * 0.06 + 0.05}>
-                <div className="mt-10 grid grid-cols-2 items-center justify-center gap-x-10 gap-y-10 sm:grid-cols-3 lg:grid-cols-5">
+                <div
+                  className={`mt-10 grid grid-cols-2 gap-6 sm:grid-cols-3 ${
+                    group.isTopTier ? 'lg:grid-cols-4' : 'lg:grid-cols-5'
+                  }`}
+                >
                   {group.items.map((p) => {
                     const logo = p.logoUrl ? (
-                      <img src={p.logoUrl} alt={p.name} title={p.name} className="h-9 max-w-full object-contain" />
+                      <img
+                        src={p.logoUrl}
+                        alt={p.name}
+                        title={p.name}
+                        className={`max-w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0 ${
+                          group.isTopTier ? 'h-16 sm:h-20' : 'h-10'
+                        }`}
+                      />
                     ) : (
-                      <span className="text-lg font-bold text-navy">{p.name}</span>
+                      <span className={`font-bold text-navy ${group.isTopTier ? 'text-2xl' : 'text-lg'}`}>{p.name}</span>
                     );
+                    const swatchClass = `group flex items-center justify-center rounded-2xl border bg-white transition-all duration-300 hover:border-orange/40 hover:shadow-md ${
+                      group.isTopTier ? 'border-slate-200 p-8' : 'border-slate-100 p-5'
+                    }`;
                     return p.website ? (
-                      <a
-                        key={p._id}
-                        href={p.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={p.name}
-                        className="flex items-center"
-                      >
+                      <a key={p._id} href={p.website} target="_blank" rel="noopener noreferrer" aria-label={p.name} className={swatchClass}>
                         {logo}
                       </a>
                     ) : (
-                      <span key={p._id} className="flex items-center">
+                      <span key={p._id} className={swatchClass}>
                         {logo}
                       </span>
                     );

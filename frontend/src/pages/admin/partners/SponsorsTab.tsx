@@ -8,7 +8,6 @@ import {
   adminUpdatePartner,
   adminDeletePartner,
   fetchPartnerAnalytics,
-  PARTNER_CATEGORY_SUGGESTIONS,
   PARTNER_STATUSES,
   type AdminPartner,
   type PartnerInput,
@@ -60,7 +59,6 @@ const STATUS_COLOR: Record<PartnerStatus, string> = {
 
 const EMPTY_FORM: PartnerInput = {
   name: '',
-  category: PARTNER_CATEGORY_SUGGESTIONS[0],
   website: '',
   description: '',
   logoUrl: '',
@@ -179,7 +177,6 @@ export const SponsorsTab = () => {
     setEditing(partner);
     setForm({
       name: partner.name,
-      category: partner.category,
       website: partner.website ?? '',
       description: partner.description ?? '',
       logoUrl: partner.logoUrl ?? '',
@@ -451,20 +448,18 @@ export const SponsorsTab = () => {
                 {formError && <Banner variant="error">{formError}</Banner>}
                 <AdminInput label="Company Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="World Health Organization" />
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <AdminInput
-                      label="Category"
-                      list="category-suggestions"
-                      value={form.category}
-                      onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      placeholder="e.g. Government"
-                    />
-                    <datalist id="category-suggestions">
-                      {PARTNER_CATEGORY_SUGGESTIONS.map((c) => (
-                        <option key={c} value={c} />
-                      ))}
-                    </datalist>
-                  </div>
+                  <AdminSelect
+                    label="Package"
+                    value={form.package ?? ''}
+                    onChange={(e) => setForm({ ...form, package: e.target.value || null })}
+                  >
+                    <option value="">None</option>
+                    {packages.map((pkg) => (
+                      <option key={pkg._id} value={pkg._id}>
+                        {pkg.name}
+                      </option>
+                    ))}
+                  </AdminSelect>
                   <AdminSelect label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as PartnerStatus })}>
                     {PARTNER_STATUSES.map((s) => (
                       <option key={s} value={s}>
@@ -473,18 +468,11 @@ export const SponsorsTab = () => {
                     ))}
                   </AdminSelect>
                 </div>
-                <AdminSelect
-                  label="Package"
-                  value={form.package ?? ''}
-                  onChange={(e) => setForm({ ...form, package: e.target.value || null })}
-                >
-                  <option value="">None</option>
-                  {packages.map((pkg) => (
-                    <option key={pkg._id} value={pkg._id}>
-                      {pkg.name} — ₦{pkg.price.toLocaleString('en-NG')}
-                    </option>
-                  ))}
-                </AdminSelect>
+                {!form.package && (
+                  <p className="-mt-2 text-xs text-warning">
+                    No package assigned — this partner won&rsquo;t appear in any tier section on the public Partners page.
+                  </p>
+                )}
                 <AdminInput
                   label="Amount Paid (NGN)"
                   type="number"

@@ -1,16 +1,11 @@
 import { api } from './api';
 
-// Not enforced — Partner.category is free text. These are just autocomplete
-// suggestions offered in the admin form (see SponsorsTab.tsx's <datalist>).
-export const PARTNER_CATEGORY_SUGGESTIONS = ['Government', 'Multilateral', 'Private Sector', 'Academia'];
-
 export const PARTNER_STATUSES = ['lead', 'contacted', 'negotiating', 'confirmed', 'active'] as const;
 export type PartnerStatus = (typeof PARTNER_STATUSES)[number];
 
 export interface AdminPartner {
   _id: string;
   name: string;
-  category: string;
   website?: string;
   description?: string;
   logoUrl?: string;
@@ -20,7 +15,10 @@ export interface AdminPartner {
   contactEmail?: string;
   contactPhone?: string;
   status: PartnerStatus;
-  package?: { _id: string; name: string; price: number } | null;
+  // Drives the public Partners page's tier grouping (Title/Technical/Supporting) —
+  // see PartnersShowcase.tsx. tierOrder is only present when populated (public +
+  // admin list/update endpoints all populate it; nothing relies on it beyond that).
+  package?: { _id: string; name: string; price: number; tierOrder?: number } | null;
   amountPaidKobo: number;
   // Attached server-side so the Sponsors table doesn't need a second
   // round-trip per row.
@@ -32,7 +30,6 @@ export interface AdminPartner {
 
 export interface PartnerInput {
   name: string;
-  category: string;
   website?: string;
   description?: string;
   logoUrl?: string;
@@ -47,7 +44,6 @@ export interface PartnerInput {
 }
 
 export interface ListPartnersParams {
-  category?: string;
   status?: PartnerStatus;
   published?: 'true' | 'false';
   q?: string;
@@ -63,8 +59,8 @@ export interface Paginated<T> {
   pages: number;
 }
 
-export const listPublicPartners = async (category?: string): Promise<AdminPartner[]> => {
-  const res = await api.get<{ success: true; data: AdminPartner[] }>('/partners', { params: category ? { category } : {} });
+export const listPublicPartners = async (): Promise<AdminPartner[]> => {
+  const res = await api.get<{ success: true; data: AdminPartner[] }>('/partners');
   return res.data.data;
 };
 

@@ -1,65 +1,107 @@
 import { useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, CheckCircle2 } from 'lucide-react';
+import { KeyRound, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Banner } from '../../components/ui/Banner';
 import { LightField } from '../../components/ui/LightField';
-import { requestMagicLink } from '../../services/reviewer.service';
+import { requestAccessCode, verifyAccessCode } from '../../services/reviewer.service';
+import { useReviewerAuth } from '../../contexts/ReviewerAuthContext';
 import { getApiErrorMessage } from '../../services/api';
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email('Enter a valid email'),
+  code: z.string().trim().min(1, 'Enter your access code'),
 });
 type FormValues = z.infer<typeof schema>;
 
+// The page the reviewer assignment/invite email links to — it no longer
+// auto-signs anyone in from a URL token. The link is just a plain shortcut
+// here; the actual credential is the access code emailed alongside it, which
+// the reviewer types in below. That code is stable (not single-use) and has
+// no short countdown — it stays valid for weeks, through a fixed cutoff a
+// week after the Summit — so "Resend my code" below always hands back the
+// SAME code rather than minting a new one.
 export const ReviewerLogin = () => {
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const { refresh } = useReviewerAuth();
   const [serverError, setServerError] = useState('');
-  const [sent, setSent] = useState(false);
+  const [resent, setResent] = useState(false);
+  const [resending, setResending] = useState(false);
+
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: params.get('email') ?? '', code: '' },
+  });
 
   const onSubmit = async (values: FormValues) => {
     setServerError('');
     try {
-      await requestMagicLink(values.email);
-      setSent(true);
+      await verifyAccessCode(values.email, values.code);
+      await refresh();
+      navigate('/review', { replace: true });
+    } catch (err) {
+      setServerError(getApiErrorMessage(err, 'That email/access code combination is invalid.'));
+    }
+  };
+
+  const resendCode = async () => {
+    const email = getValues('email');
+    if (!schema.shape.email.safeParse(email).success) {
+      setServerError('Enter your email above first, then resend.');
+      return;
+    }
+    setServerError('');
+    setResending(true);
+    try {
+      await requestAccessCode(email);
+      setResent(true);
     } catch (err) {
       setServerError(getApiErrorMessage(err));
+    } finally {
+      setResending(false);
     }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-offwhite px-4">
       <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-glow-subtle">
-        {sent ? (
-          <>
-            <CheckCircle2 size={36} className="mx-auto text-success" />
-            <h1 className="mt-4 font-display text-lg font-semibold text-navy">Check your email</h1>
-            <p className="mt-2 text-sm text-slate-500">
-              If that email is registered as a reviewer, we&rsquo;ve sent a sign-in link.
-            </p>
-          </>
-        ) : (
-          <>
-            <Mail size={32} className="mx-auto text-orange" />
-            <h1 className="mt-4 font-display text-lg font-semibold text-navy">Reviewer Portal</h1>
-            <p className="mt-1.5 text-sm text-slate-500">
-              Enter the email your review assignments were sent to — we&rsquo;ll email you a sign-in link.
-            </p>
-            <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 space-y-4 text-left">
-              {serverError && <Banner variant="error">{serverError}</Banner>}
-              <LightField label="Email" type="email" error={errors.email?.message} {...register('email')} />
-              <Button type="submit" variant="primary" loading={isSubmitting} className="w-full justify-center">
-                Send Sign-In Link
-              </Button>
-            </form>
-          </>
-        )}
+        <KeyRound size={32} className="mx-auto text-orange" />
+        <h1 className="mt-4 font-display text-lg font-semibold text-navy">Reviewer Portal</h1>
+        <p className="mt-1.5 text-sm text-slate-500">
+          Enter the email your review assignments were sent to, and the access code from that email.
+        </p>
+
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 space-y-4 text-left">
+          {serverError && <Banner variant="error">{serverError}</Banner>}
+          {resent && (
+            <div className="flex items-start gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2.5 text-xs text-success">
+              <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
+              <span>If that email is registered as a reviewer, your access code has been resent.</span>
+            </div>
+          )}
+          <LightField label="Email" type="email" error={errors.email?.message} {...register('email')} />
+          <LightField label="Access Code" placeholder="RV-XXXXXX" error={errors.code?.message} {...register('code')} />
+          <Button type="submit" variant="primary" loading={isSubmitting} className="w-full justify-center">
+            Sign In
+          </Button>
+          <button
+            type="button"
+            onClick={resendCode}
+            disabled={resending}
+            className="w-full text-center text-xs font-semibold text-orange hover:text-orange-hover disabled:opacity-50"
+          >
+            {resending ? 'Resending…' : "Don't have your code? Resend it"}
+          </button>
+        </form>
       </div>
     </div>
   );

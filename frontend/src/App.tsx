@@ -60,7 +60,6 @@ import { PortalHome } from './pages/portal/PortalHome';
 import { PortalDirectory } from './pages/portal/PortalDirectory';
 import { PortalMeetings } from './pages/portal/PortalMeetings';
 import { ReviewerLogin } from './pages/reviewer/ReviewerLogin';
-import { ReviewerVerify } from './pages/reviewer/ReviewerVerify';
 import { ReviewerDashboard } from './pages/reviewer/ReviewerDashboard';
 import { ReviewerScoreForm } from './pages/reviewer/ReviewerScoreForm';
 
@@ -173,7 +172,6 @@ function App() {
           {/* Reviewer portal — same pattern as the delegate portal above, its
               own separate auth/layout tree for external abstract reviewers. */}
           <Route path="/review/login" element={<ReviewerLogin />} />
-          <Route path="/review/verify" element={<ReviewerVerify />} />
           <Route element={<ReviewerProtectedRoute />}>
             <Route element={<ReviewerPortalLayout />}>
               <Route path="/review" element={<ReviewerDashboard />} />
