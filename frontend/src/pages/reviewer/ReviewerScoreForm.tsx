@@ -52,6 +52,17 @@ export const ReviewerScoreForm = () => {
           setLoadError('This review assignment was not found — it may have been removed.');
           return;
         }
+        // Scoring is only ever open to an accepted assignment — the backend
+        // enforces this too (submitScores rejects anything else), this is
+        // just the friendlier front-of-house version of that same rule.
+        if (match.reviewerStatus !== 'accepted') {
+          setLoadError(
+            match.reviewerStatus === 'declined'
+              ? "You've declined this assignment, so it can't be opened."
+              : 'Accept this assignment from your dashboard before opening it.'
+          );
+          return;
+        }
         setAssignment(match);
         setCriteria(rubricCriteria);
         setScores(Object.fromEntries(match.scores.map((s) => [s.criterionId, s.score])));

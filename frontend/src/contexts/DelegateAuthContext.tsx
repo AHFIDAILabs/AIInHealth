@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import * as delegateService from '../services/delegate.service';
 import type { DelegateMe } from '../services/delegate.service';
+import { clearCachedTicketQr } from '../lib/ticketQrCache';
 
 interface DelegateAuthContextValue {
   delegate: DelegateMe | null;
@@ -37,6 +38,8 @@ export const DelegateAuthProvider = ({ children }: { children: ReactNode }) => {
       await delegateService.delegateLogout();
     } finally {
       setDelegate(null);
+      // Shared/public-device hygiene — see ticketQrCache.ts.
+      clearCachedTicketQr();
     }
   }, []);
 

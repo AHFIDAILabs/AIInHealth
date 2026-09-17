@@ -9,7 +9,16 @@
       content="AI in Health Summit 2026 — Abuja, Nigeria, 19–20 October 2026. Convened by AHFID. Catalyzing Country AI-in-Health Framework for Transformative Healthcare Systems."
     />
     <link rel="icon" type="image/png" href="/summit-icon.png" />
-    <link rel="apple-touch-icon" href="/summit-icon.png" />
+    <link rel="apple-touch-icon" href="/pwa-icon-192.png" />
+
+    <!-- PWA: installable "Add to Home Screen" with an offline-capable app shell —
+         see public/sw.js. Purely additive: no existing request/route is touched by
+         this, the service worker only ever caches same-origin static assets. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0F172A" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AIHS 2026" />
 
     <!-- Open Graph / Twitter Card — /og-image.png and the URLs below are root-relative;
          once a production domain exists, either keep them root-relative (most crawlers

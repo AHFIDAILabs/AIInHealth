@@ -1,5 +1,4 @@
 import { api } from './api';
-import type { Track } from './speaker.service';
 
 export const SESSION_DAYS = ['day1', 'day2'] as const;
 export type SessionDay = (typeof SESSION_DAYS)[number];
@@ -27,13 +26,21 @@ export interface SessionRsvpEntry {
   addedAt: string;
 }
 
+// Populated — see Track.model.ts (Sessions-only track, distinct from the
+// separate fixed track list Speakers/Abstracts/Innovations still use).
+export interface SessionTrackRef {
+  _id: string;
+  name: string;
+  color: string;
+}
+
 export interface AdminSession {
   _id: string;
   day: SessionDay;
   startTime: string;
   endTime: string;
   title: string;
-  track: Track;
+  track: SessionTrackRef;
   format: SessionFormat;
   room: string;
   description?: string;
@@ -55,7 +62,8 @@ export interface SessionInput {
   startTime: string;
   endTime: string;
   title: string;
-  track: Track;
+  // A Track id (see track.service.ts's adminListTracks), not a name/enum value.
+  track: string;
   format: SessionFormat;
   room: string;
   description?: string;
@@ -67,7 +75,7 @@ export interface SessionInput {
 
 export interface ListSessionsParams {
   day?: SessionDay;
-  track?: Track;
+  track?: string;
   published?: 'true' | 'false';
   q?: string;
   page?: number;
@@ -87,7 +95,7 @@ export interface ConflictInfo {
   conflicts: { _id: string; title: string; startTime: string; endTime: string; room: string }[];
 }
 
-export const listPublicSessions = async (params?: { day?: SessionDay; track?: Track }): Promise<AdminSession[]> => {
+export const listPublicSessions = async (params?: { day?: SessionDay; track?: string }): Promise<AdminSession[]> => {
   const res = await api.get<{ success: true; data: AdminSession[] }>('/sessions', { params });
   return res.data.data;
 };

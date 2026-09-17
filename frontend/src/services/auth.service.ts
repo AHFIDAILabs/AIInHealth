@@ -3,7 +3,13 @@ import { api } from './api';
 export const ROLES = ['super_admin', 'content_editor', 'registrations_officer', 'viewer'] as const;
 export type Role = (typeof ROLES)[number];
 
-export const NOTIFICATION_EVENTS = ['registration.new', 'inquiry.new', 'message.new', 'newsletter.new'] as const;
+export const NOTIFICATION_EVENTS = [
+  'registration.new',
+  'inquiry.new',
+  'message.new',
+  'newsletter.new',
+  'abstract.reviewer_declined',
+] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
 export interface NotificationPrefs {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import axios from 'axios';
 import { CheckCircle2, Clock, Bell, BellOff, Users2, Pencil, Check, X } from 'lucide-react';
 import { useDelegateAuth } from '../../contexts/DelegateAuthContext';
 import {
@@ -10,6 +11,7 @@ import {
   isDelegatePushSupported,
 } from '../../services/delegate.service';
 import { getApiErrorMessage } from '../../services/api';
+import { getCachedTicketQr, setCachedTicketQr } from '../../lib/ticketQrCache';
 import { useToast } from '../../contexts/ToastContext';
 import { LightField } from '../../components/ui/LightField';
 import { Button } from '../../components/ui/Button';
@@ -30,6 +32,7 @@ export const PortalHome = () => {
   const toast = useToast();
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [qrError, setQrError] = useState('');
+  const [qrIsCached, setQrIsCached] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [optInBusy, setOptInBusy] = useState(false);
@@ -50,10 +53,29 @@ export const PortalHome = () => {
     // ticket yet" branch that would have cleared them.
     setQrDataUrl('');
     setQrError('');
+    setQrIsCached(false);
     fetchTicketQr()
-      .then(setQrDataUrl)
-      .catch((err) => setQrError(getApiErrorMessage(err)));
-  }, [delegate?.hasTicket]);
+      .then((dataUrl) => {
+        setQrDataUrl(dataUrl);
+        setCachedTicketQr(delegate.id, dataUrl);
+      })
+      .catch((err) => {
+        // Offline/network failure specifically (not e.g. a 404 for "no ticket")
+        // falls back to whatever was last cached for THIS registration — the
+        // scenario this exists for is a phone losing signal at the door. The
+        // check-in scan itself is still the live, authoritative check; this is
+        // display-only, so a revoked/declined ticket simply fails at the scan
+        // even though the stale QR still renders here — expected, not a bug.
+        const isNetworkFailure = axios.isAxiosError(err) && !err.response;
+        const cached = isNetworkFailure ? getCachedTicketQr(delegate.id) : null;
+        if (cached) {
+          setQrDataUrl(cached);
+          setQrIsCached(true);
+        } else {
+          setQrError(getApiErrorMessage(err));
+        }
+      });
+  }, [delegate?.hasTicket, delegate?.id]);
 
   useEffect(() => {
     if (!isDelegatePushSupported()) return;
@@ -210,7 +232,11 @@ export const PortalHome = () => {
           ) : qrDataUrl ? (
             <>
               <img src={qrDataUrl} alt="Your check-in QR code" className="mx-auto mt-4 h-48 w-48 rounded-xl border border-slate-100" />
-              <p className="mt-3 text-xs text-slate-400">Show this at the registration desk on event day.</p>
+              <p className="mt-3 text-xs text-slate-400">
+                {qrIsCached
+                  ? "Showing your last saved ticket — you're offline right now, but this still works at the desk."
+                  : 'Show this at the registration desk on event day.'}
+              </p>
             </>
           ) : qrError ? (
             <p className="mt-6 py-6 text-sm text-slate-500">{qrError}</p>

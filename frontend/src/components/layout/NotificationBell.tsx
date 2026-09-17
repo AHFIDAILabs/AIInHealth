@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, UserPlus, Handshake, MessageSquare, Mail, Check } from 'lucide-react';
+import { Bell, UserPlus, Handshake, MessageSquare, Mail, Check, UserX } from 'lucide-react';
 import { useNotifications } from '../../contexts/NotificationContext';
 import type { AdminNotification } from '../../services/notification.service';
 
@@ -8,6 +8,7 @@ const ICON: Record<AdminNotification['type'], typeof UserPlus> = {
   'inquiry.new': Handshake,
   'message.new': MessageSquare,
   'newsletter.new': Mail,
+  'abstract.reviewer_declined': UserX,
 };
 
 const timeAgo = (iso: string): string => {

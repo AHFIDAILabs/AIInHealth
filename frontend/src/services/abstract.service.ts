@@ -82,6 +82,7 @@ export interface ReviewMatrixRow {
     reviewer: { _id: string; fullName: string; email: string };
     weightedScore: number | null;
     status: 'pending' | 'completed';
+    reviewerStatus: 'pending' | 'accepted' | 'declined';
   }>;
   reviewsCompleted: number;
   reviewsTotal: number;

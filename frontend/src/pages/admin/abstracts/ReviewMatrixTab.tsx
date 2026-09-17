@@ -250,12 +250,27 @@ export const ReviewMatrixTab = () => {
                             row.reviews.map((r) => (
                               <span
                                 key={r.reviewId}
-                                title={r.reviewer.email}
+                                title={
+                                  r.reviewerStatus === 'declined'
+                                    ? `${r.reviewer.email} — declined, needs reassignment`
+                                    : r.reviewer.email
+                                }
                                 className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                  r.status === 'completed' ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-500'
+                                  r.reviewerStatus === 'declined'
+                                    ? 'bg-danger/10 text-danger'
+                                    : r.status === 'completed'
+                                      ? 'bg-success/10 text-success'
+                                      : 'bg-slate-100 text-slate-500'
                                 }`}
                               >
-                                {r.reviewer.fullName}: {r.status === 'completed' ? r.weightedScore : 'Pending'}
+                                {r.reviewer.fullName}:{' '}
+                                {r.reviewerStatus === 'declined'
+                                  ? 'Declined'
+                                  : r.status === 'completed'
+                                    ? r.weightedScore
+                                    : r.reviewerStatus === 'pending'
+                                      ? 'Awaiting response'
+                                      : 'Pending'}
                               </span>
                             ))
                           )}

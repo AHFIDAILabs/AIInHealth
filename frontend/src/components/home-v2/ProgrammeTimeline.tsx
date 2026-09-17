@@ -51,7 +51,7 @@ const fromReal = (s: AdminSession): Row => ({
   key: s._id,
   time: `${s.startTime} – ${s.endTime}`,
   title: s.title,
-  track: s.track,
+  track: s.track.name,
   description: s.description,
   speakers: s.speakers,
   requiresRsvp: s.requiresRsvp,

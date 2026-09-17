@@ -46,6 +46,8 @@ export interface ReviewScore {
   score: number;
 }
 
+export type ReviewerResponse = 'pending' | 'accepted' | 'declined';
+
 export interface MyAssignment {
   reviewId: string;
   abstract: {
@@ -60,11 +62,19 @@ export interface MyAssignment {
   recommendation?: AbstractDecision;
   status: 'pending' | 'completed';
   completedAt?: string;
+  // Whether the reviewer has accepted/declined this assignment yet — distinct
+  // from `status` above, which is purely about scoring progress. Submitting
+  // scores is refused server-side until this is 'accepted'.
+  reviewerStatus: ReviewerResponse;
 }
 
 export const fetchMyAssignments = async (): Promise<MyAssignment[]> => {
   const res = await api.get<{ success: true; data: MyAssignment[] }>('/reviewer/assignments');
   return res.data.data;
+};
+
+export const respondToAssignment = async (reviewId: string, response: 'accepted' | 'declined'): Promise<void> => {
+  await api.patch(`/reviewer/assignments/${reviewId}/respond`, { response });
 };
 
 export const submitReviewScores = async (
