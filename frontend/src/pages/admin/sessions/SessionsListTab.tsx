@@ -29,7 +29,7 @@ const EMPTY_FORM: SessionInput = {
   startTime: '09:00',
   endTime: '10:00',
   title: '',
-  track: '',
+  track: null,
   format: SESSION_FORMATS[0],
   room: '',
   description: '',
@@ -40,6 +40,15 @@ const EMPTY_FORM: SessionInput = {
 };
 
 const DAY_LABEL: Record<SessionDay, string> = { day1: 'Day 1 — 19 Oct', day2: 'Day 2 — 20 Oct' };
+
+// The Summit only ever runs these two real calendar days (see
+// jobs/sessionReminder.job.ts's own DAY_DATES, kept in sync with this) — the
+// admin form shows a real date picker (matching the reference layout) rather
+// than exposing "day1"/"day2" as raw values, but under the hood it's still
+// the same two-day enum every other part of the app (public Agenda's day
+// switcher, the reminder cron, conflict detection) is built around.
+const DAY_TO_DATE: Record<SessionDay, string> = { day1: '2026-10-19', day2: '2026-10-20' };
+const DATE_TO_DAY: Record<string, SessionDay> = { '2026-10-19': 'day1', '2026-10-20': 'day2' };
 
 export const SessionsListTab = () => {
   const toast = useToast();
@@ -117,7 +126,7 @@ export const SessionsListTab = () => {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ ...EMPTY_FORM, track: tracks[0]?._id ?? '' });
+    setForm(EMPTY_FORM);
     setFormError('');
     setConflictWarning([]);
     setRsvpEmailsText('');
@@ -132,7 +141,7 @@ export const SessionsListTab = () => {
       startTime: session.startTime,
       endTime: session.endTime,
       title: session.title,
-      track: session.track._id,
+      track: session.track?._id ?? null,
       format: session.format,
       room: session.room,
       description: session.description ?? '',
@@ -160,27 +169,24 @@ export const SessionsListTab = () => {
       setFormError('Title and room are required.');
       return;
     }
-    if (!form.track) {
-      setFormError('Choose a track — add one in the Tracks tab first if none exist yet.');
-      return;
-    }
     if (form.endTime <= form.startTime) {
       setFormError('End time must be after start time.');
       return;
     }
-    if (form.requiresRsvp && !form.maxAttendees) {
-      setFormError('Set a maximum number of attendees for an RSVP session.');
-      return;
-    }
     setSaving(true);
     setFormError('');
+    // Capacity is one plain field in this form (matching the reference layout);
+    // requiresRsvp is just derived from whether it's set, rather than a
+    // separate toggle — the backend still enforces "requiresRsvp needs a
+    // maxAttendees", this just keeps the two permanently in sync from here.
+    const payload: SessionInput = { ...form, requiresRsvp: !!form.maxAttendees };
     try {
       if (editing) {
-        const { session, conflicts } = await adminUpdateSession(editing._id, form);
+        const { session, conflicts } = await adminUpdateSession(editing._id, payload);
         setItems((prev) => prev.map((s) => (s._id === editing._id ? session : s)));
         toast(conflicts.length ? 'error' : 'success', conflicts.length ? `Saved, but overlaps ${conflicts.length} other session(s) in this room` : 'Session updated');
       } else {
-        const { session, conflicts } = await adminCreateSession(form);
+        const { session, conflicts } = await adminCreateSession(payload);
         setItems((prev) => [...prev, session]);
         toast(conflicts.length ? 'error' : 'success', conflicts.length ? `Saved, but overlaps ${conflicts.length} other session(s) in this room` : 'Session added');
       }
@@ -341,13 +347,17 @@ export const SessionsListTab = () => {
                           <td className="px-3 py-3">
                             <p className="font-medium text-navy">{s.title}</p>
                             <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                              <span
-                                className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                                style={{ backgroundColor: `${s.track.color}1A`, color: s.track.color }}
-                              >
-                                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: s.track.color }} />
-                                {s.track.name}
-                              </span>
+                              {s.track ? (
+                                <span
+                                  className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                                  style={{ backgroundColor: `${s.track.color}1A`, color: s.track.color }}
+                                >
+                                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: s.track.color }} />
+                                  {s.track.name}
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-offwhite px-2 py-0.5 text-[10px] font-medium text-slate-400">No track</span>
+                              )}
                               <span className="rounded-full bg-offwhite px-2 py-0.5 text-[10px] font-medium text-slate-500">{s.format}</span>
                               {s.requiresRsvp && (
                                 <span className="rounded-full bg-chart-violet/15 px-2 py-0.5 text-[10px] font-semibold text-chart-violet">
@@ -425,7 +435,10 @@ export const SessionsListTab = () => {
               className="absolute inset-y-0 right-0 flex w-full max-w-lg flex-col bg-white shadow-2xl"
             >
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                <p className="font-display text-lg font-semibold text-navy">{editing ? 'Edit Session' : 'Add Session'}</p>
+                <div>
+                  <p className="font-display text-lg font-semibold text-navy">{editing ? 'Edit Session' : 'Add Session'}</p>
+                  <p className="text-xs text-slate-500">{editing ? "Update this session's details." : 'Create a new session in the agenda.'}</p>
+                </div>
                 <button onClick={() => setFormOpen(false)} className="text-slate-400 hover:text-navy">
                   <X size={18} />
                 </button>
@@ -434,23 +447,41 @@ export const SessionsListTab = () => {
               <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
                 {formError && <Banner variant="error">{formError}</Banner>}
 
-                <div className="flex gap-2">
-                  {SESSION_DAYS.map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => setForm({ ...form, day: d })}
-                      className={`flex-1 rounded-lg border px-3 py-2 text-[13px] font-semibold transition-colors ${
-                        form.day === d ? 'border-orange bg-orange/10 text-orange' : 'border-slate-200 text-slate-500'
-                      }`}
-                    >
-                      {DAY_LABEL[d]}
-                    </button>
-                  ))}
-                </div>
+                <AdminInput label="Session Title *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Opening Keynote" />
 
                 <div className="grid grid-cols-2 gap-3">
-                  <AdminInput label="Start Time" type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
-                  <AdminInput label="End Time" type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
+                  <AdminSelect label="Track" value={form.track ?? ''} onChange={(e) => setForm({ ...form, track: e.target.value || null })}>
+                    <option value="">No track</option>
+                    {tracks.map((t) => (
+                      <option key={t._id} value={t._id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </AdminSelect>
+                  <AdminSelect label="Session Type" value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value as SessionInput['format'] })}>
+                    {SESSION_FORMATS.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </AdminSelect>
+                </div>
+
+                <AdminInput label="Room" value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="e.g. Ballroom A" />
+
+                <AdminInput
+                  label="Date *"
+                  type="date"
+                  min={DAY_TO_DATE.day1}
+                  max={DAY_TO_DATE.day2}
+                  value={DAY_TO_DATE[form.day]}
+                  onChange={(e) => setForm({ ...form, day: DATE_TO_DAY[e.target.value] ?? form.day })}
+                />
+                <p className="-mt-2.5 text-xs text-slate-400">{DAY_LABEL[form.day]} — the Summit's two confirmed days.</p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <AdminInput label="Start Time *" type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
+                  <AdminInput label="End Time *" type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
                 </div>
 
                 {conflictWarning.length > 0 && (
@@ -465,36 +496,18 @@ export const SessionsListTab = () => {
                   </div>
                 )}
 
-                <AdminInput label="Session Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="AI in Health Policy & Regulation" />
-                <AdminInput label="Room" value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="Main Auditorium" />
+                <AdminTextarea label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Session details..." />
 
-                <div className="grid grid-cols-2 gap-3">
-                  {tracks.length === 0 ? (
-                    <div>
-                      <p className="mb-1.5 text-[13px] font-semibold text-navy">Track</p>
-                      <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2.5 text-xs text-slate-400">
-                        No tracks yet — add one in the Tracks tab first.
-                      </p>
-                    </div>
-                  ) : (
-                    <AdminSelect label="Track" value={form.track} onChange={(e) => setForm({ ...form, track: e.target.value })}>
-                      {tracks.map((t) => (
-                        <option key={t._id} value={t._id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </AdminSelect>
-                  )}
-                  <AdminSelect label="Format" value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value as SessionInput['format'] })}>
-                    {SESSION_FORMATS.map((f) => (
-                      <option key={f} value={f}>
-                        {f}
-                      </option>
-                    ))}
-                  </AdminSelect>
+                <div>
+                  <AdminInput
+                    label="Capacity"
+                    type="number"
+                    min={1}
+                    value={form.maxAttendees ?? ''}
+                    onChange={(e) => setForm({ ...form, maxAttendees: e.target.value ? Number(e.target.value) : undefined })}
+                  />
+                  <p className="mt-1.5 text-xs text-slate-400">Leave blank for unlimited. Setting a number opens self-service RSVP for this session.</p>
                 </div>
-
-                <AdminTextarea label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Session summary..." />
 
                 <div>
                   <p className="mb-1.5 text-[13px] font-semibold text-navy">Speakers</p>
@@ -514,10 +527,13 @@ export const SessionsListTab = () => {
                         <button
                           key={sp._id}
                           onClick={() => toggleSpeaker(sp._id)}
-                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-offwhite ${selected ? 'bg-orange/5' : ''}`}
+                          className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-offwhite ${selected ? 'bg-orange/5' : ''}`}
                         >
-                          <span className="text-navy">{sp.fullName}</span>
-                          {selected && <span className="text-orange">✓</span>}
+                          <span className="min-w-0 truncate text-navy">
+                            {sp.fullName}
+                            {sp.title && <span className="text-slate-400"> — {sp.title}</span>}
+                          </span>
+                          {selected && <span className="shrink-0 text-orange">✓</span>}
                         </button>
                       );
                     })}
@@ -525,78 +541,65 @@ export const SessionsListTab = () => {
                   </div>
                 </div>
 
-                <AdminToggle label="Published" checked={!!form.isPublished} onChange={(v) => setForm({ ...form, isPublished: v })} />
-
                 <AdminToggle
-                  label="Requires RSVP (limited capacity)"
-                  checked={!!form.requiresRsvp}
-                  onChange={(v) => setForm({ ...form, requiresRsvp: v })}
+                  label="Visible on Website"
+                  checked={!!form.isPublished}
+                  onChange={(v) => setForm({ ...form, isPublished: v })}
                 />
+                <p className="-mt-2.5 text-xs text-slate-400">Show on the public event site.</p>
 
-                {form.requiresRsvp && (
-                  <>
-                    <AdminInput
-                      label="Max Attendees"
-                      type="number"
-                      min={1}
-                      value={form.maxAttendees ?? ''}
-                      onChange={(e) => setForm({ ...form, maxAttendees: e.target.value ? Number(e.target.value) : undefined })}
-                    />
+                {editing && !!form.maxAttendees && (
+                  <div className="rounded-xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[13px] font-semibold text-navy">RSVP List</p>
+                      <span className="text-xs font-medium text-slate-500">
+                        {editing.rsvpList?.length ?? 0} / {form.maxAttendees ?? '—'}
+                      </span>
+                    </div>
 
-                    {editing && (
-                      <div className="rounded-xl border border-slate-200 p-4">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[13px] font-semibold text-navy">RSVP List</p>
-                          <span className="text-xs font-medium text-slate-500">
-                            {editing.rsvpList?.length ?? 0} / {form.maxAttendees ?? '—'}
-                          </span>
-                        </div>
+                    {rsvpError && (
+                      <p className="mt-2 text-xs font-medium text-danger">{rsvpError}</p>
+                    )}
 
-                        {rsvpError && (
-                          <p className="mt-2 text-xs font-medium text-danger">{rsvpError}</p>
-                        )}
+                    <div className="mt-3">
+                      <AdminTextarea
+                        label="Add Emails"
+                        value={rsvpEmailsText}
+                        onChange={(e) => setRsvpEmailsText(e.target.value)}
+                        placeholder={'One VIP, or a whole pasted batch — one per line or comma-separated:\nvip@example.com\nattendee2@example.com'}
+                      />
+                      <button
+                        onClick={addRsvpEmails}
+                        disabled={rsvpSaving || rsvpEmails.length === 0}
+                        className="mt-2 w-full rounded-lg bg-navy py-2 text-[13px] font-semibold text-white hover:bg-navy-secondary disabled:opacity-60"
+                      >
+                        {rsvpSaving ? 'Adding…' : `Add${rsvpEmails.length ? ` (${rsvpEmails.length})` : ''}`}
+                      </button>
+                    </div>
 
-                        <div className="mt-3">
-                          <AdminTextarea
-                            label="Add Emails"
-                            value={rsvpEmailsText}
-                            onChange={(e) => setRsvpEmailsText(e.target.value)}
-                            placeholder={'One VIP, or a whole pasted batch — one per line or comma-separated:\nvip@example.com\nattendee2@example.com'}
-                          />
-                          <button
-                            onClick={addRsvpEmails}
-                            disabled={rsvpSaving || rsvpEmails.length === 0}
-                            className="mt-2 w-full rounded-lg bg-navy py-2 text-[13px] font-semibold text-white hover:bg-navy-secondary disabled:opacity-60"
-                          >
-                            {rsvpSaving ? 'Adding…' : `Add${rsvpEmails.length ? ` (${rsvpEmails.length})` : ''}`}
-                          </button>
-                        </div>
-
-                        {(editing.rsvpList?.length ?? 0) > 0 && (
-                          <div className="mt-3 max-h-40 overflow-y-auto rounded-lg border border-slate-200">
-                            {editing.rsvpList!.map((r) => (
-                              <div key={r.email} className="flex items-center justify-between px-3 py-2 text-[13px] hover:bg-offwhite">
-                                <div>
-                                  <span className="text-navy">{r.email}</span>
-                                  <span className="ml-1.5 rounded-full bg-offwhite px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
-                                    {r.source}
-                                  </span>
-                                </div>
-                                <button
-                                  onClick={() => removeRsvpEmail(r.email)}
-                                  disabled={rsvpRemovingEmail === r.email}
-                                  className="rounded-md p-1 text-slate-400 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                                  title="Remove"
-                                >
-                                  <Ban size={14} />
-                                </button>
-                              </div>
-                            ))}
+                    {(editing.rsvpList?.length ?? 0) > 0 && (
+                      <div className="mt-3 max-h-40 overflow-y-auto rounded-lg border border-slate-200">
+                        {editing.rsvpList!.map((r) => (
+                          <div key={r.email} className="flex items-center justify-between px-3 py-2 text-[13px] hover:bg-offwhite">
+                            <div>
+                              <span className="text-navy">{r.email}</span>
+                              <span className="ml-1.5 rounded-full bg-offwhite px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
+                                {r.source}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => removeRsvpEmail(r.email)}
+                              disabled={rsvpRemovingEmail === r.email}
+                              className="rounded-md p-1 text-slate-400 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                              title="Remove"
+                            >
+                              <Ban size={14} />
+                            </button>
                           </div>
-                        )}
+                        ))}
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
 
@@ -609,7 +612,7 @@ export const SessionsListTab = () => {
                   disabled={saving}
                   className="flex-1 rounded-lg bg-orange py-2.5 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
                 >
-                  {saving ? 'Saving…' : editing ? 'Save Changes' : 'Add Session'}
+                  {saving ? 'Saving…' : editing ? 'Save Changes' : 'Create Session'}
                 </button>
               </div>
             </motion.div>

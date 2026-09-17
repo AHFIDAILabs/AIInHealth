@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Plus, Layers } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Plus, Layers, X } from 'lucide-react';
 import {
   adminListTracks,
   adminCreateTrack,
@@ -156,66 +157,88 @@ export const TracksTab = () => {
         </div>
       )}
 
-      {formOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-navy/50 p-4" onClick={() => setFormOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-            <div className="border-b border-slate-100 px-5 py-4">
-              <p className="font-display text-lg font-semibold text-navy">{editing ? 'Manage Track' : 'Add Track'}</p>
-              <p className="text-xs text-slate-500">{editing ? 'Update track details and view its sessions.' : 'Create a new track for sessions to belong to.'}</p>
-            </div>
-            <div className="space-y-4 px-5 py-5">
-              {formError && <Banner variant="error">{formError}</Banner>}
-              <AdminInput label="Track Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Clinical AI & Diagnostics" />
-              <div>
-                <p className="mb-1.5 text-[13px] font-semibold text-navy">Track Color</p>
-                <div className="flex items-center gap-2.5">
-                  <input
-                    type="color"
-                    value={form.color}
-                    onChange={(e) => setForm({ ...form, color: e.target.value })}
-                    className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-slate-200 p-1"
-                  />
-                  <input
-                    value={form.color}
-                    onChange={(e) => setForm({ ...form, color: e.target.value })}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
-                  />
+      <AnimatePresence>
+        {formOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] bg-navy/50"
+            onClick={() => setFormOpen(false)}
+          >
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <div>
+                  <p className="font-display text-lg font-semibold text-navy">{editing ? 'Manage Track' : 'Add Track'}</p>
+                  <p className="text-xs text-slate-500">{editing ? 'Update track details and view its sessions.' : 'Create a new track for sessions to belong to.'}</p>
+                </div>
+                <button onClick={() => setFormOpen(false)} className="text-slate-400 hover:text-navy">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+                {formError && <Banner variant="error">{formError}</Banner>}
+                <AdminInput label="Track Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Clinical AI & Diagnostics" />
+                <div>
+                  <p className="mb-1.5 text-[13px] font-semibold text-navy">Track Color</p>
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="color"
+                      value={form.color}
+                      onChange={(e) => setForm({ ...form, color: e.target.value })}
+                      className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-slate-200 p-1"
+                    />
+                    <input
+                      value={form.color}
+                      onChange={(e) => setForm({ ...form, color: e.target.value })}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                {editing && (
+                  <p className="text-xs text-slate-400">
+                    {editing.sessionsCount > 0
+                      ? `${editing.sessionsCount} session(s) currently use this track.`
+                      : 'No sessions in this track yet.'}
+                  </p>
+                )}
+                {deleteError && <Banner variant="error">{deleteError}</Banner>}
+              </div>
+
+              <div className="flex flex-col gap-2.5 border-t border-slate-100 px-5 py-4">
+                {editing && (
+                  <button
+                    onClick={() => requestDelete(editing)}
+                    className="w-full rounded-lg bg-danger py-2.5 text-[13px] font-semibold text-white hover:bg-danger/90"
+                  >
+                    Delete Track
+                  </button>
+                )}
+                <div className="flex gap-2.5">
+                  <button onClick={() => setFormOpen(false)} className="flex-1 rounded-lg border border-slate-200 py-2.5 text-[13px] font-semibold text-navy hover:bg-offwhite">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={submit}
+                    disabled={saving}
+                    className="flex-1 rounded-lg bg-orange py-2.5 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
+                  >
+                    {saving ? 'Saving…' : 'Save Changes'}
+                  </button>
                 </div>
               </div>
-              {editing && (
-                <p className="text-xs text-slate-400">
-                  {editing.sessionsCount > 0
-                    ? `${editing.sessionsCount} session(s) currently use this track.`
-                    : 'No sessions in this track yet.'}
-                </p>
-              )}
-              {deleteError && <Banner variant="error">{deleteError}</Banner>}
-            </div>
-            <div className="flex flex-col gap-2.5 border-t border-slate-100 px-5 py-4">
-              {editing && (
-                <button
-                  onClick={() => requestDelete(editing)}
-                  className="w-full rounded-lg bg-danger py-2.5 text-[13px] font-semibold text-white hover:bg-danger/90"
-                >
-                  Delete Track
-                </button>
-              )}
-              <div className="flex gap-2.5">
-                <button onClick={() => setFormOpen(false)} className="flex-1 rounded-lg border border-slate-200 py-2.5 text-[13px] font-semibold text-navy hover:bg-offwhite">
-                  Cancel
-                </button>
-                <button
-                  onClick={submit}
-                  disabled={saving}
-                  className="flex-1 rounded-lg bg-orange py-2.5 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
-                >
-                  {saving ? 'Saving…' : 'Save Changes'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ConfirmDialog
         open={!!toDelete}

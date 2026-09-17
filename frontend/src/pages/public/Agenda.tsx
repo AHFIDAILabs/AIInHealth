@@ -41,7 +41,7 @@ const fromRealSession = (s: AdminSession): DisplaySession => ({
   key: s._id,
   time: `${s.startTime} – ${s.endTime}`,
   title: s.title,
-  track: s.track.name,
+  track: s.track?.name ?? 'General Session',
   icon: FORMAT_ICON[s.format] ?? Users,
   room: s.room,
   speakers: s.speakers,

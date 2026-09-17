@@ -40,7 +40,7 @@ export interface AdminSession {
   startTime: string;
   endTime: string;
   title: string;
-  track: SessionTrackRef;
+  track: SessionTrackRef | null;
   format: SessionFormat;
   room: string;
   description?: string;
@@ -62,8 +62,8 @@ export interface SessionInput {
   startTime: string;
   endTime: string;
   title: string;
-  // A Track id (see track.service.ts's adminListTracks), not a name/enum value.
-  track: string;
+  // A Track id (see track.service.ts's adminListTracks), or null for "No track".
+  track: string | null;
   format: SessionFormat;
   room: string;
   description?: string;

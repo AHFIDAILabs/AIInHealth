@@ -63,7 +63,7 @@ export const GridViewTab = () => {
                 <div
                   key={s._id}
                   className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4"
-                  style={{ borderTopWidth: 4, borderTopColor: s.track.color }}
+                  style={{ borderTopWidth: 4, borderTopColor: s.track?.color ?? '#CBD5E1' }}
                 >
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                     <Clock size={12} className="text-orange" />
@@ -72,9 +72,9 @@ export const GridViewTab = () => {
                   <p className="mt-2 font-display text-sm font-semibold leading-snug text-navy">{s.title}</p>
                   <span
                     className="mt-2 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                    style={{ backgroundColor: `${s.track.color}1A`, color: s.track.color }}
+                    style={{ backgroundColor: s.track ? `${s.track.color}1A` : '#F1F5F9', color: s.track?.color ?? '#64748B' }}
                   >
-                    {s.track.name}
+                    {s.track?.name ?? 'No track'}
                   </span>
                   {s.room && (
                     <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
