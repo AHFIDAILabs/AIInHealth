@@ -9,38 +9,38 @@ import { getOrCreateRubric } from '../models/Rubric.model.js';
 import { env } from '../config/env.js';
 import { setReviewerCookie, clearReviewerCookie } from '../utils/cookies.js';
 import {
-  issueReviewerMagicLinkToken,
-  consumeReviewerMagicLinkToken,
+  ensureReviewerAccessCode,
+  verifyReviewerAccessCode,
   signReviewerSessionToken,
 } from '../services/reviewerToken.service.js';
 import { sendReviewerAssignmentEmail } from '../services/email.service.js';
 import { computeWeightedScore } from '../utils/reviewScoring.js';
 import type {
-  RequestReviewerMagicLinkInput,
-  VerifyReviewerMagicLinkInput,
+  RequestReviewerAccessCodeInput,
+  VerifyReviewerAccessCodeInput,
   SubmitReviewScoresInput,
   AdminCreateReviewerInput,
 } from '../validations/reviewer.validation.js';
 
-// --- Public: magic-link auth (mirrors delegate.controller.ts exactly) ---
+// --- Public: access-code auth (mirrors delegate.controller.ts's magic-link
+// shape, but the code is stable/reusable rather than single-use) ---
 
-export const requestMagicLink = catchAsync(async (req: Request, res: Response) => {
-  const { email } = req.body as RequestReviewerMagicLinkInput;
+export const requestAccessCode = catchAsync(async (req: Request, res: Response) => {
+  const { email } = req.body as RequestReviewerAccessCodeInput;
 
   const reviewer = await Reviewer.findOne({ email, isActive: true });
   if (reviewer) {
-    const rawToken = await issueReviewerMagicLinkToken(reviewer.id);
-    const linkUrl = `${env.FRONTEND_ORIGIN}/review/verify?token=${rawToken}`;
-    await sendReviewerAssignmentEmail(reviewer.email, reviewer.fullName, { linkUrl });
+    const accessCode = await ensureReviewerAccessCode(reviewer);
+    await sendReviewerAssignmentEmail(reviewer.email, reviewer.fullName, { accessCode });
   }
 
   // Enumeration-safe: identical response whether or not a reviewer account exists.
-  res.json(new ApiResponse({ message: 'If that email is registered as a reviewer, a sign-in link has been sent.' }));
+  res.json(new ApiResponse({ message: 'If that email is registered as a reviewer, your access code has been sent.' }));
 });
 
-export const verifyMagicLink = catchAsync(async (req: Request, res: Response) => {
-  const { token } = req.body as VerifyReviewerMagicLinkInput;
-  const reviewerId = await consumeReviewerMagicLinkToken(token);
+export const verifyAccessCode = catchAsync(async (req: Request, res: Response) => {
+  const { email, code } = req.body as VerifyReviewerAccessCodeInput;
+  const reviewerId = await verifyReviewerAccessCode(email, code);
 
   const sessionToken = signReviewerSessionToken(reviewerId);
   setReviewerCookie(res, sessionToken, env.REVIEWER_SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);

@@ -1,33 +1,49 @@
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
+import type { HydratedDocument } from 'mongoose';
 import { env } from '../config/env.js';
-import { ReviewerMagicLinkToken } from '../models/ReviewerMagicLinkToken.model.js';
+import { REVIEWER_ACCESS_CODE_EXPIRES_AT } from '../config/event.js';
+import { Reviewer, type ReviewerDoc } from '../models/Reviewer.model.js';
 import { ApiError } from '../utils/ApiError.js';
 
-// Exact mirror of delegateToken.service.ts, scoped to Reviewer instead of Registration.
+// --- Access code (stable, reusable, hand-typed — replaces the old single-use
+// magic-link token) ---
 
-const sha256 = (value: string): string => crypto.createHash('sha256').update(value).digest('hex');
+// Excludes visually ambiguous characters (0/O, 1/I) — same alphabet as
+// accessCode.controller.ts's generateCode; a reviewer may read/type this by
+// hand off an email weeks after receiving it.
+const SAFE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const randomCode = (): string =>
+  `RV-${Array.from({ length: 6 }, () => SAFE_ALPHABET[crypto.randomInt(SAFE_ALPHABET.length)]).join('')}`;
 
-// --- Magic link (single-use, short-lived, hashed at rest) ---
-
-export const issueReviewerMagicLinkToken = async (reviewerId: string): Promise<string> => {
-  const raw = crypto.randomBytes(32).toString('hex');
-  await ReviewerMagicLinkToken.create({
-    reviewer: reviewerId,
-    tokenHash: sha256(raw),
-    expiresAt: new Date(Date.now() + env.REVIEWER_MAGIC_LINK_TTL_MINUTES * 60 * 1000),
-  });
-  return raw;
+// Generates a reviewer's access code once and reuses it forever after — every
+// future assignment email or resend request hands back the SAME code, so a
+// reviewer who's already noted theirs down never has it invalidated out from
+// under them. Every reviewer's code expires at the same fixed cutoff
+// (REVIEWER_ACCESS_CODE_EXPIRES_AT, a week after the Summit), not on a
+// rolling per-issue timer.
+export const ensureReviewerAccessCode = async (reviewer: HydratedDocument<ReviewerDoc>): Promise<string> => {
+  if (reviewer.accessCode) return reviewer.accessCode;
+  let code = randomCode();
+  // Collision odds at this alphabet/length are astronomically low, but check anyway.
+  // eslint-disable-next-line no-await-in-loop
+  while (await Reviewer.exists({ accessCode: code })) code = randomCode();
+  reviewer.accessCode = code;
+  reviewer.accessCodeExpiresAt = REVIEWER_ACCESS_CODE_EXPIRES_AT;
+  await reviewer.save();
+  return code;
 };
 
-export const consumeReviewerMagicLinkToken = async (rawToken: string): Promise<string> => {
-  const record = await ReviewerMagicLinkToken.findOne({ tokenHash: sha256(rawToken) });
-  if (!record || record.usedAt || record.expiresAt < new Date()) {
-    throw new ApiError(400, 'This sign-in link is invalid or has expired.', 'MAGIC_LINK_INVALID');
+export const verifyReviewerAccessCode = async (email: string, code: string): Promise<string> => {
+  const reviewer = await Reviewer.findOne({ email: email.trim().toLowerCase(), isActive: true });
+  const normalizedCode = code.trim().toUpperCase();
+  if (!reviewer || !reviewer.accessCode || reviewer.accessCode !== normalizedCode) {
+    throw new ApiError(400, 'That email/access code combination is invalid.', 'ACCESS_CODE_INVALID');
   }
-  record.usedAt = new Date();
-  await record.save();
-  return record.reviewer.toString();
+  if (!reviewer.accessCodeExpiresAt || reviewer.accessCodeExpiresAt < new Date()) {
+    throw new ApiError(400, 'This access code has expired.', 'ACCESS_CODE_EXPIRED');
+  }
+  return reviewer.id;
 };
 
 // --- Session token (long-lived JWT cookie, no rotation) ---

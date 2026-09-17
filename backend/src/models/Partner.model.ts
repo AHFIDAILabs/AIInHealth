@@ -9,10 +9,6 @@ import { PARTNER_STATUSES } from '../types/enums.js';
 const partnerSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
-    // Free text, not a fixed enum — an admin can type any organization type.
-    // PARTNER_CATEGORY_SUGGESTIONS (enums.ts) offers the original 4 values as
-    // autocomplete suggestions in the admin form, not an enforced list.
-    category: { type: String, required: true, trim: true },
     website: { type: String, trim: true },
     description: { type: String, trim: true, maxlength: 1000 },
     logoUrl: { type: String, trim: true },
@@ -29,6 +25,12 @@ const partnerSchema = new Schema(
     contactEmail: { type: String, trim: true, lowercase: true },
     contactPhone: { type: String, trim: true },
     status: { type: String, enum: PARTNER_STATUSES, default: 'lead' },
+    // Drives BOTH the CRM (Sponsors tab "Package" column) and the public
+    // Partners page's tier grouping (Title/Technical/Supporting Partners) —
+    // see the public list() in partner.controller.ts and PartnersShowcase.tsx.
+    // A published partner with no package assigned simply doesn't appear in
+    // any tier section there, so every partner meant to show up publicly
+    // needs one.
     package: { type: Schema.Types.ObjectId, ref: 'SponsorshipPackage' },
     // Admin-entered running total — sponsors are typically invoiced/paid
     // outside Paystack, so this tracks reality rather than driving a
@@ -39,7 +41,6 @@ const partnerSchema = new Schema(
 );
 
 partnerSchema.index({ isPublished: 1, order: 1 });
-partnerSchema.index({ category: 1 });
 partnerSchema.index({ status: 1 });
 
 export type PartnerDoc = InferSchemaType<typeof partnerSchema>;

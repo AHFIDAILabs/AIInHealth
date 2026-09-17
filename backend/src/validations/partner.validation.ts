@@ -8,7 +8,6 @@ const objectIdField = z.string().trim().refine(isValidObjectId, 'Invalid id');
 export const createPartnerSchema = z.object({
   body: z.object({
     name: z.string().trim().min(2, "Enter the partner's name"),
-    category: z.string().trim().min(1, 'Enter a category'),
     website: optionalUrlField,
     description: z.string().trim().max(1000).optional(),
     logoUrl: optionalUrlField,
@@ -28,7 +27,6 @@ export const updatePartnerSchema = z.object({
 });
 
 export const listPartnersQuerySchema = z.object({
-  category: z.string().trim().optional(),
   status: z.enum(PARTNER_STATUSES).optional(),
   published: z.enum(['true', 'false']).optional(),
   q: z.string().trim().max(200).optional(),

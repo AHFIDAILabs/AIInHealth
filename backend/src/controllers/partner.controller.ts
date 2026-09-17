@@ -15,17 +15,17 @@ import {
 import { recordAudit } from '../services/audit.service.js';
 import { PARTNER_STATUSES } from '../types/enums.js';
 
-// GET /partners — public, published only
-export const list = catchAsync(async (req: Request, res: Response) => {
-  const category = typeof req.query.category === 'string' ? req.query.category : undefined;
-  const filter: FilterQuery<PartnerDoc> = { isPublished: true, ...(category ? { category } : {}) };
-  const partners = await Partner.find(filter).sort({ order: 1, name: 1 });
+// GET /partners — public, published only. Package populated (name + tierOrder)
+// so the public Partners page can group logos into Title/Technical/Supporting
+// sections purely from that field — see PartnersShowcase.tsx.
+export const list = catchAsync(async (_req: Request, res: Response) => {
+  const filter: FilterQuery<PartnerDoc> = { isPublished: true };
+  const partners = await Partner.find(filter).populate('package', 'name tierOrder').sort({ order: 1, name: 1 });
   res.json(new ApiResponse(partners));
 });
 
 const buildAdminFilter = (query: ListPartnersQuery): FilterQuery<PartnerDoc> => {
   const filter: FilterQuery<PartnerDoc> = {};
-  if (query.category) filter.category = query.category;
   if (query.status) filter.status = query.status;
   if (query.published) filter.isPublished = query.published === 'true';
   if (query.q) {
@@ -55,7 +55,7 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
   const skip = (query.page - 1) * query.limit;
 
   const [items, total] = await Promise.all([
-    Partner.find(filter).populate('package', 'name price').sort({ order: 1, name: 1 }).skip(skip).limit(query.limit),
+    Partner.find(filter).populate('package', 'name price tierOrder').sort({ order: 1, name: 1 }).skip(skip).limit(query.limit),
     Partner.countDocuments(filter),
   ]);
 
@@ -88,7 +88,7 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   const input = updatePartnerSchema.parse({ body: req.body }).body;
   const before = await Partner.findById(req.params.id);
   if (!before) throw new ApiError(404, 'Partner not found', 'NOT_FOUND');
-  const partner = await Partner.findByIdAndUpdate(req.params.id, input, { new: true }).populate('package', 'name price');
+  const partner = await Partner.findByIdAndUpdate(req.params.id, input, { new: true }).populate('package', 'name price tierOrder');
   if (!partner) throw new ApiError(404, 'Partner not found', 'NOT_FOUND');
   await recordAudit({
     req,

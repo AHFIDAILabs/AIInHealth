@@ -7,9 +7,8 @@ import { Abstract, type AbstractDoc } from '../models/Abstract.model.js';
 import { AbstractReview } from '../models/AbstractReview.model.js';
 import { Reviewer } from '../models/Reviewer.model.js';
 import { AbstractCommunication } from '../models/AbstractCommunication.model.js';
-import { env } from '../config/env.js';
 import { sendReviewerAssignmentEmail } from '../services/email.service.js';
-import { issueReviewerMagicLinkToken } from '../services/reviewerToken.service.js';
+import { ensureReviewerAccessCode } from '../services/reviewerToken.service.js';
 import { draftDecisionCommunication } from '../services/communication.service.js';
 import { getScoreBand } from '../utils/reviewScoring.js';
 import { getOrCreateRubric } from '../models/Rubric.model.js';
@@ -233,9 +232,8 @@ export const assignReviewer = catchAsync(async (req: Request, res: Response) => 
     await abstract.save();
   }
 
-  const rawToken = await issueReviewerMagicLinkToken(reviewer.id);
-  const linkUrl = `${env.FRONTEND_ORIGIN}/review/verify?token=${rawToken}`;
-  await sendReviewerAssignmentEmail(reviewer.email, reviewer.fullName, { abstractTitle: abstract.title, linkUrl });
+  const accessCode = await ensureReviewerAccessCode(reviewer);
+  await sendReviewerAssignmentEmail(reviewer.email, reviewer.fullName, { abstractTitle: abstract.title, accessCode });
 
   await recordAudit({
     req,

@@ -1,19 +1,20 @@
 import { z } from 'zod';
 import { ABSTRACT_DECISIONS } from '../types/enums.js';
 
-export const requestReviewerMagicLinkSchema = z.object({
+export const requestReviewerAccessCodeSchema = z.object({
   body: z.object({
     email: z.string().trim().toLowerCase().email('Enter a valid email'),
   }),
 });
-export type RequestReviewerMagicLinkInput = z.infer<typeof requestReviewerMagicLinkSchema>['body'];
+export type RequestReviewerAccessCodeInput = z.infer<typeof requestReviewerAccessCodeSchema>['body'];
 
-export const verifyReviewerMagicLinkSchema = z.object({
+export const verifyReviewerAccessCodeSchema = z.object({
   body: z.object({
-    token: z.string().trim().min(1, 'token is required'),
+    email: z.string().trim().toLowerCase().email('Enter a valid email'),
+    code: z.string().trim().min(1, 'Enter your access code'),
   }),
 });
-export type VerifyReviewerMagicLinkInput = z.infer<typeof verifyReviewerMagicLinkSchema>['body'];
+export type VerifyReviewerAccessCodeInput = z.infer<typeof verifyReviewerAccessCodeSchema>['body'];
 
 // Every criterion currently on the rubric must be scored 1-5 — enforced in
 // the controller (against the live rubric) rather than here, since the set

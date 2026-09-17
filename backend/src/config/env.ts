@@ -38,13 +38,12 @@ const envSchema = z.object({
   DELEGATE_MAGIC_LINK_TTL_MINUTES: z.coerce.number().int().default(15),
   DELEGATE_SESSION_TTL_DAYS: z.coerce.number().int().default(45),
 
-  // Reviewer portal — same magic-link pattern as the delegate portal above, its
-  // own secret/cookie so the two auth systems can never be confused for each
-  // other. Longer windows than the delegate portal: a review period runs for
-  // weeks, not the length of a single event, and a reviewer may not click
-  // through immediately.
+  // Reviewer portal — own secret/cookie so it can never be confused with the
+  // delegate portal's session. Auth is a stable access code (config/event.ts's
+  // REVIEWER_ACCESS_CODE_EXPIRES_AT governs how long a code itself stays
+  // valid); REVIEWER_SESSION_TTL_DAYS is separately how long a signed-in
+  // session/cookie lasts once a reviewer has entered that code.
   REVIEWER_TOKEN_SECRET: z.string().min(32),
-  REVIEWER_MAGIC_LINK_TTL_MINUTES: z.coerce.number().int().default(30),
   REVIEWER_SESSION_TTL_DAYS: z.coerce.number().int().default(60),
 
   // Paystack — empty in dev disables real checkout (initialize just no-ops with a

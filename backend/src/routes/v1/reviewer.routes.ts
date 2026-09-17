@@ -4,16 +4,16 @@ import { requireReviewerAuth } from '../../middlewares/reviewer.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { loginLimiter } from '../../middlewares/rateLimiter.middleware.js';
 import {
-  requestReviewerMagicLinkSchema,
-  verifyReviewerMagicLinkSchema,
+  requestReviewerAccessCodeSchema,
+  verifyReviewerAccessCodeSchema,
   submitReviewScoresSchema,
 } from '../../validations/reviewer.validation.js';
 
 const router = Router();
 
-// --- Public: magic-link auth ---
-router.post('/request-link', loginLimiter, validate(requestReviewerMagicLinkSchema), reviewerController.requestMagicLink);
-router.post('/verify-link', loginLimiter, validate(verifyReviewerMagicLinkSchema), reviewerController.verifyMagicLink);
+// --- Public: access-code auth ---
+router.post('/request-code', loginLimiter, validate(requestReviewerAccessCodeSchema), reviewerController.requestAccessCode);
+router.post('/verify-code', loginLimiter, validate(verifyReviewerAccessCodeSchema), reviewerController.verifyAccessCode);
 
 // --- Reviewer-authenticated ---
 router.use(requireReviewerAuth);

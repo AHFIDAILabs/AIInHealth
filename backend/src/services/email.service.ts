@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
+import { REVIEWER_ACCESS_CODE_EXPIRES_AT } from '../config/event.js';
 
 const graphConfigured = Boolean(env.MS_TENANT_ID && env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.MS_SENDER_EMAIL);
 export const emailConfigured = graphConfigured;
@@ -201,23 +202,34 @@ export const sendDelegateMagicLinkEmail = async (to: string, fullName: string, l
 };
 
 // Doubles as both "you've been assigned an abstract to review" and "here's
-// your sign-in link" — a reviewer gets one of these whenever they're newly
-// assigned, and can request a fresh one anytime from /review/login if their
-// session has expired (reviewController.requestMagicLink reuses this too).
+// your access code" — a reviewer gets one of these whenever they're newly
+// assigned, and can request the same code resent anytime from /review/login
+// if they've misplaced it (reviewController.requestAccessCode reuses this
+// too). The code itself is stable — every send for a given reviewer carries
+// the same accessCode (see ensureReviewerAccessCode) — and the link is just a
+// plain, unparameterized shortcut to the sign-in page, not a one-time token.
 export const sendReviewerAssignmentEmail = async (
   to: string,
   fullName: string,
-  data: { abstractTitle?: string; linkUrl: string }
+  data: { abstractTitle?: string; accessCode: string }
 ): Promise<void> => {
+  const portalUrl = `${env.FRONTEND_ORIGIN}/review/login`;
+  const expiresLabel = REVIEWER_ACCESS_CODE_EXPIRES_AT.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
   await sendEmail({
     to,
     subject: data.abstractTitle
       ? 'New abstract assigned for your review — AI in Health Summit 2026'
-      : 'Your AI in Health Summit 2026 reviewer portal sign-in link',
+      : 'Your AI in Health Summit 2026 reviewer access code',
     html: `
       <p>Hi ${fullName},</p>
       ${data.abstractTitle ? `<p>You've been assigned to review the abstract: <strong>${data.abstractTitle}</strong>.</p>` : ''}
-      <p><a href="${data.linkUrl}">Click here to sign in to your reviewer portal</a> (expires in ${env.REVIEWER_MAGIC_LINK_TTL_MINUTES} minutes).</p>
+      <p>Your reviewer access code is:</p>
+      <p style="font-size:20px;font-weight:700;letter-spacing:1px;">${data.accessCode}</p>
+      <p><a href="${portalUrl}">Click here to go to the reviewer portal</a>, then enter your email and this code to sign in. This code doesn't expire on a timer — it stays valid through ${expiresLabel} (about a week after the Summit), so keep it handy and sign in whenever suits you.</p>
       <p>From there you can see every abstract assigned to you and submit your scores against the review rubric.</p>
       <p>If you didn't expect this, you can safely ignore this email, or contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
