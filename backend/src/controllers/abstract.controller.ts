@@ -200,6 +200,7 @@ export const reviewMatrix = catchAsync(async (req: Request, res: Response) => {
         reviewer: r.reviewer,
         weightedScore: r.weightedScore,
         status: r.status,
+        reviewerStatus: r.reviewerStatus,
       })),
       reviewsCompleted: completed.length,
       reviewsTotal: reviews.length,

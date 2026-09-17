@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { SESSION_DAYS, SESSION_FORMATS, TRACKS } from '../types/enums.js';
+import { SESSION_DAYS, SESSION_FORMATS } from '../types/enums.js';
 
 const sessionSchema = new Schema(
   {
@@ -7,7 +7,10 @@ const sessionSchema = new Schema(
     startTime: { type: String, required: true, trim: true }, // "09:00", 24h — validated in Zod
     endTime: { type: String, required: true, trim: true },
     title: { type: String, required: true, trim: true },
-    track: { type: String, enum: TRACKS, required: true },
+    // References Track.model.ts — Sessions-only; Speaker/Abstract/Innovation
+    // still use the separate fixed TRACKS enum (types/enums.ts). See
+    // Track.model.ts's own comment for why these were kept apart.
+    track: { type: Schema.Types.ObjectId, ref: 'Track', required: true },
     format: { type: String, enum: SESSION_FORMATS, required: true },
     room: { type: String, required: true, trim: true },
     description: { type: String, trim: true, maxlength: 3000 },

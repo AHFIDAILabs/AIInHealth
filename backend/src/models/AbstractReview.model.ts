@@ -29,6 +29,14 @@ const abstractReviewSchema = new Schema(
     recommendation: { type: String, enum: ABSTRACT_DECISIONS },
     status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
     completedAt: { type: Date },
+    // The reviewer's own response to being assigned — separate from `status`
+    // above, which is purely about scoring progress. A reviewer must
+    // `respondToAssignment('accepted')` before submitScores will accept
+    // anything from them (reviewer.controller.ts), and 'declined' notifies
+    // the admin to reassign this abstract to someone else (reviewer.controller.ts's
+    // respondToAssignment) rather than leaving it silently stuck.
+    reviewerStatus: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending' },
+    respondedAt: { type: Date },
   },
   { timestamps: true }
 );

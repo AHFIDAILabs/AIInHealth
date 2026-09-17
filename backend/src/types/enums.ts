@@ -75,7 +75,13 @@ export type ContactCategory = (typeof CONTACT_CATEGORIES)[number];
 // The live-event types the Socket.IO /admin namespace and web push both fan
 // out — kept as one list so Settings' notification-preference checkboxes and the
 // actual emitters can never drift apart.
-export const NOTIFICATION_EVENTS = ['registration.new', 'inquiry.new', 'message.new', 'newsletter.new'] as const;
+export const NOTIFICATION_EVENTS = [
+  'registration.new',
+  'inquiry.new',
+  'message.new',
+  'newsletter.new',
+  'abstract.reviewer_declined',
+] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
 // Access codes gate the two self-service paths that skip payment entirely: a

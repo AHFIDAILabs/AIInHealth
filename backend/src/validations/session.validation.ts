@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SESSION_DAYS, SESSION_FORMATS, TRACKS } from '../types/enums.js';
+import { SESSION_DAYS, SESSION_FORMATS } from '../types/enums.js';
 
 const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use 24-hour HH:mm format');
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
@@ -9,7 +9,7 @@ const baseSessionShape = {
   startTime: timeString,
   endTime: timeString,
   title: z.string().trim().min(2, 'Enter a title'),
-  track: z.enum(TRACKS),
+  track: objectId,
   format: z.enum(SESSION_FORMATS),
   room: z.string().trim().min(1, 'Enter a room'),
   description: z.string().trim().max(3000).optional(),
@@ -61,7 +61,7 @@ export const publicRsvpSchema = z.object({
 
 export const listSessionsQuerySchema = z.object({
   day: z.enum(SESSION_DAYS).optional(),
-  track: z.enum(TRACKS).optional(),
+  track: objectId.optional(),
   published: z.enum(['true', 'false']).optional(),
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),

@@ -30,7 +30,8 @@ export const list = catchAsync(async (req: Request, res: Response) => {
   const sessions = await Session.find(filter)
     .select('-rsvpList')
     .sort({ day: 1, startTime: 1 })
-    .populate('speakers', SPEAKER_FIELDS);
+    .populate('speakers', SPEAKER_FIELDS)
+    .populate('track', 'name color');
   res.json(new ApiResponse(sessions));
 });
 
@@ -52,7 +53,12 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
   const skip = (query.page - 1) * query.limit;
 
   const [items, total] = await Promise.all([
-    Session.find(filter).sort({ day: 1, startTime: 1 }).skip(skip).limit(query.limit).populate('speakers', SPEAKER_FIELDS),
+    Session.find(filter)
+      .sort({ day: 1, startTime: 1 })
+      .skip(skip)
+      .limit(query.limit)
+      .populate('speakers', SPEAKER_FIELDS)
+      .populate('track', 'name color'),
     Session.countDocuments(filter),
   ]);
 
@@ -83,7 +89,8 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
   const input = createSessionSchema.parse({ body: req.body }).body;
   const conflicts = await findConflicts(input.day, input.room, input.startTime, input.endTime);
   const session = await Session.create(input);
-  const populated = await session.populate('speakers', SPEAKER_FIELDS);
+  await session.populate('speakers', SPEAKER_FIELDS);
+  const populated = await session.populate('track', 'name color');
   await recordAudit({ req, action: 'session.created', resourceType: 'Session', resourceId: session.id, after: session.toObject() });
   res.status(201).json(new ApiResponse(populated, { conflicts }));
 });
@@ -110,7 +117,9 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
     throw new ApiError(422, 'Set a maximum number of attendees for an RSVP session.', 'VALIDATION_ERROR');
   }
 
-  const session = await Session.findByIdAndUpdate(req.params.id, input, { new: true }).populate('speakers', SPEAKER_FIELDS);
+  const session = await Session.findByIdAndUpdate(req.params.id, input, { new: true })
+    .populate('speakers', SPEAKER_FIELDS)
+    .populate('track', 'name color');
   if (!session) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
   await recordAudit({
     req,
@@ -155,7 +164,8 @@ export const adminAddRsvp = catchAsync(async (req: Request, res: Response) => {
     });
   }
 
-  const session = await before.populate('speakers', SPEAKER_FIELDS);
+  await before.populate('speakers', SPEAKER_FIELDS);
+  const session = await before.populate('track', 'name color');
   res.status(201).json(new ApiResponse(session));
 });
 
@@ -166,7 +176,9 @@ export const adminRemoveRsvp = catchAsync(async (req: Request, res: Response) =>
     params.id,
     { $pull: { rsvpList: { email: params.email } } },
     { new: true }
-  ).populate('speakers', SPEAKER_FIELDS);
+  )
+    .populate('speakers', SPEAKER_FIELDS)
+    .populate('track', 'name color');
   if (!session) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
   await recordAudit({ req, action: 'session.rsvp_removed', resourceType: 'Session', resourceId: session.id, before: { email: params.email } });
   res.json(new ApiResponse(session));

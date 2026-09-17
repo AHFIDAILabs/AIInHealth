@@ -31,6 +31,7 @@ import * as mediaController from '../../controllers/media.controller.js';
 import * as sponsorshipPackageController from '../../controllers/sponsorshipPackage.controller.js';
 import * as deliverableController from '../../controllers/deliverable.controller.js';
 import * as partnerInteractionController from '../../controllers/partnerInteraction.controller.js';
+import * as trackController from '../../controllers/track.controller.js';
 import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
@@ -126,6 +127,11 @@ router.patch('/sessions/:id', requireRole(...contentRoles), sessionController.ad
 router.delete('/sessions/:id', requireRole(...contentRoles), sessionController.adminDelete);
 router.post('/sessions/:id/rsvp', requireRole(...contentRoles), sessionController.adminAddRsvp);
 router.delete('/sessions/:id/rsvp/:email', requireRole(...contentRoles), sessionController.adminRemoveRsvp);
+
+router.get('/tracks', requireRole(...contentRoles), trackController.adminList);
+router.post('/tracks', requireRole(...contentRoles), trackController.adminCreate);
+router.patch('/tracks/:id', requireRole(...contentRoles), trackController.adminUpdate);
+router.delete('/tracks/:id', requireRole(...contentRoles), trackController.adminDelete);
 
 router.get('/partners', requireRole(...contentRoles), partnerController.adminList);
 router.post('/partners', requireRole(...contentRoles), partnerController.adminCreate);

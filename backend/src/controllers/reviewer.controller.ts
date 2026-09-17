@@ -14,11 +14,13 @@ import {
   signReviewerSessionToken,
 } from '../services/reviewerToken.service.js';
 import { sendReviewerAssignmentEmail } from '../services/email.service.js';
+import { emitAdminNotification } from '../services/notification.service.js';
 import { computeWeightedScore } from '../utils/reviewScoring.js';
 import type {
   RequestReviewerAccessCodeInput,
   VerifyReviewerAccessCodeInput,
   SubmitReviewScoresInput,
+  RespondToAssignmentInput,
   AdminCreateReviewerInput,
 } from '../validations/reviewer.validation.js';
 
@@ -85,9 +87,48 @@ export const listMyAssignments = catchAsync(async (req: Request, res: Response) 
         recommendation: r.recommendation,
         status: r.status,
         completedAt: r.completedAt,
+        reviewerStatus: r.reviewerStatus,
       }))
     )
   );
+});
+
+// PATCH /reviewer/assignments/:id/respond — a reviewer accepts or declines an
+// assignment BEFORE opening/scoring it. Declining never deletes the
+// assignment record (it stays as a visible, reassignable "Declined" row in
+// the admin Review Matrix — see abstract.controller.ts's reviewMatrix) — it
+// just notifies the admin so they can unassign this reviewer and assign
+// someone else, same as abstract.controller.ts's assignReviewer already lets
+// them do for any other reason.
+export const respondToAssignment = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Review assignment not found', 'NOT_FOUND');
+  const { response } = req.body as RespondToAssignmentInput;
+
+  const review = await AbstractReview.findOne({ _id: req.params.id, reviewer: req.reviewer!.reviewerId })
+    .populate('abstract', 'title')
+    .populate('reviewer', 'fullName');
+  if (!review) throw new ApiError(404, 'Review assignment not found', 'NOT_FOUND');
+  if (review.status === 'completed') {
+    throw new ApiError(400, "You've already submitted scores for this abstract.", 'ALREADY_COMPLETED');
+  }
+
+  review.reviewerStatus = response;
+  review.respondedAt = new Date();
+  await review.save();
+
+  if (response === 'declined') {
+    const abstract = review.abstract as unknown as { _id: string; title: string };
+    const reviewer = review.reviewer as unknown as { fullName: string };
+    await emitAdminNotification({
+      type: 'abstract.reviewer_declined',
+      title: 'Reviewer declined an assignment',
+      body: `${reviewer.fullName} declined to review "${abstract.title}" — reassign it to another reviewer.`,
+      resourceType: 'Abstract',
+      resourceId: abstract._id,
+    });
+  }
+
+  res.json(new ApiResponse({ reviewId: review.id, reviewerStatus: review.reviewerStatus }));
 });
 
 // PUT /reviewer/assignments/:id/scores — every criterion currently on the
@@ -100,6 +141,9 @@ export const submitScores = catchAsync(async (req: Request, res: Response) => {
 
   const review = await AbstractReview.findOne({ _id: req.params.id, reviewer: req.reviewer!.reviewerId });
   if (!review) throw new ApiError(404, 'Review assignment not found', 'NOT_FOUND');
+  if (review.reviewerStatus !== 'accepted') {
+    throw new ApiError(400, 'Accept this assignment before submitting a review.', 'NOT_ACCEPTED');
+  }
 
   const rubricDoc = await getOrCreateRubric();
   const criteriaIds = new Set(rubricDoc.criteria.map((c) => c._id!.toString()));

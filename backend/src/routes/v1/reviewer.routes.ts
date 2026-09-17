@@ -7,6 +7,7 @@ import {
   requestReviewerAccessCodeSchema,
   verifyReviewerAccessCodeSchema,
   submitReviewScoresSchema,
+  respondToAssignmentSchema,
 } from '../../validations/reviewer.validation.js';
 
 const router = Router();
@@ -22,6 +23,7 @@ router.get('/me', reviewerController.me);
 router.post('/logout', reviewerController.logout);
 router.get('/rubric', reviewerController.rubric);
 router.get('/assignments', reviewerController.listMyAssignments);
+router.patch('/assignments/:id/respond', validate(respondToAssignmentSchema), reviewerController.respondToAssignment);
 router.put('/assignments/:id/scores', validate(submitReviewScoresSchema), reviewerController.submitScores);
 
 export default router;

@@ -16,6 +16,13 @@ export const verifyReviewerAccessCodeSchema = z.object({
 });
 export type VerifyReviewerAccessCodeInput = z.infer<typeof verifyReviewerAccessCodeSchema>['body'];
 
+export const respondToAssignmentSchema = z.object({
+  body: z.object({
+    response: z.enum(['accepted', 'declined']),
+  }),
+});
+export type RespondToAssignmentInput = z.infer<typeof respondToAssignmentSchema>['body'];
+
 // Every criterion currently on the rubric must be scored 1-5 — enforced in
 // the controller (against the live rubric) rather than here, since the set
 // of valid criterionIds isn't known at schema-definition time.
