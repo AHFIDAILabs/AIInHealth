@@ -9,7 +9,9 @@ const baseSessionShape = {
   startTime: timeString,
   endTime: timeString,
   title: z.string().trim().min(2, 'Enter a title'),
-  track: objectId,
+  // Nullable (not just optional) — a PATCH must be able to explicitly clear
+  // an existing session back to "No track", not just leave it unmentioned.
+  track: objectId.nullable().optional(),
   format: z.enum(SESSION_FORMATS),
   room: z.string().trim().min(1, 'Enter a room'),
   description: z.string().trim().max(3000).optional(),

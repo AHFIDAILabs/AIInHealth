@@ -19,6 +19,7 @@ export const adminList = catchAsync(async (_req: Request, res: Response) => {
 
   const sessionsByTrack = new Map<string, typeof sessions>();
   for (const s of sessions) {
+    if (!s.track) continue; // "No track" sessions never count toward any track's totals
     const key = s.track.toString();
     if (!sessionsByTrack.has(key)) sessionsByTrack.set(key, []);
     sessionsByTrack.get(key)!.push(s);

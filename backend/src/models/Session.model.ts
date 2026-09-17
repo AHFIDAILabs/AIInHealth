@@ -9,8 +9,9 @@ const sessionSchema = new Schema(
     title: { type: String, required: true, trim: true },
     // References Track.model.ts — Sessions-only; Speaker/Abstract/Innovation
     // still use the separate fixed TRACKS enum (types/enums.ts). See
-    // Track.model.ts's own comment for why these were kept apart.
-    track: { type: Schema.Types.ObjectId, ref: 'Track', required: true },
+    // Track.model.ts's own comment for why these were kept apart. Optional —
+    // a session can sit outside any track ("No track" in the admin form).
+    track: { type: Schema.Types.ObjectId, ref: 'Track' },
     format: { type: String, enum: SESSION_FORMATS, required: true },
     room: { type: String, required: true, trim: true },
     description: { type: String, trim: true, maxlength: 3000 },
