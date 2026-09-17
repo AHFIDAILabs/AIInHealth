@@ -43,6 +43,9 @@ export interface ExhibitorPayload {
   website?: string;
   boothSize?: BoothSize;
   productsDescription?: string;
+  // Answers to admin-defined CustomFormField questions, keyed by field _id —
+  // see customFormField.service.ts.
+  customFieldAnswers?: Record<string, string>;
 }
 
 export interface SponsorPayload {

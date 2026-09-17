@@ -35,6 +35,8 @@ import { ForgotPasswordPage } from './pages/admin/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/admin/ResetPasswordPage';
 import { DashboardPage } from './pages/admin/DashboardPage';
 import { RegistrationsPage } from './pages/admin/RegistrationsPage';
+import { ExhibitorsPage } from './pages/admin/ExhibitorsPage';
+import { AttendeesPage } from './pages/admin/AttendeesPage';
 import { SpeakersPage } from './pages/admin/SpeakersPage';
 import { SessionsPage } from './pages/admin/SessionsPage';
 import { PartnersPage } from './pages/admin/PartnersPage';
@@ -124,6 +126,8 @@ function App() {
 
               <Route element={<RequireRole roles={[...REGISTRATION_ROLES, 'viewer']} />}>
                 <Route path="/admin/payments" element={<PaymentsPage />} />
+                <Route path="/admin/exhibitors" element={<ExhibitorsPage />} />
+                <Route path="/admin/attendees" element={<AttendeesPage />} />
               </Route>
 
               <Route element={<RequireRole roles={[...CONTENT_ROLES]} />}>

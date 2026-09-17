@@ -24,6 +24,8 @@ export interface AdminRegistration {
   website?: string;
   boothSize?: BoothSize;
   productsDescription?: string;
+  // Exhibitor only — answers to admin-defined custom fields, keyed by field _id.
+  customFieldAnswers?: Record<string, string>;
   message?: string;
   accessCode?: string;
   // Attendee only — set when accessCode above redeemed a 'scholarship'-type code.
@@ -124,6 +126,28 @@ export const deleteRegistration = async (id: string): Promise<void> => {
   await api.delete(`/admin/registrations/${id}`);
 };
 
+// Same PATCH endpoint as updateRegistrationStatus/updateRegistrationActive above —
+// this is for the exhibitor/attendee-detail edit forms, which need to change core
+// fields (company name, booth size, custom field answers, etc.) rather than status.
+export interface UpdateRegistrationDetailsInput {
+  companyName?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  boothSize?: BoothSize;
+  productsDescription?: string;
+  customFieldAnswers?: Record<string, string>;
+}
+
+export const updateRegistrationDetails = async (
+  id: string,
+  input: UpdateRegistrationDetailsInput
+): Promise<AdminRegistration> => {
+  const res = await api.patch<{ success: true; data: AdminRegistration }>(`/admin/registrations/${id}`, input);
+  return res.data.data;
+};
+
 // Admin-create — same per-type field sets as the public RegistrationPayload
 // union in registration.service.ts, minus the public-only friction (no
 // accessCode string for attendee/volunteer; admin sets a scholarship tier or
@@ -151,6 +175,7 @@ export interface AdminCreateExhibitorPayload {
   website?: string;
   boothSize?: BoothSize;
   productsDescription?: string;
+  customFieldAnswers?: Record<string, string>;
 }
 
 export interface AdminCreateSponsorPayload {

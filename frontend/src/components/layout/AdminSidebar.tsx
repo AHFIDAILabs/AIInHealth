@@ -85,8 +85,8 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'People',
     items: [
-      { label: 'Attendees', to: '/admin/registrations?type=attendee', icon: UserPlus, roles: [...registrationRoles, 'viewer'] },
-      { label: 'Exhibitors', to: '/admin/registrations?type=exhibitor', icon: Building2, roles: [...registrationRoles, 'viewer'] },
+      { label: 'Attendees', to: '/admin/attendees', icon: UserPlus, roles: [...registrationRoles, 'viewer'] },
+      { label: 'Exhibitors', to: '/admin/exhibitors', icon: Building2, roles: [...registrationRoles, 'viewer'] },
       { label: 'Volunteers', to: '/admin/registrations?type=volunteer', icon: HeartHandshake, roles: [...registrationRoles, 'viewer', 'content_editor'] },
       { label: 'Sponsors & Partners', to: '/admin/partners', icon: Handshake, roles: contentRoles },
       { label: 'Portal Tokens', to: '/admin/portal-tokens', icon: Smartphone, roles: registrationRoles },
