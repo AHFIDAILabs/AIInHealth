@@ -1,0 +1,271 @@
+{
+  "runAt": "2026-09-17T08:11:13.568Z",
+  "dryRun": false,
+  "file": "C:\\Users\\HP-PC\\Desktop\\AIinHealth\\backend\\AI_in_Health_Summit_Volunteers.csv",
+  "totalRowsInFile": 64,
+  "validationFailures": [],
+  "duplicateEmailGroupsInFile": [
+    {
+      "email": "lifeskills.edufoundation@gmail.com",
+      "keptRow": 7,
+      "discardedRows": [
+        29
+      ]
+    }
+  ],
+  "inserted": [
+    {
+      "email": "chukwugoziesussan@gmail.com",
+      "fullName": "Chukwugozie Sussan Nneoma"
+    },
+    {
+      "email": "jagsbabi@gmail.com",
+      "fullName": "Jagadish Babu Nagachandra"
+    },
+    {
+      "email": "ayomikuntayoojo@gmail.com",
+      "fullName": "Ayomikun Oluwadara TAYO-OJO"
+    },
+    {
+      "email": "nicoleijudigal@gmail.com",
+      "fullName": "Nicole Askarju Ijudigal"
+    },
+    {
+      "email": "kemfonnta@gmail.com",
+      "fullName": "Mfon Nta"
+    },
+    {
+      "email": "lifeskills.edufoundation@gmail.com",
+      "fullName": "Sunday Acha"
+    },
+    {
+      "email": "ukorclairr@gmail.com",
+      "fullName": "Ukor Claire Adaeze"
+    },
+    {
+      "email": "starnuella@yahoo.com",
+      "fullName": "Esther Otu Ita"
+    },
+    {
+      "email": "kennethleonard2000@gmail.com",
+      "fullName": "Kenneth Leonard"
+    },
+    {
+      "email": "dorcasmusa17@gmail.com",
+      "fullName": "Dorcas Sokolillea Musa"
+    },
+    {
+      "email": "saintekere@gmail.com",
+      "fullName": "Ekereobong Brown"
+    },
+    {
+      "email": "schukwum@andrew.cmu.edu",
+      "fullName": "Samuel Izuchukwu Chukwuma"
+    },
+    {
+      "email": "chiamkadivine@gmail.com",
+      "fullName": "Onyeji Chiamaka Divinr"
+    },
+    {
+      "email": "kasimugummi1@gmail.com",
+      "fullName": "kasimu musa Gummi"
+    },
+    {
+      "email": "mabeladetar@gmail.com",
+      "fullName": "MABEL ADE"
+    },
+    {
+      "email": "debi.career@gmail.com",
+      "fullName": "Deborah Oluwaseyi Adebayo"
+    },
+    {
+      "email": "isiyakumohammed85@gmail.com",
+      "fullName": "isiyaku mohammed"
+    },
+    {
+      "email": "dodja.air@gmail.com",
+      "fullName": "Airat Abdul Rahmon"
+    },
+    {
+      "email": "yakubunanretp@gmail.com",
+      "fullName": "Nanret Yakubu"
+    },
+    {
+      "email": "christabelmbachie9@gmail.com",
+      "fullName": "Christabel Mbachie"
+    },
+    {
+      "email": "radetokunbo@clintonhealthaccess.org",
+      "fullName": "Ruth Adetokunbo"
+    },
+    {
+      "email": "omotoshomicheal123@gmail.com",
+      "fullName": "Omotosho Michael Kayode"
+    },
+    {
+      "email": "misawode@gmail.com",
+      "fullName": "Isawode Mayowa"
+    },
+    {
+      "email": "olaabiodun48@gmail.com",
+      "fullName": "Olaitan Lilian Sanya-Abiodun"
+    },
+    {
+      "email": "rasheedahameen@gmail.com",
+      "fullName": "Rasheedat Ameen"
+    },
+    {
+      "email": "olubusayofaluyi@gmail.com",
+      "fullName": "Olubusayo Omoleye Faluyi"
+    },
+    {
+      "email": "daitemmytorpe@gmail.com",
+      "fullName": "Ogunlere Temitope"
+    },
+    {
+      "email": "otachejoy@yahoo.com",
+      "fullName": "Joy Obonu Imuetinyan-Clement"
+    },
+    {
+      "email": "hamzatadewaleadedamola@yahoo.com",
+      "fullName": "Hamzat Adewale Adedamola"
+    },
+    {
+      "email": "aifuobhokhanmirabel@gmail.com",
+      "fullName": "Mirabel Nneka Aifuobhokhan"
+    },
+    {
+      "email": "adeniranadefunke@gmail.com",
+      "fullName": "Adefunke Adeniran"
+    },
+    {
+      "email": "adebayooluwaseyi24@gmail.com",
+      "fullName": "Adebayo Oluwaseyi"
+    },
+    {
+      "email": "queenlawrence46@gmail.com",
+      "fullName": "Loveth Lawrence"
+    },
+    {
+      "email": "stephenieizang@gmail.com",
+      "fullName": "Stephenie Izang"
+    },
+    {
+      "email": "haleemasalihu1@gmail.com",
+      "fullName": "Halima Muhammad Salihu"
+    },
+    {
+      "email": "idorenyinebienang@gmail.com",
+      "fullName": "Idorenyin"
+    },
+    {
+      "email": "oanika@fhi360.org",
+      "fullName": "Osasere Rachel Anika"
+    },
+    {
+      "email": "vishnureddy.poola@gmail.com",
+      "fullName": "Vishnuvardhan Reddy Poola"
+    },
+    {
+      "email": "anifavour018@gmail.com",
+      "fullName": "Favour ani"
+    },
+    {
+      "email": "xophieonwuamah@gmail.com",
+      "fullName": "Sophia Onwuamah"
+    },
+    {
+      "email": "isolacs@aol.com",
+      "fullName": "Isaac Olorunisola"
+    },
+    {
+      "email": "wardaiswardiii@gmail.com",
+      "fullName": "Habibat Baba-Abdullah"
+    },
+    {
+      "email": "hauwausman.mail@gmail.com",
+      "fullName": "Hauwa"
+    },
+    {
+      "email": "umarabdulrahmanu@gmail.com",
+      "fullName": "UMAR"
+    },
+    {
+      "email": "ukwenyaevelyn60@gmail.com",
+      "fullName": "Evelyn Ojone Omatah"
+    },
+    {
+      "email": "docmaiwada@gmail.com",
+      "fullName": "Dr. ABDULMALIK SALIHU MAIWADA"
+    },
+    {
+      "email": "oeneenenche@gmail.com",
+      "fullName": "Ene Ochegbudu"
+    },
+    {
+      "email": "akpanvivianne@gmail.com",
+      "fullName": "Vivianne Akpan"
+    },
+    {
+      "email": "hassy2yk@gmail.com",
+      "fullName": "Hassana Ahmed Ibrahim"
+    },
+    {
+      "email": "omoleshoakeemomogbolahan@gmail.com",
+      "fullName": "Akeem Omolesho"
+    },
+    {
+      "email": "jgreatcakes@gmail.com",
+      "fullName": "Jennifer Eno Ojeh"
+    },
+    {
+      "email": "reginaonwuneme2@gmail.com",
+      "fullName": "Regina Godwin Onwuneme"
+    },
+    {
+      "email": "courdy16@gmail.com",
+      "fullName": "Courage Essienekak"
+    },
+    {
+      "email": "carosummit1@gmail.com",
+      "fullName": "Dr. Caroline Olaitan"
+    },
+    {
+      "email": "simonkwenibello@gmail.com",
+      "fullName": "Bello Simon"
+    },
+    {
+      "email": "idorenyininwang@gmail.com",
+      "fullName": "Idorenyin Mfon Inwang"
+    },
+    {
+      "email": "tarajemimah@gmail.com",
+      "fullName": "Jemimah Tara"
+    },
+    {
+      "email": "ekwochiadaeze@gmail.com",
+      "fullName": "Ekwochi Adaeze Bethla"
+    },
+    {
+      "email": "dorcasafeniqueen@gmail.com",
+      "fullName": "Bukola Afeni"
+    },
+    {
+      "email": "oyenijiraphaelopeyemi@gmail.com",
+      "fullName": "RAPHAEL OYENIJI"
+    },
+    {
+      "email": "ijeomachieme@gmail.com",
+      "fullName": "Ijeoma Chiemela"
+    },
+    {
+      "email": "nonnymbagwu@gmail.com",
+      "fullName": "Geraldine Mbagwu"
+    },
+    {
+      "email": "adegunlolasherifat49@gmail.com",
+      "fullName": "Sherifat Adegunlola"
+    }
+  ],
+  "skippedConflicts": []
+}
