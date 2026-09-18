@@ -17,7 +17,7 @@ const AhfidMonogram = ({ size = 40 }: { size?: number }) => (
 export const AhfidBadge = ({ className = '' }: { className?: string }) => (
   <div className={`inline-flex items-center gap-2.5 rounded-md border border-ahfid/30 bg-ahfid/10 px-3 py-1.5 ${className}`}>
     <AhfidMonogram size={28} />
-    <span className="font-body text-xs leading-tight text-navy">
+    <span className="font-body text-xs leading-tight text-white">
       <span className="block text-[10px] text-slate-500">Convened by</span>
       <span className="block font-semibold tracking-wide">AHFID</span>
     </span>
