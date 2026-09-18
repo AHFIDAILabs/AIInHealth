@@ -7,8 +7,8 @@ import { VENUE_SHORT } from '../../lib/siteInfo';
 
 const OBJECTIVES = [
   {
-    title: 'Catalyze a National AI-in-Health Framework',
-    body: 'Facilitate strategic, inclusive national roadmaps for AI adoption in healthcare.',
+    title: 'Build a National AI-in-Health Framework',
+    body: 'Help shape a strategic, inclusive national roadmap for AI adoption in healthcare.',
     icon: Target,
   },
   {
@@ -17,18 +17,18 @@ const OBJECTIVES = [
     icon: HeartPulse,
   },
   {
-    title: 'Share Innovations and Best Practices',
-    body: 'Provide a platform for innovators to showcase scalable AI-driven health solutions.',
+    title: 'Showcase Innovations That Work',
+    body: 'Give innovators a platform to show scalable AI-driven health solutions in action.',
     icon: Lightbulb,
   },
   {
     title: 'Strengthen Policy and Ethical Guidance',
-    body: 'Foster dialogue on ethical, policy, and regulatory frameworks for responsible AI use.',
+    body: 'Bring people together on the ethics, policy, and rules that keep AI use in health responsible.',
     icon: ShieldCheck,
   },
   {
     title: 'Facilitate Partnerships, Collaboration and Investment',
-    body: 'Drive investment and ecosystem-building across the AI-in-health landscape.',
+    body: 'Connect the investors, builders, and institutions working on AI in health.',
     icon: Handshake,
   },
 ];
@@ -36,7 +36,7 @@ const OBJECTIVES = [
 const KEY_FACTS = [
   { icon: CalendarDays, label: 'Dates', value: '19–20 October 2026' },
   { icon: MapPin, label: 'Venue', value: VENUE_SHORT },
-  { icon: Target, label: 'Format', value: 'Two-day hybrid summit — in-person + livestreamed sessions' },
+  { icon: Target, label: 'Format', value: 'Two-day hybrid summit, in person and livestreamed' },
   { icon: Compass, label: 'Convener', value: 'Africa Hub for Innovation & Development (AHFID)' },
 ];
 
@@ -77,18 +77,16 @@ export const About = () => {
             Why Now, Why Nigeria
           </h2>
           <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-slate-600">
-            AI is rapidly transforming healthcare delivery worldwide &mdash; enabling more accurate diagnostics,
-            predictive disease surveillance, personalized treatment, operational efficiency, workforce
-            optimization, and evidence-informed policymaking. As countries accelerate digital transformation, AI
-            has emerged as a strategic enabler for strengthening health systems and advancing Universal Health
-            Coverage (UHC).
+            AI is already changing how healthcare gets delivered worldwide: more accurate diagnostics, earlier
+            disease detection, personalized treatment, and health systems that run more efficiently on better
+            information. As countries push digital transformation forward, AI has become a real lever for
+            strengthening health systems and advancing Universal Health Coverage (UHC).
           </p>
           <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-slate-600">
-            Nigeria has demonstrated significant commitment through its National Artificial Intelligence Strategy,
-            investments in digital public infrastructure, and health information systems modernization &mdash;
-            presenting a unique opportunity to position the country as a continental leader in responsible AI for
-            health. The AI in Health Summit 2026 is designed to convert that momentum into a concrete, coordinated
-            national framework.
+            Nigeria has already shown real commitment here, through its National Artificial Intelligence Strategy,
+            investment in digital public infrastructure, and health information systems modernization. That gives
+            the country a genuine opening to lead the continent on responsible AI for health. The AI in Health
+            Summit 2026 is built to turn that momentum into a concrete, coordinated national framework.
           </p>
         </Reveal>
 
@@ -124,7 +122,7 @@ export const About = () => {
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-orange">Summit Goal</p>
         </Reveal>
         <RevealText
-          text="To catalyze a coordinated national and regional ecosystem that accelerates the responsible adoption, governance, financing, and implementation of Artificial Intelligence for stronger, more resilient, equitable, and future-ready health systems."
+          text="To bring Nigeria and its neighbors together around a shared, practical path to responsible AI in health, backed by real policy, funding, and systems to make it last."
           className="mt-7 font-display text-xl italic leading-relaxed text-navy sm:text-2xl lg:text-[1.7rem]"
         />
       </div>

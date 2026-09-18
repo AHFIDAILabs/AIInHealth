@@ -48,7 +48,7 @@ export const Speakers = () => {
   useEffect(() => {
     listPublicSpeakers()
       .then(setSpeakers)
-      .catch(() => setLoadError('Could not load speakers right now — please try again shortly.'));
+      .catch(() => setLoadError('Could not load speakers right now. Please try again shortly.'));
   }, []);
 
   // Derived from whichever speakers are actually published, not a separate
@@ -74,7 +74,7 @@ export const Speakers = () => {
       <PageHero
         eyebrow="Speakers"
         title="Voices Shaping AI in African Healthcare"
-        subtitle="Ministers, regulators, and global health leaders confirmed for Abuja — with more of the lineup still being finalized."
+        subtitle="Ministers, regulators, and global health leaders confirmed for Abuja, with more of the lineup still being finalized."
       />
 
       <section className="bg-white py-24">

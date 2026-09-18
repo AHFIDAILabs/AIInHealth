@@ -17,7 +17,7 @@ import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
 
 const WHO_ATTENDS = [
-  { icon: User, label: 'Individual Delegates', note: 'Clinicians, researchers, and health professionals — full two-day access.' },
+  { icon: User, label: 'Individual Delegates', note: 'Clinicians, researchers, and health professionals, with full two-day access.' },
   { icon: Building2, label: 'Organizations', note: 'Government agencies, companies, and institutions registering team seats.' },
   { icon: GraduationCap, label: 'Students & Early-Career Researchers', note: 'Reduced-rate access for the next generation of AI-in-health talent.' },
 ];
@@ -89,7 +89,7 @@ export const ParticipantsOutcomes = () => {
     <PageHero
       eyebrow="Participants & Outcomes"
       title="Who Attends, and What the Summit Delivers"
-      subtitle="From ministers and clinicians to founders and investors — convened around outcomes designed to outlast the two days on the calendar."
+      subtitle="From ministers and clinicians to founders and investors, all convened around outcomes designed to outlast the two days on the calendar."
     />
 
     {/* Projected impact stats */}
@@ -196,7 +196,7 @@ export const ParticipantsOutcomes = () => {
     <section className="relative overflow-hidden bg-gradient-to-br from-orange to-orange-hover py-20">
       <Reveal className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
         <h2 className="font-display text-2xl font-semibold text-white sm:text-3xl">Find Your Registration Path</h2>
-        <p className="mt-4 text-white/90">Individual, organization, or student — see which category fits you.</p>
+        <p className="mt-4 text-white/90">Individual, organization, or student: see which category fits you.</p>
         <ButtonLink to="/register" variant="secondary" className="!mt-8 !bg-navy !border-navy">
           Register Interest
         </ButtonLink>

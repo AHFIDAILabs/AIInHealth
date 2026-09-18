@@ -18,7 +18,7 @@ export const Volunteers = () => {
   useEffect(() => {
     listPublicVolunteers()
       .then(setVolunteers)
-      .catch(() => setLoadError('Could not load volunteers right now — please try again shortly.'));
+      .catch(() => setLoadError('Could not load volunteers right now. Please try again shortly.'));
   }, []);
 
   const noneYet = volunteers !== null && volunteers.length === 0;
@@ -28,7 +28,7 @@ export const Volunteers = () => {
       <PageHero
         eyebrow="Volunteers"
         title="The Team Making It Happen"
-        subtitle="Confirmed volunteers helping run the Summit on the ground in Abuja — guest services, technical support, and more."
+        subtitle="Confirmed volunteers helping run the Summit on the ground in Abuja: guest services, technical support, and more."
       />
 
       <section className="bg-white py-24">

@@ -50,7 +50,7 @@ export const SessionRsvpModal = ({ session, onClose }: SessionRsvpModalProps) =>
       const { message } = await submitSessionRsvp(session._id, values.email);
       setResult({ ok: true, message });
     } catch (err) {
-      setResult({ ok: false, message: getApiErrorMessage(err, "That didn't work — please try again.") });
+      setResult({ ok: false, message: getApiErrorMessage(err, "That didn't work. Please try again.") });
     }
   };
 
@@ -104,7 +104,7 @@ export const SessionRsvpModal = ({ session, onClose }: SessionRsvpModalProps) =>
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-5 space-y-4">
                 <p className="text-sm text-slate-500">
                   This session has limited seating and is open to confirmed Summit registrants. Enter the email you
-                  registered with to check if you&rsquo;re on the list — or claim a spot if there&rsquo;s still room.
+                  registered with to check if you&rsquo;re on the list, or claim a spot if there&rsquo;s still room.
                 </p>
                 <LightField
                   label="Email"

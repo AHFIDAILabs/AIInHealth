@@ -33,7 +33,7 @@ export const Gallery = () => {
   useEffect(() => {
     listPublicMedia()
       .then(setMedia)
-      .catch(() => setLoadError('Could not load the Gallery right now — please try again shortly.'));
+      .catch(() => setLoadError('Could not load the Gallery right now. Please try again shortly.'));
   }, []);
 
   const filtered = useMemo(() => {
@@ -130,7 +130,7 @@ export const Gallery = () => {
                       {(item.day !== 'general' || item.momentLabel) && (
                         <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-navy/80 to-transparent px-2.5 pb-2 pt-4 text-left text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
                           {item.day !== 'general' ? DAY_LABEL[item.day] : ''}
-                          {item.day !== 'general' && item.momentLabel ? ' — ' : ''}
+                          {item.day !== 'general' && item.momentLabel ? ' · ' : ''}
                           {item.momentLabel}
                         </span>
                       )}

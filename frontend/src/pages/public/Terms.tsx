@@ -29,7 +29,7 @@ const SECTIONS = [
   },
   {
     title: '7. Intellectual Property',
-    body: 'All content on this website — including text, graphics, and branding — is the property of AHFID and the AI in Health Summit 2026 unless otherwise credited, and may not be reproduced without permission.',
+    body: 'All content on this website, including text, graphics, and branding, is the property of AHFID and the AI in Health Summit 2026 unless otherwise credited, and may not be reproduced without permission.',
   },
   {
     title: '8. Limitation of Liability',

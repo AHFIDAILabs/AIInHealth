@@ -120,8 +120,8 @@ export const ProgrammeTimeline = () => {
           </div>
           <p className="max-w-sm text-sm text-slate-500">
             {isLive
-              ? 'Confirmed sessions for this day — see the full two-day agenda for the complete schedule.'
-              : "Indicative programme — confirmed sessions publish here as they're finalized."}
+              ? 'Confirmed sessions for this day. See the full two-day agenda for the complete schedule.'
+              : "Indicative programme: confirmed sessions publish here as they're finalized."}
           </p>
         </Reveal>
 

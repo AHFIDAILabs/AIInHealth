@@ -190,7 +190,7 @@ export const Agenda = () => {
                 <p className="mt-1 font-display text-lg font-semibold text-white sm:text-xl">{day.theme}</p>
                 {!day.isLive && (
                   <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    Indicative programme — confirmed sessions publish here as they're finalized
+                    Indicative programme: confirmed sessions publish here as they're finalized
                   </p>
                 )}
               </div>

@@ -12,7 +12,7 @@ const PHOTO_HIGHLIGHTS = [
     image: nigerianCulturalCentre,
     tag: 'Architectural Landmark',
     title: 'Nigerian Cultural Centre',
-    body: 'One of Abuja’s most striking modern structures — its geometric façade captures the capital’s architectural ambition.',
+    body: 'One of Abuja’s most striking modern structures, with a geometric façade that captures the capital’s architectural ambition.',
   },
   {
     image: ecowasCommission,
@@ -64,7 +64,7 @@ export const AbujaExperience = () => (
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Nearby Landmark</p>
             <p className="mt-1 font-display text-base font-semibold text-white">Zuma Rock</p>
             <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
-              The iconic 725-metre monolith on the Abuja&ndash;Kaduna corridor &mdash; a short drive from the city
+              The iconic 725-metre monolith on the Abuja&ndash;Kaduna corridor, a short drive from the city
               center.
             </p>
           </div>

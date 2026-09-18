@@ -209,7 +209,7 @@ export const PortalHome = () => {
 
       {!delegate.avatarUrl && !editingProfile && (
         <Banner variant="info">
-          Add a profile photo so our team can recognize you at the event —{' '}
+          Add a profile photo so our team can recognize you at the event:{' '}
           <button onClick={openEditProfile} className="font-semibold underline underline-offset-2">
             complete your profile
           </button>
@@ -234,7 +234,7 @@ export const PortalHome = () => {
               <img src={qrDataUrl} alt="Your check-in QR code" className="mx-auto mt-4 h-48 w-48 rounded-xl border border-slate-100" />
               <p className="mt-3 text-xs text-slate-400">
                 {qrIsCached
-                  ? "Showing your last saved ticket — you're offline right now, but this still works at the desk."
+                  ? "Showing your last saved ticket. You're offline right now, but this still works at the desk."
                   : 'Show this at the registration desk on event day.'}
               </p>
             </>

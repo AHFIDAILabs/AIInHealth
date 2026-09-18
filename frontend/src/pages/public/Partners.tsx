@@ -71,8 +71,8 @@ export const Partners = () => {
   <>
     <PageHero
       eyebrow="Partners"
-      title="Build the Ecosystem With Us"
-      subtitle="Government agencies, health institutions, industry, and donors already backing the Summit — with room for more."
+      title="Let&rsquo;s Build This Together"
+      subtitle="Government agencies, health institutions, industry, and donors are already backing the Summit, and there&rsquo;s room for more."
     />
 
     {/* Current partner logos — backed by the real GET /partners (published-only);
@@ -168,7 +168,7 @@ export const Partners = () => {
                       <Icon size={20} />
                     </span>
                     <p className="mt-4 font-display text-lg font-semibold text-navy">{pkg.name}</p>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-orange">&#8358;</p>
+                    {/* <p className="text-xs font-semibold uppercase tracking-wide text-orange">&#8358;{pkg.price.toLocaleString('en-NG')}</p> */}
                     {pkg.benefits && pkg.benefits.length > 0 && (
                       <ul className="mt-4 flex-1 space-y-2.5">
                         {pkg.benefits.map((perk) => (
@@ -194,8 +194,8 @@ export const Partners = () => {
           <AhfidBadge />
           <h2 className="mt-6 font-display text-2xl font-semibold text-white sm:text-3xl">Become a Partner</h2>
           <p className="mt-3 max-w-xl text-slate-300">
-            Tell us about your organization and where you&rsquo;d like to plug in — we&rsquo;ll follow up with
-            tailored partnership options.
+            Tell us about your organization and where you&rsquo;d like to plug in. We&rsquo;ll follow up with
+            partnership options that fit.
           </p>
           <ButtonLink to="/register" variant="secondary" className="mt-6 !border-white/40 !bg-white/10">
             Register Interest Instead
@@ -206,7 +206,7 @@ export const Partners = () => {
           <div className="rounded-2xl bg-white p-6 sm:p-8">
             {isSubmitSuccessful && (
               <p className="mb-5 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success">
-                Thanks for your interest — our partnerships team will follow up shortly.
+                Thanks for your interest. Our partnerships team will follow up shortly.
               </p>
             )}
             {submitError && (

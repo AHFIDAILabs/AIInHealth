@@ -84,7 +84,7 @@ export const AbstractSubmission = () => {
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
                 {serverError && <Banner variant="error">{serverError}</Banner>}
                 {tracks?.length === 0 && (
-                  <Banner variant="error">No tracks are configured yet — please check back shortly.</Banner>
+                  <Banner variant="error">No tracks are configured yet. Please check back shortly.</Banner>
                 )}
 
                 <LightField label="Abstract Title" error={errors.title?.message} {...register('title')} />

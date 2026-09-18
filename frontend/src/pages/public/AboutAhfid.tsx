@@ -8,17 +8,17 @@ const PILLARS = [
   {
     icon: Lightbulb,
     title: 'Innovation',
-    body: 'Championing practical, scalable innovation that responds to the real constraints of African health systems.',
+    body: 'Backing practical innovation that actually works within the real constraints of African health systems.',
   },
   {
     icon: ShieldCheck,
     title: 'Responsible Governance',
-    body: 'Advancing ethical, policy, and regulatory frameworks that keep emerging technology accountable and safe.',
+    body: 'Pushing for the policy and regulatory guardrails that keep new technology accountable and safe.',
   },
   {
     icon: Users,
     title: 'Multi-Sector Collaboration',
-    body: 'Convening government, academia, industry, and development partners around shared, coordinated action.',
+    body: 'Bringing government, academia, industry, and development partners to the same table for coordinated action.',
   },
   {
     icon: HeartHandshake,
@@ -38,12 +38,12 @@ export const AboutAhfid = () => (
         <Reveal className="text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-orange">Who We Are</p>
           <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">
-            Convening Africa&rsquo;s Health Innovation Ecosystem
+            Bringing Africa&rsquo;s Health Innovators Together
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-slate-600">
-            The Africa Hub for Innovation & Development (AHFID) works at the intersection of health, technology, and
-            policy &mdash; building platforms where governments, innovators, researchers, and investors can align
-            around a shared agenda for stronger, more resilient health systems. The AI in Health Summit 2026 is
+            The Africa Hub for Innovation & Development (AHFID) works across health, technology, and policy,
+            building platforms where governments, innovators, researchers, and investors can align around a
+            shared agenda for stronger, more resilient health systems. The AI in Health Summit 2026 is
             AHFID&rsquo;s flagship national convening on artificial intelligence in healthcare.
           </p>
         </Reveal>
@@ -59,8 +59,8 @@ export const AboutAhfid = () => (
             </span>
             <h3 className="mt-4 font-display text-lg font-semibold text-navy">Our Mission</h3>
             <p className="mt-2 text-[15px] leading-relaxed text-slate-600">
-              To accelerate the responsible adoption of innovation &mdash; including artificial intelligence &mdash;
-              across African health systems, through coordinated policy, partnership, and platform-building.
+              To accelerate the responsible adoption of innovation, including artificial intelligence, across
+              African health systems, through coordinated policy, partnership, and platform-building.
             </p>
           </div>
         </Reveal>

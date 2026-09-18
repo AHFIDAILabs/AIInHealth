@@ -92,7 +92,7 @@ export const InnovationShowcase = () => {
                 <>
                   <p className="font-display text-lg font-semibold text-navy">Applications are still open</p>
                   <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-                    We&rsquo;re still confirming the innovations showcasing at the Summit — check back soon, or
+                    We&rsquo;re still confirming the innovations showcasing at the Summit. Check back soon, or
                     apply to showcase your work.
                   </p>
                 </>

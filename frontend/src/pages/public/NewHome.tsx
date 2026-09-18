@@ -77,7 +77,7 @@ export const NewHome = () => {
               </motion.h1>
 
               <motion.h1 className="mt-4 font-display text-lg font-bold leading-snug text-white/90 sm:text-xl">
-                    Catalyzing Country AI-in-Health Framework for Transformative Healthcare Systems
+                    Building Nigeria&rsquo;s National AI-in-Health Framework
                   </motion.h1>
 
                       <motion.div custom={3} variants={fadeUp} className="mt-6 flex flex-wrap items-center gap-3">
@@ -98,21 +98,24 @@ export const NewHome = () => {
             </motion.div>
           </div>
 
-          {/* Right panel — theme card + primary CTAs */}
-          <Reveal delay={0.25} className="flex w-full flex-col gap-4 p-2 sm:px-10 lg:px-0 lg:py-0 lg:rounded-3xl bg-white">
+          {/* Right panel — theme card + primary CTAs. lg:self-start keeps this
+              grid item sized to its own content instead of the default grid
+              stretch-to-row-height (which forced it to match the much-taller
+              left panel and left a large blank gap below the buttons). */}
+          <Reveal delay={0.25} className="flex w-full flex-col gap-4 p-2 sm:px-10 lg:self-start lg:px-0 lg:py-0 lg:rounded-3xl bg-white">
             <div className="flex flex-1 flex-col gap-4 rounded-3xl  bg-white p-0">
               {/* Placeholder until the real theme-card image asset is dropped in —
                   see the TODO at the top of this file. */}
               <div className=" items-center justify-center rounded-3xl bg-gradient-to-b from-[#dfe9f3] to-[#eef3f8] p-0 text-center">
                 <div>
-                 
+
             <img src={homePageBg} alt="Theme card " className="w-full object-fill lg:rounded-3xl p-2" />
-                      <motion.p custom={2} variants={fadeUp} className="w-full p-5 text-[15px] leading-relaxed font-semibold text-gray-700">
+                      <p className="w-full p-5 text-[15px] leading-relaxed font-semibold text-gray-700">
                 Nigeria&rsquo;s premier platform for AI-enabled healthcare, convening national and international
                 leaders to build practical pathways for responsible AI adoption across health systems.
-              </motion.p>
+              </p>
 
-          
+
                 </div>
               </div>
 
@@ -166,8 +169,8 @@ export const NewHome = () => {
           </span>
           <h2 className="mt-5 font-display text-2xl font-semibold text-white sm:text-3xl">Join the Conversation</h2>
           <p className="mt-4 text-white/90">
-            Join policymakers, innovators, and investors shaping the future of AI-powered healthcare in Nigeria and
-            across Africa.
+            Join policymakers, innovators, and investors building what AI-powered healthcare looks like in Nigeria
+            and across Africa.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <ButtonLink to="/register" variant="secondary" className="!bg-navy !border-navy">

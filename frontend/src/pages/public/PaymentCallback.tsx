@@ -44,7 +44,7 @@ export const PaymentCallback = () => {
                 <XCircle size={40} className="mx-auto text-danger" />
                 <p className="mt-4 font-display text-lg font-semibold text-navy">We couldn&rsquo;t confirm this payment</p>
                 <p className="mt-2 text-sm text-slate-500">
-                  {error || "If you completed payment on Paystack, this may just be a delay — try refreshing in a moment, or contact us if it persists."}
+                  {error || "If you completed payment on Paystack, this may just be a delay. Try refreshing in a moment, or contact us if it persists."}
                 </p>
                 <ButtonLink to="/register" variant="secondary" className="!mt-6 !border-slate-300 !bg-white !text-navy">
                   Back to Registration

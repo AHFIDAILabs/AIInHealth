@@ -5,7 +5,7 @@ import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../lib/siteInfo';
 const SECTIONS = [
   {
     title: '1. Information We Collect',
-    body: 'When you register interest, apply as an exhibitor or sponsor, or contact us, we collect information you provide directly — such as your name, email address, phone number, organization, and job title. We also collect basic usage data (pages visited, browser type) via standard web analytics.',
+    body: 'When you register interest, apply as an exhibitor or sponsor, or contact us, we collect information you provide directly, such as your name, email address, phone number, organization, and job title. We also collect basic usage data (pages visited, browser type) via standard web analytics.',
   },
   {
     title: '2. How We Use Your Information',

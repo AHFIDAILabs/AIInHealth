@@ -61,7 +61,7 @@ export const VolunteerForm = () => {
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-        Interested in volunteering? Apply below — it&rsquo;s free, and takes a minute. If you&rsquo;re selected,
+        Interested in volunteering? Apply below. It&rsquo;s free, and takes a minute. If you&rsquo;re selected,
         we&rsquo;ll email you an access code to confirm your spot; come back here and enter it when you get it.
       </p>
 
@@ -94,7 +94,7 @@ export const VolunteerForm = () => {
       <div>
         <LightField
           label="Access Code (optional)"
-          placeholder="VOL-XXXXXX — leave blank to apply"
+          placeholder="VOL-XXXXXX (leave blank to apply)"
           error={errors.accessCode?.message}
           {...register('accessCode')}
           className="uppercase tracking-wider"

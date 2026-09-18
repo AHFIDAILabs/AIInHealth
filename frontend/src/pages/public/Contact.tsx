@@ -50,7 +50,7 @@ export const Contact = () => {
       <PageHero
         eyebrow="Contact"
         title="Get in Touch"
-        subtitle="Questions about the Summit, partnerships, or media? Reach out — our team will route you to the right person."
+        subtitle="Questions about the Summit, partnerships, or media? Reach out, and our team will route you to the right person."
       />
 
       <section className="bg-white py-24">
@@ -84,7 +84,7 @@ export const Contact = () => {
             <div className="rounded-2xl border border-slate-200 bg-offwhite p-6 sm:p-8">
               {isSubmitSuccessful && (
                 <p className="mb-5 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success">
-                  Thanks for reaching out — our team will get back to you soon.
+                  Thanks for reaching out. Our team will get back to you soon.
                 </p>
               )}
               {submitError && (

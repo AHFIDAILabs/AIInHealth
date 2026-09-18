@@ -10,8 +10,8 @@ export const Footer = () => (
         <img src={summitMark} alt="" aria-hidden="true" className="h-9 w-9 rounded-md" />
         <p className="font-display text-lg font-semibold text-white">AI in Health Summit 2026</p>
         <p className="max-w-sm text-sm leading-relaxed text-slate-400">
-          Catalyzing a coordinated national and regional ecosystem for the responsible adoption, governance,
-          financing, and implementation of AI for stronger health systems.
+          Helping Nigeria and the region adopt AI in health responsibly, with the policy, funding, and systems to
+          back it up.
         </p>
       </div>
 

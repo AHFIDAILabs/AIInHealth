@@ -43,7 +43,7 @@ const JOURNEYS = [
     track: 'Infrastructure & Data',
     headline: 'Showcase what you’ve built to the people who can scale it.',
     description:
-      'The startup showcase and infrastructure track — for teams solving data interoperability, access, and delivery at scale.',
+      'The startup showcase and infrastructure track, for teams solving data interoperability, access, and delivery at scale.',
     gains: [
       'A slot in the Startup Showcase or Poster & Abstract sessions',
       'Structured time in the Startup Pod & Deal Room',

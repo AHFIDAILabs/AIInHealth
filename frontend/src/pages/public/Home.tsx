@@ -63,8 +63,8 @@ const IMPACT_EXAMPLES = [
 
 const OBJECTIVES = [
   {
-    title: 'Catalyze a National AI-in-Health Framework',
-    body: 'Facilitate strategic, inclusive national roadmaps for AI adoption in healthcare.',
+    title: 'Build a National AI-in-Health Framework',
+    body: 'Help shape a strategic, inclusive national roadmap for AI adoption in healthcare.',
     icon: Target,
   },
   {
@@ -73,18 +73,18 @@ const OBJECTIVES = [
     icon: HeartPulse,
   },
   {
-    title: 'Share Innovations and Best Practices',
-    body: 'Provide a platform for innovators to showcase scalable AI-driven health solutions.',
+    title: 'Showcase Innovations That Work',
+    body: 'Give innovators a platform to show scalable AI-driven health solutions in action.',
     icon: Lightbulb,
   },
   {
     title: 'Strengthen Policy and Ethical Guidance',
-    body: 'Foster dialogue on ethical, policy, and regulatory frameworks for responsible AI use.',
+    body: 'Bring people together on the ethics, policy, and rules that keep AI use in health responsible.',
     icon: ShieldCheck,
   },
   {
     title: 'Facilitate Partnerships, Collaboration and Investment',
-    body: 'Drive investment and ecosystem-building across the AI-in-health landscape.',
+    body: 'Connect the investors, builders, and institutions working on AI in health.',
     icon: Handshake,
   },
 ];
@@ -149,9 +149,8 @@ export const Home = () => {
             variants={fadeUp}
             className="mx-auto mt-3.5 max-w-2xl font-mono text-xl font-semibold leading-[1.3] tracking-normal text-white sm:text-2xl lg:text-[1.75rem] xl:text-[2rem]"
           >
-            <em className="font-normal italic">Catalyzing</em> Country{' '}
-            <span className="text-orange">AI-in-Health</span> Framework{' '}
-            <em className="font-normal italic">for</em> Transformative Healthcare Systems
+            Building Nigeria&rsquo;s National{' '}
+            <span className="text-orange">AI-in-Health</span> Framework
           </motion.h1>
 
           <motion.p custom={2} variants={fadeUp} className="mx-auto mt-3.5 max-w-lg text-[13px] leading-relaxed text-slate-300 lg:text-sm">
@@ -188,7 +187,7 @@ export const Home = () => {
       body="Be first to hear about confirmed speakers, agenda releases, and policy briefings ahead of Abuja."
       cta="Sign Up"
       source="updates"
-      successMessage="You're subscribed — watch your inbox for updates."
+      successMessage="You're subscribed. Watch your inbox for updates."
     />
 
     <ConvenedWith />
@@ -222,7 +221,7 @@ export const Home = () => {
         </Reveal>
 
         <RevealText
-          text="To catalyze a coordinated national and regional ecosystem that accelerates the responsible adoption, governance, financing, and implementation of Artificial Intelligence for stronger, more resilient, equitable, and future-ready health systems."
+          text="To bring Nigeria and its neighbors together around a shared, practical path to responsible AI in health, backed by real policy, funding, and systems to make it last."
           className="mt-7 font-extralight font-serif text-xl italic leading-relaxed text-navy sm:text-2xl lg:text-[1.7rem] space-x-2"
         />
 
@@ -242,18 +241,17 @@ export const Home = () => {
           </div>
           <h2 className="mt-4 font-display text-2xl font-semibold text-navy sm:text-3xl">Why This Summit Matters</h2>
           <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-slate-600 text-justify">
-            AI is rapidly transforming healthcare delivery worldwide &mdash; enabling more accurate diagnostics,
-            predictive disease surveillance, personalized treatment, operational efficiency, workforce
-            optimization, and evidence-informed policymaking. As countries accelerate digital transformation, AI
-            has emerged as a strategic enabler for strengthening health systems and advancing{' '}
+            AI is already changing how healthcare gets delivered worldwide: more accurate diagnostics, earlier
+            disease detection, personalized treatment, and health systems that run more efficiently on better
+            information. As countries push digital transformation forward, AI has become a real lever for
+            strengthening health systems and advancing{' '}
             <strong className="font-semibold text-navy">Universal Health Coverage (UHC)</strong>.
           </p>
           <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-slate-600 text-justify">
-            Nigeria has demonstrated significant commitment through its{' '}
+            Nigeria has already shown real commitment here, through its{' '}
             <strong className="font-semibold text-navy">National Artificial Intelligence Strategy</strong>,
-            investments in digital public infrastructure, and health information systems modernization &mdash;
-            presenting a unique opportunity to position the country as a continental leader in responsible AI for
-            health.
+            investment in digital public infrastructure, and health information systems modernization. That gives
+            the country a genuine opening to lead the continent on responsible AI for health.
           </p>
           <Link
             to="/about"
@@ -392,7 +390,7 @@ export const Home = () => {
             <p className="text-xs font-semibold uppercase tracking-widest text-orange">Multi-Track Format</p>
             <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">Programme Structure</h2>
             <p className="mt-2 max-w-xl text-slate-600">
-              A two-day programme combining thought leadership with actionable deal-making and policy dialogue.
+              A two-day programme mixing real policy dialogue with deal-making and hands-on sessions.
             </p>
           </div>
           <Link

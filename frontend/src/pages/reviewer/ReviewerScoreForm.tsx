@@ -49,7 +49,7 @@ export const ReviewerScoreForm = () => {
       .then(([assignments, rubricCriteria]) => {
         const match = assignments.find((a) => a.reviewId === reviewId);
         if (!match) {
-          setLoadError('This review assignment was not found — it may have been removed.');
+          setLoadError('This review assignment was not found. It may have been removed.');
           return;
         }
         // Scoring is only ever open to an accepted assignment — the backend

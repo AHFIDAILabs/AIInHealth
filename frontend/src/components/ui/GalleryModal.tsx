@@ -107,7 +107,7 @@ export const GalleryModal = ({ items, activeIndex, onClose, onNavigate }: Galler
                   {(item.day !== 'general' || item.momentLabel) && (
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-orange">
                       {item.day !== 'general' ? DAY_LABEL[item.day] : ''}
-                      {item.day !== 'general' && item.momentLabel ? ' — ' : ''}
+                      {item.day !== 'general' && item.momentLabel ? ' · ' : ''}
                       {item.momentLabel}
                     </p>
                   )}
