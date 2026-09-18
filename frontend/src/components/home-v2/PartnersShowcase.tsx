@@ -64,7 +64,7 @@ export const PartnersShowcase = () => {
               <Reveal delay={gi * 0.06 + 0.05}>
                 <div
                   className={`mt-10 grid grid-cols-2 gap-6 sm:grid-cols-3 ${
-                    group.isTopTier ? 'lg:grid-cols-4' : 'lg:grid-cols-5'
+                    group.isTopTier ? 'lg:grid-cols-4' : 'lg:grid-cols-4'
                   }`}
                 >
                   {group.items.map((p) => {
@@ -74,14 +74,14 @@ export const PartnersShowcase = () => {
                         alt={p.name}
                         title={p.name}
                         className={`max-w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0 ${
-                          group.isTopTier ? 'h-16 sm:h-20' : 'h-10'
+                          group.isTopTier ? 'h-20 sm:h-24' : 'h-14 sm:h-16'
                         }`}
                       />
                     ) : (
                       <span className={`font-bold text-navy ${group.isTopTier ? 'text-2xl' : 'text-lg'}`}>{p.name}</span>
                     );
                     const swatchClass = `group flex items-center justify-center rounded-2xl border bg-white transition-all duration-300 hover:border-orange/40 hover:shadow-md ${
-                      group.isTopTier ? 'border-slate-200 p-8' : 'border-slate-100 p-5'
+                      group.isTopTier ? 'border-slate-200 p-8' : 'border-slate-100 p-6'
                     }`;
                     return p.website ? (
                       <a key={p._id} href={p.website} target="_blank" rel="noopener noreferrer" aria-label={p.name} className={swatchClass}>

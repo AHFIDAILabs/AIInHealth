@@ -14,6 +14,7 @@ import { PortalProtectedRoute } from './routes/PortalProtectedRoute';
 import { ReviewerProtectedRoute } from './routes/ReviewerProtectedRoute';
 import { Home } from './pages/public/Home';
 import { NewHome } from './pages/public/NewHome';
+import { HomeMain } from './pages/public/HomeMain';
 import { About } from './pages/public/About';
 import { Agenda } from './pages/public/Agenda';
 import { Speakers } from './pages/public/Speakers';
@@ -78,9 +79,9 @@ function App() {
         <ReviewerAuthProvider>
         <Routes>
           <Route element={<PublicLayout />}>
-            {/* <Route path="/" element={<Home />} /> */}
-            <Route path="/" element={<NewHome />} />
+            <Route path="/" element={<HomeMain />} />
             <Route path="/classic" element={<Home />} />
+            <Route path="/home-v2" element={<NewHome />} />
             <Route path="/about" element={<About />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/speakers" element={<Speakers />} />
