@@ -1,4 +1,5 @@
 import { env } from '../config/env.js';
+import { VENUE_SHORT } from '../config/venue.js';
 import { AbstractCommunication } from '../models/AbstractCommunication.model.js';
 import type { AbstractDoc } from '../models/Abstract.model.js';
 import type { AbstractDecision } from '../types/enums.js';
@@ -16,7 +17,7 @@ const TEMPLATES: Record<AbstractDecision, (input: TemplateInput) => { subject: s
       <p>Dear ${authorName},</p>
       <p>Congratulations — your abstract, <strong>${title}</strong> (${track}), has been accepted for an <strong>oral presentation</strong> at the AI in Health Summit 2026.</p>
       <p>Our programme committee will follow up shortly with your presentation slot and further details on preparing your talk.</p>
-      <p>We look forward to having you present in Abuja, 19&ndash;20 October 2026.</p>
+      <p>We look forward to having you present at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   }),
@@ -26,7 +27,7 @@ const TEMPLATES: Record<AbstractDecision, (input: TemplateInput) => { subject: s
       <p>Dear ${authorName},</p>
       <p>Congratulations — your abstract, <strong>${title}</strong> (${track}), has been accepted for a <strong>poster presentation</strong> at the AI in Health Summit 2026.</p>
       <p>Our programme committee will follow up shortly with poster specifications and your assigned session.</p>
-      <p>We look forward to having you present in Abuja, 19&ndash;20 October 2026.</p>
+      <p>We look forward to having you present at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   }),

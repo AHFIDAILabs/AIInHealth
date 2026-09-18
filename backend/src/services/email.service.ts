@@ -1,6 +1,7 @@
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { REVIEWER_ACCESS_CODE_EXPIRES_AT, DELEGATE_ACCESS_CODE_EXPIRES_AT } from '../config/event.js';
+import { VENUE_SHORT, VENUE_FULL_ADDRESS, VENUE_MAPS_LINK } from '../config/venue.js';
 
 const graphConfigured = Boolean(env.MS_TENANT_ID && env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.MS_SENDER_EMAIL);
 export const emailConfigured = graphConfigured;
@@ -272,7 +273,7 @@ export const sendVolunteerConfirmedEmail = async (
       <p style="font-size:20px;font-weight:700;letter-spacing:1px;">${data.accessCode}</p>
       <p><a href="${portalUrl}">Click here to go to the delegate portal</a>, then enter your email and this code to sign in and complete your profile — add a photo, so our team can recognize you at the event. The code stays valid through ${delegateAccessCodeExpiresLabel} (about a week after the Summit), so there's no rush.</p>
       <p>From there you can also view your e-ticket and QR check-in code.</p>
-      <p>See you in Abuja, 19&ndash;20 October 2026.</p>
+      <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });
@@ -292,7 +293,7 @@ export const sendPaymentConfirmationEmail = async (
       <p>Your payment of <strong>&#8358;${data.amountNaira.toLocaleString('en-NG')}</strong> (${data.ticketCategory.replace(/_/g, ' ')}) was successful and your registration is confirmed.</p>
       <p>Your delegate portal access code is: <strong style="font-size:18px;letter-spacing:1px;">${data.accessCode}</strong></p>
       <p><a href="${portalUrl}">Visit the delegate portal</a> and enter your email and this code to sign in — it's yours to reuse anytime through ${delegateAccessCodeExpiresLabel}, no rush and no re-requesting needed. From there you can access your e-ticket / QR check-in code.</p>
-      <p>See you in Abuja, 19&ndash;20 October 2026.</p>
+      <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
     `,
   });
 };
@@ -315,7 +316,7 @@ export const sendRegistrationConfirmedEmail = async (
       <p>Your registration${data.ticketCategory ? ` (${data.ticketCategory.replace(/_/g, ' ')})` : ''} for the AI in Health Summit 2026 is confirmed — no payment is required.</p>
       <p>Your delegate portal access code is: <strong style="font-size:18px;letter-spacing:1px;">${data.accessCode}</strong></p>
       <p><a href="${portalUrl}">Visit the delegate portal</a> and enter your email and this code to sign in — it's yours to reuse anytime through ${delegateAccessCodeExpiresLabel}, no rush and no re-requesting needed. From there you can access your e-ticket / QR check-in code.</p>
-      <p>See you in Abuja, 19&ndash;20 October 2026.</p>
+      <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
     `,
   });
 };
@@ -333,6 +334,7 @@ export const sendTicketQrEmail = async (to: string, fullName: string, qrDataUrl:
       <p>Hi ${fullName},</p>
       <p>Here's your e-ticket for the AI in Health Summit 2026. Show this QR code at the registration desk to check in on either day (19&ndash;20 October 2026) — it's yours for both days, no need to re-download.</p>
       <p><img src="${qrDataUrl}" alt="Check-in QR code" width="220" height="220" /></p>
+      <p><strong>Venue:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
       <p>Keep this email handy, or sign in to the delegate portal any time to view it again.</p>
     `,
   });
