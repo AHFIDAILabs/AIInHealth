@@ -256,7 +256,7 @@ export const Agenda = () => {
         </div>
       </section>
 
-      <section className="border-t border-slate-100 bg-offwhite py-16">
+      {/* <section className="border-t border-slate-100 bg-offwhite py-16">
         <Reveal className="mx-auto flex max-w-3xl flex-col items-center gap-5 px-4 text-center sm:px-6 lg:px-8">
           <MapPin size={22} className="text-orange" />
           <p className="text-slate-600">
@@ -268,7 +268,7 @@ export const Agenda = () => {
             Register Interest
           </ButtonLink>
         </Reveal>
-      </section>
+      </section> */}
 
       <SessionRsvpModal session={rsvpSession} onClose={() => setRsvpSession(null)} />
       <SpeakerModal speaker={activeSpeaker} onClose={() => setActiveSpeaker(null)} />

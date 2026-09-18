@@ -80,7 +80,6 @@ export const HomeMain = () => {
               {[
                 { icon: CalendarDays, label: 'Date', value: '19 – 20 Oct 2026' },
                 { icon: MapPin, label: 'Venue', value: VENUE_SHORT },
-                { icon: Clock3, label: 'Time Zone', value: 'WAT · GMT+1' },
               ].map((item) => (
                 <span
                   key={item.label}
