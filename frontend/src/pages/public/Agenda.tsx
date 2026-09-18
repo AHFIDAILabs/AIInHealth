@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Clock, MapPin, Mic2, Users, Rocket, FileText, Handshake, Landmark, Network, CalendarCheck, type LucideIcon } from 'lucide-react';
+import { Clock, Mic2, Users, Rocket, FileText, Handshake, Landmark, Network, CalendarCheck, type LucideIcon } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
-import { ButtonLink } from '../../components/ui/Button';
 import { SessionRsvpModal } from '../../components/ui/SessionRsvpModal';
 import { SpeakerModal } from '../../components/ui/SpeakerModal';
-import { VenueMap } from '../../components/ui/VenueMap';
 import { listPublicSessions, type AdminSession, type SessionDay, type SessionFormat } from '../../services/session.service';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
-import { VENUE_SHORT } from '../../lib/siteInfo';
 
 interface DisplaySpeaker {
   _id: string;
@@ -255,20 +252,6 @@ export const Agenda = () => {
           </AnimatePresence>
         </div>
       </section>
-
-      {/* <section className="border-t border-slate-100 bg-offwhite py-16">
-        <Reveal className="mx-auto flex max-w-3xl flex-col items-center gap-5 px-4 text-center sm:px-6 lg:px-8">
-          <MapPin size={22} className="text-orange" />
-          <p className="text-slate-600">
-            All sessions take place at the {VENUE_SHORT}. Session room locations will be shared with registered
-            delegates ahead of the Summit.
-          </p>
-          <VenueMap className="w-full" height={280} />
-          <ButtonLink to="/register" variant="primary">
-            Register Interest
-          </ButtonLink>
-        </Reveal>
-      </section> */}
 
       <SessionRsvpModal session={rsvpSession} onClose={() => setRsvpSession(null)} />
       <SpeakerModal speaker={activeSpeaker} onClose={() => setActiveSpeaker(null)} />

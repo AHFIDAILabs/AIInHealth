@@ -1,5 +1,5 @@
 import { motion, type Variants } from 'framer-motion';
-import { CalendarDays, MapPin, Clock3, ArrowRight } from 'lucide-react';
+import { CalendarDays, MapPin, ArrowRight } from 'lucide-react';
 import { ButtonLink } from '../../components/ui/Button';
 import { Reveal } from '../../components/ui/Reveal';
 import { useCountdown } from '../../hooks/useCountdown';
