@@ -20,7 +20,6 @@ export const Footer = () => (
           <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">About</p>
           <ul className="space-y-2.5 text-sm text-slate-300">
             <li><a href="https://ahfid.org/" target="_blank" rel="noopener noreferrer" className="hover:text-orange">About AHFID</a></li>
-            <li><Link to="/about" className="hover:text-orange">About the Summit</Link></li>
             <li><Link to="/contact" className="hover:text-orange">Contact</Link></li>
           </ul>
         </div>
@@ -30,7 +29,7 @@ export const Footer = () => (
             <li><Link to="/agenda" className="hover:text-orange">Agenda</Link></li>
             <li><Link to="/speakers" className="hover:text-orange">Speakers</Link></li>
             <li><Link to="/partners" className="hover:text-orange">Partners</Link></li>
-            <li><Link to="/innovation-showcase" className="hover:text-orange">Innovation Showcase</Link></li>
+            <li><Link to="https://forms.microsoft.com/r/bH0frUVmvV" className="hover:text-orange">Innovation Showcase</Link></li>
             <li><Link to="/gallery" className="hover:text-orange">Gallery</Link></li>
             <li><Link to="/abstracts/submit" className="hover:text-orange">Submit an Abstract</Link></li>
           </ul>

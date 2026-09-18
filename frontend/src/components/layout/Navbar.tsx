@@ -18,7 +18,7 @@ interface NavItem {
 // click away via the Footer, this is just what the header itself shows now.
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', to: '/' },
-  { label: 'Innovation Showcase', to: '/innovation-showcase' },
+  { label: 'Innovation Showcase', to: 'https://forms.microsoft.com/r/bH0frUVmvV' },
   { label: 'Register Now', to: '/register' },
   { label: 'AHFID', to: 'https://ahfid.org/', external: true },
 ];

@@ -6,7 +6,7 @@ import { Reveal } from '../ui/Reveal';
 const FAQS = [
   {
     q: 'What ticket categories are available?',
-    a: 'Six categories: International Delegate (₦150,000 / $100), Nigerian Professional (₦120,000), Student / Researcher (₦75,000), VIP (₦300,000), Government Official (Complimentary), and Accredited Media (Complimentary).',
+    a: 'Six categories: International Delegate (₦200,000 / $150), Nigerian Professional (₦200,000), Student / Researcher (₦75,000), VIP (₦350,000), Government Official (Complimentary), and Accredited Media (Complimentary).',
   },
   {
     q: 'What is included in registration?',
