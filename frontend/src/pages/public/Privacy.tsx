@@ -1,5 +1,6 @@
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../lib/siteInfo';
 
 const SECTIONS = [
   {
@@ -20,7 +21,7 @@ const SECTIONS = [
   },
   {
     title: '5. Your Rights',
-    body: 'You may request access to, correction of, or deletion of your personal information at any time by contacting us at info@aihealthsummit2026.ng.',
+    body: `You may request access to, correction of, or deletion of your personal information at any time by contacting us at ${SUPPORT_EMAIL}.`,
   },
   {
     title: '6. Cookies',
@@ -62,8 +63,8 @@ export const Privacy = () => (
         <Reveal delay={0.3} className="mt-12 rounded-xl border border-slate-200 bg-offwhite p-6">
           <p className="text-sm text-slate-600">
             Questions about this policy? Contact us at{' '}
-            <a href="mailto:info@aihealthsummit2026.ng" className="font-semibold text-orange hover:text-orange-hover">
-              info@aihealthsummit2026.ng
+            <a href={SUPPORT_MAILTO} className="font-semibold text-orange hover:text-orange-hover">
+              {SUPPORT_EMAIL}
             </a>
             .
           </p>

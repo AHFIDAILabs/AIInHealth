@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useCountdown } from '../../hooks/useCountdown';
 import { Reveal } from '../ui/Reveal';
+import { VENUE_SHORT } from '../../lib/siteInfo';
 
 // Same summit date as HeroCountdown (kept in sync manually — both read the
 // single source of truth in that file's constant if you'd rather import it
@@ -128,7 +129,7 @@ export const CountdownCard = () => {
         </div>
 
         <p className="relative mt-6 text-xs text-slate-500">
-          International Conference Centre, Abuja &middot; 19&ndash;20 October 2026
+          {VENUE_SHORT} &middot; 19&ndash;20 October 2026
         </p>
       </div>
     </Reveal>

@@ -1,6 +1,7 @@
 import { motion, type Variants } from 'framer-motion';
 import { ButtonLink } from '../../components/ui/Button';
 import { Reveal } from '../../components/ui/Reveal';
+import { VENUE_SHORT } from '../../lib/siteInfo';
 import { ConvenedWith } from '../../components/home/ConvenedWith';
 import { ConfirmedVoices } from '../../components/home/ConfirmedVoices';
 // import { NewsletterCapture } from '../../components/home/NewsletterCapture';
@@ -177,7 +178,7 @@ export const NewHome = () => {
             </ButtonLink>
           </div>
           <p className="mt-8 text-xs font-medium text-white/70">
-            19&ndash;20 October 2026 &middot; International Conference Centre, Abuja, Nigeria
+            19&ndash;20 October 2026 &middot; {VENUE_SHORT}, Nigeria
           </p>
         </Reveal>
       </section>

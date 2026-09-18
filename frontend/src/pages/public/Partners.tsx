@@ -168,7 +168,7 @@ export const Partners = () => {
                       <Icon size={20} />
                     </span>
                     <p className="mt-4 font-display text-lg font-semibold text-navy">{pkg.name}</p>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-orange">&#8358;{pkg.price.toLocaleString('en-NG')}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-orange">&#8358;</p>
                     {pkg.benefits && pkg.benefits.length > 0 && (
                       <ul className="mt-4 flex-1 space-y-2.5">
                         {pkg.benefits.map((perk) => (

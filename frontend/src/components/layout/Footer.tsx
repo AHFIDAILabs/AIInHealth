@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { AhfidBadge } from '../ui/AhfidBadge';
 import summitMark from '../../assets/images/summit_logo_mark.png';
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../lib/siteInfo';
 
 export const Footer = () => (
   <footer className="w-full justify-between border-t border-slate-800 bg-navy">
@@ -40,7 +41,7 @@ export const Footer = () => (
             <li><Link to="/privacy" className="hover:text-orange">Privacy Policy</Link></li>
             <li><Link to="/terms" className="hover:text-orange">Terms of Service</Link></li>
             <li>
-              <a href="mailto:info@aihealthsummit2026.ng" className="hover:text-orange">info@aihealthsummit2026.ng</a>
+              <a href={SUPPORT_MAILTO} className="hover:text-orange">{SUPPORT_EMAIL}</a>
             </li>
           </ul>
         </div>

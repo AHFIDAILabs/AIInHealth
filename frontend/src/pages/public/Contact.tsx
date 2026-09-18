@@ -6,13 +6,15 @@ import { Mail, MapPin, Clock, Send } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Button } from '../../components/ui/Button';
+import { VenueMap } from '../../components/ui/VenueMap';
 import { LightField, LightTextArea, LightSelect } from '../../components/ui/LightField';
 import { submitContactMessage, CONTACT_CATEGORIES } from '../../services/contact.service';
 import { getApiErrorMessage } from '../../services/api';
+import { SUPPORT_EMAIL, SUPPORT_MAILTO, VENUE_FULL_ADDRESS } from '../../lib/siteInfo';
 
 const CONTACT_INFO = [
-  { icon: Mail, label: 'Email', value: 'info@aihealthsummit2026.ng', href: 'mailto:info@aihealthsummit2026.ng' },
-  { icon: MapPin, label: 'Venue', value: 'International Conference Centre (ICC), Abuja, Nigeria' },
+  { icon: Mail, label: 'Email', value: SUPPORT_EMAIL, href: SUPPORT_MAILTO },
+  { icon: MapPin, label: 'Venue', value: VENUE_FULL_ADDRESS },
   { icon: Clock, label: 'Dates', value: '19–20 October 2026' },
 ];
 
@@ -75,6 +77,7 @@ export const Contact = () => {
                 </div>
               ))}
             </div>
+            <VenueMap className="mt-8" height={260} />
           </Reveal>
 
           <Reveal delay={0.1} className="lg:col-span-7">

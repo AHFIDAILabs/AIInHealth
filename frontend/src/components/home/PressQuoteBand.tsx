@@ -1,5 +1,6 @@
 import { Reveal } from '../ui/Reveal';
 import { ButtonLink } from '../ui/Button';
+import { VENUE_SHORT } from '../../lib/siteInfo';
 
 // The mid-page "second hero" — a full-width, large-type pull-quote used as a section
 // header instead of another generic title, roughly two-thirds down the page where
@@ -27,7 +28,7 @@ export const PressQuoteBand = () => (
       </p>
 
       <p className="mt-8 text-sm font-medium text-slate-300">
-        19&ndash;20 October 2026 &middot; International Conference Centre, Abuja, Nigeria
+        19&ndash;20 October 2026 &middot; {VENUE_SHORT}, Nigeria
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
         <ButtonLink to="/register" variant="primary" className="!px-6 !py-3 !text-sm">

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { ButtonLink } from '../../components/ui/Button';
 import { AbujaSkyline } from '../../components/ui/AbujaSkyline';
+import { VENUE_SHORT } from '../../lib/siteInfo';
 import { Reveal } from '../../components/ui/Reveal';
 import { RevealText } from '../../components/ui/RevealText';
 import heroBg from '../../assets/images/hero_bg.webp';
@@ -501,7 +502,7 @@ export const Home = () => {
           </ButtonLink>
         </div>
         <p className="mt-8 text-xs font-medium text-white/70">
-          19&ndash;20 October 2026 &middot; International Conference Centre, Abuja, Nigeria
+          19&ndash;20 October 2026 &middot; {VENUE_SHORT}, Nigeria
         </p>
       </Reveal>
     </section>

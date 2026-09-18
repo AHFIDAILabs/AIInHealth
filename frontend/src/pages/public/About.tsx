@@ -3,6 +3,7 @@ import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { RevealText } from '../../components/ui/RevealText';
 import { ButtonLink } from '../../components/ui/Button';
+import { VENUE_SHORT } from '../../lib/siteInfo';
 
 const OBJECTIVES = [
   {
@@ -34,7 +35,7 @@ const OBJECTIVES = [
 
 const KEY_FACTS = [
   { icon: CalendarDays, label: 'Dates', value: '19–20 October 2026' },
-  { icon: MapPin, label: 'Venue', value: 'International Conference Centre (ICC), Abuja' },
+  { icon: MapPin, label: 'Venue', value: VENUE_SHORT },
   { icon: Target, label: 'Format', value: 'Two-day hybrid summit — in-person + livestreamed sessions' },
   { icon: Compass, label: 'Convener', value: 'Africa Hub for Innovation & Development (AHFID)' },
 ];
