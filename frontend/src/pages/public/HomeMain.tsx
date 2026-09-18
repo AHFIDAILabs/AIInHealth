@@ -6,7 +6,6 @@ import { useCountdown } from '../../hooks/useCountdown';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { SpeakersGrid } from '../../components/home/SpeakersGrid';
 import { SummitProgramme } from '../../components/home/SummitProgramme';
-import { HeroPartnersStrip } from '../../components/home/HeroPartnersStrip';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase';
 import { VENUE_SHORT } from '../../lib/siteInfo';
 import heroBg from '../../assets/images/hero_bg.webp';
