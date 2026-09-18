@@ -8,7 +8,7 @@ import { SpeakersGrid } from '../../components/home/SpeakersGrid';
 import { SummitProgramme } from '../../components/home/SummitProgramme';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase';
 import { VENUE_SHORT } from '../../lib/siteInfo';
-import heroBg from '../../assets/Header_Bacground.png';
+import heroBg from '../../assets/Image (2).png';
 
 // Same summit start used by CountdownCard.tsx/HeroCountdown.tsx — duplicated
 // rather than imported so each countdown surface can diverge later without
