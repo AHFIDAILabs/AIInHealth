@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { SESSION_DAYS, SESSION_FORMATS } from '../types/enums.js';
+import { SESSION_DAYS, SESSION_FORMATS, SESSION_CARD_STYLES } from '../types/enums.js';
 
 const sessionSchema = new Schema(
   {
@@ -17,6 +17,12 @@ const sessionSchema = new Schema(
     room: { type: String, required: true, trim: true },
     description: { type: String, trim: true, maxlength: 3000 },
     speakers: [{ type: Schema.Types.ObjectId, ref: 'Speaker' }],
+    // Which sponsor/partner logos show on this session's public card (e.g. the
+    // opening ceremony crediting its host + co-hosts) — independent of
+    // Partner.package/status, which drive the Partners page's CRM/tiering.
+    partners: [{ type: Schema.Types.ObjectId, ref: 'Partner' }],
+    // Public Agenda card treatment — see types/enums.ts's SESSION_CARD_STYLES.
+    cardStyle: { type: String, enum: SESSION_CARD_STYLES, default: 'standard' },
     isPublished: { type: Boolean, default: false },
     // Set by the session-reminder cron job once it's fired for this session, so a
     // 5-minute polling loop never sends the same reminder twice.

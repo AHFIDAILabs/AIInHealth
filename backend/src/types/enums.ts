@@ -65,6 +65,13 @@ export const SESSION_FORMATS = [
 ] as const;
 export type SessionFormat = (typeof SESSION_FORMATS)[number];
 
+// Which visual treatment the public Agenda gives a session card — an
+// editorial choice (which sessions get the bold "featured"/"spotlight"
+// look), not derived from format/track. 'break' renders as a plain
+// centered time row with no card at all (e.g. "Lunch Break").
+export const SESSION_CARD_STYLES = ['standard', 'featured', 'spotlight', 'break'] as const;
+export type SessionCardStyle = (typeof SESSION_CARD_STYLES)[number];
+
 // Not enforced — Partner.category is free text (an admin can type any
 // organization type). These are just autocomplete suggestions shown in the
 // admin form.

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SESSION_DAYS, SESSION_FORMATS } from '../types/enums.js';
+import { SESSION_DAYS, SESSION_FORMATS, SESSION_CARD_STYLES } from '../types/enums.js';
 
 const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use 24-hour HH:mm format');
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
@@ -16,6 +16,8 @@ const baseSessionShape = {
   room: z.string().trim().min(1, 'Enter a room'),
   description: z.string().trim().max(3000).optional(),
   speakers: z.array(objectId).max(20).optional(),
+  partners: z.array(objectId).max(20).optional(),
+  cardStyle: z.enum(SESSION_CARD_STYLES).optional(),
   isPublished: z.boolean().optional(),
   requiresRsvp: z.boolean().optional(),
   maxAttendees: z.number().int().positive().optional(),
