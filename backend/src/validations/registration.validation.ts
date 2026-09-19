@@ -105,6 +105,12 @@ export const updateRegistrationStatusSchema = z.object({
       boothSize: z.enum(BOOTH_SIZES).optional(),
       productsDescription: z.string().trim().max(2000).optional(),
       customFieldAnswers: z.record(z.string(), z.string()).optional(),
+      // Volunteer-only — lets staff (re)assign a track, or fix a t-shirt size/
+      // stated preference, after the registration already exists. Previously
+      // only settable at creation time via adminCreateRegistrationSchema.
+      tshirtSize: z.string().trim().max(20).optional(),
+      trackSelected: z.string().trim().max(200).optional(),
+      trackAssigned: z.string().trim().max(200).optional(),
     })
     .refine((data) => Object.values(data).some((v) => v !== undefined), {
       message: 'Provide at least one field to update.',

@@ -5,6 +5,7 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { toCsv } from '../utils/toCsv.js';
 import { Registration, type RegistrationDoc } from '../models/Registration.model.js';
+import { VolunteerTrack } from '../models/VolunteerTrack.model.js';
 import { AccessCode, type AccessCodeDoc } from '../models/AccessCode.model.js';
 import { CustomFormField } from '../models/CustomFormField.model.js';
 import { Lead } from '../models/Lead.model.js';
@@ -104,10 +105,22 @@ const confirmVolunteerDirectly = async (registration: HydratedDocument<Registrat
   }
 };
 
+// Same "validate free text against a live admin-managed list" pattern as
+// speaker.controller.ts's assertValidTrack — trackSelected/trackAssigned stay
+// plain strings on Registration (not an ObjectId ref) so nothing has to
+// change if a track is later renamed, but a submission naming one that
+// doesn't exist in VolunteerTrack is rejected here.
+const assertValidVolunteerTrack = async (track: string | undefined): Promise<void> => {
+  if (!track) return;
+  const exists = await VolunteerTrack.exists({ name: track });
+  if (!exists) throw new ApiError(422, 'Select a valid track.', 'INVALID_VOLUNTEER_TRACK');
+};
+
 export const create = catchAsync(async (req: Request, res: Response) => {
   const input = req.body as CreateRegistrationInput;
 
   if (input.type === 'volunteer') {
+    await assertValidVolunteerTrack(input.trackSelected);
     const trimmedCode = input.accessCode?.trim().toUpperCase();
 
     // No code yet — this is an application, not a confirmation. Most people
@@ -421,6 +434,10 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
   }
 
   // exhibitor / sponsor / volunteer — confirmed immediately, admin is vouching.
+  if (input.type === 'volunteer') {
+    await assertValidVolunteerTrack(input.trackSelected);
+    await assertValidVolunteerTrack(input.trackAssigned);
+  }
   let registration: HydratedDocument<RegistrationDoc>;
   try {
     registration = await Registration.create({ ...input, status: 'confirmed', qrToken: generateQrToken() });
@@ -491,6 +508,10 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   }
   if (isContentEditor(req) && before.type !== 'volunteer') {
     throw new ApiError(403, 'You can only manage volunteer registrations.', 'FORBIDDEN');
+  }
+  if (before.type === 'volunteer') {
+    await assertValidVolunteerTrack(detailFields.trackSelected);
+    await assertValidVolunteerTrack(detailFields.trackAssigned);
   }
   // Any registration type earns a check-in QR the moment it's confirmed, whichever
   // path got it there (payment, volunteer code, or a manual admin decision here).

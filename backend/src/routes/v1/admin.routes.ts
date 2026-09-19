@@ -32,6 +32,7 @@ import * as sponsorshipPackageController from '../../controllers/sponsorshipPack
 import * as deliverableController from '../../controllers/deliverable.controller.js';
 import * as partnerInteractionController from '../../controllers/partnerInteraction.controller.js';
 import * as trackController from '../../controllers/track.controller.js';
+import * as volunteerTrackController from '../../controllers/volunteerTrack.controller.js';
 import * as leadController from '../../controllers/lead.controller.js';
 import * as customFormFieldController from '../../controllers/customFormField.controller.js';
 import * as exhibitorController from '../../controllers/exhibitor.controller.js';
@@ -136,6 +137,13 @@ router.get('/tracks', requireRole(...contentRoles), trackController.adminList);
 router.post('/tracks', requireRole(...contentRoles), trackController.adminCreate);
 router.patch('/tracks/:id', requireRole(...contentRoles), trackController.adminUpdate);
 router.delete('/tracks/:id', requireRole(...contentRoles), trackController.adminDelete);
+
+// Volunteer track options — same roles as registrations (Volunteers is where
+// this list is managed, not the Agenda/Sessions area Track above belongs to).
+router.get('/volunteer-tracks', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminList);
+router.post('/volunteer-tracks', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminCreate);
+router.patch('/volunteer-tracks/:id', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminUpdate);
+router.delete('/volunteer-tracks/:id', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminDelete);
 
 router.get('/exhibitors-stats', requireRole('super_admin', 'registrations_officer', 'viewer'), exhibitorController.adminStats);
 router.get('/exhibitors-analytics', requireRole('super_admin', 'registrations_officer', 'viewer'), exhibitorController.adminAnalytics);
