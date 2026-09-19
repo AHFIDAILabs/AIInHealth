@@ -9,6 +9,7 @@ import {
   createSpeakerSchema,
   updateSpeakerSchema,
   listSpeakersQuerySchema,
+  reorderSpeakersSchema,
   type ListSpeakersQuery,
 } from '../validations/speaker.validation.js';
 import { recordAudit } from '../services/audit.service.js';
@@ -81,6 +82,25 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
     after: speaker.toObject(),
   });
   res.json(new ApiResponse(speaker));
+});
+
+// PATCH /admin/speakers/reorder — one bulk write for a drag-and-drop reorder,
+// instead of the admin UI firing one PATCH per moved speaker. Sending N
+// separate requests left a real gap: if the tab closed or the connection
+// dropped mid-flight, some speakers got their new `order` and others didn't,
+// leaving the list (and the public site, which sorts by this same field) in
+// a half-old-half-new state. bulkWrite sends every update in one round trip,
+// so there's no window for a partial application on the client side.
+export const adminReorder = catchAsync(async (req: Request, res: Response) => {
+  const { order } = reorderSpeakersSchema.parse({ body: req.body }).body;
+  await Speaker.bulkWrite(
+    order.map(({ id, order: newOrder }) => ({
+      updateOne: { filter: { _id: id }, update: { $set: { order: newOrder } } },
+    }))
+  );
+  await recordAudit({ req, action: 'speaker.reordered', resourceType: 'Speaker', resourceId: 'bulk', after: { order } });
+  const speakers = await Speaker.find({ _id: { $in: order.map((o) => o.id) } }).sort({ order: 1 });
+  res.json(new ApiResponse(speakers));
 });
 
 export const adminDelete = catchAsync(async (req: Request, res: Response) => {

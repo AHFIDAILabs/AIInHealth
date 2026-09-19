@@ -20,6 +20,18 @@ export const updateSpeakerSchema = z.object({
   body: createSpeakerSchema.shape.body.partial(),
 });
 
+const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
+
+// Drag-to-reorder on the admin Speakers page — one bulk write instead of one
+// PATCH per moved speaker, so a dropped connection or an early tab close
+// can't leave the list with only some of an N-speaker shuffle applied (the
+// per-speaker-PATCH approach this replaced could do exactly that).
+export const reorderSpeakersSchema = z.object({
+  body: z.object({
+    order: z.array(z.object({ id: objectId, order: z.number().int() })).min(1).max(500),
+  }),
+});
+
 export const listSpeakersQuerySchema = z.object({
   track: z.string().trim().optional(),
   published: z.enum(['true', 'false']).optional(),
@@ -31,3 +43,4 @@ export const listSpeakersQuerySchema = z.object({
 export type CreateSpeakerInput = z.infer<typeof createSpeakerSchema>['body'];
 export type UpdateSpeakerInput = z.infer<typeof updateSpeakerSchema>['body'];
 export type ListSpeakersQuery = z.infer<typeof listSpeakersQuerySchema>;
+export type ReorderSpeakersInput = z.infer<typeof reorderSpeakersSchema>['body'];

@@ -122,6 +122,9 @@ const contentRoles = ['super_admin', 'content_editor'] as const;
 
 router.get('/speakers', requireRole(...contentRoles), speakerController.adminList);
 router.post('/speakers', requireRole(...contentRoles), speakerController.adminCreate);
+// Must come before the /:id routes below — otherwise Express matches
+// "reorder" as an :id param instead of this route.
+router.patch('/speakers/reorder', requireRole(...contentRoles), speakerController.adminReorder);
 router.patch('/speakers/:id', requireRole(...contentRoles), speakerController.adminUpdate);
 router.delete('/speakers/:id', requireRole(...contentRoles), speakerController.adminDelete);
 
