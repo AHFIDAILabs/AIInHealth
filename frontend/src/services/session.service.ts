@@ -13,11 +13,24 @@ export const SESSION_FORMATS = [
 ] as const;
 export type SessionFormat = (typeof SESSION_FORMATS)[number];
 
+// Public Agenda card treatment — an editorial choice (which sessions get the
+// bold "featured"/"spotlight" look), not derived from format/track. 'break'
+// renders as a plain centered time row with no card (e.g. "Lunch Break").
+export const SESSION_CARD_STYLES = ['standard', 'featured', 'spotlight', 'break'] as const;
+export type SessionCardStyle = (typeof SESSION_CARD_STYLES)[number];
+
 export interface SessionSpeakerRef {
   _id: string;
   fullName: string;
   title: string;
   photoUrl?: string;
+}
+
+export interface SessionPartnerRef {
+  _id: string;
+  name: string;
+  logoUrl?: string;
+  website?: string;
 }
 
 export interface SessionRsvpEntry {
@@ -46,6 +59,8 @@ export interface AdminSession {
   room: string;
   description?: string;
   speakers: SessionSpeakerRef[];
+  partners: SessionPartnerRef[];
+  cardStyle: SessionCardStyle;
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
@@ -69,6 +84,8 @@ export interface SessionInput {
   room: string;
   description?: string;
   speakers?: string[];
+  partners?: string[];
+  cardStyle?: SessionCardStyle;
   isPublished?: boolean;
   requiresRsvp?: boolean;
   maxAttendees?: number;

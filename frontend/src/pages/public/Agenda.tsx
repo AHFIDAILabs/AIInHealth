@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Clock, Mic2, Users, Rocket, FileText, Handshake, Landmark, Network, CalendarCheck, type LucideIcon } from 'lucide-react';
+import { CalendarCheck } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
-import { Reveal } from '../../components/ui/Reveal';
 import { SessionRsvpModal } from '../../components/ui/SessionRsvpModal';
 import { SpeakerModal } from '../../components/ui/SpeakerModal';
-import { listPublicSessions, type AdminSession, type SessionDay, type SessionFormat } from '../../services/session.service';
+import {
+  listPublicSessions,
+  SESSION_FORMATS,
+  type AdminSession,
+  type SessionDay,
+  type SessionFormat,
+  type SessionCardStyle,
+  type SessionPartnerRef,
+} from '../../services/session.service';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 
 interface DisplaySpeaker {
@@ -17,80 +23,94 @@ interface DisplaySpeaker {
 
 interface DisplaySession {
   key: string;
-  time: string;
+  startTime: string;
+  endTime: string;
   title: string;
-  track: string;
-  trackColor?: string;
-  icon: LucideIcon;
+  format: SessionFormat;
+  track: { name: string; color: string } | null;
   room?: string;
-  speakers?: DisplaySpeaker[];
+  speakers: DisplaySpeaker[];
+  partners: SessionPartnerRef[];
   description?: string;
   requiresRsvp?: boolean;
+  cardStyle: SessionCardStyle;
 }
-
-const FORMAT_ICON: Record<SessionFormat, LucideIcon> = {
-  Keynote: Mic2,
-  'Panel Discussion': Users,
-  'Startup Showcase': Rocket,
-  'Poster & Abstract': FileText,
-  'Political Engagement': Landmark,
-  Networking: Network,
-};
 
 const fromRealSession = (s: AdminSession): DisplaySession => ({
   key: s._id,
-  time: `${s.startTime} – ${s.endTime}`,
+  startTime: s.startTime,
+  endTime: s.endTime,
   title: s.title,
-  track: s.track?.name ?? 'General Session',
-  trackColor: s.track?.color,
-  icon: FORMAT_ICON[s.format] ?? Users,
+  format: s.format,
+  track: s.track ? { name: s.track.name, color: s.track.color } : null,
   room: s.room,
   speakers: s.speakers,
+  partners: s.partners,
   description: s.description,
   requiresRsvp: s.requiresRsvp,
+  cardStyle: s.cardStyle ?? 'standard',
+});
+
+// The Summit's two real calendar days — kept in sync with
+// SessionsListTab.tsx's own DAY_TO_DATE and jobs/sessionReminder.job.ts.
+const DAY_DATES: Record<SessionDay, Date> = {
+  day1: new Date('2026-10-19T00:00:00+01:00'),
+  day2: new Date('2026-10-20T00:00:00+01:00'),
+};
+
+const dayTabParts = (date: Date) => ({
+  dayOfMonth: date.toLocaleDateString('en-GB', { day: '2-digit' }),
+  weekday: date.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase(),
+  month: date.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(),
 });
 
 // Illustrative fallback — shown for a day only once it has zero real published
-// sessions. Not claimed as confirmed; PageHero's subtitle already sets that
-// expectation ("final timings and speakers will be confirmed closer to the
-// Summit"). As soon as a real session is published for a day, this stops
-// applying to that day specifically — the two are never blended.
-const STATIC_DAYS: { key: SessionDay; label: string; date: string; theme: string; sessions: DisplaySession[] }[] = [
+// sessions. Normalized to the same DisplaySession shape the real data uses, so
+// it renders through the identical timeline/card UI below (just always
+// 'standard' cards, since there's no real curation to reflect yet).
+const STATIC_DAYS: { key: SessionDay; sessions: DisplaySession[] }[] = [
   {
     key: 'day1',
-    label: 'Day 1',
-    date: '19 October 2026',
-    theme: 'Vision, Policy & Political Commitment',
     sessions: [
-      { key: 's1-1', time: '08:00 – 09:00', title: 'Registration & Welcome Coffee', track: 'Arrivals', icon: Users },
-      { key: 's1-2', time: '09:00 – 10:00', title: 'Opening Ceremony & Keynote Addresses', track: 'Plenary', icon: Mic2 },
-      { key: 's1-3', time: '10:00 – 11:00', title: 'Political Engagements: National Commitments to AI in Health', track: 'Plenary', icon: Landmark },
-      { key: 's1-4', time: '11:00 – 11:30', title: 'Networking Break', track: 'Networking', icon: Network },
-      { key: 's1-5', time: '11:30 – 13:00', title: 'Panel: AI in Health Policy & Regulation', track: 'Policy & Governance', icon: Users },
-      { key: 's1-6', time: '13:00 – 14:00', title: 'Lunch', track: 'Networking', icon: Network },
-      { key: 's1-7', time: '14:00 – 15:30', title: 'Panel: AI for Resource-Limited Settings', track: 'Clinical AI & Diagnostics', icon: Users },
-      { key: 's1-8', time: '15:30 – 17:00', title: 'Poster & Abstract Presentations', track: 'Research', icon: FileText },
-      { key: 's1-9', time: '17:00 – 18:30', title: 'Welcome Reception & Networking', track: 'Networking', icon: Network },
+      { key: 's1-1', startTime: '08:00', endTime: '09:00', title: 'Registration & Welcome Coffee', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's1-2', startTime: '09:00', endTime: '10:00', title: 'Opening Ceremony & Keynote Addresses', format: 'Keynote', track: { name: 'Plenary', color: '#E8792C' }, speakers: [], partners: [], cardStyle: 'featured' },
+      { key: 's1-3', startTime: '10:00', endTime: '11:00', title: 'Political Engagements: National Commitments to AI in Health', format: 'Political Engagement', track: { name: 'Plenary', color: '#E8792C' }, speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's1-4', startTime: '11:00', endTime: '11:30', title: 'Networking Break', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's1-5', startTime: '11:30', endTime: '13:00', title: 'Panel: AI in Health Policy & Regulation', format: 'Panel Discussion', track: { name: 'Policy & Governance', color: '#14213D' }, speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's1-6', startTime: '13:00', endTime: '14:00', title: 'Lunch', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's1-7', startTime: '14:00', endTime: '15:30', title: 'Panel: AI for Resource-Limited Settings', format: 'Panel Discussion', track: { name: 'Clinical AI & Diagnostics', color: '#0F172A' }, speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's1-8', startTime: '15:30', endTime: '17:00', title: 'Poster & Abstract Presentations', format: 'Poster & Abstract', track: { name: 'Research', color: '#64748B' }, speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's1-9', startTime: '17:00', endTime: '18:30', title: 'Welcome Reception & Networking', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
     ],
   },
   {
     key: 'day2',
-    label: 'Day 2',
-    date: '20 October 2026',
-    theme: 'Innovation, Investment & Implementation',
     sessions: [
-      { key: 's2-1', time: '08:30 – 09:00', title: 'Morning Coffee', track: 'Arrivals', icon: Users },
-      { key: 's2-2', time: '09:00 – 10:30', title: 'Startup Showcase: Live Demonstrations', track: 'Venture & Investment', icon: Rocket },
-      { key: 's2-3', time: '10:30 – 11:00', title: 'Networking Break', track: 'Networking', icon: Network },
-      { key: 's2-4', time: '11:00 – 13:00', title: 'Startup Pod & Deal Room: Investor Matchmaking', track: 'Venture & Investment', icon: Handshake },
-      { key: 's2-5', time: '13:00 – 14:00', title: 'Lunch', track: 'Networking', icon: Network },
-      { key: 's2-6', time: '14:00 – 15:30', title: 'Panel: Data Interoperability & Infrastructure', track: 'Infrastructure & Data', icon: Users },
-      { key: 's2-7', time: '15:30 – 16:30', title: 'Working Session: Draft National Policy Brief', track: 'Policy & Governance', icon: FileText },
-      { key: 's2-8', time: '16:30 – 17:15', title: 'Closing Plenary & Summit Communiqué', track: 'Plenary', icon: Mic2 },
-      { key: 's2-9', time: '17:15 – 18:00', title: 'Closing Reception', track: 'Networking', icon: Network },
+      { key: 's2-1', startTime: '08:30', endTime: '09:00', title: 'Morning Coffee', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's2-2', startTime: '09:00', endTime: '10:30', title: 'Startup Showcase: Live Demonstrations', format: 'Startup Showcase', track: { name: 'Venture & Investment', color: '#E8792C' }, speakers: [], partners: [], cardStyle: 'featured' },
+      { key: 's2-3', startTime: '10:30', endTime: '11:00', title: 'Networking Break', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's2-4', startTime: '11:00', endTime: '13:00', title: 'Startup Pod & Deal Room: Investor Matchmaking', format: 'Startup Showcase', track: { name: 'Venture & Investment', color: '#E8792C' }, speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's2-5', startTime: '13:00', endTime: '14:00', title: 'Lunch', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's2-6', startTime: '14:00', endTime: '15:30', title: 'Panel: Data Interoperability & Infrastructure', format: 'Panel Discussion', track: { name: 'Infrastructure & Data', color: '#14213D' }, speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's2-7', startTime: '15:30', endTime: '16:30', title: 'Working Session: Draft National Policy Brief', format: 'Poster & Abstract', track: { name: 'Policy & Governance', color: '#64748B' }, speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's2-8', startTime: '16:30', endTime: '17:15', title: 'Closing Plenary & Summit Communiqué', format: 'Keynote', track: { name: 'Plenary', color: '#E8792C' }, speakers: [], partners: [], cardStyle: 'featured' },
+      { key: 's2-9', startTime: '17:15', endTime: '18:00', title: 'Closing Reception', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
     ],
   },
 ];
+
+const timeOfDay = (startTime: string): 'Morning Sessions' | 'Afternoon Sessions' | 'Evening Sessions' => {
+  const hour = Number(startTime.slice(0, 2));
+  if (hour < 12) return 'Morning Sessions';
+  if (hour < 17) return 'Afternoon Sessions';
+  return 'Evening Sessions';
+};
+
+const CARD_STYLE_CLASSES: Record<Exclude<SessionCardStyle, 'break'>, string> = {
+  standard: 'bg-white text-navy',
+  featured: 'bg-navy text-white',
+  spotlight: 'bg-navy-secondary text-white',
+};
 
 export const Agenda = () => {
   const [dayKey, setDayKey] = useState<SessionDay>('day1');
@@ -98,6 +118,10 @@ export const Agenda = () => {
   const [rsvpSession, setRsvpSession] = useState<{ _id: string; title: string } | null>(null);
   const [allSpeakers, setAllSpeakers] = useState<AdminSpeaker[]>([]);
   const [activeSpeaker, setActiveSpeaker] = useState<AdminSpeaker | null>(null);
+
+  const [formatFilter, setFormatFilter] = useState<SessionFormat | ''>('');
+  const [trackFilter, setTrackFilter] = useState('');
+  const [roomFilter, setRoomFilter] = useState('');
 
   useEffect(() => {
     listPublicSessions()
@@ -130,18 +154,69 @@ export const Agenda = () => {
       updatedAt: '',
     };
 
-  const days = STATIC_DAYS.map((staticDay) => {
-    const realForDay = (realSessions ?? [])
-      .filter((s) => s.day === staticDay.key)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-    return {
-      ...staticDay,
-      sessions: realForDay.length > 0 ? realForDay.map(fromRealSession) : staticDay.sessions,
-      isLive: realForDay.length > 0,
-    };
-  });
+  const days = useMemo(
+    () =>
+      STATIC_DAYS.map((staticDay) => {
+        const realForDay = (realSessions ?? [])
+          .filter((s) => s.day === staticDay.key)
+          .sort((a, b) => a.startTime.localeCompare(b.startTime));
+        return {
+          key: staticDay.key,
+          sessions: realForDay.length > 0 ? realForDay.map(fromRealSession) : staticDay.sessions,
+          isLive: realForDay.length > 0,
+        };
+      }),
+    [realSessions]
+  );
 
   const day = days.find((d) => d.key === dayKey)!;
+
+  // Filter dropdown/pill options are drawn from BOTH days' real data (not just
+  // the active day), so switching days doesn't make an option disappear —
+  // only the sessions shown change.
+  const allRealSessions = useMemo(() => (realSessions ?? []).map(fromRealSession), [realSessions]);
+  const trackOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    allRealSessions.forEach((s) => {
+      if (s.track) map.set(s.track.name, s.track.color);
+    });
+    return Array.from(map.entries());
+  }, [allRealSessions]);
+  const roomOptions = useMemo(
+    () => Array.from(new Set(allRealSessions.map((s) => s.room).filter((r): r is string => !!r))).sort(),
+    [allRealSessions]
+  );
+  const formatCounts = useMemo(() => {
+    const counts = new Map<SessionFormat, number>();
+    day.sessions.forEach((s) => counts.set(s.format, (counts.get(s.format) ?? 0) + 1));
+    return counts;
+  }, [day.sessions]);
+
+  const filteredSessions = day.sessions.filter(
+    (s) =>
+      (!formatFilter || s.format === formatFilter) &&
+      (!trackFilter || s.track?.name === trackFilter) &&
+      (!roomFilter || s.room === roomFilter)
+  );
+
+  // Sessions already come back sorted by time; grouping by time-of-day here
+  // just labels that existing order (Morning/Afternoon/Evening), it never
+  // re-sorts.
+  const sections = useMemo(() => {
+    const order: DisplaySession['key'][] = [];
+    const map = new Map<string, DisplaySession[]>();
+    filteredSessions.forEach((s) => {
+      const label = timeOfDay(s.startTime);
+      if (!map.has(label)) {
+        map.set(label, []);
+        order.push(label);
+      }
+      map.get(label)!.push(s);
+    });
+    return order.map((label) => ({ label, sessions: map.get(label)! }));
+  }, [filteredSessions]);
+
+  const dateLabel = DAY_DATES[dayKey].toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <>
@@ -151,105 +226,254 @@ export const Agenda = () => {
         subtitle="A working agenda combining thought leadership with actionable deal-making and policy dialogue. Final timings and speakers will be confirmed closer to the Summit."
       />
 
-      <section className="bg-white py-16">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          {/* Day switcher */}
-          <Reveal className="flex flex-wrap items-center justify-center gap-3">
-            {days.map((d) => {
-              const isActive = d.key === dayKey;
+      {/* Day tabs — sticky under the fixed site header, reading the same
+          measured --header-height Navbar.tsx sets, so it lines up exactly
+          instead of guessing a breakpoint offset. */}
+      <div className="sticky z-30 bg-navy-nav" style={{ top: 'var(--header-height, 4rem)' }}>
+        <div className="mx-auto flex max-w-6xl items-stretch justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-1 items-stretch">
+            {(Object.keys(DAY_DATES) as SessionDay[]).map((key) => {
+              const { dayOfMonth, weekday, month } = dayTabParts(DAY_DATES[key]);
+              const isActive = key === dayKey;
               return (
                 <button
-                  key={d.key}
-                  onClick={() => setDayKey(d.key)}
-                  className={`rounded-full border px-6 py-3 text-sm font-semibold transition-all ${
-                    isActive
-                      ? 'border-orange bg-orange text-white shadow-md shadow-orange/25'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-orange/40'
+                  key={key}
+                  onClick={() => setDayKey(key)}
+                  className={`flex items-center gap-2.5 border-b-2 px-4 py-3 transition-colors sm:px-6 ${
+                    isActive ? 'border-orange bg-white/5' : 'border-transparent hover:bg-white/5'
                   }`}
                 >
-                  {d.label} <span className="ml-1.5 font-normal opacity-80">&middot; {d.date}</span>
+                  <span className={`font-display text-2xl font-bold ${isActive ? 'text-white' : 'text-slate-500'}`}>{dayOfMonth}</span>
+                  <span className="text-left leading-tight">
+                    <span className={`block text-[13px] font-semibold ${isActive ? 'text-white' : 'text-slate-400'}`}>
+                      {key === 'day1' ? 'Day 1' : 'Day 2'}
+                    </span>
+                    <span className="block text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                      {weekday} {month}
+                    </span>
+                  </span>
                 </button>
               );
             })}
-          </Reveal>
+          </div>
+          <a
+            href="/partners"
+            className="ml-2 flex shrink-0 items-center rounded-full bg-orange px-4 text-[12px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-orange-hover sm:px-6 sm:text-[13px]"
+          >
+            Partner With Us
+          </a>
+        </div>
+      </div>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={dayKey}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.35 }}
-              className="mt-10"
+      <section className="bg-offwhite py-10">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          {/* Filter pills + dropdowns */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => setFormatFilter('')}
+              className={`rounded-full px-4 py-2 text-[13px] font-semibold transition-colors ${
+                !formatFilter ? 'bg-navy text-white' : 'border border-slate-200 bg-white text-slate-600 hover:border-orange/40'
+              }`}
             >
-              <div className="rounded-2xl bg-navy px-6 py-5 text-center sm:px-8">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-orange">{day.label} Theme</p>
-                <p className="mt-1 font-display text-lg font-semibold text-white sm:text-xl">{day.theme}</p>
-                {!day.isLive && (
-                  <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    Indicative programme: confirmed sessions publish here as they're finalized
-                  </p>
-                )}
-              </div>
+              All
+            </button>
+            {SESSION_FORMATS.filter((f) => (formatCounts.get(f) ?? 0) > 0).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFormatFilter(f)}
+                className={`rounded-full px-4 py-2 text-[13px] font-semibold transition-colors ${
+                  formatFilter === f ? 'bg-navy text-white' : 'border border-slate-200 bg-white text-slate-600 hover:border-orange/40'
+                }`}
+              >
+                {f} &middot; {formatCounts.get(f)}
+              </button>
+            ))}
 
-              <div className="mt-8 space-y-3">
-                {day.sessions.map((s, i) => (
-                  <Reveal key={s.key} delay={i * 0.04}>
-                    <div className="flex items-start gap-4 rounded-xl border border-slate-200 p-4 transition-colors hover:border-orange/40 sm:items-center sm:gap-6 sm:p-5">
-                      <div className="flex w-28 shrink-0 items-center gap-2 text-xs font-semibold text-slate-500 sm:w-36 sm:text-sm">
-                        <Clock size={14} className="shrink-0 text-orange" />
-                        {s.time}
+            <select
+              value={trackFilter}
+              onChange={(e) => setTrackFilter(e.target.value)}
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 focus:border-orange/40 focus:outline-none"
+            >
+              <option value="">All Tracks</option>
+              {trackOptions.map(([name]) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={roomFilter}
+              onChange={(e) => setRoomFilter(e.target.value)}
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 focus:border-orange/40 focus:outline-none"
+            >
+              <option value="">All Rooms</option>
+              {roomOptions.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <p className="mt-4 text-[13px] text-slate-400">
+            Day {dayKey === 'day1' ? '1' : '2'} &middot; {dateLabel} &mdash; {filteredSessions.length} session
+            {filteredSessions.length === 1 ? '' : 's'} shown
+          </p>
+
+          {!day.isLive && (
+            <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+              Indicative programme: confirmed sessions publish here as they're finalized
+            </p>
+          )}
+
+          {/* Timeline */}
+          <div className="mt-8 space-y-10">
+            {sections.map((section) => (
+              <div key={section.label}>
+                <div className="mb-5 flex items-center gap-3">
+                  <p className="shrink-0 text-xs font-bold uppercase tracking-widest text-orange">{section.label}</p>
+                  <span className="h-px flex-1 bg-slate-200" />
+                </div>
+
+                <div className="space-y-4">
+                  {section.sessions.map((s) =>
+                    s.cardStyle === 'break' ? (
+                      <div key={s.key} className="rounded-lg bg-slate-100 py-3 text-center text-[13px] font-medium text-slate-500">
+                        {s.startTime} &ndash; {s.endTime} &middot; {s.title}
                       </div>
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-secondary text-orange">
-                        <s.icon size={16} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <p className="font-semibold text-navy">{s.title}</p>
-                          {s.requiresRsvp && (
-                            <button
-                              type="button"
-                              onClick={() => setRsvpSession({ _id: s.key, title: s.title })}
-                              className="flex shrink-0 items-center gap-1 rounded-full bg-orange/10 px-2.5 py-1 text-[11px] font-semibold text-orange hover:bg-orange/20"
-                            >
-                              <CalendarCheck size={12} /> RSVP
-                            </button>
-                          )}
+                    ) : (
+                      <div key={s.key} className="flex gap-4 sm:gap-5">
+                        {/* Timeline rail */}
+                        <div className="flex w-12 shrink-0 flex-col items-center sm:w-16">
+                          <span className="text-[13px] font-bold text-navy sm:text-sm">{s.startTime}</span>
+                          <span
+                            className="my-1.5 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-offwhite"
+                            style={{ backgroundColor: s.track?.color ?? '#E8792C' }}
+                          />
+                          <span className="w-px flex-1 bg-slate-200" />
+                          <span className="text-[11px] font-medium text-slate-400">{s.endTime}</span>
                         </div>
-                        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">
-                          {s.trackColor && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: s.trackColor }} />}
-                          <span style={s.trackColor ? { color: s.trackColor } : undefined}>{s.track}</span>
-                          {s.room && <span className="normal-case tracking-normal text-slate-400"> &middot; {s.room}</span>}
-                        </p>
-                        {s.description && <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{s.description}</p>}
-                        {s.speakers && s.speakers.length > 0 && (
-                          <div className="mt-2.5 flex flex-wrap gap-2">
-                            {s.speakers.map((sp) => (
-                              <button
-                                key={sp._id}
-                                type="button"
-                                onClick={() => setActiveSpeaker(resolveSpeaker(sp, s.track))}
-                                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3 text-left transition-colors hover:border-orange/40 hover:bg-orange/5"
-                              >
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy text-[10px] font-semibold text-white">
-                                  {sp.photoUrl ? (
-                                    <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full object-cover" />
-                                  ) : (
-                                    sp.fullName[0]
-                                  )}
+
+                        {/* Card */}
+                        <div className={`mb-2 flex-1 rounded-xl p-5 shadow-sm ${
+                          s.cardStyle === 'standard'
+                            ? `${CARD_STYLE_CLASSES.standard} border-l-4`
+                            : CARD_STYLE_CLASSES[s.cardStyle]
+                        }`}
+                          style={s.cardStyle === 'standard' ? { borderLeftColor: s.track?.color ?? '#E8792C' } : undefined}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                                    s.cardStyle === 'standard' ? 'bg-orange/10 text-orange' : 'bg-white/15 text-white'
+                                  }`}
+                                >
+                                  {s.format}
                                 </span>
-                                <span className="text-xs font-medium text-navy">{sp.fullName}</span>
-                              </button>
-                            ))}
+                                {s.track && (
+                                  <span
+                                    className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                                      s.cardStyle === 'standard' ? 'bg-offwhite text-slate-500' : 'bg-white/10 text-slate-200'
+                                    }`}
+                                  >
+                                    {s.track.name}
+                                  </span>
+                                )}
+                                {s.requiresRsvp && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setRsvpSession({ _id: s.key, title: s.title })}
+                                    className="flex items-center gap-1 rounded-full bg-orange px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-orange-hover"
+                                  >
+                                    <CalendarCheck size={11} /> RSVP
+                                  </button>
+                                )}
+                              </div>
+
+                              <p className={`mt-2 font-display text-base font-bold sm:text-lg ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>
+                                {s.title}
+                              </p>
+                              {s.room && (
+                                <p className={`mt-0.5 text-[12px] font-medium ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-300'}`}>
+                                  {s.room}
+                                </p>
+                              )}
+
+                              {s.description && (
+                                <div className="mt-3">
+                                  <p className={`text-[10px] font-bold uppercase tracking-widest ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-400'}`}>
+                                    Session Brief
+                                  </p>
+                                  <p className={`mt-1 text-[13px] leading-relaxed ${s.cardStyle === 'standard' ? 'text-slate-600' : 'text-slate-200'}`}>
+                                    {s.description}
+                                  </p>
+                                </div>
+                              )}
+
+                              {s.speakers.length > 0 && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {s.speakers.map((sp) => (
+                                    <button
+                                      key={sp._id}
+                                      type="button"
+                                      onClick={() => setActiveSpeaker(resolveSpeaker(sp, s.track?.name ?? 'General Session'))}
+                                      className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-left transition-colors ${
+                                        s.cardStyle === 'standard'
+                                          ? 'border-slate-200 bg-white hover:border-orange/40 hover:bg-orange/5'
+                                          : 'border-white/20 bg-white/5 hover:bg-white/10'
+                                      }`}
+                                    >
+                                      <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy text-[10px] font-semibold text-white">
+                                        {sp.photoUrl ? (
+                                          <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full object-cover" />
+                                        ) : (
+                                          sp.fullName[0]
+                                        )}
+                                      </span>
+                                      <span className={`text-xs font-medium ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>
+                                        {sp.fullName}
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {s.partners.length > 0 && (
+                              <div className="flex shrink-0 flex-wrap justify-end gap-3">
+                                {s.partners.map((p) => (
+                                  <div key={p._id} className="flex w-20 flex-col items-center gap-1.5 text-center">
+                                    <span className="flex h-12 w-20 items-center justify-center rounded-lg bg-white p-2 shadow-sm">
+                                      {p.logoUrl ? (
+                                        <img src={p.logoUrl} alt={p.name} className="max-h-full max-w-full object-contain" />
+                                      ) : (
+                                        <span className="text-[10px] font-semibold text-navy">{p.name}</span>
+                                      )}
+                                    </span>
+                                    <span className={`text-[10px] font-medium leading-tight ${s.cardStyle === 'standard' ? 'text-slate-500' : 'text-slate-300'}`}>
+                                      {p.name}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  </Reveal>
-                ))}
+                    )
+                  )}
+                </div>
               </div>
-            </motion.div>
-          </AnimatePresence>
+            ))}
+
+            {filteredSessions.length === 0 && (
+              <p className="rounded-xl border border-slate-200 bg-white py-12 text-center text-sm text-slate-400">
+                No sessions match these filters yet.
+              </p>
+            )}
+          </div>
         </div>
       </section>
 

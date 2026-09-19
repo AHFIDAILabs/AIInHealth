@@ -11,12 +11,14 @@ import {
   adminRemoveSessionRsvp,
   SESSION_DAYS,
   SESSION_FORMATS,
+  SESSION_CARD_STYLES,
   type AdminSession,
   type SessionInput,
   type SessionDay,
 } from '../../../services/session.service';
 import { adminListSpeakers, type AdminSpeaker } from '../../../services/speaker.service';
 import { adminListTracks, type AdminTrack } from '../../../services/track.service';
+import { adminListPartners, type AdminPartner } from '../../../services/partner.service';
 import { getApiErrorMessage } from '../../../services/api';
 import { SkeletonRows } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
@@ -34,12 +36,23 @@ const EMPTY_FORM: SessionInput = {
   room: '',
   description: '',
   speakers: [],
+  partners: [],
+  cardStyle: 'standard',
   isPublished: false,
   requiresRsvp: false,
   maxAttendees: undefined,
 };
 
 const DAY_LABEL: Record<SessionDay, string> = { day1: 'Day 1 — 19 Oct', day2: 'Day 2 — 20 Oct' };
+
+// Plain labels for the admin form's dropdown — the enum values themselves
+// (session.service.ts's SESSION_CARD_STYLES) are what's actually stored.
+const CARD_STYLE_LABEL: Record<(typeof SESSION_CARD_STYLES)[number], string> = {
+  standard: 'Standard (white card)',
+  featured: 'Featured (dark card)',
+  spotlight: 'Spotlight (blue card)',
+  break: 'Break (no card, e.g. Lunch)',
+};
 
 // The Summit only ever runs these two real calendar days (see
 // jobs/sessionReminder.job.ts's own DAY_DATES, kept in sync with this) — the
@@ -55,6 +68,7 @@ export const SessionsListTab = () => {
   const [items, setItems] = useState<AdminSession[]>([]);
   const [tracks, setTracks] = useState<AdminTrack[]>([]);
   const [speakers, setSpeakers] = useState<AdminSpeaker[]>([]);
+  const [partners, setPartners] = useState<AdminPartner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dayFilter, setDayFilter] = useState<SessionDay | ''>('');
@@ -64,6 +78,7 @@ export const SessionsListTab = () => {
   const [editing, setEditing] = useState<AdminSession | null>(null);
   const [form, setForm] = useState<SessionInput>(EMPTY_FORM);
   const [speakerQuery, setSpeakerQuery] = useState('');
+  const [partnerQuery, setPartnerQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [conflictWarning, setConflictWarning] = useState<{ title: string; startTime: string; endTime: string }[]>([]);
@@ -89,6 +104,7 @@ export const SessionsListTab = () => {
   useEffect(() => {
     adminListSpeakers({ limit: 100 }).then((res) => setSpeakers(res.items)).catch(() => {});
     adminListTracks().then(setTracks).catch(() => {});
+    adminListPartners({ limit: 100 }).then((res) => setPartners(res.items)).catch(() => {});
   }, []);
 
   // Live conflict check while day/room/time fields are filled in — inline warning
@@ -124,6 +140,11 @@ export const SessionsListTab = () => {
     return speakers.filter((s) => !q || s.fullName.toLowerCase().includes(q));
   }, [speakers, speakerQuery]);
 
+  const filteredPartnerOptions = useMemo(() => {
+    const q = partnerQuery.trim().toLowerCase();
+    return partners.filter((p) => !q || p.name.toLowerCase().includes(q));
+  }, [partners, partnerQuery]);
+
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
@@ -146,6 +167,8 @@ export const SessionsListTab = () => {
       room: session.room,
       description: session.description ?? '',
       speakers: session.speakers.map((s) => s._id),
+      partners: session.partners.map((p) => p._id),
+      cardStyle: session.cardStyle,
       isPublished: session.isPublished,
       requiresRsvp: session.requiresRsvp ?? false,
       maxAttendees: session.maxAttendees,
@@ -161,6 +184,13 @@ export const SessionsListTab = () => {
     setForm((prev) => {
       const current = prev.speakers ?? [];
       return { ...prev, speakers: current.includes(id) ? current.filter((s) => s !== id) : [...current, id] };
+    });
+  };
+
+  const togglePartner = (id: string) => {
+    setForm((prev) => {
+      const current = prev.partners ?? [];
+      return { ...prev, partners: current.includes(id) ? current.filter((p) => p !== id) : [...current, id] };
     });
   };
 
@@ -467,6 +497,18 @@ export const SessionsListTab = () => {
                   </AdminSelect>
                 </div>
 
+                <AdminSelect
+                  label="Agenda Card Style"
+                  value={form.cardStyle ?? 'standard'}
+                  onChange={(e) => setForm({ ...form, cardStyle: e.target.value as SessionInput['cardStyle'] })}
+                >
+                  {SESSION_CARD_STYLES.map((style) => (
+                    <option key={style} value={style}>
+                      {CARD_STYLE_LABEL[style]}
+                    </option>
+                  ))}
+                </AdminSelect>
+
                 <AdminInput label="Room" value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="e.g. Ballroom A" />
 
                 <AdminInput
@@ -538,6 +580,36 @@ export const SessionsListTab = () => {
                       );
                     })}
                     {filteredSpeakerOptions.length === 0 && <p className="px-3 py-3 text-xs text-slate-400">No speakers found</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[13px] font-semibold text-navy">Partner Logos</p>
+                  <p className="-mt-0.5 mb-1.5 text-xs text-slate-400">Shown on this session's public Agenda card (e.g. hosts/co-hosts).</p>
+                  <div className="relative">
+                    <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      value={partnerQuery}
+                      onChange={(e) => setPartnerQuery(e.target.value)}
+                      placeholder="Search partners..."
+                      className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+                    />
+                  </div>
+                  <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-slate-200">
+                    {filteredPartnerOptions.map((p) => {
+                      const selected = form.partners?.includes(p._id);
+                      return (
+                        <button
+                          key={p._id}
+                          onClick={() => togglePartner(p._id)}
+                          className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-offwhite ${selected ? 'bg-orange/5' : ''}`}
+                        >
+                          <span className="min-w-0 truncate text-navy">{p.name}</span>
+                          {selected && <span className="shrink-0 text-orange">✓</span>}
+                        </button>
+                      );
+                    })}
+                    {filteredPartnerOptions.length === 0 && <p className="px-3 py-3 text-xs text-slate-400">No partners found</p>}
                   </div>
                 </div>
 
