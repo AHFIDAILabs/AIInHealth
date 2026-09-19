@@ -57,6 +57,14 @@ export const Partners = () => {
     formState: { errors, isSubmitSuccessful, isSubmitting },
   } = useForm<InquiryValues>({ resolver: zodResolver(inquirySchema) });
 
+  // Same tier ordering as the homepage's PartnersShowcase (Title Partner
+  // first, by package.tierOrder) — just without that section's per-tier
+  // headings, since this strip is meant to read as one flat logo wall.
+  // Partners with no package assigned (tierOrder undefined) sort last.
+  const sortedPartners = [...partners].sort(
+    (a, b) => (a.package?.tierOrder ?? Number.MAX_SAFE_INTEGER) - (b.package?.tierOrder ?? Number.MAX_SAFE_INTEGER)
+  );
+
   const onSubmit = async (values: InquiryValues) => {
     setSubmitError('');
     try {
@@ -90,13 +98,13 @@ export const Partners = () => {
               <img src={ahfidMark} alt="AHFID" className="h-7 w-7 rounded" />
               <span className="text-[11px] font-semibold uppercase tracking-wide text-ahfid">Convener</span>
             </div>
-            {partners.map((partner) => {
+            {sortedPartners.map((partner) => {
               const img = partner.logoUrl ? (
                 <img
                   src={partner.logoUrl}
                   alt={partner.name}
                   title={partner.name}
-                  className="h-9 shrink-0 object-contain opacity-70 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
+                  className="h-9 shrink-0 object-contain"
                 />
               ) : (
                 <span className="shrink-0 text-sm font-semibold text-slate-500" title={partner.name}>
