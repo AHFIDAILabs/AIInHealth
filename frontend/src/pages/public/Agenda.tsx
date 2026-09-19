@@ -258,7 +258,7 @@ export const Agenda = () => {
           </div>
           <a
             href="/partners"
-            className="ml-2 flex shrink-0 items-center rounded-full bg-orange px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-orange-hover sm:px-6 sm:text-[12px]"
+            className="ml-2 flex shrink-0 items-center self-center rounded-full bg-orange px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-orange-hover sm:px-4"
           >
             Partner With Us
           </a>

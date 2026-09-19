@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { LightField, LightSelect } from '../ui/LightField';
 import { RegisterSuccess } from './RegisterSuccess';
 import { submitRegistration } from '../../services/registration.service';
 import { getApiErrorMessage } from '../../services/api';
+import { listVolunteerTracks, type PublicVolunteerTrack } from '../../services/volunteerTrack.service';
 
 const TSHIRT_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 
@@ -25,6 +26,11 @@ type FormValues = z.infer<typeof schema>;
 export const VolunteerForm = () => {
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [tracks, setTracks] = useState<PublicVolunteerTrack[]>([]);
+
+  useEffect(() => {
+    listVolunteerTracks().then(setTracks).catch(() => setTracks([]));
+  }, []);
 
   const {
     register,
@@ -84,12 +90,18 @@ export const VolunteerForm = () => {
         </LightSelect>
       </div>
 
-      <LightField
+      <LightSelect
         label="Which track are you interested in? (optional)"
-        placeholder="e.g. Guest Services, Technical Support, Event Coordination"
         error={errors.trackSelected?.message}
         {...register('trackSelected')}
-      />
+      >
+        <option value="">Select a track...</option>
+        {tracks.map((t) => (
+          <option key={t._id} value={t.name}>
+            {t.name}
+          </option>
+        ))}
+      </LightSelect>
 
       <div>
         <LightField

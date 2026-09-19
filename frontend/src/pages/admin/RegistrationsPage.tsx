@@ -6,6 +6,7 @@ import {
   listRegistrations,
   updateRegistrationStatus,
   updateRegistrationActive,
+  updateRegistrationDetails,
   deleteRegistration,
   adminCreateRegistration,
   exportRegistrationsUrl,
@@ -15,6 +16,7 @@ import {
   type AdminCreateRegistrationPayload,
 } from '../../services/admin.service';
 import type { TicketCategory, BoothSize } from '../../services/registration.service';
+import { adminListVolunteerTracks, type AdminVolunteerTrack } from '../../services/volunteerTrack.service';
 import { TICKET_PRICE_NGN, isFreeTicketCategory, formatNaira } from '../../lib/pricing';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
@@ -22,6 +24,7 @@ import { Banner } from '../../components/ui/Banner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { AdminInput, AdminSelect, AdminTextarea } from '../../components/ui/AdminField';
 import { Avatar } from '../../components/ui/Avatar';
+import { VolunteerTrackManagerModal } from '../../components/admin/VolunteerTrackManagerModal';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -143,6 +146,48 @@ export const RegistrationsPage = () => {
   const [addError, setAddError] = useState('');
   const [paymentLink, setPaymentLink] = useState<string | null>(null);
   const [paymentLinkCopied, setPaymentLinkCopied] = useState(false);
+
+  const [volunteerTracks, setVolunteerTracks] = useState<AdminVolunteerTrack[]>([]);
+  const [trackManagerOpen, setTrackManagerOpen] = useState(false);
+  const [trackForm, setTrackForm] = useState({ tshirtSize: '', trackSelected: '', trackAssigned: '' });
+  const [trackSaving, setTrackSaving] = useState(false);
+
+  const loadVolunteerTracks = useCallback(() => {
+    adminListVolunteerTracks().then(setVolunteerTracks).catch(() => {});
+  }, []);
+
+  useEffect(loadVolunteerTracks, [loadVolunteerTracks]);
+
+  // Seed the editable track form whenever a different (or no) registration is
+  // opened, so edits to one volunteer never bleed into the next one viewed.
+  useEffect(() => {
+    if (active?.type === 'volunteer') {
+      setTrackForm({
+        tshirtSize: active.tshirtSize ?? '',
+        trackSelected: active.trackSelected ?? '',
+        trackAssigned: active.trackAssigned ?? '',
+      });
+    }
+  }, [active]);
+
+  const saveVolunteerTrack = async () => {
+    if (!active) return;
+    setTrackSaving(true);
+    try {
+      const updated = await updateRegistrationDetails(active._id, {
+        tshirtSize: trackForm.tshirtSize || undefined,
+        trackSelected: trackForm.trackSelected || undefined,
+        trackAssigned: trackForm.trackAssigned || undefined,
+      });
+      setItems((prev) => prev.map((r) => (r._id === active._id ? updated : r)));
+      setActive(updated);
+      toast('success', 'Volunteer details updated');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setTrackSaving(false);
+    }
+  };
 
   // The sidebar's Attendees/Exhibitors/Volunteers links all point at THIS route with
   // only ?type= differing (AdminSidebar.tsx's isItemActive comment explains why), so
@@ -675,9 +720,53 @@ export const RegistrationsPage = () => {
                     </div>
                   )}
                   {active.boothSize && <DetailRow label="Booth Size" value={active.boothSize} />}
-                  {active.tshirtSize && <DetailRow label="T-Shirt Size" value={active.tshirtSize} />}
-                  {active.trackSelected && <DetailRow label="Track Selected" value={active.trackSelected} />}
-                  {active.trackAssigned && <DetailRow label="Track Assigned" value={active.trackAssigned} />}
+                  {active.type === 'volunteer' && (
+                    <div className="space-y-3 rounded-lg border border-slate-200 p-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Volunteer Details</p>
+                        <button onClick={() => setTrackManagerOpen(true)} className="text-[11px] font-semibold text-orange hover:underline">
+                          Manage Tracks
+                        </button>
+                      </div>
+                      <AdminInput
+                        label="T-Shirt Size"
+                        value={trackForm.tshirtSize}
+                        onChange={(e) => setTrackForm({ ...trackForm, tshirtSize: e.target.value })}
+                        placeholder="e.g. L"
+                      />
+                      <AdminSelect
+                        label="Track Selected"
+                        value={trackForm.trackSelected}
+                        onChange={(e) => setTrackForm({ ...trackForm, trackSelected: e.target.value })}
+                      >
+                        <option value="">None</option>
+                        {volunteerTracks.map((t) => (
+                          <option key={t._id} value={t.name}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </AdminSelect>
+                      <AdminSelect
+                        label="Track Assigned"
+                        value={trackForm.trackAssigned}
+                        onChange={(e) => setTrackForm({ ...trackForm, trackAssigned: e.target.value })}
+                      >
+                        <option value="">None</option>
+                        {volunteerTracks.map((t) => (
+                          <option key={t._id} value={t.name}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </AdminSelect>
+                      <button
+                        onClick={saveVolunteerTrack}
+                        disabled={trackSaving}
+                        className="w-full rounded-lg bg-orange py-2 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
+                      >
+                        {trackSaving ? 'Saving…' : 'Save Volunteer Details'}
+                      </button>
+                    </div>
+                  )}
                   {active.website && <DetailRow label="Website" value={active.website} />}
                   {active.productsDescription && <DetailRow label="Products" value={active.productsDescription} />}
                   {active.message && <DetailRow label="Message" value={active.message} />}
@@ -830,13 +919,36 @@ export const RegistrationsPage = () => {
                 )}
 
                 {addForm.type === 'volunteer' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <AdminInput label="Full Name" value={addForm.fullName} onChange={(e) => setAddForm({ ...addForm, fullName: e.target.value })} />
-                    <AdminInput label="Email" type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} />
-                    <AdminInput label="Phone" type="tel" value={addForm.phone} onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })} />
-                    <AdminInput label="T-Shirt Size" value={addForm.tshirtSize} onChange={(e) => setAddForm({ ...addForm, tshirtSize: e.target.value })} placeholder="e.g. L" />
-                    <AdminInput label="Track Selected" value={addForm.trackSelected} onChange={(e) => setAddForm({ ...addForm, trackSelected: e.target.value })} />
-                    <AdminInput label="Track Assigned" value={addForm.trackAssigned} onChange={(e) => setAddForm({ ...addForm, trackAssigned: e.target.value })} />
+                  <div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <AdminInput label="Full Name" value={addForm.fullName} onChange={(e) => setAddForm({ ...addForm, fullName: e.target.value })} />
+                      <AdminInput label="Email" type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} />
+                      <AdminInput label="Phone" type="tel" value={addForm.phone} onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })} />
+                      <AdminInput label="T-Shirt Size" value={addForm.tshirtSize} onChange={(e) => setAddForm({ ...addForm, tshirtSize: e.target.value })} placeholder="e.g. L" />
+                      <AdminSelect label="Track Selected" value={addForm.trackSelected} onChange={(e) => setAddForm({ ...addForm, trackSelected: e.target.value })}>
+                        <option value="">None</option>
+                        {volunteerTracks.map((t) => (
+                          <option key={t._id} value={t.name}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </AdminSelect>
+                      <AdminSelect label="Track Assigned" value={addForm.trackAssigned} onChange={(e) => setAddForm({ ...addForm, trackAssigned: e.target.value })}>
+                        <option value="">None</option>
+                        {volunteerTracks.map((t) => (
+                          <option key={t._id} value={t.name}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </AdminSelect>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setTrackManagerOpen(true)}
+                      className="mt-2 text-[12px] font-semibold text-orange hover:underline"
+                    >
+                      Manage Tracks
+                    </button>
                   </div>
                 )}
 
@@ -915,6 +1027,12 @@ export const RegistrationsPage = () => {
         loading={deleting}
         onConfirm={confirmDeleteRegistration}
         onCancel={() => setToDelete(null)}
+      />
+
+      <VolunteerTrackManagerModal
+        open={trackManagerOpen}
+        onClose={() => setTrackManagerOpen(false)}
+        onChange={loadVolunteerTracks}
       />
     </div>
   );

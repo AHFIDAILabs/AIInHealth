@@ -141,6 +141,11 @@ export interface UpdateRegistrationDetailsInput {
   boothSize?: BoothSize;
   productsDescription?: string;
   customFieldAnswers?: Record<string, string>;
+  // Volunteer-only — lets staff (re)assign a track, or fix a t-shirt size/
+  // stated preference, after the registration already exists.
+  tshirtSize?: string;
+  trackSelected?: string;
+  trackAssigned?: string;
 }
 
 export const updateRegistrationDetails = async (
