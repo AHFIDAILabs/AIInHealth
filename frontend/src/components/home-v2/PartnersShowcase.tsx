@@ -62,9 +62,15 @@ export const PartnersShowcase = () => {
               </Reveal>
 
               <Reveal delay={gi * 0.06 + 0.05}>
+                {/* An auto-fit grid (rather than a fixed grid-cols-N) centers itself
+                    as a group even when a tier has fewer partners than a full row —
+                    a fixed column count would otherwise leave a lone or partial row
+                    stuck at the left edge instead of centered under the heading. */}
                 <div
-                  className={`mt-10 grid grid-cols-2 gap-6 sm:grid-cols-3 ${
-                    group.isTopTier ? 'lg:grid-cols-4' : 'lg:grid-cols-4'
+                  className={`mt-10 grid justify-center gap-6 ${
+                    group.isTopTier
+                      ? 'grid-cols-[repeat(auto-fit,minmax(150px,190px))]'
+                      : 'grid-cols-[repeat(auto-fit,minmax(120px,150px))]'
                   }`}
                 >
                   {group.items.map((p) => {

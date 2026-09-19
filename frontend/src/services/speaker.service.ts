@@ -70,3 +70,11 @@ export const adminUpdateSpeaker = async (id: string, input: Partial<SpeakerInput
 export const adminDeleteSpeaker = async (id: string): Promise<void> => {
   await api.delete(`/admin/speakers/${id}`);
 };
+
+// One bulk write for a drag-and-drop reorder — see speaker.controller.ts's
+// adminReorder — instead of one PATCH per moved speaker, so a dropped
+// connection or an early tab close can't leave the list half-reordered.
+export const adminReorderSpeakers = async (order: { id: string; order: number }[]): Promise<AdminSpeaker[]> => {
+  const res = await api.patch<{ success: true; data: AdminSpeaker[] }>('/admin/speakers/reorder', { order });
+  return res.data.data;
+};

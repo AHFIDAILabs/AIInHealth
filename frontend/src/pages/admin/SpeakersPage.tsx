@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Plus, X, Users, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, X, Users, Pencil, Trash2, GripVertical } from 'lucide-react';
 import {
   adminListSpeakers,
   adminCreateSpeaker,
   adminUpdateSpeaker,
   adminDeleteSpeaker,
+  adminReorderSpeakers,
   type AdminSpeaker,
   type SpeakerInput,
 } from '../../services/speaker.service';
@@ -49,6 +50,15 @@ export const SpeakersPage = () => {
 
   const [toDelete, setToDelete] = useState<AdminSpeaker | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Reordering only makes sense against the one true full-list order — with a
+  // search/track/status filter active, "position 3 of 4 filtered rows" doesn't
+  // map cleanly onto the real order values the rest of the (hidden) speakers
+  // hold, so dragging is disabled whenever any filter narrows the list.
+  const canReorder = !q && !track && !published;
+  const dragIndex = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [reordering, setReordering] = useState(false);
 
   useEffect(() => {
     listTracks()
@@ -142,12 +152,45 @@ export const SpeakersPage = () => {
     }
   };
 
+  const handleDrop = async (dropIndex: number) => {
+    const fromIndex = dragIndex.current;
+    dragIndex.current = null;
+    setDragOverIndex(null);
+    if (fromIndex === null || fromIndex === dropIndex) return;
+
+    const reordered = [...items];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(dropIndex, 0, moved);
+
+    // Optimistic — the table reflects the new order immediately, then the
+    // whole list's `order` values (0..n-1 by new index) are persisted in one
+    // bulk request, so the public site, which already sorts by this same
+    // field, picks it up without any further changes. One request rather
+    // than one PATCH per moved speaker — see adminReorderSpeakers's comment.
+    const previousItems = items;
+    setItems(reordered);
+    setReordering(true);
+    try {
+      const updated = await adminReorderSpeakers(reordered.map((s, i) => ({ id: s._id, order: i })));
+      const updatedById = new Map(updated.map((u) => [u._id, u]));
+      setItems((prev) => prev.map((s) => updatedById.get(s._id) ?? s));
+    } catch (err) {
+      setItems(previousItems);
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setReordering(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">Speakers</h1>
-          <p className="text-sm text-slate-500">{items.length} speaker{items.length === 1 ? '' : 's'}</p>
+          <p className="text-sm text-slate-500">
+            {items.length} speaker{items.length === 1 ? '' : 's'}
+            {reordering && <span className="ml-2 text-orange">Saving order…</span>}
+          </p>
         </div>
         <button
           onClick={openCreate}
@@ -196,6 +239,10 @@ export const SpeakersPage = () => {
         </div>
       )}
 
+      {!canReorder && items.length > 0 && (
+        <p className="mt-3 text-xs text-slate-400">Clear search/track/status filters to drag speakers into a new order.</p>
+      )}
+
       <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover">
         {loading ? (
           <SkeletonRows rows={6} cols={5} />
@@ -214,6 +261,7 @@ export const SpeakersPage = () => {
             <table className="w-full text-left text-[13px]">
               <thead className="border-b border-slate-100 bg-offwhite/60 text-[11px] uppercase tracking-wide text-slate-400">
                 <tr>
+                  <th className="w-8 px-2 py-3" />
                   <th className="px-4 py-3 font-semibold">Speaker</th>
                   <th className="px-3 py-3 font-semibold">Track</th>
                   <th className="px-3 py-3 font-semibold">Status</th>
@@ -222,8 +270,33 @@ export const SpeakersPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {items.map((s) => (
-                  <tr key={s._id} className={!s.isPublished ? 'opacity-70' : ''}>
+                {items.map((s, i) => (
+                  <tr
+                    key={s._id}
+                    draggable={canReorder}
+                    onDragStart={() => {
+                      dragIndex.current = i;
+                    }}
+                    onDragOver={(e) => {
+                      if (!canReorder) return;
+                      e.preventDefault();
+                      if (dragOverIndex !== i) setDragOverIndex(i);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (canReorder) handleDrop(i);
+                    }}
+                    onDragEnd={() => {
+                      dragIndex.current = null;
+                      setDragOverIndex(null);
+                    }}
+                    className={`${!s.isPublished ? 'opacity-70' : ''} ${dragOverIndex === i ? 'bg-orange/5' : ''} ${
+                      canReorder ? 'cursor-grab active:cursor-grabbing' : ''
+                    }`}
+                  >
+                    <td className="px-2 py-3 text-slate-300">
+                      {canReorder && <GripVertical size={15} />}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {s.photoUrl ? (
