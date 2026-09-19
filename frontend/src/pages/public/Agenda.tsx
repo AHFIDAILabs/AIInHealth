@@ -239,7 +239,7 @@ export const Agenda = () => {
                 <button
                   key={key}
                   onClick={() => setDayKey(key)}
-                  className={`flex items-center gap-2.5 border-b-2 px-4 py-4 transition-colors sm:px-6 ${
+                  className={`flex items-center gap-2.5 border-b-2 px-2 py-4 transition-colors sm:px-6 ${
                     isActive ? 'border-orange bg-white/5' : 'border-transparent hover:bg-white/5'
                   }`}
                 >
@@ -258,7 +258,7 @@ export const Agenda = () => {
           </div>
           <a
             href="/partners"
-            className="ml-2 flex shrink-0 items-center rounded-full bg-orange px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-orange-hover sm:px-6 sm:text-[12px]"
+            className="ml-2 flex shrink-0 items-center rounded-full bg-orange px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-orange-hover sm:px-6 sm:text-[12px]"
           >
             Partner With Us
           </a>
