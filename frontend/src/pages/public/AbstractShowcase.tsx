@@ -1,14 +1,31 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, X, FileText, Mic, StickyNote } from 'lucide-react';
+import { Search, X, FileText, Mic, StickyNote, Globe2, Layers } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
 import { Banner } from '../../components/ui/Banner';
+import { InitialsAvatar } from '../../components/ui/InitialsAvatar';
 import { listConfirmedAbstracts, type ConfirmedAbstract } from '../../services/confirmedAbstract.service';
 import { getApiErrorMessage } from '../../services/api';
 
 const PRESENTATION_LABEL: Record<string, string> = { oral: 'Oral Presentation', poster: 'Poster Presentation' };
+
+// Headshot when the admin has uploaded one, otherwise the same branded
+// initials tile used for speakers without a photo — a missing headshot
+// reads as intentional, not broken.
+const PresenterAvatar = ({ name, photoUrl, size }: { name: string; photoUrl?: string; size: 'card' | 'modal' }) => {
+  const dims = size === 'card' ? 'h-20 w-20' : 'h-24 w-24';
+  return photoUrl ? (
+    <img
+      src={photoUrl}
+      alt={name}
+      className={`${dims} shrink-0 rounded-full object-cover ring-4 ring-offwhite shadow-md`}
+    />
+  ) : (
+    <InitialsAvatar name={name} className={`${dims} shrink-0 rounded-full ring-4 ring-offwhite shadow-md`} />
+  );
+};
 
 // A new, additive public page — the list of presenters the committee has
 // actually confirmed, imported from their own tracker (see backend
@@ -45,6 +62,16 @@ export const AbstractShowcase = () => {
     });
   }, [abstracts, query, track]);
 
+  const countryCount = useMemo(
+    () => new Set(abstracts.map((a) => a.country).filter((c): c is string => !!c)).size,
+    [abstracts]
+  );
+  const stats = [
+    { label: 'Confirmed Presenters', value: abstracts.length },
+    { label: 'Tracks Represented', value: availableTracks.length - 1 },
+    { label: 'Countries', value: countryCount },
+  ];
+
   return (
     <>
       <PageHero
@@ -52,6 +79,19 @@ export const AbstractShowcase = () => {
         title="Confirmed Abstract Presentations"
         subtitle="The researchers and presenters confirmed for the Summit's oral and poster sessions."
       />
+
+      {!loading && abstracts.length > 0 && (
+        <section className="border-b border-slate-100 bg-offwhite py-10">
+          <div className="mx-auto grid max-w-4xl grid-cols-3 gap-4 px-4 text-center sm:px-6 lg:px-8">
+            {stats.map((s, i) => (
+              <Reveal key={s.label} delay={i * 0.06}>
+                <p className="font-display text-3xl font-bold text-navy sm:text-4xl">{s.value}</p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{s.label}</p>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="bg-white py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -122,20 +162,25 @@ export const AbstractShowcase = () => {
               {filtered.map((abstract, i) => (
                 <Reveal key={abstract._id} delay={i * 0.05}>
                   <button onClick={() => setActive(abstract)} className="group block h-full w-full text-left">
-                    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-orange/40 hover:shadow-lg hover:shadow-navy/5">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-secondary text-orange">
-                          {abstract.presentationType === 'poster' ? <StickyNote size={16} /> : <Mic size={16} />}
-                        </span>
-                        {abstract.track && (
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-orange">{abstract.track}</span>
-                        )}
-                      </div>
-                      <p className="mt-4 font-display text-[15px] font-semibold leading-snug text-navy line-clamp-3">
-                        {abstract.title}
+                    <div className="relative flex h-full flex-col items-center rounded-2xl border border-slate-200 bg-white p-6 pt-8 text-center transition-all duration-300 hover:-translate-y-1 hover:border-orange/40 hover:shadow-lg hover:shadow-navy/5">
+                      <span className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-navy-secondary text-orange">
+                        {abstract.presentationType === 'poster' ? <StickyNote size={14} /> : <Mic size={14} />}
+                      </span>
+
+                      <PresenterAvatar name={abstract.authorName} photoUrl={abstract.photoUrl} size="card" />
+
+                      <p className="mt-4 font-display text-[15px] font-semibold leading-snug text-navy">
+                        {abstract.authorName}
                       </p>
-                      <p className="mt-auto pt-4 text-sm text-slate-500">{abstract.authorName}</p>
                       {abstract.country && <p className="text-xs text-slate-400">{abstract.country}</p>}
+
+                      <p className="mt-3 text-sm leading-snug text-slate-600 line-clamp-3">{abstract.title}</p>
+
+                      {abstract.track && (
+                        <span className="mt-auto pt-4 text-[10px] font-semibold uppercase tracking-wide text-orange">
+                          {abstract.track}
+                        </span>
+                      )}
                     </div>
                   </button>
                 </Reveal>
@@ -184,31 +229,35 @@ export const AbstractShowcase = () => {
               >
                 <X size={18} />
               </button>
-              <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-navy-secondary text-orange">
-                  <FileText size={20} />
-                </span>
-                <div>
-                  {active.track && <span className="text-[10px] font-semibold uppercase tracking-wide text-orange">{active.track}</span>}
-                  <p className="text-xs text-slate-400">
-                    {active.presentationType ? PRESENTATION_LABEL[active.presentationType] : 'Presentation'} &middot;{' '}
-                    {active.code}
+
+              <div className="flex flex-col items-center text-center">
+                <PresenterAvatar name={active.authorName} photoUrl={active.photoUrl} size="modal" />
+                <p className="mt-4 font-display text-lg font-semibold text-navy">{active.authorName}</p>
+                {active.country && (
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                    <Globe2 size={12} /> {active.country}
                   </p>
+                )}
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  <span className="flex items-center gap-1 rounded-full bg-navy-secondary px-3 py-1 text-[11px] font-semibold text-white">
+                    {active.presentationType === 'poster' ? <StickyNote size={12} /> : <Mic size={12} />}
+                    {active.presentationType ? PRESENTATION_LABEL[active.presentationType] : 'Presentation'}
+                  </span>
+                  {active.track && (
+                    <span className="flex items-center gap-1 rounded-full bg-orange/10 px-3 py-1 text-[11px] font-semibold text-orange">
+                      <Layers size={12} /> {active.track}
+                    </span>
+                  )}
                 </div>
               </div>
-              <h3 className="mt-4 font-display text-lg font-semibold leading-snug text-navy">{active.title}</h3>
-              <dl className="mt-5 space-y-1.5 text-sm">
-                <div className="flex gap-2">
-                  <dt className="text-slate-400">Presenter</dt>
-                  <dd className="text-navy">{active.authorName}</dd>
-                </div>
-                {active.country && (
-                  <div className="flex gap-2">
-                    <dt className="text-slate-400">Country</dt>
-                    <dd className="text-navy">{active.country}</dd>
-                  </div>
-                )}
-              </dl>
+
+              <div className="mt-6 rounded-xl bg-offwhite p-4">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  <FileText size={12} /> Abstract Title
+                </p>
+                <h3 className="mt-1.5 font-display text-base font-semibold leading-snug text-navy">{active.title}</h3>
+              </div>
+              <p className="mt-4 text-center text-xs text-slate-400">Abstract Code: {active.code}</p>
             </motion.div>
           </motion.div>
         )}

@@ -16,11 +16,15 @@ import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { AdminInput, AdminTextarea, AdminSelect, AdminToggle } from '../../components/ui/AdminField';
+import { ImagePicker } from '../../components/ui/ImagePicker';
+import { Avatar } from '../../components/ui/Avatar';
+import { uploadAdminImage } from '../../services/upload.service';
 import { useToast } from '../../contexts/ToastContext';
 
 const emptyForm = (): ConfirmedAbstractInput => ({
   code: '',
   authorName: '',
+  photoUrl: '',
   title: '',
   presentationType: undefined,
   track: '',
@@ -83,6 +87,7 @@ export const ConfirmedAbstractsPage = () => {
     setForm({
       code: abstract.code,
       authorName: abstract.authorName,
+      photoUrl: abstract.photoUrl ?? '',
       title: abstract.title,
       presentationType: abstract.presentationType,
       track: abstract.track ?? '',
@@ -231,8 +236,13 @@ export const ConfirmedAbstractsPage = () => {
                 {items.map((a) => (
                   <tr key={a._id} className={!a.isPublished ? 'opacity-70' : ''}>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-navy">{a.authorName}</p>
-                      <p className="max-w-xs truncate text-xs text-slate-400">{a.title}</p>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={a.authorName} avatarUrl={a.photoUrl} size={32} />
+                        <div>
+                          <p className="font-medium text-navy">{a.authorName}</p>
+                          <p className="max-w-xs truncate text-xs text-slate-400">{a.title}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-slate-500">{a.code}</td>
                     <td className="px-3 py-3 text-slate-500">
@@ -308,6 +318,15 @@ export const ConfirmedAbstractsPage = () => {
                   </AdminSelect>
                 </div>
                 <AdminInput label="Author Name" value={form.authorName} onChange={(e) => setForm({ ...form, authorName: e.target.value })} />
+                <ImagePicker
+                  label="Headshot"
+                  value={form.photoUrl}
+                  onChange={(url) => setForm({ ...form, photoUrl: url })}
+                  upload={uploadAdminImage}
+                  shape="circle"
+                  size={56}
+                  fallbackText={form.authorName}
+                />
                 <AdminTextarea label="Abstract Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
                 <div className="grid grid-cols-2 gap-3">
                   <AdminSelect label="Track" value={form.track ?? ''} onChange={(e) => setForm({ ...form, track: e.target.value })} disabled={!tracks}>

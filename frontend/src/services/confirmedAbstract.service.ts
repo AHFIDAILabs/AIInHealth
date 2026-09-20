@@ -12,6 +12,7 @@ export interface ConfirmedAbstract {
   _id: string;
   code: string;
   authorName: string;
+  photoUrl?: string;
   title: string;
   presentationType?: PresentationType;
   track?: string;
@@ -29,6 +30,7 @@ export interface AdminConfirmedAbstract extends ConfirmedAbstract {
 export interface ConfirmedAbstractInput {
   code: string;
   authorName: string;
+  photoUrl?: string;
   title: string;
   presentationType?: PresentationType;
   track?: string;

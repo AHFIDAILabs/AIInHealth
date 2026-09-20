@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, X, Globe2, Sparkles, Users } from 'lucide-react';
+import { Search, X, Globe2, Sparkles, Users, Layers, Rocket } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
@@ -10,6 +10,23 @@ import {
   type InnovationShowcaseEntry,
 } from '../../services/innovationShowcaseEntry.service';
 import { getApiErrorMessage } from '../../services/api';
+
+// A dedicated tile for the org logo — white/offwhite swatch with generous
+// padding (same "logo gets real space" convention PartnersShowcase.tsx uses
+// for partner logos), so a missing logo still reads as a placeholder for one
+// rather than an afterthought icon squeezed next to the name.
+const StartupLogo = ({ name, logoUrl, size }: { name: string; logoUrl?: string; size: 'card' | 'modal' }) => {
+  const dims = size === 'card' ? 'h-16 w-16' : 'h-20 w-20';
+  return (
+    <div className={`flex ${dims} shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-offwhite p-2.5 shadow-sm`}>
+      {logoUrl ? (
+        <img src={logoUrl} alt={name} className="h-full w-full object-contain" />
+      ) : (
+        <Sparkles className="text-orange" size={size === 'card' ? 22 : 28} />
+      )}
+    </div>
+  );
+};
 
 // A new, additive public page — the confirmed cohort of Innovation Showcase
 // startups, imported from the judging tracker's own application data (see
@@ -50,6 +67,16 @@ export const InnovationShowcaseConfirmed = () => {
     });
   }, [entries, query, category]);
 
+  const countryCount = useMemo(
+    () => new Set(entries.map((e) => e.country).filter((c): c is string => !!c)).size,
+    [entries]
+  );
+  const stats = [
+    { label: 'Confirmed Startups', value: entries.length },
+    { label: 'Categories', value: availableCategories.length - 1 },
+    { label: 'Countries', value: countryCount },
+  ];
+
   return (
     <>
       <PageHero
@@ -57,6 +84,19 @@ export const InnovationShowcaseConfirmed = () => {
         title="Confirmed Showcase Startups"
         subtitle="The health-AI startups confirmed to demo live at the Summit, selected through our judging process."
       />
+
+      {!loading && entries.length > 0 && (
+        <section className="border-b border-slate-100 bg-offwhite py-10">
+          <div className="mx-auto grid max-w-4xl grid-cols-3 gap-4 px-4 text-center sm:px-6 lg:px-8">
+            {stats.map((s, i) => (
+              <Reveal key={s.label} delay={i * 0.06}>
+                <p className="font-display text-3xl font-bold text-navy sm:text-4xl">{s.value}</p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{s.label}</p>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="bg-white py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -81,7 +121,8 @@ export const InnovationShowcaseConfirmed = () => {
                 <button
                   key={c}
                   onClick={() => setCategory(c)}
-                  className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                  title={c}
+                  className={`max-w-[220px] truncate rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                     category === c ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
                   }`}
                 >
@@ -126,24 +167,21 @@ export const InnovationShowcaseConfirmed = () => {
               {filtered.map((entry, i) => (
                 <Reveal key={entry._id} delay={i * 0.05}>
                   <button onClick={() => setActive(entry)} className="group block h-full w-full text-left">
-                    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-orange/40 hover:shadow-lg hover:shadow-navy/5">
-                      <div className="flex items-center gap-3">
-                        {entry.logoUrl ? (
-                          <img src={entry.logoUrl} alt="" className="h-10 w-10 rounded-lg object-contain" />
-                        ) : (
-                          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-secondary text-orange">
-                            <Sparkles size={18} />
-                          </span>
-                        )}
-                        {entry.category && (
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-orange">{entry.category}</span>
-                        )}
-                      </div>
+                    <div className="flex h-full flex-col items-center rounded-2xl border border-slate-200 bg-white p-6 pt-8 text-center transition-all duration-300 hover:-translate-y-1 hover:border-orange/40 hover:shadow-lg hover:shadow-navy/5">
+                      <StartupLogo name={entry.startupName} logoUrl={entry.logoUrl} size="card" />
+
                       <p className="mt-4 font-display text-[15px] font-semibold leading-snug text-navy">{entry.startupName}</p>
-                      <p className="mt-1.5 text-sm leading-snug text-slate-500 line-clamp-3">
+                      {entry.country && <p className="text-xs text-slate-400">{entry.country}</p>}
+
+                      <p className="mt-3 text-sm leading-snug text-slate-600 line-clamp-3">
                         {entry.description ?? entry.solutionDescription}
                       </p>
-                      {entry.country && <p className="mt-auto pt-4 text-xs text-slate-400">{entry.country}</p>}
+
+                      {entry.category && (
+                        <span className="mt-auto line-clamp-1 pt-4 text-[10px] font-semibold uppercase tracking-wide text-orange">
+                          {entry.category}
+                        </span>
+                      )}
                     </div>
                   </button>
                 </Reveal>
@@ -192,21 +230,29 @@ export const InnovationShowcaseConfirmed = () => {
               >
                 <X size={18} />
               </button>
-              <div className="flex items-center gap-3">
-                {active.logoUrl ? (
-                  <img src={active.logoUrl} alt="" className="h-12 w-12 rounded-lg object-contain" />
-                ) : (
-                  <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-navy-secondary text-orange">
-                    <Sparkles size={20} />
-                  </span>
+              <div className="flex flex-col items-center text-center">
+                <StartupLogo name={active.startupName} logoUrl={active.logoUrl} size="modal" />
+                <h3 className="mt-4 font-display text-xl font-semibold text-navy">{active.startupName}</h3>
+                {active.country && (
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                    <Globe2 size={12} /> {active.country}
+                  </p>
                 )}
-                <div>
-                  {active.category && <span className="text-[10px] font-semibold uppercase tracking-wide text-orange">{active.category}</span>}
-                  <h3 className="font-display text-xl font-semibold text-navy">{active.startupName}</h3>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  {active.category && (
+                    <span className="flex items-center gap-1 rounded-full bg-navy-secondary px-3 py-1 text-[11px] font-semibold text-white">
+                      <Layers size={12} /> {active.category}
+                    </span>
+                  )}
+                  {active.stageOfDevelopment && (
+                    <span className="flex items-center gap-1 rounded-full bg-orange/10 px-3 py-1 text-[11px] font-semibold text-orange">
+                      <Rocket size={12} /> {active.stageOfDevelopment}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {active.description && <p className="mt-4 text-sm leading-relaxed text-slate-600">{active.description}</p>}
+              {active.description && <p className="mt-5 text-sm leading-relaxed text-slate-600">{active.description}</p>}
 
               <dl className="mt-5 space-y-1.5 text-sm">
                 {active.founderNames && (
@@ -215,18 +261,6 @@ export const InnovationShowcaseConfirmed = () => {
                       <Users size={13} /> Founders
                     </dt>
                     <dd className="text-navy">{active.founderNames}</dd>
-                  </div>
-                )}
-                {active.country && (
-                  <div className="flex gap-2">
-                    <dt className="text-slate-400">Country</dt>
-                    <dd className="text-navy">{active.country}</dd>
-                  </div>
-                )}
-                {active.stageOfDevelopment && (
-                  <div className="flex gap-2">
-                    <dt className="text-slate-400">Stage</dt>
-                    <dd className="text-navy">{active.stageOfDevelopment}</dd>
                   </div>
                 )}
                 {active.trl && (
