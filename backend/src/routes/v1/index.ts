@@ -19,6 +19,8 @@ import volunteerRoutes from './volunteer.routes.js';
 import customFormFieldRoutes from './customFormField.routes.js';
 import trackRoutes from './track.routes.js';
 import volunteerTrackRoutes from './volunteerTrack.routes.js';
+import confirmedAbstractRoutes from './confirmedAbstract.routes.js';
+import innovationShowcaseEntryRoutes from './innovationShowcaseEntry.routes.js';
 
 const router = Router();
 
@@ -42,5 +44,7 @@ router.use('/volunteers', volunteerRoutes);
 router.use('/custom-fields', customFormFieldRoutes);
 router.use('/tracks', trackRoutes);
 router.use('/volunteer-tracks', volunteerTrackRoutes);
+router.use('/confirmed-abstracts', confirmedAbstractRoutes);
+router.use('/innovation-showcase-entries', innovationShowcaseEntryRoutes);
 
 export default router;

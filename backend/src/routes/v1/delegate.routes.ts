@@ -28,6 +28,7 @@ router.use(requireDelegateAuth);
 router.get('/me', delegateController.me);
 router.post('/logout', delegateController.logout);
 router.get('/ticket/qr', delegateController.ticketQr);
+router.post('/resend-ticket', delegateController.resendTicket);
 router.patch('/directory-opt-in', validate(updateDirectoryOptInSchema), delegateController.updateDirectoryOptIn);
 router.patch('/profile', validate(updateDelegateProfileSchema), delegateController.updateProfile);
 router.post('/uploads/image', uploadImage, uploadController.uploadImage);

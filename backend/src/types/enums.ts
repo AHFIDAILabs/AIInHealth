@@ -160,6 +160,12 @@ export type AbstractDecision = (typeof ABSTRACT_DECISIONS)[number];
 export const SCORE_BANDS = ['strong_accept', 'accept', 'borderline', 'reject'] as const;
 export type ScoreBand = (typeof SCORE_BANDS)[number];
 
+// Format of a confirmed presentation — see ConfirmedAbstract.model.ts. Kept
+// as its own small enum rather than reusing ABSTRACT_DECISIONS, since this
+// model is decoupled from the submission/review pipeline entirely.
+export const PRESENTATION_TYPES = ['oral', 'poster'] as const;
+export type PresentationType = (typeof PRESENTATION_TYPES)[number];
+
 // Which event day(s) an Event Team member is rostered for — mirrors SESSION_DAYS
 // plus a 'both' option since most core staff work the whole summit.
 export const TEAM_MEMBER_DAYS = ['day1', 'day2', 'both'] as const;

@@ -4,8 +4,7 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Registration } from '../models/Registration.model.js';
-import { ensureDelegateAccessCode } from '../services/delegateToken.service.js';
-import { sendDelegateAccessCodeEmail } from '../services/email.service.js';
+import { resendAccessCodeAndTicket } from '../services/registrationNotification.service.js';
 import { recordAudit } from '../services/audit.service.js';
 
 const delegateName = (r: { fullName?: string | null; contactName?: string | null; companyName?: string | null }) =>
@@ -52,22 +51,17 @@ export const adminSendCode = catchAsync(async (req: Request, res: Response) => {
   if (registration.status !== 'confirmed') {
     throw new ApiError(400, 'Only confirmed registrations can access the delegate portal.', 'NOT_CONFIRMED');
   }
-  const to = delegateEmail(registration);
-  if (!to) throw new ApiError(400, 'This registration has no email on file.', 'NO_EMAIL');
+  if (!delegateEmail(registration)) throw new ApiError(400, 'This registration has no email on file.', 'NO_EMAIL');
 
-  const accessCode = await ensureDelegateAccessCode(registration);
-  await sendDelegateAccessCodeEmail(to, delegateName(registration), accessCode);
-
-  registration.portalLastLinkSentAt = new Date();
-  await registration.save();
+  const result = await resendAccessCodeAndTicket(registration);
 
   await recordAudit({
     req,
     action: 'portal_token.sent',
     resourceType: 'Registration',
     resourceId: registration.id,
-    after: { sentAt: registration.portalLastLinkSentAt },
+    after: { sentAt: result?.sentAt },
   });
 
-  res.status(201).json(new ApiResponse({ ok: true, sentAt: registration.portalLastLinkSentAt }));
+  res.status(201).json(new ApiResponse({ ok: true, sentAt: result?.sentAt }));
 });

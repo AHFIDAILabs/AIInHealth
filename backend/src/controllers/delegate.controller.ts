@@ -6,9 +6,9 @@ import { Registration } from '../models/Registration.model.js';
 import { DelegatePushSubscription } from '../models/DelegatePushSubscription.model.js';
 import { env } from '../config/env.js';
 import { setDelegateCookie, clearDelegateCookie } from '../utils/cookies.js';
-import { ensureDelegateAccessCode, verifyDelegateAccessCode, signDelegateSessionToken } from '../services/delegateToken.service.js';
-import { sendDelegateAccessCodeEmail } from '../services/email.service.js';
+import { verifyDelegateAccessCode, signDelegateSessionToken } from '../services/delegateToken.service.js';
 import { qrDataUrlForToken } from '../services/qr.service.js';
+import { resendAccessCodeAndTicket } from '../services/registrationNotification.service.js';
 import type {
   RequestAccessCodeInput,
   VerifyAccessCodeInput,
@@ -33,13 +33,7 @@ export const requestAccessCode = catchAsync(async (req: Request, res: Response) 
   }).sort({ createdAt: -1 });
 
   if (registration) {
-    const to = delegateEmail(registration);
-    if (to) {
-      const accessCode = await ensureDelegateAccessCode(registration);
-      await sendDelegateAccessCodeEmail(to, delegateName(registration), accessCode);
-      registration.portalLastLinkSentAt = new Date();
-      await registration.save();
-    }
+    await resendAccessCodeAndTicket(registration);
   }
 
   // Enumeration-safe: identical response whether or not a confirmed registration exists.
@@ -96,6 +90,18 @@ export const ticketQr = catchAsync(async (req: Request, res: Response) => {
   if (!registration?.qrToken) throw new ApiError(404, 'No e-ticket available yet', 'NO_TICKET');
   const qrDataUrl = await qrDataUrlForToken(registration.qrToken);
   res.json(new ApiResponse({ qrDataUrl }));
+});
+
+// POST /delegate/resend-ticket — an "email me a copy" convenience from inside
+// the portal itself (distinct from requestAccessCode, which is the pre-login
+// "I lost my code" flow on PortalLogin.tsx) — useful to forward the ticket to
+// a personal inbox, or keep a copy for offline access at the door.
+export const resendTicket = catchAsync(async (req: Request, res: Response) => {
+  const registration = await Registration.findById(req.delegate!.registrationId);
+  if (!registration) throw new ApiError(401, 'Session invalid', 'UNAUTHENTICATED');
+  const result = await resendAccessCodeAndTicket(registration);
+  if (!result) throw new ApiError(400, 'No email is on file for this registration.', 'NO_EMAIL');
+  res.json(new ApiResponse({ ok: true, sentTo: result.to }));
 });
 
 // PATCH /delegate/profile — name/phone/organization only (see the validation

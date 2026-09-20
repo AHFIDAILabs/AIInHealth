@@ -32,6 +32,8 @@ import * as sponsorshipPackageController from '../../controllers/sponsorshipPack
 import * as deliverableController from '../../controllers/deliverable.controller.js';
 import * as partnerInteractionController from '../../controllers/partnerInteraction.controller.js';
 import * as trackController from '../../controllers/track.controller.js';
+import * as confirmedAbstractController from '../../controllers/confirmedAbstract.controller.js';
+import * as innovationShowcaseEntryController from '../../controllers/innovationShowcaseEntry.controller.js';
 import * as volunteerTrackController from '../../controllers/volunteerTrack.controller.js';
 import * as leadController from '../../controllers/lead.controller.js';
 import * as customFormFieldController from '../../controllers/customFormField.controller.js';
@@ -211,6 +213,16 @@ router.get('/innovations', requireRole(...contentRoles), innovationController.ad
 router.post('/innovations', requireRole(...contentRoles), innovationController.adminCreate);
 router.patch('/innovations/:id', requireRole(...contentRoles), innovationController.adminUpdate);
 router.delete('/innovations/:id', requireRole(...contentRoles), innovationController.adminDelete);
+
+router.get('/confirmed-abstracts', requireRole(...contentRoles), confirmedAbstractController.adminList);
+router.post('/confirmed-abstracts', requireRole(...contentRoles), confirmedAbstractController.adminCreate);
+router.patch('/confirmed-abstracts/:id', requireRole(...contentRoles), confirmedAbstractController.adminUpdate);
+router.delete('/confirmed-abstracts/:id', requireRole(...contentRoles), confirmedAbstractController.adminDelete);
+
+router.get('/innovation-showcase-entries', requireRole(...contentRoles), innovationShowcaseEntryController.adminList);
+router.post('/innovation-showcase-entries', requireRole(...contentRoles), innovationShowcaseEntryController.adminCreate);
+router.patch('/innovation-showcase-entries/:id', requireRole(...contentRoles), innovationShowcaseEntryController.adminUpdate);
+router.delete('/innovation-showcase-entries/:id', requireRole(...contentRoles), innovationShowcaseEntryController.adminDelete);
 
 router.get('/abstracts', requireRole(...contentRoles), abstractController.adminList);
 router.patch('/abstracts/:id', requireRole(...contentRoles), abstractController.adminUpdate);
