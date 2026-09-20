@@ -9,19 +9,26 @@ interface PackageGroup {
   tierOrder: number;
 }
 
-const Swatch = ({ p, isTopTier }: { p: AdminPartner; isTopTier: boolean }) => {
-  // Logo sized to fill most of its card (tall + full-width, object-contain
-  // keeping its own aspect ratio) with the card's own padding cut down to
-  // match — logos were reading small/timid against all the surrounding
-  // white space before.
+const Swatch = ({ p, isTopTier, dense = false }: { p: AdminPartner; isTopTier: boolean; dense?: boolean }) => {
+  // Logo sized to fill most of its card (object-contain keeping its own
+  // aspect ratio) with the card's own padding cut down to match — logos were
+  // reading small/timid against all the surrounding white space before.
+  //
+  // `w-full` only resolves sensibly when this swatch sits in a CSS grid cell
+  // with a defined track width (the non-dense case). In `dense` mode the
+  // swatch is a flex item with no defined width of its own, so `width:100%`
+  // has nothing concrete to resolve against and the browser falls back to
+  // the image's own intrinsic width — which is how two logos ended up
+  // wrapping onto separate lines instead of sitting side by side. An
+  // explicit width sidesteps that entirely.
   const logo = p.logoUrl ? (
     <img
       src={p.logoUrl}
       alt={p.name}
       title={p.name}
-      className={`w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0 ${
-        isTopTier ? 'h-28 sm:h-32' : 'h-20 sm:h-24'
-      }`}
+      className={`object-contain grayscale transition-all duration-300 group-hover:grayscale-0 ${
+        dense ? 'w-28 sm:w-36' : 'w-full'
+      } ${isTopTier ? 'h-28 sm:h-32' : 'h-20 sm:h-24'}`}
     />
   ) : (
     <span className={`font-bold text-navy ${isTopTier ? 'text-2xl' : 'text-lg'}`}>{p.name}</span>
@@ -42,14 +49,25 @@ const Swatch = ({ p, isTopTier }: { p: AdminPartner; isTopTier: boolean }) => {
 // group even when a tier has fewer partners than a full row — a fixed
 // column count would otherwise leave a lone or partial row stuck at the
 // left edge instead of centered under the heading.
-const LogoGrid = ({ group }: { group: PackageGroup }) => (
+//
+// `dense` swaps that grid for a plain flex row: inside the combined
+// Host/Title/Technical row, each package only gets one third of the row's
+// width, and a 150-190px grid track minimum was wider than that share —
+// forcing a package with 2+ logos to wrap one-per-line (a column) instead of
+// staying side by side. Flex sizes each swatch to its own content instead of
+// a fixed track width, with a smaller gap, so they stay in a single row.
+const LogoGrid = ({ group, dense = false }: { group: PackageGroup; dense?: boolean }) => (
   <div
-    className={`grid justify-center gap-6 ${
-      group.isTopTier ? 'grid-cols-[repeat(auto-fit,minmax(190px,230px))]' : 'grid-cols-[repeat(auto-fit,minmax(150px,190px))]'
-    }`}
+    className={
+      dense
+        ? 'flex flex-row flex-wrap justify-center gap-3'
+        : `grid justify-center gap-6 ${
+            group.isTopTier ? 'grid-cols-[repeat(auto-fit,minmax(190px,230px))]' : 'grid-cols-[repeat(auto-fit,minmax(150px,190px))]'
+          }`
+    }
   >
     {group.items.map((p) => (
-      <Swatch key={p._id} p={p} isTopTier={group.isTopTier} />
+      <Swatch key={p._id} p={p} isTopTier={group.isTopTier} dense={dense} />
     ))}
   </div>
 );
@@ -160,7 +178,7 @@ export const PartnersShowcase = () => {
                     <div key={group.label} className="flex min-w-[220px] flex-1 flex-col items-center">
                       <h3 className="text-center font-display text-lg font-bold text-white sm:text-xl">{group.label}</h3>
                       <div className="mt-6">
-                        <LogoGrid group={group} />
+                        <LogoGrid group={group} dense />
                       </div>
                     </div>
                   ))}
