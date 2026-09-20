@@ -123,7 +123,7 @@ export const PartnersShowcase = () => {
   }
 
   return (
-    <section className="w-full justify-center bg-white py-24">
+    <section className="w-full bg-white py-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-orange">Partners</p>
@@ -131,42 +131,43 @@ export const PartnersShowcase = () => {
             Convened with leading institutions
           </h2>
         </Reveal>
+      </div>
 
-        {/* Dark card holding every tier's headings + logos — narrower than
-            the section itself (not full-bleed) so it reads as an inset
-            panel on the white section behind it, not a same-size background
-            swap. White swatch cards get real contrast against this instead
-            of blending into an all-white section. */}
-        <div className=" mt-14 w-full bg-navy px-6 py-12 sm:px-10 sm:py-16">
-          <div className="space-y-16">
-            {rows.map((rowGroups, ri) =>
-              rowGroups.length === 1 ? (
-                <div key={rowGroups[0].label}>
-                  <Reveal delay={ri * 0.06}>
-                    <h3 className="text-center font-display text-xl font-bold text-white sm:text-2xl">
-                      {rowGroups[0].label}
-                    </h3>
-                  </Reveal>
-                  <Reveal delay={ri * 0.06 + 0.05} className="mt-10">
-                    <LogoGrid group={rowGroups[0]} />
-                  </Reveal>
-                </div>
-              ) : (
-                <Reveal key={rowGroups.map((g) => g.label).join('|')} delay={ri * 0.06}>
-                  <div className="flex flex-row flex-wrap justify-center gap-x-12 gap-y-12">
-                    {rowGroups.map((group) => (
-                      <div key={group.label} className="flex min-w-[220px] flex-1 flex-col items-center">
-                        <h3 className="text-center font-display text-lg font-bold text-white sm:text-xl">{group.label}</h3>
-                        <div className="mt-6">
-                          <LogoGrid group={group} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+      {/* Dark band holding every tier's headings + logos — full-bleed (a
+          direct child of the section, outside the max-w-5xl heading
+          container above) rather than an inset card, so it runs edge to
+          edge and gives the logo grids the most room to breathe. White
+          swatch cards get real contrast against this instead of blending
+          into an all-white section. */}
+      <div className="mt-14 w-full bg-navy px-4 py-12 sm:px-8 sm:py-16 lg:px-12">
+        <div className="mx-auto max-w-6xl space-y-16">
+          {rows.map((rowGroups, ri) =>
+            rowGroups.length === 1 ? (
+              <div key={rowGroups[0].label}>
+                <Reveal delay={ri * 0.06}>
+                  <h3 className="text-center font-display text-xl font-bold text-white sm:text-2xl">
+                    {rowGroups[0].label}
+                  </h3>
                 </Reveal>
-              )
-            )}
-          </div>
+                <Reveal delay={ri * 0.06 + 0.05} className="mt-10">
+                  <LogoGrid group={rowGroups[0]} />
+                </Reveal>
+              </div>
+            ) : (
+              <Reveal key={rowGroups.map((g) => g.label).join('|')} delay={ri * 0.06}>
+                <div className="flex flex-row flex-wrap justify-center gap-x-12 gap-y-12">
+                  {rowGroups.map((group) => (
+                    <div key={group.label} className="flex min-w-[220px] flex-1 flex-col items-center">
+                      <h3 className="text-center font-display text-lg font-bold text-white sm:text-xl">{group.label}</h3>
+                      <div className="mt-6">
+                        <LogoGrid group={group} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+            )
+          )}
         </div>
       </div>
     </section>
