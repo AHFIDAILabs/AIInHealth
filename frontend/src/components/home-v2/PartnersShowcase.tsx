@@ -155,7 +155,7 @@ export const PartnersShowcase = () => {
               </div>
             ) : (
               <Reveal key={rowGroups.map((g) => g.label).join('|')} delay={ri * 0.06}>
-                <div className="flex flex-row flex-wrap justify-center gap-x-12 gap-y-12">
+                <div className="flex flex-row flex-wrap justify-center gap-x-8 gap-y-5">
                   {rowGroups.map((group) => (
                     <div key={group.label} className="flex min-w-[220px] flex-1 flex-col items-center">
                       <h3 className="text-center font-display text-lg font-bold text-white sm:text-xl">{group.label}</h3>
