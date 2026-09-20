@@ -2,59 +2,75 @@ import { useEffect, useState } from 'react';
 import { Reveal } from '../ui/Reveal';
 import { InitialsAvatar } from '../ui/InitialsAvatar';
 import { SpeakerModal } from '../ui/SpeakerModal';
-import { AbujaSkyline } from '../ui/AbujaSkyline';
-import { useDominantColor, hashColor } from '../../hooks/useDominantColor';
+import { useDominantColor, hashColor, shadeColor } from '../../hooks/useDominantColor';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 
-// Default state: a "designed" card — the full photo (not a cropped avatar)
-// tinted with a color pulled from that same photo via a color-blend overlay
-// (recolors it while keeping its own detail/luminance, a duotone effect —
-// see the mixBlendMode below), with PageHero.tsx's visual language — a glow
-// blob, a decorative circle, and the AbujaSkyline silhouette along the
-// bottom — floating on top of it. On hover it cross-fades to the plain
-// full-bleed photo + name/title reveal this card used to show by default —
-// the "original" look, preserved as-is.
+// Cloudinary's AI background-removal add-on, applied on the fly to whatever
+// photo the admin already uploaded — no separate cutout asset to manage.
+// Cloudinary caches the transformed result on its CDN after the first
+// request, so this only actually runs the (metered) add-on once per photo,
+// not on every page view. Falls back to the original URL for a non-
+// Cloudinary host, or if the URL shape doesn't match what we expect.
+const toCutoutUrl = (url: string): string => {
+  const marker = '/upload/';
+  const idx = url.indexOf(marker);
+  if (idx === -1 || !url.includes('res.cloudinary.com')) return url;
+  const before = url.slice(0, idx + marker.length);
+  const after = url.slice(idx + marker.length).replace(/\.(jpg|jpeg|png|webp)$/i, '.png');
+  return `${before}e_background_removal/${after}`;
+};
+
+// A small folded-corner accent, decoration only — the one geometric touch
+// the reference design uses in the top-right of every card.
+const AccentShape = ({ color }: { color: string }) => (
+  <svg width="52" height="52" viewBox="0 0 52 52" className="pointer-events-none absolute right-3 top-3" aria-hidden="true">
+    <path d="M8 40 L40 40 L40 8" stroke={color} strokeWidth="8" strokeLinecap="square" fill="none" />
+  </svg>
+);
+
+// Default state: a flat, solid card color (extracted from the speaker's own
+// photo) with that same photo's background removed (Cloudinary AI cutout),
+// so the person appears to stand directly on the card color, plus a small
+// geometric accent in the corner — matching the reference design given
+// directly. On hover it cross-fades to the plain full-bleed photo + name/
+// title reveal this card showed by default before this redesign.
 const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () => void }) => {
   const fallback = hashColor(speaker.fullName);
   const { color, ref, onLoad } = useDominantColor(speaker.photoUrl, fallback);
+  const accent = shadeColor(color, 0.45);
 
   return (
     <button onClick={onOpen} className="group block w-full text-left">
-      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-navy-secondary">
+      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl" style={{ backgroundColor: color }}>
         {/* Layer 1 — designed default, fades out on hover */}
         <div className="absolute inset-0 overflow-hidden transition-opacity duration-300 group-hover:opacity-0">
+          <AccentShape color={accent} />
           {speaker.photoUrl ? (
             <img
               ref={ref}
               src={speaker.photoUrl}
-              alt={speaker.fullName}
+              alt=""
+              aria-hidden="true"
               crossOrigin="anonymous"
               onLoad={onLoad}
-              className="h-full w-full object-cover"
+              className="absolute h-px w-px opacity-0"
+            />
+          ) : null}
+          {speaker.photoUrl ? (
+            <img
+              src={toCutoutUrl(speaker.photoUrl)}
+              alt={speaker.fullName}
+              className="absolute bottom-0 left-1/2 h-[92%] w-[124%] -translate-x-1/2 object-contain object-bottom"
             />
           ) : (
-            <InitialsAvatar name={speaker.fullName} className="h-full w-full rounded-none" />
+            <InitialsAvatar name={speaker.fullName} className="absolute inset-x-6 bottom-0 top-6 rounded-t-full" />
           )}
-
-          {/* Tints the full photo with its own extracted color, keeping the
-              photo's own detail/luminance visible underneath (duotone). */}
-          <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: color, mixBlendMode: 'color' }} />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-navy/90 via-navy/25 to-navy/10" />
-
-          <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/15 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-6 -left-6 h-20 w-20 rounded-full border border-white/10" />
-          <AbujaSkyline className="pointer-events-none absolute bottom-0 left-0 h-8 w-full" opacity={0.4} />
-
-          <div className="absolute inset-x-0 bottom-0 p-3.5">
-            <p className="font-display text-sm font-bold leading-snug text-white">{speaker.fullName}</p>
-            <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-white/80">{speaker.title}</p>
-          </div>
         </div>
 
         {/* Layer 2 — the original card, cross-faded in on hover. Same
-            crossOrigin as the layer-1 photo above — mixing crossOrigin and
-            non-crossOrigin <img> requests for the identical URL is what
-            caused the render bug this is fixed from (see
+            crossOrigin as the hidden sampling <img> above — mixing
+            crossOrigin and non-crossOrigin <img> requests for the identical
+            URL is what caused an earlier render bug (see
             useDominantColor.ts's comment). */}
         <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
           {speaker.photoUrl ? (

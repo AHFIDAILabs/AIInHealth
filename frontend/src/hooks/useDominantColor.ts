@@ -7,10 +7,10 @@ const cache = new Map<string, string>();
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 // A raw average color from a photo is usually muddy (skin tones, neutral
-// backgrounds average toward brown/gray) — pushing saturation up and pinning
-// lightness into a band that reads well as a card background (dark enough
-// for white text, still colorful) is what makes the result look "designed"
-// rather than "smudged photo average".
+// backgrounds average toward brown/gray) — pushing saturation into a modest
+// band and pinning lightness into a light/pastel range (tan, sky blue, teal
+// — the reference card colors) is what makes the result read as a flat
+// "designed" card color rather than a smudged photo average.
 const toCardColor = (r: number, g: number, b: number): string => {
   const rn = r / 255;
   const gn = g / 255;
@@ -37,8 +37,8 @@ const toCardColor = (r: number, g: number, b: number): string => {
     if (h < 0) h += 360;
   }
 
-  s = clamp(Math.max(s, 0.45), 0, 0.75);
-  const lAdjusted = clamp(l, 0.22, 0.4);
+  s = clamp(Math.max(s, 0.3), 0.3, 0.55);
+  const lAdjusted = clamp(l, 0.58, 0.72);
 
   const c = (1 - Math.abs(2 * lAdjusted - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
@@ -60,11 +60,25 @@ const toCardColor = (r: number, g: number, b: number): string => {
 
 // Deterministic fallback for speakers with no photo — still gives each card
 // a distinct color (hashed from their name) rather than one flat default.
+// Same light/pastel band as toCardColor above, so a no-photo card doesn't
+// stand out as visibly darker than its neighbors.
 export const hashColor = (seed: string): string => {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = (hash << 5) - hash + seed.charCodeAt(i);
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 45%, 28%)`;
+  return `hsl(${hue}, 40%, 65%)`;
+};
+
+// Darkens a #rrggbb color by a fraction (0-1) of its own lightness — used
+// for the corner accent shape, which needs to read clearly against the
+// lighter flat card color it sits on.
+export const shadeColor = (hex: string, amount: number): string => {
+  const match = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!match) return hex;
+  const [r, g, b] = [match[1], match[2], match[3]].map((c) => parseInt(c, 16));
+  const darken = (c: number) => clamp(Math.round(c * (1 - amount)), 0, 255);
+  const toHex = (v: number) => v.toString(16).padStart(2, '0');
+  return `#${toHex(darken(r))}${toHex(darken(g))}${toHex(darken(b))}`;
 };
 
 // Reads the accent color straight off an <img> this component is already
