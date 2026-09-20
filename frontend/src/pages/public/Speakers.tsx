@@ -155,9 +155,9 @@ export const Speakers = () => {
                         <div className="absolute inset-x-0 bottom-0 h-1 bg-orange opacity-0 transition-opacity group-hover:opacity-100" />
                       </div>
                       <div className="p-4">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-orange">
+                        {/* <span className="text-[10px] font-semibold uppercase tracking-wide text-orange">
                           {speaker.track}
-                        </span>
+                        </span> */}
                         <p className="mt-1.5 font-display text-[15px] font-semibold leading-snug text-navy">
                           {speaker.fullName}
                         </p>

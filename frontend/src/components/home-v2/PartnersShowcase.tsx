@@ -137,7 +137,7 @@ export const PartnersShowcase = () => {
             panel on the white section behind it, not a same-size background
             swap. White swatch cards get real contrast against this instead
             of blending into an all-white section. */}
-        <div className="mx-auto mt-14 max-w-4xl rounded-3xl bg-navy px-6 py-12 sm:px-10 sm:py-16">
+        <div className=" mt-14 w-full bg-navy px-6 py-12 sm:px-10 sm:py-16">
           <div className="space-y-16">
             {rows.map((rowGroups, ri) =>
               rowGroups.length === 1 ? (
