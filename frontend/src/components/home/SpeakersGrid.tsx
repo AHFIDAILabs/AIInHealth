@@ -67,9 +67,11 @@ const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () =>
             <InitialsAvatar name={speaker.fullName} className="absolute inset-x-6 bottom-0 top-6 rounded-t-full" />
           )}
 
-          {/* Floating on top of the cutout, same silhouette PageHero.tsx uses
-              along the bottom of every interior page header. */}
-          <AbujaSkyline className="pointer-events-none absolute inset-x-0 bottom-0 h-7 w-full" tone="onLight" opacity={0.4} />
+          {/* Floating on top of the cutout — vivid + taller than the faint
+              tone-on-tone watermark PageHero.tsx uses along interior page
+              headers, since here it needs to read as a real illustration
+              behind the person, not a background texture. */}
+          <AbujaSkyline className="pointer-events-none absolute inset-x-0 bottom-0 h-16 w-full" tone="onLight" vivid />
         </div>
 
         {/* Layer 2 — the original card, cross-faded in on hover. Same
