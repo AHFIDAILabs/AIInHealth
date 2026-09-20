@@ -29,9 +29,9 @@ export const Footer = () => (
             <li><Link to="/agenda" className="hover:text-orange">Agenda</Link></li>
             <li><Link to="/speakers" className="hover:text-orange">Speakers</Link></li>
             <li><Link to="/partners" className="hover:text-orange">Partners</Link></li>
-            <li><Link to="/innovation-showcase" className="hover:text-orange">Innovations</Link></li>
+            <li><Link to="/innovation-showcase/confirmed" className="hover:text-orange">Innovations</Link></li>
             <li><Link to="/gallery" className="hover:text-orange">Gallery</Link></li>
-            <li><Link to="/abstracts/submit" className="hover:text-orange">Submit an Abstract</Link></li>
+            <li><Link to="/abstracts/confirmed" className="hover:text-orange">Submit an Abstract</Link></li>
           </ul>
         </div>
         <div>
