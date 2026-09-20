@@ -24,7 +24,7 @@ const assertValidTrack = async (track: string | undefined): Promise<void> => {
 
 // Fields safe for public consumption only — internalNotes is admin-only and
 // deliberately never selected here.
-const PUBLIC_FIELDS = 'code authorName title presentationType track country order';
+const PUBLIC_FIELDS = 'code authorName photoUrl title presentationType track country order';
 
 // GET /confirmed-abstracts — public, published only
 export const list = catchAsync(async (req: Request, res: Response) => {

@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import { PRESENTATION_TYPES } from '../types/enums.js';
+import { optionalUrlField } from './common.js';
 
 export const createConfirmedAbstractSchema = z.object({
   body: z.object({
     code: z.string().trim().min(2, 'Enter an abstract code'),
     authorName: z.string().trim().min(2, 'Enter the author name'),
+    photoUrl: optionalUrlField,
     title: z.string().trim().min(2, 'Enter the abstract title').max(300),
     presentationType: z.enum(PRESENTATION_TYPES).optional(),
     // Checked against the live Track collection in confirmedAbstract.controller.ts.

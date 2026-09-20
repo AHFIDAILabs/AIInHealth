@@ -11,6 +11,10 @@ const confirmedAbstractSchema = new Schema(
   {
     code: { type: String, required: true, trim: true, unique: true }, // e.g. AIHS261001
     authorName: { type: String, required: true, trim: true },
+    // Not present in the source tracker (it only recorded a "headshot
+    // submitted" yes/no flag, not an actual file) — admin-uploaded after
+    // import, same upload.controller.ts flow as Speaker.photoUrl.
+    photoUrl: { type: String, trim: true },
     title: { type: String, required: true, trim: true, maxlength: 300 },
     presentationType: { type: String, enum: PRESENTATION_TYPES },
     // Free text, validated against the live Track collection — same pattern
