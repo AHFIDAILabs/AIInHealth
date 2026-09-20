@@ -6,12 +6,14 @@ import { AbujaSkyline } from '../ui/AbujaSkyline';
 import { useDominantColor, hashColor } from '../../hooks/useDominantColor';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 
-// Default state: a "designed" card — the same visual language as PageHero.tsx
-// (gradient wash, glow blob, the AbujaSkyline silhouette along the bottom),
-// tinted with a color pulled from that speaker's own photo, with the photo
-// itself floating on top as a framed portrait rather than filling the card.
-// On hover it cross-fades to the plain full-bleed photo + name/title reveal
-// this card used to show by default — the "original" look, preserved as-is.
+// Default state: a "designed" card — the full photo (not a cropped avatar)
+// tinted with a color pulled from that same photo via a color-blend overlay
+// (recolors it while keeping its own detail/luminance, a duotone effect —
+// see the mixBlendMode below), with PageHero.tsx's visual language — a glow
+// blob, a decorative circle, and the AbujaSkyline silhouette along the
+// bottom — floating on top of it. On hover it cross-fades to the plain
+// full-bleed photo + name/title reveal this card used to show by default —
+// the "original" look, preserved as-is.
 const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () => void }) => {
   const fallback = hashColor(speaker.fullName);
   const { color, ref, onLoad } = useDominantColor(speaker.photoUrl, fallback);
@@ -20,13 +22,7 @@ const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () =>
     <button onClick={onOpen} className="group block w-full text-left">
       <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-navy-secondary">
         {/* Layer 1 — designed default, fades out on hover */}
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden p-4 transition-opacity duration-300 group-hover:opacity-0"
-          style={{ background: `linear-gradient(160deg, ${color} 0%, #0F172A 100%)` }}
-        >
-          <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/15 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-6 -left-6 h-20 w-20 rounded-full border border-white/10" />
-
+        <div className="absolute inset-0 overflow-hidden transition-opacity duration-300 group-hover:opacity-0">
           {speaker.photoUrl ? (
             <img
               ref={ref}
@@ -34,20 +30,25 @@ const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () =>
               alt={speaker.fullName}
               crossOrigin="anonymous"
               onLoad={onLoad}
-              className="relative h-20 w-20 shrink-0 rounded-full object-cover shadow-lg ring-4 ring-white/20 sm:h-24 sm:w-24"
+              className="h-full w-full object-cover"
             />
           ) : (
-            <InitialsAvatar name={speaker.fullName} className="relative h-20 w-20 shrink-0 rounded-full shadow-lg ring-4 ring-white/20 sm:h-24 sm:w-24" />
+            <InitialsAvatar name={speaker.fullName} className="h-full w-full rounded-none" />
           )}
 
-          <p className="relative mt-3 text-center font-display text-[13px] font-bold leading-snug text-white">
-            {speaker.fullName}
-          </p>
-          <p className="relative mt-0.5 line-clamp-1 text-center text-[11px] leading-snug text-white/75">
-            {speaker.title}
-          </p>
+          {/* Tints the full photo with its own extracted color, keeping the
+              photo's own detail/luminance visible underneath (duotone). */}
+          <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: color, mixBlendMode: 'color' }} />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-navy/90 via-navy/25 to-navy/10" />
 
-          <AbujaSkyline className="pointer-events-none absolute bottom-0 left-0 h-8 w-full" opacity={0.3} />
+          <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/15 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-6 -left-6 h-20 w-20 rounded-full border border-white/10" />
+          <AbujaSkyline className="pointer-events-none absolute bottom-0 left-0 h-8 w-full" opacity={0.4} />
+
+          <div className="absolute inset-x-0 bottom-0 p-3.5">
+            <p className="font-display text-sm font-bold leading-snug text-white">{speaker.fullName}</p>
+            <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-white/80">{speaker.title}</p>
+          </div>
         </div>
 
         {/* Layer 2 — the original card, cross-faded in on hover. Same
