@@ -20,6 +20,8 @@ import { Agenda } from './pages/public/Agenda';
 import { Speakers } from './pages/public/Speakers';
 import { Volunteers } from './pages/public/Volunteers';
 import { InnovationShowcase } from './pages/public/InnovationShowcase';
+import { InnovationShowcaseConfirmed } from './pages/public/InnovationShowcaseConfirmed';
+import { AbstractShowcase } from './pages/public/AbstractShowcase';
 import { ParticipantsOutcomes } from './pages/public/ParticipantsOutcomes';
 import { Partners } from './pages/public/Partners';
 import { Gallery } from './pages/public/Gallery';
@@ -42,6 +44,8 @@ import { SpeakersPage } from './pages/admin/SpeakersPage';
 import { SessionsPage } from './pages/admin/SessionsPage';
 import { PartnersPage } from './pages/admin/PartnersPage';
 import { InnovationsPage } from './pages/admin/InnovationsPage';
+import { InnovationShowcaseEntriesPage } from './pages/admin/InnovationShowcaseEntriesPage';
+import { ConfirmedAbstractsPage } from './pages/admin/ConfirmedAbstractsPage';
 import { AccessCodesPage } from './pages/admin/AccessCodesPage';
 import { InquiriesPage } from './pages/admin/InquiriesPage';
 import { MessagesPage } from './pages/admin/MessagesPage';
@@ -87,6 +91,8 @@ function App() {
             <Route path="/speakers" element={<Speakers />} />
             <Route path="/volunteers" element={<Volunteers />} />
             <Route path="/innovation-showcase" element={<InnovationShowcase />} />
+            <Route path="/innovation-showcase/confirmed" element={<InnovationShowcaseConfirmed />} />
+            <Route path="/abstracts/confirmed" element={<AbstractShowcase />} />
             <Route path="/participants-outcomes" element={<ParticipantsOutcomes />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/gallery" element={<Gallery />} />
@@ -136,6 +142,8 @@ function App() {
                 <Route path="/admin/speakers" element={<SpeakersPage />} />
                 <Route path="/admin/sessions" element={<SessionsPage />} />
                 <Route path="/admin/innovations" element={<InnovationsPage />} />
+                <Route path="/admin/innovation-showcase-entries" element={<InnovationShowcaseEntriesPage />} />
+                <Route path="/admin/confirmed-abstracts" element={<ConfirmedAbstractsPage />} />
                 <Route path="/admin/partners" element={<PartnersPage />} />
                 <Route path="/admin/inquiries" element={<InquiriesPage />} />
                 <Route path="/admin/messages" element={<MessagesPage />} />

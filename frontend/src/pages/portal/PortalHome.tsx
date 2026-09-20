@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { CheckCircle2, Clock, Bell, BellOff, Users2, Pencil, Check, X } from 'lucide-react';
+import { CheckCircle2, Clock, Bell, BellOff, Users2, Pencil, Check, X, Mail, CalendarPlus, Download } from 'lucide-react';
 import { useDelegateAuth } from '../../contexts/DelegateAuthContext';
 import {
   fetchTicketQr,
+  resendTicketEmail,
   updateDirectoryOptIn,
   updateDelegateProfile,
   enableDelegatePush,
@@ -12,6 +13,7 @@ import {
 } from '../../services/delegate.service';
 import { getApiErrorMessage } from '../../services/api';
 import { getCachedTicketQr, setCachedTicketQr } from '../../lib/ticketQrCache';
+import { downloadSummitIcs, googleCalendarUrl, outlookCalendarUrl } from '../../lib/calendar';
 import { useToast } from '../../contexts/ToastContext';
 import { LightField } from '../../components/ui/LightField';
 import { Button } from '../../components/ui/Button';
@@ -36,6 +38,7 @@ export const PortalHome = () => {
   const [pushBusy, setPushBusy] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [optInBusy, setOptInBusy] = useState(false);
+  const [resendingTicket, setResendingTicket] = useState(false);
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileName, setProfileName] = useState('');
@@ -101,6 +104,18 @@ export const PortalHome = () => {
       toast('error', getApiErrorMessage(err, 'Could not update push notifications.'));
     } finally {
       setPushBusy(false);
+    }
+  };
+
+  const resendTicket = async () => {
+    setResendingTicket(true);
+    try {
+      const sentTo = await resendTicketEmail();
+      toast('success', `Sent to ${sentTo}`);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setResendingTicket(false);
     }
   };
 
@@ -237,6 +252,13 @@ export const PortalHome = () => {
                   ? "Showing your last saved ticket. You're offline right now, but this still works at the desk."
                   : 'Show this at the registration desk on event day.'}
               </p>
+              <button
+                onClick={resendTicket}
+                disabled={resendingTicket}
+                className="mx-auto mt-3 flex items-center gap-1.5 text-xs font-semibold text-orange hover:text-orange-hover disabled:opacity-50"
+              >
+                <Mail size={13} /> {resendingTicket ? 'Sending…' : 'Email me this ticket'}
+              </button>
             </>
           ) : qrError ? (
             <p className="mt-6 py-6 text-sm text-slate-500">{qrError}</p>
@@ -307,6 +329,43 @@ export const PortalHome = () => {
           </div>
         </div>
       </div>
+
+      {/* RSVP — add the Summit to a personal calendar. Only meaningful once
+          the registration is actually confirmed (status gate matches the
+          E-Ticket panel above), since a pending/declined registration has
+          nothing to RSVP to yet. */}
+      {delegate.status === 'confirmed' && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">RSVP</p>
+          <p className="mt-1.5 text-sm text-slate-500">
+            Add the Summit to your calendar — 19&ndash;20 October 2026.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            <a
+              href={googleCalendarUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2.5 text-[13px] font-medium text-navy transition-colors hover:border-orange/40"
+            >
+              <CalendarPlus size={15} className="text-orange" /> Google Calendar
+            </a>
+            <a
+              href={outlookCalendarUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2.5 text-[13px] font-medium text-navy transition-colors hover:border-orange/40"
+            >
+              <CalendarPlus size={15} className="text-orange" /> Outlook
+            </a>
+            <button
+              onClick={downloadSummitIcs}
+              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2.5 text-[13px] font-medium text-navy transition-colors hover:border-orange/40"
+            >
+              <Download size={15} className="text-orange" /> Apple / Download .ics
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

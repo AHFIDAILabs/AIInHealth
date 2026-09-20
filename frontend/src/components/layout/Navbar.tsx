@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, ArrowUpRight, ArrowRight } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ArrowRight, LogIn } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../../assets/AI_Logo_New_white.png';
 
@@ -25,6 +25,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Gallery', to: '/gallery' },
   { label: 'Register Now', to: '/register' },
   { label: 'AHFID', to: 'https://ahfid.org/', external: true },
+  // Delegate portal sign-in — kept out of the main nav row (see the filter
+  // below) and shown instead in the utility strip next to AHFID, and in the
+  // mobile menu list. Anyone with a confirmed registration lands here; if
+  // they've lost their access code, PortalLogin.tsx's "Resend it" re-sends
+  // both the code and their QR ticket to their email.
+  { label: 'Login', to: '/portal/login' },
 ];
 
 export const Navbar = () => {
@@ -92,6 +98,13 @@ export const Navbar = () => {
             >
               AHFID <ArrowUpRight size={11} />
             </a>
+            <span className="h-3 w-px bg-white/15" />
+            <Link
+              to="/portal/login"
+              className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-widest text-slate-400 transition-colors hover:text-orange"
+            >
+              <LogIn size={11} /> Login
+            </Link>
           </div>
         </div>
 
@@ -109,7 +122,7 @@ export const Navbar = () => {
           </Link>
 
           <nav className="hidden items-center gap-1.5 lg:flex">
-            {NAV_ITEMS.filter((i) => i.label !== 'AHFID').map((item) =>
+            {NAV_ITEMS.filter((i) => i.label !== 'AHFID' && i.label !== 'Login').map((item) =>
               item.label === 'Register Now' ? (
                 <Link
                   key={item.label}

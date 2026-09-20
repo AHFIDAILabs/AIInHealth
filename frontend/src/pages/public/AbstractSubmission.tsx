@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send } from 'lucide-react';
+import { Send, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Button } from '../../components/ui/Button';
@@ -77,6 +78,12 @@ export const AbstractSubmission = () => {
 
       <section className="bg-offwhite pb-16 pt-16 sm:pt-20">
         <Reveal className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
+          <Link
+            to="/abstracts/confirmed"
+            className="mb-6 flex items-center justify-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"
+          >
+            View Confirmed Abstract Presentations <ArrowRight size={15} />
+          </Link>
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-glow-subtle sm:p-9">
             {confirmation ? (
               <RegisterSuccess message={confirmation} onReset={resetAll} />

@@ -44,6 +44,14 @@ export const fetchTicketQr = async (): Promise<string> => {
   return res.data.data.qrDataUrl;
 };
 
+// "Email me a copy" from inside the portal — resends the access code and (if
+// a ticket exists yet) the QR check-in email, same as requestAccessCode on
+// the pre-login PortalLogin.tsx page, but for an already-signed-in delegate.
+export const resendTicketEmail = async (): Promise<string> => {
+  const res = await api.post<{ success: true; data: { ok: true; sentTo: string } }>('/delegate/resend-ticket');
+  return res.data.data.sentTo;
+};
+
 export interface UpdateDelegateProfileInput {
   name?: string;
   phone?: string;

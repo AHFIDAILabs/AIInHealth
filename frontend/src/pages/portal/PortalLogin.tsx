@@ -85,7 +85,10 @@ export const PortalLogin = () => {
           {resent && (
             <div className="flex items-start gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2.5 text-xs text-success">
               <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
-              <span>If that email has a confirmed registration, your access code has been resent.</span>
+              <span>
+                If that email has a confirmed registration, your access code has been resent — along with your
+                e-ticket QR code, if one's ready.
+              </span>
             </div>
           )}
           <LightField label="Email" type="email" error={errors.email?.message} {...register('email')} />
