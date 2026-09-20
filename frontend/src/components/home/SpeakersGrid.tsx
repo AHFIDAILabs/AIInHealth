@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Reveal } from '../ui/Reveal';
 import { InitialsAvatar } from '../ui/InitialsAvatar';
 import { SpeakerModal } from '../ui/SpeakerModal';
+import { AbujaSkyline } from '../ui/AbujaSkyline';
 import { useDominantColor, hashColor, shadeColor } from '../../hooks/useDominantColor';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 
@@ -65,6 +66,10 @@ const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () =>
           ) : (
             <InitialsAvatar name={speaker.fullName} className="absolute inset-x-6 bottom-0 top-6 rounded-t-full" />
           )}
+
+          {/* Floating on top of the cutout, same silhouette PageHero.tsx uses
+              along the bottom of every interior page header. */}
+          <AbujaSkyline className="pointer-events-none absolute inset-x-0 bottom-0 h-7 w-full" tone="onLight" opacity={0.4} />
         </div>
 
         {/* Layer 2 — the original card, cross-faded in on hover. Same
