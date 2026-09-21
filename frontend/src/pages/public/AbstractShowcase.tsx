@@ -18,9 +18,16 @@ const PRESENTATION_LABEL: Record<string, string> = { oral: 'Oral Presentation', 
 // missing headshot still fills the same space with the branded initials
 // tile, so a photo-less entry never looks broken or unbalanced next to ones
 // that have one.
+//
+// object-top, not object-cover's default center crop: these are headshots
+// submitted at all kinds of source aspect ratios, and a face is almost
+// always in the upper portion of the frame, not dead-center — center-cropping
+// a portrait-oriented photo into this wide banner shape was cutting heads off
+// at the forehead. Anchoring to the top keeps the face in frame and crops
+// from the bottom (chest/shoulders) instead, which is the safer loss.
 const CardHeadshot = ({ name, photoUrl }: { name: string; photoUrl?: string }) =>
   photoUrl ? (
-    <img src={photoUrl} alt={name} className="h-full w-full object-cover" />
+    <img src={photoUrl} alt={name} className="h-full w-full object-cover object-top" />
   ) : (
     <InitialsAvatar name={name} className="h-full w-full" />
   );
@@ -127,7 +134,7 @@ export const AbstractShowcase = () => {
           {loading ? (
             <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="aspect-[4/5] animate-pulse rounded-2xl border border-slate-200 bg-offwhite" />
+                <div key={i} className="h-48 animate-pulse rounded-2xl border border-slate-200 bg-offwhite sm:h-52" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -160,27 +167,32 @@ export const AbstractShowcase = () => {
               {filtered.map((abstract, i) => (
                 <Reveal key={abstract._id} delay={i * 0.05}>
                   <button onClick={() => setActive(abstract)} className="group block w-full text-left">
-                    {/* Fixed aspect ratio — not h-full off the grid row — so the
-                        45/55 image/text split below has an actual height to
-                        resolve against instead of an ambiguous auto one. */}
-                    <div className="flex aspect-[4/5] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-orange/40 hover:shadow-lg hover:shadow-navy/5">
-                      <div className="relative h-[45%] w-full shrink-0 overflow-hidden bg-navy-secondary">
+                    {/* Row layout — photo left at full row height, details right.
+                        Fixed height (not aspect-ratio) since a row card doesn't
+                        need the "percentage height needs a defined parent
+                        height" workaround the column layout did — the image
+                        just takes h-full off this row directly. 40/60 image-
+                        to-text width split: enough for a face to actually read
+                        at this size without starving the title/track text next
+                        to it. */}
+                    <div className="flex h-48 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-orange/40 hover:shadow-lg hover:shadow-navy/5 sm:h-52">
+                      <div className="relative h-full w-2/5 shrink-0 overflow-hidden bg-navy-secondary">
                         <CardHeadshot name={abstract.authorName} photoUrl={abstract.photoUrl} />
-                        <span className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-navy/80 text-orange backdrop-blur-sm">
-                          {abstract.presentationType === 'poster' ? <StickyNote size={14} /> : <Mic size={14} />}
+                        <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-navy/80 text-orange backdrop-blur-sm">
+                          {abstract.presentationType === 'poster' ? <StickyNote size={12} /> : <Mic size={12} />}
                         </span>
                       </div>
 
-                      <div className="flex flex-1 flex-col items-center overflow-hidden p-5 text-center">
-                        <p className="font-display text-[15px] font-semibold leading-snug text-navy">
+                      <div className="flex flex-1 flex-col justify-center overflow-hidden p-4 text-left">
+                        <p className="font-display text-[15px] font-semibold leading-snug text-navy line-clamp-2">
                           {abstract.authorName}
                         </p>
                         {abstract.country && <p className="text-xs text-slate-400">{abstract.country}</p>}
 
-                        <p className="mt-3 text-sm leading-snug text-slate-600 line-clamp-3">{abstract.title}</p>
+                        <p className="mt-2 text-sm leading-snug text-slate-600 line-clamp-3">{abstract.title}</p>
 
                         {abstract.track && (
-                          <span className="mt-auto line-clamp-1 pt-4 text-[10px] font-semibold uppercase tracking-wide text-orange">
+                          <span className="mt-auto line-clamp-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-orange">
                             {abstract.track}
                           </span>
                         )}

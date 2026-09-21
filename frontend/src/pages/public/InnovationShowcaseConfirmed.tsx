@@ -136,7 +136,7 @@ export const InnovationShowcaseConfirmed = () => {
           {loading ? (
             <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="aspect-[4/5] animate-pulse rounded-2xl border border-slate-200 bg-offwhite" />
+                <div key={i} className="aspect-[2/3] animate-pulse rounded-2xl border border-slate-200 bg-offwhite" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -171,7 +171,7 @@ export const InnovationShowcaseConfirmed = () => {
                     {/* Fixed aspect ratio — not h-full off the grid row — so the
                         45/55 logo/text split below has an actual height to
                         resolve against instead of an ambiguous auto one. */}
-                    <div className="flex aspect-[4/5] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-orange/40 hover:shadow-lg hover:shadow-navy/5">
+                    <div className="flex aspect-[2/3] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-orange/40 hover:shadow-lg hover:shadow-navy/5">
                       <div className="h-[45%] w-full shrink-0 overflow-hidden">
                         <CardLogo name={entry.startupName} logoUrl={entry.logoUrl} />
                       </div>

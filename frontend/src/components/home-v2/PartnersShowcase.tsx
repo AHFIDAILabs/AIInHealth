@@ -173,9 +173,18 @@ export const PartnersShowcase = () => {
               </div>
             ) : (
               <Reveal key={rowGroups.map((g) => g.label).join('|')} delay={ri * 0.06}>
+                {/* Content-sized columns, not flex-1 equal thirds — a package
+                    with one logo (Host, Title Partners) and one with three
+                    (Technical Collaborating Partner) don't need the same
+                    width. Equal thirds was stretching the single-logo columns
+                    into wide gaps of empty space while starving the
+                    three-logo column of the room its own logos actually
+                    needed, forcing the third one onto its own line.
+                    min-w-[180px] is just enough to keep each heading from
+                    wrapping, not to force equal-width columns. */}
                 <div className="flex flex-row flex-wrap justify-center gap-x-8 gap-y-5">
                   {rowGroups.map((group) => (
-                    <div key={group.label} className="flex min-w-[220px] flex-1 flex-col items-center">
+                    <div key={group.label} className="flex min-w-[180px] flex-col items-center">
                       <h3 className="text-center font-display text-lg font-bold text-white sm:text-xl">{group.label}</h3>
                       <div className="mt-6">
                         <LogoGrid group={group} dense />
