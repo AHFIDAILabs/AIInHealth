@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminTopbar } from './AdminTopbar';
+import { SecurityAlertBanner } from './SecurityAlertBanner';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Persistent admin shell — sidebar + topbar around every /admin/* page below the
@@ -28,6 +29,7 @@ export const AdminLayout = () => {
       <div className={`flex min-h-screen flex-col transition-all duration-200 ${collapsed ? 'lg:pl-[72px]' : 'lg:pl-64'}`}>
         <AdminTopbar onOpenMobileSidebar={() => setMobileOpen(true)} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <SecurityAlertBanner />
           <Outlet />
         </main>
       </div>

@@ -29,6 +29,7 @@ import {
   Images,
   Rss,
   Rocket,
+  ShieldAlert,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -147,6 +148,18 @@ export const AdminSidebar = ({ role, collapsed, onToggle, mobileOpen, onCloseMob
     ...section,
     items: section.items.filter((item) => item.roles.includes(role)),
   })).filter((section) => section.items.length > 0);
+
+  // Not expressible through the roles array above: this must show for the one
+  // seeded root account and nobody else, even another user later promoted to
+  // super_admin — see User.model.ts's isRootAdmin comment. Appended as its own
+  // section rather than folded into "Administration" so it visually reads as
+  // a different tier, not just another super_admin-only page.
+  if (user?.isRootAdmin) {
+    sections.push({
+      label: 'Security',
+      items: [{ label: 'Security Center', to: '/admin/security', icon: ShieldAlert, roles: [role] }],
+    });
+  }
 
   // Active state is a solid, high-contrast pill — not a translucent tint — so the
   // current section reads at a glance against the dark rail, same weight as the

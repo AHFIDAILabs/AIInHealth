@@ -11,6 +11,7 @@ import { PortalLayout } from './components/layout/PortalLayout';
 import { ReviewerPortalLayout } from './components/layout/ReviewerPortalLayout';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { RequireRole } from './routes/RequireRole';
+import { RequireRootAdmin } from './routes/RequireRootAdmin';
 import { PortalProtectedRoute } from './routes/PortalProtectedRoute';
 import { ReviewerProtectedRoute } from './routes/ReviewerProtectedRoute';
 import { Home } from './pages/public/Home';
@@ -61,6 +62,7 @@ import { ReconciliationsPage } from './pages/admin/ReconciliationsPage';
 import { AbstractsPage } from './pages/admin/AbstractsPage';
 import { MediaPage } from './pages/admin/MediaPage';
 import { EventTeamPage } from './pages/admin/EventTeamPage';
+import { SecurityPage } from './pages/admin/SecurityPage';
 import { PortalTokensPage } from './pages/admin/PortalTokensPage';
 import { AnalyticsPage } from './pages/admin/AnalyticsPage';
 import { IntegrationsPage } from './pages/admin/IntegrationsPage';
@@ -168,6 +170,11 @@ function App() {
                 <Route path="/admin/event-team" element={<EventTeamPage />} />
                 <Route path="/admin/integrations" element={<IntegrationsPage />} />
                 <Route path="/admin/roles-permissions" element={<RolesPermissionsPage />} />
+              </Route>
+
+              {/* Identity-gated, not role-gated — see RequireRootAdmin.tsx. */}
+              <Route element={<RequireRootAdmin />}>
+                <Route path="/admin/security" element={<SecurityPage />} />
               </Route>
 
               <Route path="/admin/settings" element={<SettingsPage />} />

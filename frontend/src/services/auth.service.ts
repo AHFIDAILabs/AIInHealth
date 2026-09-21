@@ -26,6 +26,10 @@ export interface AdminUser {
   role: Role;
   avatarUrl?: string;
   notificationPrefs?: NotificationPrefs;
+  // True only for the one account seeded on first boot — see
+  // backend User.model.ts's comment. Gates the Security Command Center nav
+  // item and route; never settable through any admin form.
+  isRootAdmin?: boolean;
 }
 
 export const login = async (email: string, password: string): Promise<AdminUser> => {
