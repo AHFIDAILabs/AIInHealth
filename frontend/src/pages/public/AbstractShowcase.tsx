@@ -246,33 +246,36 @@ export const AbstractShowcase = () => {
                 <X size={18} />
               </button>
 
-              {/* Full-width photo — same treatment as the card, now at modal scale. */}
-              <div className="relative h-56 w-full shrink-0 overflow-hidden rounded-t-2xl bg-navy-secondary sm:h-64">
-                <CardHeadshot name={active.authorName} photoUrl={active.photoUrl} />
-              </div>
-
-              <div className="p-7">
-                <div className="flex flex-col items-center text-center">
-                  <p className="font-display text-lg font-semibold text-navy">{active.authorName}</p>
+              {/* Row header — same photo-left/details-right treatment as the
+                  card, at modal scale, instead of the full-width banner this
+                  used before. */}
+              <div className="flex h-56 w-full overflow-hidden rounded-t-2xl sm:h-64">
+                <div className="relative h-full w-2/5 shrink-0 overflow-hidden bg-navy-secondary">
+                  <CardHeadshot name={active.authorName} photoUrl={active.photoUrl} />
+                </div>
+                <div className="flex flex-1 flex-col justify-center overflow-hidden p-5 text-left">
+                  <p className="font-display text-lg font-semibold leading-snug text-navy line-clamp-2">{active.authorName}</p>
                   {active.country && (
                     <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
                       <Globe2 size={12} /> {active.country}
                     </p>
                   )}
-                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="flex items-center gap-1 rounded-full bg-navy-secondary px-3 py-1 text-[11px] font-semibold text-white">
                       {active.presentationType === 'poster' ? <StickyNote size={12} /> : <Mic size={12} />}
                       {active.presentationType ? PRESENTATION_LABEL[active.presentationType] : 'Presentation'}
                     </span>
                     {active.track && (
                       <span className="flex items-center gap-1 rounded-full bg-orange/10 px-3 py-1 text-[11px] font-semibold text-orange">
-                        <Layers size={12} /> {active.track}
+                        <Layers size={12} /> <span className="line-clamp-1">{active.track}</span>
                       </span>
                     )}
                   </div>
                 </div>
+              </div>
 
-                <div className="mt-6 rounded-xl bg-offwhite p-4">
+              <div className="p-7">
+                <div className="rounded-xl bg-offwhite p-4">
                   <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                     <FileText size={12} /> Abstract Title
                   </p>

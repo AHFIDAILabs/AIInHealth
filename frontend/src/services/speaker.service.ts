@@ -11,6 +11,10 @@ export interface AdminSpeaker {
   // options via track.service.ts's listTracks().
   track: string;
   photoUrl?: string;
+  // Shown on hover on the homepage speaker grid, in place of photoUrl — a
+  // second, independently-uploaded image. Falls back to photoUrl itself
+  // when unset (see backend Speaker.model.ts's comment).
+  hoverPhotoUrl?: string;
   isPublished: boolean;
   order: number;
   createdAt: string;
@@ -24,6 +28,7 @@ export interface SpeakerInput {
   bio?: string;
   track: string;
   photoUrl?: string;
+  hoverPhotoUrl?: string;
   isPublished?: boolean;
   order?: number;
 }

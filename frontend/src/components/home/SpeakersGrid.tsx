@@ -2,98 +2,42 @@ import { useEffect, useState } from 'react';
 import { Reveal } from '../ui/Reveal';
 import { InitialsAvatar } from '../ui/InitialsAvatar';
 import { SpeakerModal } from '../ui/SpeakerModal';
-import { AbujaSkyline } from '../ui/AbujaSkyline';
-import { useDominantColor, hashColor, shadeColor } from '../../hooks/useDominantColor';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 
-// Cloudinary's AI background-removal add-on, applied on the fly to whatever
-// photo the admin already uploaded — no separate cutout asset to manage.
-// Cloudinary caches the transformed result on its CDN after the first
-// request, so this only actually runs the (metered) add-on once per photo,
-// not on every page view. Falls back to the original URL for a non-
-// Cloudinary host, or if the URL shape doesn't match what we expect.
-const toCutoutUrl = (url: string): string => {
-  const marker = '/upload/';
-  const idx = url.indexOf(marker);
-  if (idx === -1 || !url.includes('res.cloudinary.com')) return url;
-  const before = url.slice(0, idx + marker.length);
-  const after = url.slice(idx + marker.length).replace(/\.(jpg|jpeg|png|webp)$/i, '.png');
-  return `${before}e_background_removal/${after}`;
-};
-
-// A small folded-corner accent, decoration only — the one geometric touch
-// the reference design uses in the top-right of every card.
-const AccentShape = ({ color }: { color: string }) => (
-  <svg width="52" height="52" viewBox="0 0 52 52" className="pointer-events-none absolute right-3 top-3" aria-hidden="true">
-    <path d="M8 40 L40 40 L40 8" stroke={color} strokeWidth="8" strokeLinecap="square" fill="none" />
-  </svg>
-);
-
-// Default state: a flat, solid card color (extracted from the speaker's own
-// photo) with that same photo's background removed (Cloudinary AI cutout),
-// so the person appears to stand directly on the card color, plus a small
-// geometric accent in the corner — matching the reference design given
-// directly. On hover it cross-fades to the plain full-bleed photo + name/
-// title reveal this card showed by default before this redesign.
+// Default state shows the admin's own "default" photo, plain, full-bleed.
+// Hovering cross-fades to a second, independently-uploaded "hover" photo
+// (falling back to the same default photo if none was set) — no gradient/
+// name/title reveal on the image itself, since that's already shown as
+// static text right below the card. Two admin-uploaded images, not a
+// derived Cloudinary AI cutout — replaces the earlier "cut the person out,
+// stand them on a flat extracted card color" treatment entirely; see
+// Speaker.model.ts's hoverPhotoUrl comment for why.
 const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () => void }) => {
-  const fallback = hashColor(speaker.fullName);
-  const { color, ref, onLoad } = useDominantColor(speaker.photoUrl, fallback);
-  const accent = shadeColor(color, 0.45);
+  const hoverPhotoUrl = speaker.hoverPhotoUrl || speaker.photoUrl;
 
   return (
     <button onClick={onOpen} className="group block w-full text-left">
-      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl" style={{ backgroundColor: color }}>
-        {/* Layer 1 — designed default, fades out on hover */}
+      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-navy-secondary">
+        {/* Default photo — fades out on hover */}
         <div className="absolute inset-0 overflow-hidden transition-opacity duration-300 group-hover:opacity-0">
-          <AccentShape color={accent} />
           {speaker.photoUrl ? (
-            <img
-              ref={ref}
-              src={speaker.photoUrl}
-              alt=""
-              aria-hidden="true"
-              crossOrigin="anonymous"
-              onLoad={onLoad}
-              className="absolute h-px w-px opacity-0"
-            />
-          ) : null}
-          {speaker.photoUrl ? (
-            <img
-              src={toCutoutUrl(speaker.photoUrl)}
-              alt={speaker.fullName}
-              className="absolute bottom-0 left-1/2 h-[92%] w-[124%] -translate-x-1/2 object-contain object-bottom"
-            />
+            <img src={speaker.photoUrl} alt={speaker.fullName} className="h-full w-full object-cover" />
           ) : (
-            <InitialsAvatar name={speaker.fullName} className="absolute inset-x-6 bottom-0 top-6 rounded-t-full" />
+            <InitialsAvatar name={speaker.fullName} className="h-full w-full rounded-none" />
           )}
-
-          {/* Floating on top of the cutout — vivid + taller than the faint
-              tone-on-tone watermark PageHero.tsx uses along interior page
-              headers, since here it needs to read as a real illustration
-              behind the person, not a background texture. */}
-          <AbujaSkyline className="pointer-events-none absolute inset-x-0 bottom-0 h-16 w-full" tone="onLight" vivid />
         </div>
 
-        {/* Layer 2 — the original card, cross-faded in on hover. Same
-            crossOrigin as the hidden sampling <img> above — mixing
-            crossOrigin and non-crossOrigin <img> requests for the identical
-            URL is what caused an earlier render bug (see
-            useDominantColor.ts's comment). */}
+        {/* Hover photo — cross-faded in, image only */}
         <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-          {speaker.photoUrl ? (
+          {hoverPhotoUrl ? (
             <img
-              src={speaker.photoUrl}
+              src={hoverPhotoUrl}
               alt={speaker.fullName}
-              crossOrigin="anonymous"
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <InitialsAvatar name={speaker.fullName} className="h-full w-full rounded-none" />
           )}
-          <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-navy/95 via-navy/40 to-transparent p-3.5">
-            <p className="font-display text-sm font-bold leading-snug text-white">{speaker.fullName}</p>
-            <p className="mt-0.5 text-xs leading-snug text-white/80">{speaker.title}</p>
-          </div>
         </div>
       </div>
       <p className="mt-3 font-display text-[15px] font-bold leading-snug text-navy">{speaker.fullName}</p>

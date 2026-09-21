@@ -28,6 +28,7 @@ const emptyForm = (defaultTrack: string): SpeakerInput => ({
   bio: '',
   track: defaultTrack,
   photoUrl: '',
+  hoverPhotoUrl: '',
   isPublished: false,
 });
 
@@ -96,6 +97,7 @@ export const SpeakersPage = () => {
       bio: speaker.bio ?? '',
       track: speaker.track,
       photoUrl: speaker.photoUrl ?? '',
+      hoverPhotoUrl: speaker.hoverPhotoUrl ?? '',
       isPublished: speaker.isPublished,
     });
     setFormError('');
@@ -386,13 +388,27 @@ export const SpeakersPage = () => {
                   )}
                 </AdminSelect>
                 <ImagePicker
-                  label="Photo"
+                  label="Default Photo"
                   value={form.photoUrl}
                   onChange={(url) => setForm({ ...form, photoUrl: url })}
                   upload={uploadAdminImage}
                   size={56}
                   fallbackText={form.fullName}
                 />
+                <div>
+                  <ImagePicker
+                    label="Hover Photo (optional)"
+                    value={form.hoverPhotoUrl}
+                    onChange={(url) => setForm({ ...form, hoverPhotoUrl: url })}
+                    upload={uploadAdminImage}
+                    size={56}
+                    fallbackText={form.fullName}
+                  />
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    Shown when a visitor hovers the speaker card on the homepage. Falls back to the default photo if
+                    left empty.
+                  </p>
+                </div>
                 <AdminTextarea
                   label="Bio"
                   maxLength={2000}
