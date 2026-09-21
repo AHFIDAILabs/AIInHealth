@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import { PageViewTracker } from './components/analytics/PageViewTracker';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -29,6 +30,7 @@ import { AboutAhfid } from './pages/public/AboutAhfid';
 import { Register } from './pages/public/Register';
 import { PaymentCallback } from './pages/public/PaymentCallback';
 import { AbstractSubmission } from './pages/public/AbstractSubmission';
+import { TeamRegistration } from './pages/public/TeamRegistration';
 import { Contact } from './pages/public/Contact';
 import { Privacy } from './pages/public/Privacy';
 import { Terms } from './pages/public/Terms';
@@ -100,6 +102,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/register/payment-callback" element={<PaymentCallback />} />
             <Route path="/abstracts/submit" element={<AbstractSubmission />} />
+            <Route path="/team/register" element={<TeamRegistration />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
@@ -194,6 +197,7 @@ function App() {
             </Route>
           </Route>
         </Routes>
+        <PageViewTracker />
         </ReviewerAuthProvider>
         </DelegateAuthProvider>
         </NotificationProvider>

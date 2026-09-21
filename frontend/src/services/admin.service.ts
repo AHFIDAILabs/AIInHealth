@@ -1,7 +1,7 @@
 import { api } from './api';
 import type { TicketCategory, BoothSize } from './registration.service';
 
-export type RegistrationType = 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer';
+export type RegistrationType = 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer' | 'team';
 export type RegistrationStatus = 'pending' | 'reviewed' | 'confirmed' | 'declined';
 
 export interface AdminRegistration {
@@ -206,11 +206,21 @@ export interface AdminCreateVolunteerPayload {
   trackAssigned?: string;
 }
 
+export interface AdminCreateTeamPayload {
+  type: 'team';
+  fullName: string;
+  email: string;
+  phone: string;
+  jobTitle?: string;
+  organization?: string;
+}
+
 export type AdminCreateRegistrationPayload =
   | AdminCreateAttendeePayload
   | AdminCreateExhibitorPayload
   | AdminCreateSponsorPayload
-  | AdminCreateVolunteerPayload;
+  | AdminCreateVolunteerPayload
+  | AdminCreateTeamPayload;
 
 export interface AdminCreateRegistrationResult {
   id: string;

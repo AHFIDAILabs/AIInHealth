@@ -54,7 +54,7 @@ export const HomeMain = () => {
                 variants={fadeUp}
                 className="max-w-xl font-display text-4xl font-black leading-[1.05] text-white sm:text-5xl"
               >
-                Artificial Intelligence in Health Summit 2026
+                Artificial <span className="text-orange text-italic" >Intelligence</span> in Health Summit 2026
               </motion.h1>
 
               <motion.p

@@ -70,7 +70,18 @@ export interface VolunteerPayload {
   trackSelected?: string;
 }
 
-export type RegistrationPayload = AttendeePayload | ExhibitorPayload | SponsorPayload | VolunteerPayload;
+// Event staff — its own type, own public page (TeamRegistration.tsx), gated
+// against the EventTeamMember roster server-side rather than an access code.
+export interface TeamPayload {
+  type: 'team';
+  fullName: string;
+  email: string;
+  phone: string;
+  jobTitle?: string;
+  organization?: string;
+}
+
+export type RegistrationPayload = AttendeePayload | ExhibitorPayload | SponsorPayload | VolunteerPayload | TeamPayload;
 
 export interface SubmitRegistrationResult {
   id: string;

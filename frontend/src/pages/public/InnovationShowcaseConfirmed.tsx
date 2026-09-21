@@ -11,22 +11,23 @@ import {
 } from '../../services/innovationShowcaseEntry.service';
 import { getApiErrorMessage } from '../../services/api';
 
-// A dedicated tile for the org logo — white/offwhite swatch with generous
-// padding (same "logo gets real space" convention PartnersShowcase.tsx uses
-// for partner logos), so a missing logo still reads as a placeholder for one
-// rather than an afterthought icon squeezed next to the name.
-const StartupLogo = ({ name, logoUrl, size }: { name: string; logoUrl?: string; size: 'card' | 'modal' }) => {
-  const dims = size === 'card' ? 'h-16 w-16' : 'h-20 w-20';
-  return (
-    <div className={`flex ${dims} shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-offwhite p-2.5 shadow-sm`}>
-      {logoUrl ? (
-        <img src={logoUrl} alt={name} className="h-full w-full object-contain" />
-      ) : (
-        <Sparkles className="text-orange" size={size === 'card' ? 22 : 28} />
-      )}
+// Full-width banner — used both on the grid card (top ~45%, see the card
+// markup below, which fixes its own height via aspect-ratio so that
+// percentage means something) and the detail modal's header (fixed height
+// there instead, since the modal isn't itself aspect-ratio-constrained).
+// object-contain (not object-cover, unlike the abstract page's real
+// headshots) — cropping into a company logo instead of letterboxing it would
+// cut off part of the actual mark.
+const CardLogo = ({ name, logoUrl }: { name: string; logoUrl?: string }) =>
+  logoUrl ? (
+    <div className="flex h-full w-full items-center justify-center bg-offwhite p-5">
+      <img src={logoUrl} alt={name} className="h-full w-full object-contain" />
+    </div>
+  ) : (
+    <div className="flex h-full w-full items-center justify-center bg-navy-secondary">
+      <Sparkles className="text-orange" size={32} />
     </div>
   );
-};
 
 // A new, additive public page — the confirmed cohort of Innovation Showcase
 // startups, imported from the judging tracker's own application data (see
@@ -135,7 +136,7 @@ export const InnovationShowcaseConfirmed = () => {
           {loading ? (
             <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-56 animate-pulse rounded-2xl border border-slate-200 bg-offwhite" />
+                <div key={i} className="aspect-[4/5] animate-pulse rounded-2xl border border-slate-200 bg-offwhite" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -166,22 +167,29 @@ export const InnovationShowcaseConfirmed = () => {
             <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((entry, i) => (
                 <Reveal key={entry._id} delay={i * 0.05}>
-                  <button onClick={() => setActive(entry)} className="group block h-full w-full text-left">
-                    <div className="flex h-full flex-col items-center rounded-2xl border border-slate-200 bg-white p-6 pt-8 text-center transition-all duration-300 hover:-translate-y-1 hover:border-orange/40 hover:shadow-lg hover:shadow-navy/5">
-                      <StartupLogo name={entry.startupName} logoUrl={entry.logoUrl} size="card" />
+                  <button onClick={() => setActive(entry)} className="group block w-full text-left">
+                    {/* Fixed aspect ratio — not h-full off the grid row — so the
+                        45/55 logo/text split below has an actual height to
+                        resolve against instead of an ambiguous auto one. */}
+                    <div className="flex aspect-[4/5] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-orange/40 hover:shadow-lg hover:shadow-navy/5">
+                      <div className="h-[45%] w-full shrink-0 overflow-hidden">
+                        <CardLogo name={entry.startupName} logoUrl={entry.logoUrl} />
+                      </div>
 
-                      <p className="mt-4 font-display text-[15px] font-semibold leading-snug text-navy">{entry.startupName}</p>
-                      {entry.country && <p className="text-xs text-slate-400">{entry.country}</p>}
+                      <div className="flex flex-1 flex-col items-center overflow-hidden p-5 text-center">
+                        <p className="font-display text-[15px] font-semibold leading-snug text-navy">{entry.startupName}</p>
+                        {entry.country && <p className="text-xs text-slate-400">{entry.country}</p>}
 
-                      <p className="mt-3 text-sm leading-snug text-slate-600 line-clamp-3">
-                        {entry.description ?? entry.solutionDescription}
-                      </p>
+                        <p className="mt-3 text-sm leading-snug text-slate-600 line-clamp-3">
+                          {entry.description ?? entry.solutionDescription}
+                        </p>
 
-                      {entry.category && (
-                        <span className="mt-auto line-clamp-1 pt-4 text-[10px] font-semibold uppercase tracking-wide text-orange">
-                          {entry.category}
-                        </span>
-                      )}
+                        {entry.category && (
+                          <span className="mt-auto line-clamp-1 pt-4 text-[10px] font-semibold uppercase tracking-wide text-orange">
+                            {entry.category}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 </Reveal>
@@ -221,96 +229,103 @@ export const InnovationShowcaseConfirmed = () => {
               exit={{ opacity: 0, y: 10, scale: 0.97 }}
               transition={{ duration: 0.25 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-7 shadow-2xl"
+              className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
             >
               <button
                 onClick={() => setActive(null)}
                 aria-label="Close"
-                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
+                className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-navy/60 text-white backdrop-blur-sm hover:bg-navy/80"
               >
                 <X size={18} />
               </button>
-              <div className="flex flex-col items-center text-center">
-                <StartupLogo name={active.startupName} logoUrl={active.logoUrl} size="modal" />
-                <h3 className="mt-4 font-display text-xl font-semibold text-navy">{active.startupName}</h3>
-                {active.country && (
-                  <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
-                    <Globe2 size={12} /> {active.country}
-                  </p>
-                )}
-                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                  {active.category && (
-                    <span className="flex items-center gap-1 rounded-full bg-navy-secondary px-3 py-1 text-[11px] font-semibold text-white">
-                      <Layers size={12} /> {active.category}
-                    </span>
-                  )}
-                  {active.stageOfDevelopment && (
-                    <span className="flex items-center gap-1 rounded-full bg-orange/10 px-3 py-1 text-[11px] font-semibold text-orange">
-                      <Rocket size={12} /> {active.stageOfDevelopment}
-                    </span>
-                  )}
-                </div>
+
+              {/* Full-width logo — same treatment as the card, now at modal scale. */}
+              <div className="h-56 w-full shrink-0 overflow-hidden rounded-t-2xl sm:h-64">
+                <CardLogo name={active.startupName} logoUrl={active.logoUrl} />
               </div>
 
-              {active.description && <p className="mt-5 text-sm leading-relaxed text-slate-600">{active.description}</p>}
+              <div className="p-7">
+                <div className="flex flex-col items-center text-center">
+                  <h3 className="font-display text-xl font-semibold text-navy">{active.startupName}</h3>
+                  {active.country && (
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                      <Globe2 size={12} /> {active.country}
+                    </p>
+                  )}
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                    {active.category && (
+                      <span className="flex items-center gap-1 rounded-full bg-navy-secondary px-3 py-1 text-[11px] font-semibold text-white">
+                        <Layers size={12} /> {active.category}
+                      </span>
+                    )}
+                    {active.stageOfDevelopment && (
+                      <span className="flex items-center gap-1 rounded-full bg-orange/10 px-3 py-1 text-[11px] font-semibold text-orange">
+                        <Rocket size={12} /> {active.stageOfDevelopment}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-              <dl className="mt-5 space-y-1.5 text-sm">
-                {active.founderNames && (
-                  <div className="flex gap-2">
-                    <dt className="flex shrink-0 items-center gap-1 text-slate-400">
-                      <Users size={13} /> Founders
-                    </dt>
-                    <dd className="text-navy">{active.founderNames}</dd>
+                {active.description && <p className="mt-5 text-sm leading-relaxed text-slate-600">{active.description}</p>}
+
+                <dl className="mt-5 space-y-1.5 text-sm">
+                  {active.founderNames && (
+                    <div className="flex gap-2">
+                      <dt className="flex shrink-0 items-center gap-1 text-slate-400">
+                        <Users size={13} /> Founders
+                      </dt>
+                      <dd className="text-navy">{active.founderNames}</dd>
+                    </div>
+                  )}
+                  {active.trl && (
+                    <div className="flex gap-2">
+                      <dt className="text-slate-400">TRL</dt>
+                      <dd className="text-navy">{active.trl}</dd>
+                    </div>
+                  )}
+                </dl>
+
+                {active.solutionDescription && (
+                  <div className="mt-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      {active.solutionName || 'The Solution'}
+                    </p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.solutionDescription}</p>
                   </div>
                 )}
-                {active.trl && (
-                  <div className="flex gap-2">
-                    <dt className="text-slate-400">TRL</dt>
-                    <dd className="text-navy">{active.trl}</dd>
+
+                {active.problemAddressed && (
+                  <div className="mt-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">The Problem</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.problemAddressed}</p>
                   </div>
                 )}
-              </dl>
 
-              {active.solutionDescription && (
-                <div className="mt-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    {active.solutionName || 'The Solution'}
-                  </p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.solutionDescription}</p>
-                </div>
-              )}
+                {active.aiTechnologies && (
+                  <div className="mt-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">AI / ML Technologies</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.aiTechnologies}</p>
+                  </div>
+                )}
 
-              {active.problemAddressed && (
-                <div className="mt-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">The Problem</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.problemAddressed}</p>
-                </div>
-              )}
+                {active.uniqueValue && (
+                  <div className="mt-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">What Makes It Unique</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.uniqueValue}</p>
+                  </div>
+                )}
 
-              {active.aiTechnologies && (
-                <div className="mt-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">AI / ML Technologies</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.aiTechnologies}</p>
-                </div>
-              )}
-
-              {active.uniqueValue && (
-                <div className="mt-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">What Makes It Unique</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.uniqueValue}</p>
-                </div>
-              )}
-
-              {active.website && (
-                <a
-                  href={active.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"
-                >
-                  <Globe2 size={15} /> Visit website
-                </a>
-              )}
+                {active.website && (
+                  <a
+                    href={active.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"
+                  >
+                    <Globe2 size={15} /> Visit website
+                  </a>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}

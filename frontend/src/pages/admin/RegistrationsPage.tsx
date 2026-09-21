@@ -90,7 +90,7 @@ const EMPTY_ADD_FORM: AddFormState = {
 };
 
 const STATUS_OPTIONS: RegistrationStatus[] = ['pending', 'reviewed', 'confirmed', 'declined'];
-const TYPE_OPTIONS: RegistrationType[] = ['attendee', 'exhibitor', 'sponsor', 'volunteer'];
+const TYPE_OPTIONS: RegistrationType[] = ['attendee', 'exhibitor', 'sponsor', 'volunteer', 'team'];
 
 const STATUS_BADGE: Record<RegistrationStatus, string> = {
   pending: 'text-warning bg-warning/10',
@@ -108,6 +108,7 @@ const TYPE_LABEL: Record<RegistrationType, string> = {
   exhibitor: 'Exhibitors',
   sponsor: 'Sponsors',
   volunteer: 'Volunteers',
+  team: 'Team',
 };
 
 export const RegistrationsPage = () => {
@@ -337,6 +338,19 @@ export const RegistrationsPage = () => {
         trackSelected: addForm.trackSelected.trim() || undefined,
         trackAssigned: addForm.trackAssigned.trim() || undefined,
       };
+    } else if (addForm.type === 'team') {
+      if (!addForm.fullName.trim() || !addForm.email.trim() || !addForm.phone.trim()) {
+        setAddError('Full name, email, and phone are required.');
+        return;
+      }
+      payload = {
+        type: 'team',
+        fullName: addForm.fullName.trim(),
+        email: addForm.email.trim(),
+        phone: addForm.phone.trim(),
+        jobTitle: addForm.jobTitle.trim() || undefined,
+        organization: addForm.organization.trim() || undefined,
+      };
     } else {
       if (!addForm.companyName.trim() || !addForm.contactName.trim() || !addForm.contactEmail.trim()) {
         setAddError('Company name, contact name, and contact email are required.');
@@ -395,7 +409,7 @@ export const RegistrationsPage = () => {
           <p className="text-sm text-slate-500">
             {type
               ? `${total} ${TYPE_LABEL[type].toLowerCase()} submission${total === 1 ? '' : 's'}.`
-              : `${total} total submission${total === 1 ? '' : 's'} across attendees, exhibitors, sponsors, and volunteers.`}
+              : `${total} total submission${total === 1 ? '' : 's'} across attendees, exhibitors, sponsors, volunteers, and team.`}
           </p>
         </div>
         <button
@@ -949,6 +963,16 @@ export const RegistrationsPage = () => {
                     >
                       Manage Tracks
                     </button>
+                  </div>
+                )}
+
+                {addForm.type === 'team' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <AdminInput label="Full Name" value={addForm.fullName} onChange={(e) => setAddForm({ ...addForm, fullName: e.target.value })} />
+                    <AdminInput label="Email" type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} />
+                    <AdminInput label="Phone" type="tel" value={addForm.phone} onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })} />
+                    <AdminInput label="Role / Duty" value={addForm.jobTitle} onChange={(e) => setAddForm({ ...addForm, jobTitle: e.target.value })} placeholder="e.g. Registration Desk Lead" />
+                    <AdminInput label="Organization" value={addForm.organization} onChange={(e) => setAddForm({ ...addForm, organization: e.target.value })} />
                   </div>
                 )}
 
