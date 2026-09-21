@@ -1,7 +1,12 @@
 export const ROLES = ['super_admin', 'content_editor', 'registrations_officer', 'viewer'] as const;
 export type Role = (typeof ROLES)[number];
 
-export const REGISTRATION_TYPES = ['attendee', 'exhibitor', 'sponsor', 'volunteer'] as const;
+// 'team' is event staff — a deliberately separate registration path from
+// 'attendee' (its own public page, not a tab on Register.tsx), gated against
+// the EventTeamMember roster rather than open self-serve. See
+// registration.controller.ts's create() 'team' branch and
+// analytics.controller.ts's exclusion of this type from attendee-facing totals.
+export const REGISTRATION_TYPES = ['attendee', 'exhibitor', 'sponsor', 'volunteer', 'team'] as const;
 export type RegistrationType = (typeof REGISTRATION_TYPES)[number];
 
 export const REGISTRATION_STATUSES = ['pending', 'reviewed', 'confirmed', 'declined'] as const;

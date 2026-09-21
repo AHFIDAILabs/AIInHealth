@@ -44,7 +44,21 @@ export const connectDB = async (): Promise<void> => {
   mongoose.connection.on('error', (err) => logger.error({ err }, 'MongoDB connection error'));
   mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected'));
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, {
+    // Mongoose's own default (100) is sized for a dedicated cluster with its own
+    // headroom — against a shared/free-tier Atlas cluster (a hard connection
+    // ceiling shared across every client touching it, not just this app) a
+    // single Node process reaching for 100 connections eats into that ceiling
+    // for no real benefit at this traffic level. Kept explicit rather than
+    // left to whatever Mongoose's default happens to be release to release.
+    maxPoolSize: 20,
+    minPoolSize: 2,
+    // Fails fast with a clear error instead of a request hanging indefinitely
+    // if Atlas is throttling or briefly unreachable — a hung request under
+    // concurrent load is worse than a fast, retriable failure.
+    serverSelectionTimeoutMS: 10_000,
+    socketTimeoutMS: 45_000,
+  });
   logger.info('MongoDB connected');
 
   // Mongoose's default autoIndex only ever CREATES missing indexes — it never

@@ -6,6 +6,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { toCsv } from '../utils/toCsv.js';
 import { Registration, type RegistrationDoc } from '../models/Registration.model.js';
 import { VolunteerTrack } from '../models/VolunteerTrack.model.js';
+import { EventTeamMember } from '../models/EventTeamMember.model.js';
 import { AccessCode, type AccessCodeDoc } from '../models/AccessCode.model.js';
 import { CustomFormField } from '../models/CustomFormField.model.js';
 import { Lead } from '../models/Lead.model.js';
@@ -33,16 +34,25 @@ const CONFIRMATION_MESSAGE: Record<CreateRegistrationInput['type'], string> = {
   attendee: "You're registered. We'll be in touch with next steps shortly.",
   exhibitor: "Thanks for applying to exhibit. Our team will follow up with booth options and pricing.",
   sponsor: "Thanks for your interest in partnering with us. Our team will follow up with sponsorship packages.",
-  // Unreachable in practice — the volunteer branch below always returns its own
-  // application/confirmation message instead. Kept only because every type needs
-  // an entry for this Record's type to check out.
+  // Unreachable in practice — the volunteer/team branches below always return
+  // their own application/confirmation message instead. Kept only because
+  // every type needs an entry for this Record's type to check out.
   volunteer: "You're confirmed as a volunteer! We'll be in touch with schedule and role details shortly.",
+  team: "You're confirmed! We'll be in touch with event-day details shortly.",
 };
 
 const VOLUNTEER_APPLIED_MESSAGE = "Thanks for applying to volunteer! If you're selected, we'll email you an access code to confirm your spot.";
 const VOLUNTEER_ALREADY_APPLIED_MESSAGE = "You've already applied to volunteer — we'll be in touch if you're selected.";
 const VOLUNTEER_CONFIRMED_MESSAGE = "You're confirmed as a volunteer! We'll be in touch with schedule and role details shortly.";
 const ATTENDEE_PAID_MESSAGE = "You're one step away — complete payment to confirm your seat.";
+
+// Team registration is gated against the EventTeamMember roster rather than an
+// access code — a match auto-confirms (they're already vetted staff); no
+// match falls to the normal pending review queue instead of being rejected,
+// in case the roster is stale or has a typo.
+const TEAM_CONFIRMED_MESSAGE = "You're confirmed! We'll be in touch with event-day details shortly.";
+const TEAM_PENDING_MESSAGE = "Thanks for registering — we're verifying your details against the team roster. You'll get a confirmation email shortly.";
+const TEAM_ALREADY_REGISTERED_MESSAGE = "You've already registered — check your email for your confirmation.";
 
 // Idempotency window for the non-volunteer create() branch below — see its comment.
 const DUPLICATE_SUBMIT_WINDOW_MS = 2 * 60 * 1000;
@@ -206,6 +216,40 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     });
 
     res.status(existingApplication ? 200 : 201).json(new ApiResponse({ id: registration.id, message: VOLUNTEER_CONFIRMED_MESSAGE }));
+    return;
+  }
+
+  if (input.type === 'team') {
+    const existing = await Registration.findOne({ type: 'team', email: input.email });
+    if (existing) {
+      res.status(200).json(new ApiResponse({ id: existing.id, message: TEAM_ALREADY_REGISTERED_MESSAGE }));
+      return;
+    }
+
+    // Auto-confirm only when the email matches an active roster entry —
+    // staff already vetted by management. Anyone else lands in the normal
+    // pending review queue rather than being rejected outright (the roster
+    // may be stale, or the email may have a typo either side).
+    const isRosterMatch = await EventTeamMember.exists({ email: input.email, isActive: true });
+
+    const registration = await Registration.create({
+      ...input,
+      ...(isRosterMatch && { status: 'confirmed', qrToken: generateQrToken() }),
+    });
+
+    await emitAdminNotification({
+      type: 'registration.new',
+      title: isRosterMatch ? 'Team registration confirmed' : 'New team registration (needs review)',
+      body: input.fullName,
+      resourceType: 'Registration',
+      resourceId: registration.id,
+    });
+
+    if (isRosterMatch) {
+      void sendConfirmationAndTicketEmails(registration);
+    }
+
+    res.status(201).json(new ApiResponse({ id: registration.id, message: isRosterMatch ? TEAM_CONFIRMED_MESSAGE : TEAM_PENDING_MESSAGE }));
     return;
   }
 
@@ -449,7 +493,7 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
   await emitAdminNotification({
     type: 'registration.new',
     title: `New ${input.type} registration (admin)`,
-    body: input.type === 'volunteer' ? input.fullName : input.companyName,
+    body: input.type === 'volunteer' || input.type === 'team' ? input.fullName : input.companyName,
     resourceType: 'Registration',
     resourceId: registration.id,
   });

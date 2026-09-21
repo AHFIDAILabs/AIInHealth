@@ -66,8 +66,23 @@ const volunteerSchema = z.object({
   trackSelected: z.string().trim().max(200).optional(),
 });
 
+// Event staff — deliberately its own type/branch rather than a volunteer/
+// attendee variant. No accessCode: confirmation is gated by matching the
+// email against the EventTeamMember roster in registration.controller.ts,
+// not a redeemed code.
+const teamSchema = z.object({
+  type: z.literal('team'),
+  fullName: z.string().trim().min(2, 'Enter your full name'),
+  email: z.string().trim().toLowerCase().email('Enter a valid email'),
+  phone: z.string().trim().min(6, 'Enter a valid phone number'),
+  // Their role/duty at the event (e.g. "Registration Desk Lead") — reuses the
+  // generic jobTitle field rather than adding a new one.
+  jobTitle: z.string().trim().max(200).optional(),
+  organization: z.string().trim().optional(),
+});
+
 export const createRegistrationSchema = z.object({
-  body: z.discriminatedUnion('type', [attendeeSchema, exhibitorSchema, sponsorSchema, volunteerSchema]),
+  body: z.discriminatedUnion('type', [attendeeSchema, exhibitorSchema, sponsorSchema, volunteerSchema, teamSchema]),
 });
 
 export type CreateRegistrationInput = z.infer<typeof createRegistrationSchema>['body'];
@@ -145,7 +160,18 @@ const adminVolunteerSchema = z.object({
   trackAssigned: z.string().trim().max(200).optional(),
 });
 
+// Admin vouches directly — same shape as the public teamSchema, no roster
+// gate needed since staff is the one entering it.
+const adminTeamSchema = z.object({
+  type: z.literal('team'),
+  fullName: z.string().trim().min(2, 'Enter your full name'),
+  email: z.string().trim().toLowerCase().email('Enter a valid email'),
+  phone: z.string().trim().min(6, 'Enter a valid phone number'),
+  jobTitle: z.string().trim().max(200).optional(),
+  organization: z.string().trim().optional(),
+});
+
 export const adminCreateRegistrationSchema = z.object({
-  body: z.discriminatedUnion('type', [adminAttendeeSchema, exhibitorSchema, sponsorSchema, adminVolunteerSchema]),
+  body: z.discriminatedUnion('type', [adminAttendeeSchema, exhibitorSchema, sponsorSchema, adminVolunteerSchema, adminTeamSchema]),
 });
 export type AdminCreateRegistrationInput = z.infer<typeof adminCreateRegistrationSchema>['body'];

@@ -1,6 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import hpp from 'hpp';
 import { pinoHttp } from 'pino-http';
@@ -38,6 +39,10 @@ app.use(
     credentials: true,
   })
 );
+// Gzips every JSON response — admin list/analytics payloads especially — before
+// it goes out. Cheap win on a budget Render tier and matters more, not less,
+// once traffic is 100 concurrent users instead of a handful of admins.
+app.use(compression());
 app.use(requestId);
 app.use(pinoHttp({ logger, customLogLevel: (_req, res) => (res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info') }));
 // The verify callback stashes the untouched raw bytes on req.rawBody before

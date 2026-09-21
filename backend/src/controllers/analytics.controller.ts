@@ -42,9 +42,13 @@ export const overview = catchAsync(async (_req: Request, res: Response) => {
     registrationsByDay,
     revenueByDay,
   ] = await Promise.all([
-    Registration.countDocuments(),
-    Registration.countDocuments({ status: 'confirmed', checkedIn: true }),
-    Registration.countDocuments({ status: 'confirmed' }),
+    // 'team' (event staff) is excluded from every headline figure below — these
+    // represent the event's guest/attendee funnel, and staff registrations
+    // would otherwise silently inflate them. 'team' still gets its own honest
+    // count via byType in the sibling /admin/analytics-registrations endpoint.
+    Registration.countDocuments({ type: { $ne: 'team' } }),
+    Registration.countDocuments({ status: 'confirmed', checkedIn: true, type: { $ne: 'team' } }),
+    Registration.countDocuments({ status: 'confirmed', type: { $ne: 'team' } }),
     Registration.aggregate<{ total: number }>([
       { $match: { type: 'attendee', paymentStatus: 'paid' } },
       { $group: { _id: null, total: { $sum: '$amountKobo' } } },
@@ -64,7 +68,7 @@ export const overview = catchAsync(async (_req: Request, res: Response) => {
     Registration.countDocuments({ type: 'volunteer' }),
     AbstractCommunication.countDocuments({ status: 'sent' }),
     Registration.aggregate<{ _id: string; count: number }>([
-      { $match: { createdAt: { $gte: since() } } },
+      { $match: { createdAt: { $gte: since() }, type: { $ne: 'team' } } },
       { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
     ]),
@@ -122,17 +126,24 @@ export const registrations = catchAsync(async (_req: Request, res: Response) => 
     directoryOptInCount,
     totalConfirmed,
   ] = await Promise.all([
+    // Same 'team' exclusion as overview() above — registrationsByDay,
+    // checkInsByDay, byStatus, and the directory opt-in rate all represent the
+    // guest funnel, not staff. byType (right below) deliberately keeps 'team'
+    // in, as its own honest bucket.
     Registration.aggregate<{ _id: string; count: number }>([
-      { $match: { createdAt: { $gte: since() } } },
+      { $match: { createdAt: { $gte: since() }, type: { $ne: 'team' } } },
       { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
     ]),
     Registration.aggregate<{ _id: string; count: number }>([
-      { $match: { checkedIn: true, checkedInAt: { $gte: since() } } },
+      { $match: { checkedIn: true, checkedInAt: { $gte: since() }, type: { $ne: 'team' } } },
       { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$checkedInAt' } }, count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
     ]),
-    Registration.aggregate<{ _id: string; count: number }>([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+    Registration.aggregate<{ _id: string; count: number }>([
+      { $match: { type: { $ne: 'team' } } },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]),
     Registration.aggregate<{ _id: string; count: number }>([{ $group: { _id: '$type', count: { $sum: 1 } } }]),
     Registration.aggregate<{ _id: string; count: number; revenueKobo: number }>([
       { $match: { type: 'attendee', ticketCategory: { $exists: true } } },
@@ -143,8 +154,8 @@ export const registrations = catchAsync(async (_req: Request, res: Response) => 
     Registration.countDocuments({ type: 'attendee' }),
     Registration.countDocuments({ type: 'attendee', paymentStatus: 'paid' }),
     Registration.countDocuments({ type: 'attendee', status: 'confirmed' }),
-    Registration.countDocuments({ directoryOptIn: true }),
-    Registration.countDocuments({ status: 'confirmed' }),
+    Registration.countDocuments({ directoryOptIn: true, type: { $ne: 'team' } }),
+    Registration.countDocuments({ status: 'confirmed', type: { $ne: 'team' } }),
   ]);
 
   const byStatus = Object.fromEntries(REGISTRATION_STATUSES.map((s) => [s, 0])) as Record<string, number>;

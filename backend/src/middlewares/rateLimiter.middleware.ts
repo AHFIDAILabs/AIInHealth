@@ -8,9 +8,18 @@ import type { Request } from 'express';
  * Node instances. Fine for local/single-instance use while we validate design.
  */
 
+// This is the blanket net over every /api/v1 request (reads included) — unlike
+// the endpoint-specific limiters below, it's keyed on IP alone with nothing to
+// tell two different people apart. That's fine on the open internet, but this
+// is an in-person event: a meaningful chunk of the ~100 concurrent attendees
+// expected on-site will share one venue-WiFi NAT'd IP, and a single SPA page
+// view is several requests (data + auth check + etc.), not one. A low ceiling
+// here risks locking out legitimate attendees on the same WiFi, not stopping
+// an attacker — the specific limiters below (already keyed on IP+email) are
+// what actually guards the sensitive write/login endpoints, and are untouched.
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 300,
+  limit: 3000,
   standardHeaders: true,
   legacyHeaders: false,
 });
