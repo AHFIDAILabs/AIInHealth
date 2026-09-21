@@ -141,11 +141,11 @@ export const PartnersShowcase = () => {
   }
 
   return (
-    <section className="w-full bg-white py-24">
+    <section className="w-full bg-navy py-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-orange">Partners</p>
-          <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">
+          <p className="text-xs font-semibold uppercase tracking-widest text-white">Partners</p>
+          <h2 className="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl">
             Convened with leading institutions
           </h2>
         </Reveal>
@@ -157,7 +157,7 @@ export const PartnersShowcase = () => {
           edge and gives the logo grids the most room to breathe. White
           swatch cards get real contrast against this instead of blending
           into an all-white section. */}
-      <div className="mt-14 w-full bg-navy px-4 py-12 sm:px-8 sm:py-16 lg:px-12">
+      <div className="mt-10 w-full bg-navy px-4 py-10 sm:px-8 sm:py-10 lg:px-12">
         <div className="mx-auto max-w-6xl space-y-16">
           {rows.map((rowGroups, ri) =>
             rowGroups.length === 1 ? (
