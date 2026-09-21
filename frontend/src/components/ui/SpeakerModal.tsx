@@ -29,16 +29,21 @@ export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
           exit={{ opacity: 0, y: 10, scale: 0.97 }}
           transition={{ duration: 0.25 }}
           onClick={(e) => e.stopPropagation()}
-          className="grid w-full max-w-lg grid-cols-1 overflow-y-auto rounded-2xl bg-white shadow-2xl sm:max-w-2xl sm:grid-cols-2 max-h-[90vh]"
+          className="w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl sm:max-w-xl max-h-[90vh]"
         >
-          <div className="relative aspect-[4/3] shrink-0 sm:aspect-auto">
+          {/* Photo band is a fixed height, independent of how long the name/
+              title/bio run — the old two-column grid let the image column
+              stretch to match the text column's height (grid row stretch),
+              so a long bio produced a very tall, very narrow photo panel and
+              object-cover cropped it down to a sliver. A fixed h-64/h-72
+              band plus object-cover always frames the same crop window
+              regardless of text length. */}
+          <div className="relative h-64 w-full shrink-0 overflow-hidden sm:h-72">
             {speaker.photoUrl ? (
-              <img src={speaker.photoUrl} alt={speaker.fullName} className="h-full w-full object-cover" />
+              <img src={speaker.photoUrl} alt={speaker.fullName} className="h-full w-full object-cover object-top" />
             ) : (
-              <InitialsAvatar name={speaker.fullName} className="h-full w-full" />
+              <InitialsAvatar name={speaker.fullName} className="h-full w-full rounded-none" />
             )}
-          </div>
-          <div className="relative p-6 sm:p-7">
             <button
               onClick={onClose}
               aria-label="Close"
@@ -46,6 +51,8 @@ export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
             >
               <X size={18} />
             </button>
+          </div>
+          <div className="relative p-6 sm:p-7">
             <span className="inline-block rounded-full bg-orange/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-orange">
               {speaker.track}
             </span>
