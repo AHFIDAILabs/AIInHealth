@@ -41,6 +41,11 @@ export const submitReviewScoresSchema = z.object({
 });
 export type SubmitReviewScoresInput = z.infer<typeof submitReviewScoresSchema>['body'];
 
+export const listReviewersQuerySchema = z.object({
+  q: z.string().trim().max(200).optional(),
+});
+export type ListReviewersQuery = z.infer<typeof listReviewersQuerySchema>;
+
 // Admin-side reviewer creation.
 export const adminCreateReviewerSchema = z.object({
   body: z.object({

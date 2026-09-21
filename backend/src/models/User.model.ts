@@ -9,6 +9,14 @@ const userSchema = new Schema(
     // Populated by uploading a file through upload.controller.ts (POST /admin/uploads/image).
     avatarUrl: { type: String, trim: true },
     role: { type: String, enum: ROLES, required: true },
+    // True only for the one account ensureSuperAdminSeeded() creates on first
+    // boot — never accepted by createUserSchema/updateUserSchema, so there's
+    // no request body path that can set it. Gates the Security Command Center
+    // (requireRootAdmin.middleware.ts): role alone can't do this, since any
+    // existing super_admin can promote another user to super_admin through
+    // ordinary user management, but only the original seed account should
+    // ever see security events / block IPs / trigger lockdown.
+    isRootAdmin: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
     lastLoginAt: { type: Date },
     notificationPrefs: {

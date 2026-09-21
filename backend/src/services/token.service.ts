@@ -4,6 +4,7 @@ import { env } from '../config/env.js';
 import { RefreshToken } from '../models/RefreshToken.model.js';
 import { PasswordResetToken } from '../models/PasswordResetToken.model.js';
 import { ApiError } from '../utils/ApiError.js';
+import { recordSecurityEvent } from './securityEvent.service.js';
 import type { Role } from '../types/enums.js';
 
 export interface AccessTokenPayload {
@@ -14,11 +15,18 @@ export interface AccessTokenPayload {
 const sha256 = (value: string): string => crypto.createHash('sha256').update(value).digest('hex');
 
 export const signAccessToken = (payload: AccessTokenPayload): string =>
-  jwt.sign(payload, env.ACCESS_TOKEN_SECRET, { expiresIn: env.ACCESS_TOKEN_TTL as jwt.SignOptions['expiresIn'] });
+  jwt.sign(payload, env.ACCESS_TOKEN_SECRET, {
+    expiresIn: env.ACCESS_TOKEN_TTL as jwt.SignOptions['expiresIn'],
+    algorithm: 'HS256',
+  });
 
 export const verifyAccessToken = (token: string): AccessTokenPayload => {
   try {
-    return jwt.verify(token, env.ACCESS_TOKEN_SECRET) as AccessTokenPayload;
+    // Explicitly pinned rather than left to jsonwebtoken's default inference —
+    // a plain-string secret already restricts verify() to HMAC algs, but
+    // naming it here means a future switch to a PEM-keyed algorithm can't
+    // silently widen what this endpoint accepts.
+    return jwt.verify(token, env.ACCESS_TOKEN_SECRET, { algorithms: ['HS256'] }) as AccessTokenPayload;
   } catch {
     throw new ApiError(401, 'Invalid or expired session', 'INVALID_ACCESS_TOKEN');
   }
@@ -61,6 +69,13 @@ export const rotateRefreshToken = async (
   if (existing.status !== 'active') {
     // Reuse of an already-rotated or revoked token — assume compromise.
     await RefreshToken.updateMany({ user: existing.user, status: 'active' }, { status: 'revoked' });
+    void recordSecurityEvent({
+      type: 'auth.refresh_reuse_detected',
+      severity: 'high',
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      userId: existing.user.toString(),
+    });
     throw new ApiError(401, 'Session invalidated, please log in again', 'REFRESH_REUSE_DETECTED');
   }
 

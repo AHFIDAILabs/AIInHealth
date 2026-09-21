@@ -1,5 +1,25 @@
-import rateLimit from 'express-rate-limit';
-import type { Request } from 'express';
+import rateLimit, { type Options } from 'express-rate-limit';
+import type { NextFunction, Request, Response } from 'express';
+import { recordSecurityEvent } from '../services/securityEvent.service.js';
+import type { SecurityEventSeverity } from '../types/enums.js';
+
+// Shared `handler` for every limiter below — records a security event, then
+// reproduces the response express-rate-limit's default handler would have
+// sent (it must be reproduced explicitly: passing a custom `handler` fully
+// replaces the default one, `message` included).
+const onLimitExceeded =
+  (limiterName: string, severity: SecurityEventSeverity) =>
+  (req: Request, res: Response, _next: NextFunction, options: Options): void => {
+    void recordSecurityEvent({
+      type: 'rate_limit.exceeded',
+      severity,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      path: req.originalUrl,
+      detail: { limiter: limiterName },
+    });
+    res.status(options.statusCode).json(options.message);
+  };
 
 /**
  * In-memory limiter for this early build. The System Design Document specifies a
@@ -22,6 +42,11 @@ export const apiLimiter = rateLimit({
   limit: 3000,
   standardHeaders: true,
   legacyHeaders: false,
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please try again shortly.' } },
+  // 'low' severity — this net is IP-only (see the comment above) and a busy
+  // venue WiFi NAT can legitimately trip it; it's a volume signal, not on its
+  // own evidence of an attack the way tripping loginLimiter is.
+  handler: onLimitExceeded('apiLimiter', 'low'),
 });
 
 const emailKey = (req: Request): string => {
@@ -36,6 +61,8 @@ export const loginLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: emailKey,
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many attempts. Try again in 15 minutes.' } },
+  // 'high' — this is the credential-stuffing/brute-force guard specifically.
+  handler: onLimitExceeded('loginLimiter', 'high'),
 });
 
 export const passwordResetLimiter = rateLimit({
@@ -45,6 +72,7 @@ export const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: emailKey,
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many attempts. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('passwordResetLimiter', 'medium'),
 });
 
 export const registrationLimiter = rateLimit({
@@ -58,6 +86,7 @@ export const registrationLimiter = rateLimit({
     return `${req.ip}:${email || contactEmail}`;
   },
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many submissions. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('registrationLimiter', 'low'),
 });
 
 export const contactLimiter = rateLimit({
@@ -67,6 +96,7 @@ export const contactLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: emailKey,
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many messages. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('contactLimiter', 'low'),
 });
 
 export const inquiryLimiter = rateLimit({
@@ -79,6 +109,7 @@ export const inquiryLimiter = rateLimit({
     return `${req.ip}:${email}`;
   },
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many submissions. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('inquiryLimiter', 'low'),
 });
 
 // Each hit is an outbound Paystack API call, not just a DB write — the costliest
@@ -98,6 +129,7 @@ export const paymentLimiter = rateLimit({
     return `${req.ip}:${key}`;
   },
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many payment requests. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('paymentLimiter', 'medium'),
 });
 
 // Public session RSVP claim — keyed by email+IP like the other public-write
@@ -110,6 +142,7 @@ export const rsvpLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: emailKey,
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many attempts. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('rsvpLimiter', 'low'),
 });
 
 export const abstractLimiter = rateLimit({
@@ -122,4 +155,5 @@ export const abstractLimiter = rateLimit({
     return `${req.ip}:${email}`;
   },
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many submissions. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('abstractLimiter', 'low'),
 });

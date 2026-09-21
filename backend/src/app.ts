@@ -4,12 +4,16 @@ import cors from 'cors';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import hpp from 'hpp';
+import mongoSanitize from 'express-mongo-sanitize';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { requestId } from './middlewares/requestId.middleware.js';
 import { apiLimiter } from './middlewares/rateLimiter.middleware.js';
+import { blockedIpGuard } from './middlewares/blockedIp.middleware.js';
+import { lockdownGuard } from './middlewares/lockdown.middleware.js';
 import { notFoundHandler, errorHandler } from './middlewares/errorHandler.middleware.js';
+import { recordSecurityEvent } from './services/securityEvent.service.js';
 import healthRoutes from './routes/health.routes.js';
 import apiV1Router from './routes/v1/index.js';
 
@@ -45,6 +49,11 @@ app.use(
 app.use(compression());
 app.use(requestId);
 app.use(pinoHttp({ logger, customLogLevel: (_req, res) => (res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info') }));
+// Both checked before any body parsing, so a blocked/locked-down request is
+// rejected as cheaply as possible — no point parsing a JSON body we're about
+// to 403/503 anyway.
+app.use(blockedIpGuard);
+app.use(lockdownGuard);
 // The verify callback stashes the untouched raw bytes on req.rawBody before
 // express.json parses them — the Paystack webhook needs those exact bytes to
 // recompute the HMAC signature; the parsed body isn't byte-identical to the wire.
@@ -58,6 +67,27 @@ app.use(
 );
 app.use(cookieParser());
 app.use(hpp());
+// Every route already validates req.body/req.query through a zod schema before
+// a controller touches it, which is what actually prevents NoSQL operator
+// injection today — this strips any stray `$`/`.`-prefixed keys as a second,
+// independent layer so a future route that skips validation doesn't reopen it.
+// onSanitize firing at all means something sent a `$`/`.`-prefixed key, which
+// a legitimate client never does — worth a security event even though zod
+// already caught/would catch the actual attempt.
+app.use(
+  mongoSanitize({
+    onSanitize: ({ req, key }) => {
+      void recordSecurityEvent({
+        type: 'injection.mongo_operator_stripped',
+        severity: 'medium',
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        path: req.originalUrl,
+        detail: { key },
+      });
+    },
+  })
+);
 app.use(apiLimiter);
 
 app.use('/healthz', healthRoutes);

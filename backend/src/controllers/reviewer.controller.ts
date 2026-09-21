@@ -16,12 +16,13 @@ import {
 import { sendReviewerAssignmentEmail } from '../services/email.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
 import { computeWeightedScore } from '../utils/reviewScoring.js';
-import type {
-  RequestReviewerAccessCodeInput,
-  VerifyReviewerAccessCodeInput,
-  SubmitReviewScoresInput,
-  RespondToAssignmentInput,
-  AdminCreateReviewerInput,
+import {
+  listReviewersQuerySchema,
+  type RequestReviewerAccessCodeInput,
+  type VerifyReviewerAccessCodeInput,
+  type SubmitReviewScoresInput,
+  type RespondToAssignmentInput,
+  type AdminCreateReviewerInput,
 } from '../validations/reviewer.validation.js';
 
 // --- Public: access-code auth (mirrors delegate.controller.ts's own
@@ -168,7 +169,7 @@ export const submitScores = catchAsync(async (req: Request, res: Response) => {
 // --- Admin-side reviewer roster management ---
 
 export const adminList = catchAsync(async (req: Request, res: Response) => {
-  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  const { q = '' } = listReviewersQuerySchema.parse(req.query);
   const filter = q
     ? { $or: [{ fullName: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }, { email: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }] }
     : {};

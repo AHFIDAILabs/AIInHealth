@@ -56,6 +56,7 @@ export const me = catchAsync(async (req: Request, res: Response) => {
       role: user.role,
       avatarUrl: user.avatarUrl,
       notificationPrefs: user.notificationPrefs,
+      isRootAdmin: user.isRootAdmin,
     })
   );
 });

@@ -39,8 +39,10 @@ import * as leadController from '../../controllers/lead.controller.js';
 import * as customFormFieldController from '../../controllers/customFormField.controller.js';
 import * as exhibitorController from '../../controllers/exhibitor.controller.js';
 import * as attendeeController from '../../controllers/attendee.controller.js';
+import * as securityController from '../../controllers/security.controller.js';
 import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { requireRole } from '../../middlewares/rbac.middleware.js';
+import { requireRootAdmin } from '../../middlewares/requireRootAdmin.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { uploadImage, uploadMedia, uploadCsv } from '../../middlewares/upload.middleware.js';
 import { subscribePushSchema, unsubscribePushSchema } from '../../validations/push.validation.js';
@@ -51,6 +53,7 @@ import { adminUpdateCommunicationSchema } from '../../validations/communication.
 import { createSponsorshipPackageSchema, updateSponsorshipPackageSchema } from '../../validations/sponsorshipPackage.validation.js';
 import { createDeliverableSchema, updateDeliverableSchema } from '../../validations/deliverable.validation.js';
 import { createPartnerInteractionSchema } from '../../validations/partnerInteraction.validation.js';
+import { blockIpSchema, setLockdownSchema } from '../../validations/security.validation.js';
 
 const router = Router();
 
@@ -315,5 +318,20 @@ router.post(
   validate(sendAnnouncementSchema),
   delegateAnnouncementController.send
 );
+
+// Security Command Center — gated on isRootAdmin (an identity flag set once
+// by ensureSuperAdminSeeded), not a role. A later super_admin created through
+// ordinary user management never passes requireRootAdmin, even though they'd
+// pass requireRole('super_admin') everywhere else in this file.
+router.use('/security', requireRootAdmin);
+router.get('/security/overview', securityController.overview);
+router.get('/security/events', securityController.listEvents);
+router.get('/security/blocked-ips', securityController.listBlockedIps);
+router.post('/security/blocked-ips', validate(blockIpSchema), securityController.adminBlockIp);
+router.delete('/security/blocked-ips/:ip', securityController.adminUnblockIp);
+router.get('/security/lockdown', securityController.getLockdown);
+router.put('/security/lockdown', validate(setLockdownSchema), securityController.adminSetLockdown);
+router.get('/security/sessions', securityController.listSessions);
+router.post('/security/sessions/revoke-all', securityController.revokeAllSessions);
 
 export default router;

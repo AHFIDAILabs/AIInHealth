@@ -3,6 +3,7 @@ import { VENUE_SHORT } from '../config/venue.js';
 import { AbstractCommunication } from '../models/AbstractCommunication.model.js';
 import type { AbstractDoc } from '../models/Abstract.model.js';
 import type { AbstractDecision } from '../types/enums.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 interface TemplateInput {
   authorName: string;
@@ -61,10 +62,14 @@ export const draftDecisionCommunication = async (abstract: AbstractDoc & { _id: 
     { $set: { status: 'cancelled' } }
   );
 
+  // authorName/title/track are public-submitted, free-text fields — escaped
+  // here since every TEMPLATES entry interpolates them straight into an HTML
+  // string that's later rendered unsanitized (dangerouslySetInnerHTML) in the
+  // admin Communications tab.
   const { subject, body } = TEMPLATES[decision]({
-    authorName: abstract.authorName,
-    title: abstract.title,
-    track: abstract.track,
+    authorName: escapeHtml(abstract.authorName),
+    title: escapeHtml(abstract.title),
+    track: escapeHtml(abstract.track),
   });
 
   await AbstractCommunication.create({ abstract: abstract._id, decision, subject, body });

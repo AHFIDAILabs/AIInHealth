@@ -8,6 +8,7 @@ import {
   signAccessToken,
 } from './token.service.js';
 import { sendPasswordResetEmail } from './email.service.js';
+import { recordSecurityEvent } from './securityEvent.service.js';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import type { Role } from '../types/enums.js';
@@ -18,16 +19,45 @@ interface RequestMeta {
 }
 
 export const login = async (email: string, password: string, meta: RequestMeta) => {
-  const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash');
+  const normalizedEmail = email.toLowerCase();
+  const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
 
   // Same generic error whether the email doesn't exist or the password is wrong —
   // never let a login form confirm which admin emails exist.
   const invalidCredentials = () => new ApiError(401, 'Invalid email or password', 'INVALID_CREDENTIALS');
 
-  if (!user || !user.isActive) throw invalidCredentials();
+  if (!user || !user.isActive) {
+    void recordSecurityEvent({
+      type: 'auth.login_failed',
+      severity: 'medium',
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      email: normalizedEmail,
+    });
+    throw invalidCredentials();
+  }
 
   const passwordOk = await argon2.verify(user.passwordHash, password);
-  if (!passwordOk) throw invalidCredentials();
+  if (!passwordOk) {
+    void recordSecurityEvent({
+      type: 'auth.login_failed',
+      severity: 'medium',
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      userId: user.id,
+      email: normalizedEmail,
+    });
+    throw invalidCredentials();
+  }
+
+  void recordSecurityEvent({
+    type: 'auth.login_succeeded',
+    severity: 'low',
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+    userId: user.id,
+    email: normalizedEmail,
+  });
 
   user.lastLoginAt = new Date();
   await user.save();
@@ -38,7 +68,14 @@ export const login = async (email: string, password: string, meta: RequestMeta) 
   return {
     accessToken,
     refreshToken,
-    user: { id: user.id, fullName: user.fullName, email: user.email, role: user.role, avatarUrl: user.avatarUrl },
+    user: {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      isRootAdmin: user.isRootAdmin,
+    },
   };
 };
 

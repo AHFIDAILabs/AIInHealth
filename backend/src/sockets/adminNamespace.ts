@@ -53,3 +53,10 @@ export const initAdminSocket = (httpServer: HttpServer): void => {
 export const broadcastAdminEvent = (event: string, payload: unknown): void => {
   adminNamespace?.emit(event, payload);
 };
+
+// Unlike broadcastAdminEvent, targets one specific connected user's room —
+// used for Security Command Center alerts, which must never reach a regular
+// admin's socket even though they share this same /admin namespace.
+export const emitToUser = (userId: string, event: string, payload: unknown): void => {
+  adminNamespace?.to(`user:${userId}`).emit(event, payload);
+};

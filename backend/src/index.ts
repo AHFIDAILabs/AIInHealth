@@ -2,6 +2,7 @@ import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { ensureSuperAdminSeeded } from './services/bootstrap.service.js';
+import { loadSecurityCaches } from './services/securityEvent.service.js';
 import { app } from './app.js';
 import { initAdminSocket } from './sockets/adminNamespace.js';
 import { startScheduledJobs } from './jobs/index.js';
@@ -14,6 +15,7 @@ const start = async (): Promise<void> => {
   if (!env.MONGO_URI) {
     await ensureSuperAdminSeeded();
   }
+  await loadSecurityCaches();
 
   const server = app.listen(env.PORT, () => {
     logger.info(`API listening on http://localhost:${env.PORT} (${env.NODE_ENV})`);

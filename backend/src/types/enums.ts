@@ -184,3 +184,19 @@ export type MediaType = (typeof MEDIA_TYPES)[number];
 // 'general' bucket for pre-event, venue, or otherwise not-day-specific shots.
 export const MEDIA_DAYS = ['day1', 'day2', 'general'] as const;
 export type MediaDay = (typeof MEDIA_DAYS)[number];
+
+// Security Command Center — see SecurityEvent.model.ts. Each type maps to one
+// capture point (auth.service.ts, token.service.ts's reuse-breach detection,
+// rateLimiter.middleware.ts, app.ts's mongoSanitize hook, blockedIp.middleware.ts).
+export const SECURITY_EVENT_TYPES = [
+  'auth.login_failed',
+  'auth.login_succeeded',
+  'auth.refresh_reuse_detected',
+  'rate_limit.exceeded',
+  'injection.mongo_operator_stripped',
+  'blocked_ip.request_denied',
+] as const;
+export type SecurityEventType = (typeof SECURITY_EVENT_TYPES)[number];
+
+export const SECURITY_EVENT_SEVERITIES = ['low', 'medium', 'high'] as const;
+export type SecurityEventSeverity = (typeof SECURITY_EVENT_SEVERITIES)[number];

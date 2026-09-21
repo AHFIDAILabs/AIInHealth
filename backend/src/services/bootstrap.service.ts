@@ -23,6 +23,7 @@ export const ensureSuperAdminSeeded = async (): Promise<void> => {
     passwordHash,
     role: 'super_admin',
     isActive: true,
+    isRootAdmin: true,
   });
 
   logger.info(
