@@ -11,6 +11,7 @@ export const createSpeakerSchema = z.object({
     // Checked against the live Track collection in speaker.controller.ts.
     track: z.string().trim().min(1, 'Choose a track'),
     photoUrl: optionalUrl,
+    hoverPhotoUrl: optionalUrl,
     isPublished: z.boolean().optional(),
     order: z.coerce.number().int().optional(),
   }),

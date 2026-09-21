@@ -13,6 +13,13 @@ const speakerSchema = new Schema(
     // same reasoning as Abstract.model.ts's track field.
     track: { type: String, required: true, trim: true },
     photoUrl: { type: String, trim: true },
+    // Shown on hover on the homepage speaker grid (SpeakersGrid.tsx) in place
+    // of photoUrl — a second, independently-uploaded image, not a derived
+    // transformation of the first. Optional: falls back to photoUrl itself
+    // when unset, so a speaker added before this field existed (or one an
+    // admin hasn't gotten around to yet) still has a sensible hover state
+    // instead of a blank one.
+    hoverPhotoUrl: { type: String, trim: true },
     isPublished: { type: Boolean, default: false },
     order: { type: Number, default: 0 },
   },
