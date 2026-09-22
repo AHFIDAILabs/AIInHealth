@@ -32,7 +32,7 @@ const TICKET_LABEL: Record<TicketCategory, string> = {
   government_official: 'Government Official',
   accredited_media: 'Accredited Media',
 };
-const SCHOLARSHIP_OPTIONS = [25, 50, 100] as const;
+const SCHOLARSHIP_OPTIONS = [10, 25, 50, 100] as const;
 const STATUS_OPTIONS: RegistrationStatus[] = ['pending', 'reviewed', 'confirmed', 'declined'];
 const PAYMENT_OPTIONS: NonNullable<AdminRegistration['paymentStatus']>[] = ['not_required', 'unpaid', 'paid', 'failed'];
 
@@ -45,7 +45,7 @@ const STATUS_BADGE: Record<RegistrationStatus, string> = {
 
 interface AddFormState {
   ticketCategory: TicketCategory;
-  scholarshipDiscount: '' | 25 | 50 | 100;
+  scholarshipDiscount: '' | 10 | 25 | 50 | 100;
   fullName: string;
   email: string;
   phone: string;
@@ -440,7 +440,14 @@ export const AttendeesPage = () => {
                     </div>
                   )}
                   {typeof active.discountPercent === 'number' && (
-                    <DetailRow label="Discount" value={active.discountPercent === 100 ? 'Fully comped (100%)' : `${active.discountPercent}% scholarship`} />
+                    <DetailRow
+                      label="Discount"
+                      value={
+                        active.discountPercent === 100
+                          ? 'Fully comped (100%)'
+                          : `${active.discountPercent}% ${active.discountPercent === 10 ? 'group' : 'scholarship'}`
+                      }
+                    />
                   )}
                   {active.paymentStatus && active.paymentStatus !== 'not_required' && <DetailRow label="Payment" value={active.paymentStatus} />}
                   {typeof active.amountKobo === 'number' && active.amountKobo > 0 && (
@@ -589,6 +596,6 @@ export const AttendeesPage = () => {
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <div>
     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-    <p className="mt-0.5 break-words text-navy">{value}</p>
+    <p className="mt-0.5 whitespace-pre-line break-words text-navy">{value}</p>
   </div>
 );

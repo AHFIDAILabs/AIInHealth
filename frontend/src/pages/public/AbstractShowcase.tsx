@@ -189,7 +189,7 @@ export const AbstractShowcase = () => {
                         </p>
                         {abstract.country && <p className="text-xs text-slate-400">{abstract.country}</p>}
 
-                        <p className="mt-2 text-sm leading-snug text-slate-600 line-clamp-3">{abstract.title}</p>
+                        <p className="mt-2 line-clamp-3 whitespace-pre-line text-sm leading-snug text-slate-600">{abstract.title}</p>
 
                         {abstract.track && (
                           <span className="mt-auto line-clamp-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-orange">
@@ -279,7 +279,7 @@ export const AbstractShowcase = () => {
                   <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                     <FileText size={12} /> Abstract Title
                   </p>
-                  <h3 className="mt-1.5 font-display text-base font-semibold leading-snug text-navy">{active.title}</h3>
+                  <h3 className="mt-1.5 whitespace-pre-line font-display text-base font-semibold leading-snug text-navy">{active.title}</h3>
                 </div>
                 <p className="mt-4 text-center text-xs text-slate-400">Abstract Code: {active.code}</p>
               </div>

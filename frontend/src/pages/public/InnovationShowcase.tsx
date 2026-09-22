@@ -207,7 +207,7 @@ export const InnovationShowcase = () => {
                 </div>
               </div>
               <p className="mt-4 text-sm font-medium text-slate-700">{active.tagline}</p>
-              {active.description && <p className="mt-3 text-sm leading-relaxed text-slate-600">{active.description}</p>}
+              {active.description && <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-600">{active.description}</p>}
               <dl className="mt-5 space-y-1.5 text-sm">
                 {active.founderName && (
                   <div className="flex gap-2">

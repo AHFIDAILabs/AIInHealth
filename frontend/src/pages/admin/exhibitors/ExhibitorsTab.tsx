@@ -652,7 +652,7 @@ export const ExhibitorsTab = () => {
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <div>
     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-    <p className="mt-0.5 break-words text-navy">{value}</p>
+    <p className="mt-0.5 whitespace-pre-line break-words text-navy">{value}</p>
   </div>
 );
 

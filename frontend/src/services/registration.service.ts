@@ -28,9 +28,10 @@ export interface AttendeePayload {
   jobTitle?: string;
   country: string;
   groupAttendees?: GroupAttendee[];
-  // Optional scholarship/discount code (25%, 50%, or 100% off) — verified against
-  // the AccessCode collection server-side; a discount is applied to the price
-  // charged at payment, not shown/computed here.
+  // Optional scholarship/discount code (10%, 25%, 50%, or 100% off) — verified
+  // against the AccessCode collection server-side; a discount is applied to the
+  // price charged at payment, not shown/computed here. The 10% tier additionally
+  // requires registrationMode 'group' with 5+ total attendees, enforced server-side.
   accessCode?: string;
 }
 
@@ -87,10 +88,11 @@ export interface SubmitRegistrationResult {
   id: string;
   message: string;
   requiresPayment?: boolean;
-  // Present only when a scholarship code was redeemed at a partial (25/50%)
+  // Present only when a scholarship code was redeemed at a partial (10/25/50%)
   // tier — a 100% code instead sets requiresPayment: false with no payment step
-  // to show a discount on at all.
-  discountApplied?: 25 | 50;
+  // to show a discount on at all. 10 is the group-rate tier (registration
+  // mode 'group', 5+ attendees) — see backend's ACCESS_CODE_DISCOUNTS comment.
+  discountApplied?: 10 | 25 | 50;
 }
 
 export const submitRegistration = async (payload: RegistrationPayload): Promise<SubmitRegistrationResult> => {

@@ -32,7 +32,7 @@ export interface AdminRegistration {
   message?: string;
   accessCode?: string;
   // Attendee only — set when accessCode above redeemed a 'scholarship'-type code.
-  discountPercent?: 25 | 50 | 100;
+  discountPercent?: 10 | 25 | 50 | 100;
   paymentStatus?: 'not_required' | 'unpaid' | 'paid' | 'failed';
   paymentReference?: string;
   amountKobo?: number;
@@ -171,7 +171,7 @@ export interface AdminCreateAttendeePayload {
   organization?: string;
   jobTitle?: string;
   country: string;
-  scholarshipDiscount?: 25 | 50 | 100;
+  scholarshipDiscount?: 10 | 25 | 50 | 100;
 }
 
 export interface AdminCreateExhibitorPayload {

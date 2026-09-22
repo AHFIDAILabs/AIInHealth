@@ -48,7 +48,7 @@ export const AttendeeForm = () => {
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
-  const [discountApplied, setDiscountApplied] = useState<25 | 50 | null>(null);
+  const [discountApplied, setDiscountApplied] = useState<10 | 25 | 50 | null>(null);
 
   const {
     register,
@@ -108,7 +108,7 @@ export const AttendeeForm = () => {
         <p className="font-display text-lg font-semibold text-navy">Redirecting you to secure payment…</p>
         {discountApplied && (
           <p className="rounded-full bg-success/10 px-4 py-1.5 text-sm font-semibold text-success">
-            ✓ {discountApplied}% scholarship discount applied
+            ✓ {discountApplied}% {discountApplied === 10 ? 'group' : 'scholarship'} discount applied
           </p>
         )}
         <p className="max-w-sm text-sm text-slate-500">

@@ -38,13 +38,13 @@ const TICKET_LABEL: Record<TicketCategory, string> = {
   accredited_media: 'Accredited Media',
 };
 const BOOTH_SIZES: BoothSize[] = ['small', 'medium', 'large'];
-const SCHOLARSHIP_OPTIONS = [25, 50, 100] as const;
+const SCHOLARSHIP_OPTIONS = [10, 25, 50, 100] as const;
 
 interface AddFormState {
   type: RegistrationType;
   // attendee
   ticketCategory: TicketCategory;
-  scholarshipDiscount: '' | 25 | 50 | 100;
+  scholarshipDiscount: '' | 10 | 25 | 50 | 100;
   fullName: string;
   email: string;
   phone: string;
@@ -788,7 +788,11 @@ export const RegistrationsPage = () => {
                   {typeof active.discountPercent === 'number' && (
                     <DetailRow
                       label="Discount"
-                      value={active.discountPercent === 100 ? 'Fully comped (100%)' : `${active.discountPercent}% scholarship`}
+                      value={
+                        active.discountPercent === 100
+                          ? 'Fully comped (100%)'
+                          : `${active.discountPercent}% ${active.discountPercent === 10 ? 'group' : 'scholarship'}`
+                      }
                     />
                   )}
                   {active.paymentStatus && active.paymentStatus !== 'not_required' && (
@@ -1065,6 +1069,6 @@ export const RegistrationsPage = () => {
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <div>
     <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-    <p className="mt-0.5 break-words text-navy">{value}</p>
+    <p className="mt-0.5 whitespace-pre-line break-words text-navy">{value}</p>
   </div>
 );

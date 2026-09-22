@@ -372,12 +372,14 @@ export const AccessCodesPage = () => {
                       <option value="">Choose a tier…</option>
                       {ACCESS_CODE_DISCOUNTS.map((d) => (
                         <option key={d} value={d}>
-                          {d}% off{d === 100 ? ' (fully covered)' : ''}
+                          {d}% off{d === 100 ? ' (fully covered)' : d === 10 ? ' (group rate, 5+ attendees)' : ''}
                         </option>
                       ))}
                     </AdminSelect>
                     <p className="mt-1.5 text-xs text-slate-400">
-                      Applied automatically when the recipient enters this code on the Attendee registration form.
+                      {form.discountPercent === 10
+                        ? 'Group rate — the recipient must register as a Group with 5 or more attendees for this code to work. It will be rejected on an individual registration or a smaller group.'
+                        : 'Applied automatically when the recipient enters this code on the Attendee registration form.'}
                     </p>
                   </div>
                 )}

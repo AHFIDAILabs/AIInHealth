@@ -283,7 +283,7 @@ export const Partners = () => {
               <h3 className="font-display text-xl font-semibold text-navy">{activePartner.name}</h3>
             </div>
             {activePartner.description && (
-              <p className="mt-4 text-sm leading-relaxed text-slate-600">{activePartner.description}</p>
+              <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-slate-600">{activePartner.description}</p>
             )}
             {activePartner.website && (
               <a

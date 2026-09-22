@@ -180,7 +180,7 @@ export const InnovationShowcaseConfirmed = () => {
                         <p className="font-display text-[15px] font-semibold leading-snug text-navy">{entry.startupName}</p>
                         {entry.country && <p className="text-xs text-slate-400">{entry.country}</p>}
 
-                        <p className="mt-3 text-sm leading-snug text-slate-600 line-clamp-3">
+                        <p className="mt-3 line-clamp-3 whitespace-pre-line text-sm leading-snug text-slate-600">
                           {entry.description ?? entry.solutionDescription}
                         </p>
 
@@ -266,7 +266,7 @@ export const InnovationShowcaseConfirmed = () => {
                   </div>
                 </div>
 
-                {active.description && <p className="mt-5 text-sm leading-relaxed text-slate-600">{active.description}</p>}
+                {active.description && <p className="mt-5 whitespace-pre-line text-sm leading-relaxed text-slate-600">{active.description}</p>}
 
                 <dl className="mt-5 space-y-1.5 text-sm">
                   {active.founderNames && (
@@ -290,14 +290,14 @@ export const InnovationShowcaseConfirmed = () => {
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                       {active.solutionName || 'The Solution'}
                     </p>
-                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.solutionDescription}</p>
+                    <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-slate-600">{active.solutionDescription}</p>
                   </div>
                 )}
 
                 {active.problemAddressed && (
                   <div className="mt-5">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">The Problem</p>
-                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.problemAddressed}</p>
+                    <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-slate-600">{active.problemAddressed}</p>
                   </div>
                 )}
 
@@ -311,7 +311,7 @@ export const InnovationShowcaseConfirmed = () => {
                 {active.uniqueValue && (
                   <div className="mt-5">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">What Makes It Unique</p>
-                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.uniqueValue}</p>
+                    <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-slate-600">{active.uniqueValue}</p>
                   </div>
                 )}
 

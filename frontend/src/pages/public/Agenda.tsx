@@ -301,7 +301,7 @@ export const Agenda = () => {
               <p className={`text-[10px] font-bold uppercase tracking-widest ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-400'}`}>
                 Session Brief
               </p>
-              <p className={`mt-1 text-[13px] leading-relaxed ${s.cardStyle === 'standard' ? 'text-slate-600' : 'text-slate-200'}`}>
+              <p className={`mt-1 whitespace-pre-line text-[13px] leading-relaxed ${s.cardStyle === 'standard' ? 'text-slate-600' : 'text-slate-200'}`}>
                 {s.description}
               </p>
             </div>

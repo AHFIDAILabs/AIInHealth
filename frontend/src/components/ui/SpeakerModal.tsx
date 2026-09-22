@@ -64,7 +64,7 @@ export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
           </div>
 
           <div className="p-6 sm:p-7">
-            {speaker.bio && <p className="text-sm leading-relaxed text-slate-600">{speaker.bio}</p>}
+            {speaker.bio && <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">{speaker.bio}</p>}
             <ButtonLink to="/agenda" variant="primary" className="!mt-6 !py-2.5 !text-sm">
               View Related Sessions
             </ButtonLink>

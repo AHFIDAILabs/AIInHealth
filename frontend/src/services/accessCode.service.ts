@@ -8,7 +8,10 @@ export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];
 
 // The only discount tiers a scholarship code can carry — required when type is
 // 'scholarship', rejected otherwise (backend/src/validations/accessCode.validation.ts).
-export const ACCESS_CODE_DISCOUNTS = [25, 50, 100] as const;
+// 10 is management's group-rate tier: the backend only lets it be redeemed on
+// a group registration of 5+ attendees (registration.controller.ts) — not
+// enforced here, just the set of valid percentages an admin can pick.
+export const ACCESS_CODE_DISCOUNTS = [10, 25, 50, 100] as const;
 export type AccessCodeDiscount = (typeof ACCESS_CODE_DISCOUNTS)[number];
 
 export interface AdminAccessCode {
