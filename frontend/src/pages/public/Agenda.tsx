@@ -5,10 +5,8 @@ import { SessionRsvpModal } from '../../components/ui/SessionRsvpModal';
 import { SpeakerModal } from '../../components/ui/SpeakerModal';
 import {
   listPublicSessions,
-  SESSION_FORMATS,
   type AdminSession,
   type SessionDay,
-  type SessionFormat,
   type SessionCardStyle,
   type SessionPartnerRef,
 } from '../../services/session.service';
@@ -26,7 +24,7 @@ interface DisplaySession {
   startTime: string;
   endTime: string;
   title: string;
-  format: SessionFormat;
+  format: string;
   track: { name: string; color: string } | null;
   room?: string;
   speakers: DisplaySpeaker[];
@@ -106,10 +104,16 @@ const timeOfDay = (startTime: string): 'Morning Sessions' | 'Afternoon Sessions'
   return 'Evening Sessions';
 };
 
-const CARD_STYLE_CLASSES: Record<Exclude<SessionCardStyle, 'break'>, string> = {
+// 'break' never actually reaches CARD_STYLE_CLASSES[...] at runtime — a break
+// card always renders its own standalone bar, never SessionCard — but SessionCard
+// takes a plain DisplaySession prop (its cardStyle isn't narrowed the way the old
+// inline-ternary version had it), so the type needs an entry for every
+// SessionCardStyle even though this one is dead.
+const CARD_STYLE_CLASSES: Record<SessionCardStyle, string> = {
   standard: 'bg-white text-navy',
   featured: 'bg-navy text-white',
   spotlight: 'bg-navy-secondary text-white',
+  break: '',
 };
 
 export const Agenda = () => {
@@ -119,7 +123,7 @@ export const Agenda = () => {
   const [allSpeakers, setAllSpeakers] = useState<AdminSpeaker[]>([]);
   const [activeSpeaker, setActiveSpeaker] = useState<AdminSpeaker | null>(null);
 
-  const [formatFilter, setFormatFilter] = useState<SessionFormat | ''>('');
+  const [formatFilter, setFormatFilter] = useState('');
   const [trackFilter, setTrackFilter] = useState('');
   const [roomFilter, setRoomFilter] = useState('');
 
@@ -187,10 +191,15 @@ export const Agenda = () => {
     [allRealSessions]
   );
   const formatCounts = useMemo(() => {
-    const counts = new Map<SessionFormat, number>();
+    const counts = new Map<string, number>();
     day.sessions.forEach((s) => counts.set(s.format, (counts.get(s.format) ?? 0) + 1));
     return counts;
   }, [day.sessions]);
+  // Format is free text now (admin-typeable, see the Sessions admin form's
+  // combobox) rather than a fixed list, so the filter pills are derived
+  // straight from whatever formats are actually present today — a custom
+  // type an admin just added shows up here the same as any built-in one.
+  const formatOptions = useMemo(() => Array.from(formatCounts.keys()).sort(), [formatCounts]);
 
   const filteredSessions = day.sessions.filter(
     (s) =>
@@ -216,7 +225,136 @@ export const Agenda = () => {
     return order.map((label) => ({ label, sessions: map.get(label)! }));
   }, [filteredSessions]);
 
+  // Two or more parallel-track sessions sharing a start time get one shared
+  // timeline rail with their cards laid out in a row instead of each getting
+  // its own full-width row — that's what "happening at the same time" should
+  // look like on a timeline, not a plain vertical stack that implies
+  // sequence. A 'break' card is never grouped (it's rendered as its own
+  // centered bar, not the rail+card shape), so it always sits alone even if
+  // its time happens to coincide with something else.
+  const groupByStartTime = (sessions: DisplaySession[]): DisplaySession[][] => {
+    const groups: DisplaySession[][] = [];
+    for (const s of sessions) {
+      const prev = groups[groups.length - 1];
+      if (s.cardStyle !== 'break' && prev && prev[0].cardStyle !== 'break' && prev[0].startTime === s.startTime) {
+        prev.push(s);
+      } else {
+        groups.push([s]);
+      }
+    }
+    return groups;
+  };
+
   const dateLabel = DAY_DATES[dayKey].toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  // Pulled out of the timeline loop so it can render once per session
+  // whether that session is alone in its time slot or sharing a row with
+  // parallel-track siblings — same card markup either way.
+  const SessionCard = ({ s }: { s: DisplaySession }) => (
+    <div
+      className={`mb-2 flex-1 rounded-xl p-5 shadow-sm ${
+        s.cardStyle === 'standard' ? `${CARD_STYLE_CLASSES.standard} border-l-4` : CARD_STYLE_CLASSES[s.cardStyle]
+      }`}
+      style={s.cardStyle === 'standard' ? { borderLeftColor: s.track?.color ?? '#E8792C' } : undefined}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                s.cardStyle === 'standard' ? 'bg-orange/10 text-orange' : 'bg-white/15 text-white'
+              }`}
+            >
+              {s.format}
+            </span>
+            {s.track && (
+              <span
+                className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                  s.cardStyle === 'standard' ? 'bg-offwhite text-slate-500' : 'bg-white/10 text-slate-200'
+                }`}
+              >
+                {s.track.name}
+              </span>
+            )}
+            {s.requiresRsvp && (
+              <button
+                type="button"
+                onClick={() => setRsvpSession({ _id: s.key, title: s.title })}
+                className="flex items-center gap-1 rounded-full bg-orange px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-orange-hover"
+              >
+                <CalendarCheck size={11} /> RSVP
+              </button>
+            )}
+          </div>
+
+          <p className={`mt-2 font-display text-base font-bold sm:text-lg ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>
+            {s.title}
+          </p>
+          {s.room && (
+            <p className={`mt-0.5 text-[12px] font-medium ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-300'}`}>
+              {s.room}
+            </p>
+          )}
+
+          {s.description && (
+            <div className="mt-3">
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-400'}`}>
+                Session Brief
+              </p>
+              <p className={`mt-1 text-[13px] leading-relaxed ${s.cardStyle === 'standard' ? 'text-slate-600' : 'text-slate-200'}`}>
+                {s.description}
+              </p>
+            </div>
+          )}
+
+          {s.speakers.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {s.speakers.map((sp) => (
+                <button
+                  key={sp._id}
+                  type="button"
+                  onClick={() => setActiveSpeaker(resolveSpeaker(sp, s.track?.name ?? 'General Session'))}
+                  className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-left transition-colors ${
+                    s.cardStyle === 'standard'
+                      ? 'border-slate-200 bg-white hover:border-orange/40 hover:bg-orange/5'
+                      : 'border-white/20 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy text-[10px] font-semibold text-white">
+                    {sp.photoUrl ? (
+                      <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full object-cover" />
+                    ) : (
+                      sp.fullName[0]
+                    )}
+                  </span>
+                  <span className={`text-xs font-medium ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>{sp.fullName}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {s.partners.length > 0 && (
+          <div className="flex shrink-0 flex-wrap justify-end gap-3">
+            {s.partners.map((p) => (
+              <div key={p._id} className="flex w-20 flex-col items-center gap-1.5 text-center">
+                <span className="flex h-12 w-20 items-center justify-center rounded-lg bg-white p-2 shadow-sm">
+                  {p.logoUrl ? (
+                    <img src={p.logoUrl} alt={p.name} className="max-h-full max-w-full object-contain" />
+                  ) : (
+                    <span className="text-[10px] font-semibold text-navy">{p.name}</span>
+                  )}
+                </span>
+                <span className={`text-[10px] font-medium leading-tight ${s.cardStyle === 'standard' ? 'text-slate-500' : 'text-slate-300'}`}>
+                  {p.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -277,7 +415,7 @@ export const Agenda = () => {
             >
               All
             </button>
-            {SESSION_FORMATS.filter((f) => (formatCounts.get(f) ?? 0) > 0).map((f) => (
+            {formatOptions.map((f) => (
               <button
                 key={f}
                 onClick={() => setFormatFilter(f)}
@@ -336,134 +474,44 @@ export const Agenda = () => {
                 </div>
 
                 <div className="space-y-4">
-                  {section.sessions.map((s) =>
-                    s.cardStyle === 'break' ? (
-                      <div key={s.key} className="rounded-lg bg-slate-100 py-3 text-center text-[13px] font-medium text-slate-500">
-                        {s.startTime} &ndash; {s.endTime} &middot; {s.title}
-                      </div>
-                    ) : (
-                      <div key={s.key} className="flex gap-4 sm:gap-5">
+                  {groupByStartTime(section.sessions).map((group) => {
+                    const first = group[0];
+                    if (first.cardStyle === 'break') {
+                      return (
+                        <div key={first.key} className="rounded-lg bg-slate-100 py-3 text-center text-[13px] font-medium text-slate-500">
+                          {first.startTime} &ndash; {first.endTime} &middot; {first.title}
+                        </div>
+                      );
+                    }
+                    // Concurrent sessions share one rail — a single endTime
+                    // label would be misleading if the parallel tracks run
+                    // different lengths, so the rail only commits to the
+                    // shared start time in that case.
+                    const isConcurrent = group.length > 1;
+                    return (
+                      <div key={first.key} className="flex gap-4 sm:gap-5">
                         {/* Timeline rail */}
                         <div className="flex w-12 shrink-0 flex-col items-center sm:w-16">
-                          <span className="text-[13px] font-bold text-navy sm:text-sm">{s.startTime}</span>
+                          <span className="text-[13px] font-bold text-navy sm:text-sm">{first.startTime}</span>
                           <span
                             className="my-1.5 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-offwhite"
-                            style={{ backgroundColor: s.track?.color ?? '#E8792C' }}
+                            style={{ backgroundColor: first.track?.color ?? '#E8792C' }}
                           />
                           <span className="w-px flex-1 bg-slate-200" />
-                          <span className="text-[11px] font-medium text-slate-400">{s.endTime}</span>
+                          {!isConcurrent && <span className="text-[11px] font-medium text-slate-400">{first.endTime}</span>}
                         </div>
 
-                        {/* Card */}
-                        <div className={`mb-2 flex-1 rounded-xl p-5 shadow-sm ${
-                          s.cardStyle === 'standard'
-                            ? `${CARD_STYLE_CLASSES.standard} border-l-4`
-                            : CARD_STYLE_CLASSES[s.cardStyle]
-                        }`}
-                          style={s.cardStyle === 'standard' ? { borderLeftColor: s.track?.color ?? '#E8792C' } : undefined}
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-4">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span
-                                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
-                                    s.cardStyle === 'standard' ? 'bg-orange/10 text-orange' : 'bg-white/15 text-white'
-                                  }`}
-                                >
-                                  {s.format}
-                                </span>
-                                {s.track && (
-                                  <span
-                                    className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                                      s.cardStyle === 'standard' ? 'bg-offwhite text-slate-500' : 'bg-white/10 text-slate-200'
-                                    }`}
-                                  >
-                                    {s.track.name}
-                                  </span>
-                                )}
-                                {s.requiresRsvp && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setRsvpSession({ _id: s.key, title: s.title })}
-                                    className="flex items-center gap-1 rounded-full bg-orange px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-orange-hover"
-                                  >
-                                    <CalendarCheck size={11} /> RSVP
-                                  </button>
-                                )}
-                              </div>
-
-                              <p className={`mt-2 font-display text-base font-bold sm:text-lg ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>
-                                {s.title}
-                              </p>
-                              {s.room && (
-                                <p className={`mt-0.5 text-[12px] font-medium ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-300'}`}>
-                                  {s.room}
-                                </p>
-                              )}
-
-                              {s.description && (
-                                <div className="mt-3">
-                                  <p className={`text-[10px] font-bold uppercase tracking-widest ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-400'}`}>
-                                    Session Brief
-                                  </p>
-                                  <p className={`mt-1 text-[13px] leading-relaxed ${s.cardStyle === 'standard' ? 'text-slate-600' : 'text-slate-200'}`}>
-                                    {s.description}
-                                  </p>
-                                </div>
-                              )}
-
-                              {s.speakers.length > 0 && (
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {s.speakers.map((sp) => (
-                                    <button
-                                      key={sp._id}
-                                      type="button"
-                                      onClick={() => setActiveSpeaker(resolveSpeaker(sp, s.track?.name ?? 'General Session'))}
-                                      className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-left transition-colors ${
-                                        s.cardStyle === 'standard'
-                                          ? 'border-slate-200 bg-white hover:border-orange/40 hover:bg-orange/5'
-                                          : 'border-white/20 bg-white/5 hover:bg-white/10'
-                                      }`}
-                                    >
-                                      <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy text-[10px] font-semibold text-white">
-                                        {sp.photoUrl ? (
-                                          <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full object-cover" />
-                                        ) : (
-                                          sp.fullName[0]
-                                        )}
-                                      </span>
-                                      <span className={`text-xs font-medium ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>
-                                        {sp.fullName}
-                                      </span>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            {s.partners.length > 0 && (
-                              <div className="flex shrink-0 flex-wrap justify-end gap-3">
-                                {s.partners.map((p) => (
-                                  <div key={p._id} className="flex w-20 flex-col items-center gap-1.5 text-center">
-                                    <span className="flex h-12 w-20 items-center justify-center rounded-lg bg-white p-2 shadow-sm">
-                                      {p.logoUrl ? (
-                                        <img src={p.logoUrl} alt={p.name} className="max-h-full max-w-full object-contain" />
-                                      ) : (
-                                        <span className="text-[10px] font-semibold text-navy">{p.name}</span>
-                                      )}
-                                    </span>
-                                    <span className={`text-[10px] font-medium leading-tight ${s.cardStyle === 'standard' ? 'text-slate-500' : 'text-slate-300'}`}>
-                                      {p.name}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                        {/* Parallel-track sessions sit in a row (stacked on mobile); a
+                            single session at this time still gets the full-width card
+                            it always had. */}
+                        <div className="flex flex-1 flex-col gap-4 sm:flex-row">
+                          {group.map((s) => (
+                            <SessionCard key={s.key} s={s} />
+                          ))}
                         </div>
                       </div>
-                    )
-                  )}
+                    );
+                  })}
                 </div>
               </div>
             ))}

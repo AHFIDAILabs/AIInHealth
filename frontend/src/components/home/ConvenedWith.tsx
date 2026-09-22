@@ -42,7 +42,7 @@ export const ConvenedWith = () => {
                   src={partner.logoUrl}
                   alt={partner.name}
                   title={partner.name}
-                  className="h-9 shrink-0 object-contain opacity-60 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
+                  className="h-9 shrink-0 object-contain"
                 />
               ) : (
                 <span className="shrink-0 text-sm font-semibold text-slate-400" title={partner.name}>

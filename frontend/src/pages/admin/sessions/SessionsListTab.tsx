@@ -10,7 +10,6 @@ import {
   adminAddSessionRsvp,
   adminRemoveSessionRsvp,
   SESSION_DAYS,
-  SESSION_FORMATS,
   SESSION_CARD_STYLES,
   type AdminSession,
   type SessionInput,
@@ -18,11 +17,17 @@ import {
 } from '../../../services/session.service';
 import { adminListSpeakers, type AdminSpeaker } from '../../../services/speaker.service';
 import { adminListTracks, type AdminTrack } from '../../../services/track.service';
+import {
+  adminListSessionTypes,
+  adminDeleteSessionType,
+  type AdminSessionType,
+} from '../../../services/sessionType.service';
 import { adminListPartners, type AdminPartner } from '../../../services/partner.service';
 import { getApiErrorMessage } from '../../../services/api';
 import { SkeletonRows } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
+import { CreatableCombobox } from '../../../components/ui/CreatableCombobox';
 import { AdminInput, AdminTextarea, AdminSelect, AdminToggle } from '../../../components/ui/AdminField';
 import { useToast } from '../../../contexts/ToastContext';
 
@@ -32,7 +37,7 @@ const EMPTY_FORM: SessionInput = {
   endTime: '10:00',
   title: '',
   track: null,
-  format: SESSION_FORMATS[0],
+  format: '',
   room: '',
   description: '',
   speakers: [],
@@ -67,6 +72,7 @@ export const SessionsListTab = () => {
   const toast = useToast();
   const [items, setItems] = useState<AdminSession[]>([]);
   const [tracks, setTracks] = useState<AdminTrack[]>([]);
+  const [sessionTypes, setSessionTypes] = useState<AdminSessionType[]>([]);
   const [speakers, setSpeakers] = useState<AdminSpeaker[]>([]);
   const [partners, setPartners] = useState<AdminPartner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,12 +106,17 @@ export const SessionsListTab = () => {
       .finally(() => setLoading(false));
   }, [dayFilter, trackFilter]);
 
+  const loadSessionTypes = useCallback(() => {
+    adminListSessionTypes().then(setSessionTypes).catch(() => {});
+  }, []);
+
   useEffect(load, [load]);
   useEffect(() => {
     adminListSpeakers({ limit: 100 }).then((res) => setSpeakers(res.items)).catch(() => {});
     adminListTracks().then(setTracks).catch(() => {});
     adminListPartners({ limit: 100 }).then((res) => setPartners(res.items)).catch(() => {});
-  }, []);
+    loadSessionTypes();
+  }, [loadSessionTypes]);
 
   // Live conflict check while day/room/time fields are filled in — inline warning
   // before save, per the Phase 1 checklist ("Time/room conflict warning on save").
@@ -195,8 +206,8 @@ export const SessionsListTab = () => {
   };
 
   const submit = async () => {
-    if (!form.title.trim() || !form.room.trim()) {
-      setFormError('Title and room are required.');
+    if (!form.title.trim() || !form.room.trim() || !form.format.trim()) {
+      setFormError('Title, room, and session type are required.');
       return;
     }
     if (form.endTime <= form.startTime) {
@@ -221,6 +232,10 @@ export const SessionsListTab = () => {
         toast(conflicts.length ? 'error' : 'success', conflicts.length ? `Saved, but overlaps ${conflicts.length} other session(s) in this room` : 'Session added');
       }
       setFormOpen(false);
+      // A newly-typed session type (see CreatableCombobox) was just
+      // upserted server-side — refetch so it's a pickable option for the
+      // next session without needing a full page reload.
+      loadSessionTypes();
     } catch (err) {
       setFormError(getApiErrorMessage(err));
     } finally {
@@ -488,13 +503,17 @@ export const SessionsListTab = () => {
                       </option>
                     ))}
                   </AdminSelect>
-                  <AdminSelect label="Session Type" value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value as SessionInput['format'] })}>
-                    {SESSION_FORMATS.map((f) => (
-                      <option key={f} value={f}>
-                        {f}
-                      </option>
-                    ))}
-                  </AdminSelect>
+                  <CreatableCombobox
+                    label="Session Type"
+                    value={form.format}
+                    onChange={(v) => setForm({ ...form, format: v })}
+                    options={sessionTypes.map((t) => ({ id: t._id, name: t.name, inUseCount: t.sessionsCount }))}
+                    onDelete={async (opt) => {
+                      await adminDeleteSessionType(opt.id);
+                      loadSessionTypes();
+                    }}
+                    placeholder="e.g. Keynote"
+                  />
                 </div>
 
                 <AdminSelect

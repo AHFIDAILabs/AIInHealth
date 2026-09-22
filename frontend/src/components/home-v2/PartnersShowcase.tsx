@@ -13,6 +13,15 @@ const Swatch = ({ p, isTopTier, dense = false }: { p: AdminPartner; isTopTier: b
   // Logo sized to fill most of its card (object-contain keeping its own
   // aspect ratio) with the card's own padding cut down to match — logos were
   // reading small/timid against all the surrounding white space before.
+  // Full color always, not just on hover — grayscale-until-hover read as an
+  // unintended "disabled" look on a page whose whole job is showing these
+  // logos off.
+  //
+  // Every tier's logo renders at the same height (h-20 sm:h-24) — tierOrder 1
+  // ("Government Partners") used to get a visibly larger h-28/h-32 treatment,
+  // but that made its logos look mismatched against every other tier rather
+  // than intentionally "bolder". isTopTier still controls the swatch card's
+  // own padding/border weight below, just no longer the logo's own size.
   //
   // `w-full` only resolves sensibly when this swatch sits in a CSS grid cell
   // with a defined track width (the non-dense case). In `dense` mode the
@@ -26,9 +35,7 @@ const Swatch = ({ p, isTopTier, dense = false }: { p: AdminPartner; isTopTier: b
       src={p.logoUrl}
       alt={p.name}
       title={p.name}
-      className={`object-contain grayscale transition-all duration-300 group-hover:grayscale-0 ${
-        dense ? 'w-28 sm:w-36' : 'w-full'
-      } ${isTopTier ? 'h-28 sm:h-32' : 'h-20 sm:h-24'}`}
+      className={`h-20 object-contain transition-all duration-300 sm:h-24 ${dense ? 'w-28 sm:w-36' : 'w-full'}`}
     />
   ) : (
     <span className={`font-bold text-navy ${isTopTier ? 'text-2xl' : 'text-lg'}`}>{p.name}</span>
@@ -88,8 +95,8 @@ const LogoGrid = ({ group, dense = false }: { group: PackageGroup; dense?: boole
 // derived from tierOrder (two packages can share a tierOrder — e.g. Anchor
 // Partners/Session Partners both sit at 4 today — without being meant to
 // share a row; only this specific trio does). tierOrder 1 (currently
-// "Government Partners") gets a visibly larger, bolder swatch/logo — the one
-// place tier literally translates to size on the page. A partner with no
+// "Government Partners") still gets a slightly bolder swatch card (border/
+// padding, see Swatch above) — but the same logo size as every other tier. A partner with no
 // package assigned has nowhere to be shown here — the package IS the
 // heading — so it's simply excluded; the admin Sponsors tab is where that
 // gets fixed. Whole section stays hidden if there's nobody left to show,

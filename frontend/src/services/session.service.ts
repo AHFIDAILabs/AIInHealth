@@ -3,15 +3,10 @@ import { api } from './api';
 export const SESSION_DAYS = ['day1', 'day2'] as const;
 export type SessionDay = (typeof SESSION_DAYS)[number];
 
-export const SESSION_FORMATS = [
-  'Keynote',
-  'Panel Discussion',
-  'Startup Showcase',
-  'Poster & Abstract',
-  'Political Engagement',
-  'Networking',
-] as const;
-export type SessionFormat = (typeof SESSION_FORMATS)[number];
+// Session type/format is no longer a fixed list — see sessionType.service.ts's
+// listSessionTypes/adminListSessionTypes. Stored as plain text on the session
+// itself (validated against that live collection server-side), so the type
+// here is just `string`.
 
 // Public Agenda card treatment — an editorial choice (which sessions get the
 // bold "featured"/"spotlight" look), not derived from format/track. 'break'
@@ -55,7 +50,7 @@ export interface AdminSession {
   endTime: string;
   title: string;
   track: SessionTrackRef | null;
-  format: SessionFormat;
+  format: string;
   room: string;
   description?: string;
   speakers: SessionSpeakerRef[];
@@ -80,7 +75,7 @@ export interface SessionInput {
   title: string;
   // A Track id (see track.service.ts's adminListTracks), or null for "No track".
   track: string | null;
-  format: SessionFormat;
+  format: string;
   room: string;
   description?: string;
   speakers?: string[];
