@@ -128,9 +128,16 @@ export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];
 
 // The only discount tiers a scholarship code can carry — required on the
 // AccessCode doc when type is 'scholarship', absent otherwise (enforced in
-// accessCode.validation.ts, not just documented here).
-export const ACCESS_CODE_DISCOUNTS = [25, 50, 100] as const;
+// accessCode.validation.ts, not just documented here). 10 is management's
+// group-rate tier — reserved for group registrations of 5+ attendees, a rule
+// enforced at redemption in registration.controller.ts (not encoded here,
+// since this array is just the set of valid percentages).
+export const ACCESS_CODE_DISCOUNTS = [10, 25, 50, 100] as const;
 export type AccessCodeDiscount = (typeof ACCESS_CODE_DISCOUNTS)[number];
+
+// The minimum total attendee count (self + groupAttendees) a group
+// registration must have to redeem a 10%-tier scholarship code.
+export const GROUP_DISCOUNT_MIN_ATTENDEES = 5;
 
 // 'not_required' covers the two free ticket categories (government_official,
 // accredited_media) and every non-attendee registration type — they never touch

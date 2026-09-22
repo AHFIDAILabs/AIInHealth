@@ -147,7 +147,7 @@ const adminAttendeeSchema = z.object({
   organization: z.string().trim().optional(),
   jobTitle: z.string().trim().optional(),
   country: z.string().trim().min(2, 'Enter your country'),
-  scholarshipDiscount: z.union([z.literal(25), z.literal(50), z.literal(100)]).optional(),
+  scholarshipDiscount: z.union([z.literal(10), z.literal(25), z.literal(50), z.literal(100)]).optional(),
 });
 
 const adminVolunteerSchema = z.object({

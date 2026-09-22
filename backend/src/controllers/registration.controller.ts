@@ -19,7 +19,7 @@ import {
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
 import { isFreeTicketCategory } from '../config/pricing.js';
-import { ATTENDEE_ACCESS_CODE_TYPES } from '../types/enums.js';
+import { ATTENDEE_ACCESS_CODE_TYPES, GROUP_DISCOUNT_MIN_ATTENDEES } from '../types/enums.js';
 import { generateQrToken, qrDataUrlForToken } from '../services/qr.service.js';
 import { generateCode } from './accessCode.controller.js';
 import { initializePaymentForRegistration } from './payment.controller.js';
@@ -299,6 +299,23 @@ export const create = catchAsync(async (req: Request, res: Response) => {
       throw new ApiError(422, 'This access code was issued to a different email address. Please use the email it was sent to.', 'ACCESS_CODE_EMAIL_MISMATCH');
     }
     discountPercent = code.type === 'scholarship' ? code.discountPercent ?? undefined : 100;
+
+    // Management's group-rate tier — reserved for group registrations of
+    // GROUP_DISCOUNT_MIN_ATTENDEES (5) or more, not a general-purpose 10%
+    // code. Checked here rather than at code-generation time since the admin
+    // issues a code to an email address before knowing how many attendees
+    // that person will actually bring.
+    if (code.type === 'scholarship' && discountPercent === 10) {
+      const attendeeCount = 1 + (input.groupAttendees?.length ?? 0);
+      if (input.registrationMode !== 'group' || attendeeCount < GROUP_DISCOUNT_MIN_ATTENDEES) {
+        throw new ApiError(
+          422,
+          `This access code is reserved for group registrations of ${GROUP_DISCOUNT_MIN_ATTENDEES} or more attendees.`,
+          'ACCESS_CODE_REQUIRES_GROUP'
+        );
+      }
+    }
+
     redeemedCode = code;
   }
 
@@ -382,8 +399,9 @@ export const create = catchAsync(async (req: Request, res: Response) => {
       return "Your registration fee is fully covered — you're all set!";
     }
     if (stillRequiresPayment) {
+      const discountLabel = appliedDiscount === 10 ? 'group' : 'scholarship';
       return appliedDiscount
-        ? `Your ${appliedDiscount}% scholarship discount has been applied — complete payment to confirm your seat.`
+        ? `Your ${appliedDiscount}% ${discountLabel} discount has been applied — complete payment to confirm your seat.`
         : ATTENDEE_PAID_MESSAGE;
     }
     return CONFIRMATION_MESSAGE[input.type];

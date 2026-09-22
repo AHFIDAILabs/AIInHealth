@@ -143,10 +143,17 @@ const ACCESS_CODE_LABEL: Record<string, string> = {
 export const sendAccessCodeEmail = async (to: string, type: string, code: string, discountPercent?: number): Promise<void> => {
   const registerUrl = `${env.FRONTEND_ORIGIN}/register`;
   const isScholarship = type === 'scholarship' && discountPercent !== undefined;
+  // The 10% tier is management's group rate, not an individual scholarship —
+  // worded differently here since the recipient must also register as a
+  // Group of 5+ for the code to actually work (see registration.controller.ts's
+  // group-size check), which this email needs to tell them up front.
+  const isGroupRate = isScholarship && discountPercent === 10;
 
-  const introLine = isScholarship
-    ? `You've been awarded a scholarship covering <strong>${discountPercent}%</strong> of your attendee registration fee for the AI in Health Summit 2026.`
-    : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
+  const introLine = isGroupRate
+    ? `Your organization has been offered a <strong>10% group discount</strong> on attendee registration fees for the AI in Health Summit 2026 — available for group registrations of 5 or more attendees.`
+    : isScholarship
+      ? `You've been awarded a scholarship covering <strong>${discountPercent}%</strong> of your attendee registration fee for the AI in Health Summit 2026.`
+      : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
 
   // 'volunteer' redeems on the Volunteer tab; the other three (scholarship,
   // keynote_speaker, complimentary) all redeem on the Attendee tab — see
@@ -154,7 +161,9 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
   const instructionLine =
     type === 'volunteer'
       ? `Visit <a href="${registerUrl}">the registration page</a> and use this code to confirm your spot — it's tied to this email address, so please register using ${to}.`
-      : `Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, and enter this code${
+      : `Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab${
+          isGroupRate ? ' choosing <strong>Group Registration</strong> with 5 or more attendees' : ''
+        }, and enter this code${
           isScholarship
             ? ` to apply your discount${discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'}`
             : ' — it covers your registration fee in full, no payment needed'
@@ -354,7 +363,7 @@ export const sendRegistrationPaymentLinkEmail = async (
     html: `
       <p>Hi ${fullName},</p>
       <p>You've been registered for the AI in Health Summit 2026 (${data.ticketCategory.replace(/_/g, ' ')})${
-        data.discountPercent ? ` with a <strong>${data.discountPercent}% scholarship discount</strong> applied` : ''
+        data.discountPercent ? ` with a <strong>${data.discountPercent}% discount</strong> applied` : ''
       }.</p>
       <p>To confirm your seat, complete payment of <strong>&#8358;${data.amountNaira.toLocaleString('en-NG')}</strong>:</p>
       <p><a href="${data.authorizationUrl}">Click here to pay securely via Paystack</a>.</p>

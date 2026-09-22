@@ -16,7 +16,7 @@ export const generateAccessCodesSchema = z.object({
       discountPercent: z
         .number()
         .refine((v): v is (typeof ACCESS_CODE_DISCOUNTS)[number] => (ACCESS_CODE_DISCOUNTS as readonly number[]).includes(v), {
-          message: 'Choose a discount of 25, 50, or 100.',
+          message: 'Choose a discount of 10, 25, 50, or 100.',
         })
         .optional(),
     })
