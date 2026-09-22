@@ -32,6 +32,7 @@ import * as sponsorshipPackageController from '../../controllers/sponsorshipPack
 import * as deliverableController from '../../controllers/deliverable.controller.js';
 import * as partnerInteractionController from '../../controllers/partnerInteraction.controller.js';
 import * as trackController from '../../controllers/track.controller.js';
+import * as sessionTypeController from '../../controllers/sessionType.controller.js';
 import * as confirmedAbstractController from '../../controllers/confirmedAbstract.controller.js';
 import * as innovationShowcaseEntryController from '../../controllers/innovationShowcaseEntry.controller.js';
 import * as volunteerTrackController from '../../controllers/volunteerTrack.controller.js';
@@ -145,6 +146,10 @@ router.get('/tracks', requireRole(...contentRoles), trackController.adminList);
 router.post('/tracks', requireRole(...contentRoles), trackController.adminCreate);
 router.patch('/tracks/:id', requireRole(...contentRoles), trackController.adminUpdate);
 router.delete('/tracks/:id', requireRole(...contentRoles), trackController.adminDelete);
+
+router.get('/session-types', requireRole(...contentRoles), sessionTypeController.adminList);
+router.post('/session-types', requireRole(...contentRoles), sessionTypeController.adminCreate);
+router.delete('/session-types/:id', requireRole(...contentRoles), sessionTypeController.adminDelete);
 
 // Volunteer track options — same roles as registrations (Volunteers is where
 // this list is managed, not the Agenda/Sessions area Track above belongs to).

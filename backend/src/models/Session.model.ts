@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { SESSION_DAYS, SESSION_FORMATS, SESSION_CARD_STYLES } from '../types/enums.js';
+import { SESSION_DAYS, SESSION_CARD_STYLES } from '../types/enums.js';
 
 const sessionSchema = new Schema(
   {
@@ -13,7 +13,10 @@ const sessionSchema = new Schema(
     // relation — see Speaker.model.ts's track field comment. Optional — a
     // session can sit outside any track ("No track" in the admin form).
     track: { type: Schema.Types.ObjectId, ref: 'Track' },
-    format: { type: String, enum: SESSION_FORMATS, required: true },
+    // Free text, validated against the live SessionType collection in
+    // session.controller.ts — same by-name pattern as Speaker/Abstract's
+    // track field, not an ObjectId ref. See SessionType.model.ts.
+    format: { type: String, required: true, trim: true },
     room: { type: String, required: true, trim: true },
     description: { type: String, trim: true, maxlength: 3000 },
     speakers: [{ type: Schema.Types.ObjectId, ref: 'Speaker' }],

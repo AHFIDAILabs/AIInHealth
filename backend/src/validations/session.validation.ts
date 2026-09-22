@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SESSION_DAYS, SESSION_FORMATS, SESSION_CARD_STYLES } from '../types/enums.js';
+import { SESSION_DAYS, SESSION_CARD_STYLES } from '../types/enums.js';
 
 const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use 24-hour HH:mm format');
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
@@ -12,7 +12,8 @@ const baseSessionShape = {
   // Nullable (not just optional) — a PATCH must be able to explicitly clear
   // an existing session back to "No track", not just leave it unmentioned.
   track: objectId.nullable().optional(),
-  format: z.enum(SESSION_FORMATS),
+  // Checked against the live SessionType collection in session.controller.ts.
+  format: z.string().trim().min(1, 'Choose a session type'),
   room: z.string().trim().min(1, 'Enter a room'),
   description: z.string().trim().max(3000).optional(),
   speakers: z.array(objectId).max(20).optional(),

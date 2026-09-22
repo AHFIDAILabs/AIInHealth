@@ -60,15 +60,10 @@ export type Track = (typeof TRACKS)[number];
 export const SESSION_DAYS = ['day1', 'day2'] as const;
 export type SessionDay = (typeof SESSION_DAYS)[number];
 
-export const SESSION_FORMATS = [
-  'Keynote',
-  'Panel Discussion',
-  'Startup Showcase',
-  'Poster & Abstract',
-  'Political Engagement',
-  'Networking',
-] as const;
-export type SessionFormat = (typeof SESSION_FORMATS)[number];
+// Session "format"/type is no longer a fixed enum — see SessionType.model.ts.
+// The values that used to live here (Keynote, Panel Discussion, Startup
+// Showcase, Poster & Abstract, Political Engagement, Networking) are seeded
+// into that collection instead, so existing sessions keep validating.
 
 // Which visual treatment the public Agenda gives a session card — an
 // editorial choice (which sessions get the bold "featured"/"spotlight"

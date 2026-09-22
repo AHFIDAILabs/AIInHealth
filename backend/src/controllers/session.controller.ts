@@ -4,6 +4,7 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Session, type SessionDoc } from '../models/Session.model.js';
+import { SessionType } from '../models/SessionType.model.js';
 import { Registration } from '../models/Registration.model.js';
 import {
   createSessionSchema,
@@ -19,6 +20,20 @@ import { recordAudit } from '../services/audit.service.js';
 
 const SPEAKER_FIELDS = 'fullName title photoUrl';
 const PARTNER_FIELDS = 'name logoUrl website';
+
+// Shared by adminCreate/adminUpdate — format is free text now (see
+// Session.model.ts). Unlike Speaker/Abstract's assertValidTrack (which
+// rejects a track that isn't in the live Track collection), an unrecognized
+// session type is silently added to SessionType rather than rejected — that's
+// the actual feature: an admin types a new type straight into the Sessions
+// form and it just becomes a selectable option from then on, no separate
+// "create session type" step. Cleanup happens the other direction, via the
+// combobox's delete action (sessionType.controller.ts's adminDelete, blocked
+// while any session still uses it).
+const upsertSessionType = async (format: string | undefined): Promise<void> => {
+  if (format === undefined) return;
+  await SessionType.updateOne({ name: format }, { name: format }, { upsert: true });
+};
 
 // GET /sessions — public, published only. rsvpList holds real attendee emails and
 // is never sent here — requiresRsvp/maxAttendees stay visible (just numbers/flags,
@@ -95,6 +110,7 @@ export const checkConflict = catchAsync(async (req: Request, res: Response) => {
 
 export const adminCreate = catchAsync(async (req: Request, res: Response) => {
   const input = createSessionSchema.parse({ body: req.body }).body;
+  await upsertSessionType(input.format);
   const conflicts = await findConflicts(input.day, input.room, input.startTime, input.endTime);
   const session = await Session.create(input);
   await session.populate('speakers', SPEAKER_FIELDS);
@@ -107,6 +123,7 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
 export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
   const input = updateSessionSchema.parse({ body: req.body }).body;
+  await upsertSessionType(input.format);
 
   let conflicts: Awaited<ReturnType<typeof findConflicts>> = [];
   if (input.day && input.room && input.startTime && input.endTime) {
