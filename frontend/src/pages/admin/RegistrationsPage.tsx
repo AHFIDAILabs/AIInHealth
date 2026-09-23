@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Download, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard } from 'lucide-react';
+import { Search, Download, Upload, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard } from 'lucide-react';
 import {
   listRegistrations,
   updateRegistrationStatus,
@@ -10,10 +10,12 @@ import {
   deleteRegistration,
   adminCreateRegistration,
   exportRegistrationsUrl,
+  importVolunteersCsv,
   type AdminRegistration,
   type RegistrationStatus,
   type RegistrationType,
   type AdminCreateRegistrationPayload,
+  type VolunteerImportReport,
 } from '../../services/admin.service';
 import type { TicketCategory, BoothSize } from '../../services/registration.service';
 import { adminListVolunteerTracks, type AdminVolunteerTrack } from '../../services/volunteerTrack.service';
@@ -153,6 +155,11 @@ export const RegistrationsPage = () => {
   const [trackForm, setTrackForm] = useState({ tshirtSize: '', trackSelected: '', trackAssigned: '' });
   const [trackSaving, setTrackSaving] = useState(false);
 
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+  const [importReport, setImportReport] = useState<VolunteerImportReport | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState('');
+
   const loadVolunteerTracks = useCallback(() => {
     adminListVolunteerTracks().then(setVolunteerTracks).catch(() => {});
   }, []);
@@ -187,6 +194,26 @@ export const RegistrationsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setTrackSaving(false);
+    }
+  };
+
+  const triggerImport = () => importFileInputRef.current?.click();
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImporting(true);
+    setImportError('');
+    try {
+      const report = await importVolunteersCsv(file);
+      setImportReport(report);
+      load();
+    } catch (err) {
+      setImportError(getApiErrorMessage(err));
+      setImportReport({ totalRows: 0, inserted: [], updated: [], confirmedAndNotified: [], skippedConflicts: [], validationFailures: [] });
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -490,10 +517,22 @@ export const RegistrationsPage = () => {
             Clear
           </button>
         )}
+        {type === 'volunteer' && (
+          <>
+            <input ref={importFileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportFile} />
+            <button
+              onClick={triggerImport}
+              disabled={importing}
+              className={`flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-navy transition-colors hover:border-orange/40 disabled:opacity-60 ${contentEditorOnly ? 'ml-auto' : ''}`}
+            >
+              <Upload size={15} /> {importing ? 'Importing…' : 'Import Volunteer List'}
+            </button>
+          </>
+        )}
         {!contentEditorOnly && (
           <a
             href={exportRegistrationsUrl({ status: status || undefined, type: type || undefined, q: q || undefined })}
-            className="ml-auto flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-navy transition-colors hover:border-orange/40"
+            className={`flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-navy transition-colors hover:border-orange/40 ${type === 'volunteer' ? '' : 'ml-auto'}`}
           >
             <Download size={15} /> Export (current filters)
           </a>
@@ -1079,6 +1118,70 @@ export const RegistrationsPage = () => {
         onClose={() => setTrackManagerOpen(false)}
         onChange={loadVolunteerTracks}
       />
+
+      <AnimatePresence>
+        {importReport && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-navy/50 p-4"
+            onClick={() => setImportReport(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+            >
+              <p className="font-display text-lg font-semibold text-navy">Import Result</p>
+              {importError ? (
+                <div className="mt-3">
+                  <Banner variant="error">{importError}</Banner>
+                </div>
+              ) : (
+                <div className="mt-3 space-y-2 text-sm">
+                  <p className="text-slate-600">{importReport.totalRows} row(s) processed.</p>
+                  <p className="text-success">{importReport.inserted.length} new volunteer registration(s) added.</p>
+                  <p className="text-slate-600">{importReport.updated.length} existing record(s) updated.</p>
+                  <p className="font-semibold text-orange">{importReport.confirmedAndNotified.length} volunteer(s) confirmed and emailed their access code + ticket.</p>
+                  {importReport.skippedConflicts.length > 0 && (
+                    <div className="rounded-lg bg-warning/5 p-3 text-warning">
+                      <p className="font-semibold">{importReport.skippedConflicts.length} row(s) skipped — already confirmed:</p>
+                      <ul className="mt-1 list-disc pl-4">
+                        {importReport.skippedConflicts.map((s) => (
+                          <li key={s.row}>
+                            Row {s.row} ({s.email}): {s.reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {importReport.validationFailures.length > 0 && (
+                    <div className="rounded-lg bg-danger/5 p-3 text-danger">
+                      <p className="font-semibold">{importReport.validationFailures.length} row(s) failed:</p>
+                      <ul className="mt-1 list-disc pl-4">
+                        {importReport.validationFailures.map((f) => (
+                          <li key={f.row}>
+                            Row {f.row}: {f.error}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+              <button
+                onClick={() => setImportReport(null)}
+                className="mt-5 w-full rounded-lg bg-orange py-2.5 text-[13px] font-semibold text-white hover:bg-orange-hover"
+              >
+                Close
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

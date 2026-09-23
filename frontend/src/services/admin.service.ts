@@ -145,6 +145,24 @@ export const bulkSendPaymentReminders = async (): Promise<BulkPaymentReminderRes
   return res.data.data;
 };
 
+export interface VolunteerImportReport {
+  totalRows: number;
+  inserted: { email: string; fullName: string; status: RegistrationStatus }[];
+  updated: { email: string; changedFields: string[] }[];
+  confirmedAndNotified: { email: string; fullName: string }[];
+  skippedConflicts: { row: number; email: string; reason: string }[];
+  validationFailures: { row: number; email?: string; error: string }[];
+}
+
+export const importVolunteersCsv = async (file: File): Promise<VolunteerImportReport> => {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await api.post<{ success: true; data: VolunteerImportReport }>('/admin/registrations/import-volunteers', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data.data;
+};
+
 // Same PATCH endpoint as updateRegistrationStatus/updateRegistrationActive above —
 // this is for the exhibitor/attendee-detail edit forms, which need to change core
 // fields (company name, booth size, custom field answers, etc.) rather than status.
