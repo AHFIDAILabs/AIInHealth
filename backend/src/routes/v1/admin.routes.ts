@@ -117,6 +117,16 @@ router.post(
   requireRole('super_admin', 'registrations_officer'),
   registrationController.adminBulkSendPaymentReminders
 );
+// Same role scope as PATCH /registrations/:id above (content_editor's own
+// access is volunteer-only either way, since this endpoint only ever touches
+// type: 'volunteer' records) — a bulk version of the exact same "confirm this
+// volunteer" action they can already take one at a time.
+router.post(
+  '/registrations/import-volunteers',
+  requireRole('super_admin', 'registrations_officer', 'content_editor'),
+  uploadCsv,
+  registrationController.adminImportVolunteers
+);
 
 // Access codes directly gate free entry — same role scope as reviewing registrations,
 // plus content_editor for volunteer-type codes only (enforced in the controller).

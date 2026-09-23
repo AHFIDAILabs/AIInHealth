@@ -10,7 +10,14 @@ const auditLogSchema = new Schema(
     actorRole: { type: String, required: true },
     action: { type: String, required: true }, // e.g. "registration.status_changed"
     resourceType: { type: String, required: true }, // e.g. "Registration"
-    resourceId: { type: Schema.Types.ObjectId, required: true },
+    // Plain String, not ObjectId — every single-record mutation passes a real
+    // ObjectId string here, but a bulk action (exhibitor CSV import, the
+    // volunteer CSV import, bulk payment reminders, bulk portal-token sends)
+    // has no one resource to point at and passes the literal "batch" instead.
+    // An ObjectId-typed field silently fails validation for that literal —
+    // recordAudit's own try/catch swallows the error, so every bulk action's
+    // audit entry was being dropped without any visible sign of it.
+    resourceId: { type: String, required: true },
     before: { type: Schema.Types.Mixed },
     after: { type: Schema.Types.Mixed },
     ip: { type: String },

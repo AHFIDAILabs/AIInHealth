@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { isValidObjectId, type FilterQuery } from 'mongoose';
+import { parse } from 'csv-parse/sync';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -28,7 +29,7 @@ import { sendRegistrationPaymentLinkEmail } from '../services/email.service.js';
 import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
 import { getOrCreateVolunteerSettings } from '../models/VolunteerSettings.model.js';
 import { logger } from '../config/logger.js';
-import type { TicketCategory } from '../types/enums.js';
+import type { TicketCategory, RegistrationStatus } from '../types/enums.js';
 import type { HydratedDocument } from 'mongoose';
 
 const CONFIRMATION_MESSAGE: Record<CreateRegistrationInput['type'], string> = {
@@ -689,6 +690,238 @@ export const adminBulkSendPaymentReminders = catchAsync(async (req: Request, res
       failedEmails: failed.map((f) => f.item.email).filter(Boolean),
     })
   );
+});
+
+interface VolunteerImportReport {
+  totalRows: number;
+  inserted: { email: string; fullName: string; status: RegistrationStatus }[];
+  updated: { email: string; changedFields: string[] }[];
+  confirmedAndNotified: { email: string; fullName: string }[];
+  skippedConflicts: { row: number; email: string; reason: string }[];
+  validationFailures: { row: number; email?: string; error: string }[];
+}
+
+const VOLUNTEER_IMPORT_STATUS_MAP: Record<string, RegistrationStatus> = {
+  confirmed: 'confirmed',
+  declined: 'declined',
+  pending: 'pending',
+  reviewed: 'reviewed',
+};
+
+// A handful of spreadsheet cells use "-"/"NIL"/"N/A" as a literal "not
+// answered" placeholder rather than actually being empty — same convention as
+// scripts/syncVolunteerApplications.ts.
+const meaningfulCell = (s: string | undefined): string | undefined => {
+  const t = s?.trim();
+  if (!t) return undefined;
+  return /^(-|nil|n\/a|none)$/i.test(t) ? undefined : t;
+};
+
+// POST /admin/registrations/import-volunteers — bulk-apply an external
+// volunteer roster (the original selection spreadsheet, or any future
+// re-export of it) onto the real Registration collection. Column headers are
+// matched loosely by regex (same approach as exhibitor.controller.ts's
+// adminImport) so minor header variations across export rounds don't break
+// this. Every row that can't be safely applied is reported, never guessed.
+//
+// A row whose status resolves to 'confirmed' goes through
+// confirmVolunteerDirectly — the exact same "issue an access code if needed,
+// then send the confirmation + QR ticket email" path adminUpdate's
+// justConfirmed branch already uses for a single volunteer — so a bulk import
+// notifies people exactly like an admin confirming them one at a time would,
+// with no separate/duplicate email logic to maintain.
+//
+// CONFLICT SAFETY: a volunteer already confirmed in the system is never
+// silently moved to a different status by an import — a stale or conflicting
+// re-upload must not be able to un-confirm someone an admin (or an earlier
+// import) already locked in. That case is reported, not applied.
+export const adminImportVolunteers = catchAsync(async (req: Request, res: Response) => {
+  if (!req.file) throw new ApiError(400, 'Upload a .csv file.', 'NO_FILE');
+
+  const raw = req.file.buffer.toString('utf-8');
+  let records: Record<string, string>[];
+  try {
+    records = parse(raw, { columns: (header: string[]) => header.map((h) => h.trim()), skip_empty_lines: true, trim: true });
+  } catch {
+    throw new ApiError(422, 'Could not parse this file as CSV.', 'INVALID_CSV');
+  }
+
+  const findCol = (row: Record<string, string>, pattern: RegExp): string | undefined => {
+    const key = Object.keys(row).find((k) => pattern.test(k));
+    return key ? row[key]?.trim() : undefined;
+  };
+
+  const report: VolunteerImportReport = {
+    totalRows: records.length,
+    inserted: [],
+    updated: [],
+    confirmedAndNotified: [],
+    skippedConflicts: [],
+    validationFailures: [],
+  };
+
+  interface ImportRow {
+    rowNum: number;
+    fullName: string;
+    email: string;
+    phone?: string;
+    tshirtSize?: string;
+    trackSelected?: string;
+    notes?: string;
+    status: RegistrationStatus;
+    registeredAt?: Date;
+  }
+
+  const rows: ImportRow[] = [];
+  records.forEach((record, i) => {
+    const rowNum = i + 2; // header is row 1
+    const fullName = findCol(record, /^name$/i);
+    const email = findCol(record, /^email$/i)?.toLowerCase();
+    const statusRaw = findCol(record, /^status$/i);
+
+    if (!fullName || fullName.length < 2) {
+      report.validationFailures.push({ row: rowNum, email, error: 'Missing or invalid Name' });
+      return;
+    }
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      report.validationFailures.push({ row: rowNum, email, error: 'Missing or invalid Email' });
+      return;
+    }
+    const status = statusRaw ? VOLUNTEER_IMPORT_STATUS_MAP[statusRaw.toLowerCase()] : undefined;
+    if (!status) {
+      report.validationFailures.push({ row: rowNum, email, error: `Unrecognized status "${statusRaw ?? ''}"` });
+      return;
+    }
+
+    const dateRegistered = findCol(record, /date.*registered/i);
+    const registeredAt = dateRegistered ? new Date(dateRegistered) : undefined;
+
+    rows.push({
+      rowNum,
+      fullName: fullName.replace(/\s+/g, ' '),
+      email,
+      phone: meaningfulCell(findCol(record, /phone/i)),
+      tshirtSize: meaningfulCell(findCol(record, /t.?shirt/i)),
+      trackSelected: meaningfulCell(findCol(record, /track/i)),
+      notes: meaningfulCell(findCol(record, /notes/i)),
+      status,
+      registeredAt: registeredAt && !Number.isNaN(registeredAt.getTime()) ? registeredAt : undefined,
+    });
+  });
+
+  // Resolve duplicate emails WITHIN this file — confirmed wins over any other
+  // status, else the last row in the file wins (same "prefer the more
+  // decided outcome" tie-break as scripts/syncFlootRegistrations.ts's
+  // "prefer paid" rule).
+  const byEmail = new Map<string, ImportRow[]>();
+  for (const row of rows) {
+    if (!byEmail.has(row.email)) byEmail.set(row.email, []);
+    byEmail.get(row.email)!.push(row);
+  }
+  const winners: ImportRow[] = [];
+  for (const group of byEmail.values()) {
+    winners.push(group.length === 1 ? group[0] : group.find((r) => r.status === 'confirmed') ?? group[group.length - 1]);
+  }
+
+  for (const row of winners) {
+    // eslint-disable-next-line no-await-in-loop
+    const existing = await Registration.findOne({ type: 'volunteer', email: row.email });
+
+    if (!existing) {
+      // eslint-disable-next-line no-await-in-loop
+      const created = await Registration.create({
+        type: 'volunteer',
+        status: row.status,
+        fullName: row.fullName,
+        email: row.email,
+        phone: row.phone,
+        tshirtSize: row.tshirtSize,
+        trackSelected: row.trackSelected,
+        tags: row.notes ? [`Notes: ${row.notes}`] : undefined,
+        qrToken: row.status === 'confirmed' ? generateQrToken() : undefined,
+        createdAt: row.registeredAt,
+      });
+      report.inserted.push({ email: row.email, fullName: row.fullName, status: row.status });
+      if (row.status === 'confirmed') {
+        // eslint-disable-next-line no-await-in-loop
+        await confirmVolunteerDirectly(created, req.user!.sub);
+        report.confirmedAndNotified.push({ email: row.email, fullName: row.fullName });
+      }
+      continue;
+    }
+
+    if (existing.status === 'confirmed' && row.status !== 'confirmed') {
+      report.skippedConflicts.push({
+        row: row.rowNum,
+        email: row.email,
+        reason: `Already confirmed in the system — import says "${row.status}", left untouched.`,
+      });
+      continue;
+    }
+
+    const wasConfirmed = existing.status === 'confirmed';
+    const changedFields: string[] = [];
+    const set: Record<string, unknown> = {};
+
+    const refresh: Array<[string | undefined, keyof RegistrationDoc]> = [
+      [row.fullName, 'fullName'],
+      [row.phone, 'phone'],
+      [row.tshirtSize, 'tshirtSize'],
+      [row.trackSelected, 'trackSelected'],
+    ];
+    for (const [value, field] of refresh) {
+      if (value === undefined) continue;
+      if (value !== (existing[field] ?? undefined)) changedFields.push(field);
+      set[field] = value;
+    }
+    if (row.notes) {
+      const tag = `Notes: ${row.notes}`;
+      if (!(existing.tags ?? []).includes(tag)) {
+        set.tags = [...(existing.tags ?? []), tag];
+        changedFields.push('tags');
+      }
+    }
+    if (row.status !== existing.status) {
+      set.status = row.status;
+      changedFields.push('status');
+    }
+    if (row.status === 'confirmed' && !existing.qrToken) {
+      set.qrToken = generateQrToken();
+      changedFields.push('qrToken');
+    }
+
+    if (Object.keys(set).length > 0) {
+      // eslint-disable-next-line no-await-in-loop
+      await Registration.updateOne({ _id: existing._id }, { $set: set });
+      report.updated.push({ email: row.email, changedFields });
+    }
+
+    if (row.status === 'confirmed' && !wasConfirmed) {
+      // eslint-disable-next-line no-await-in-loop
+      const reloaded = await Registration.findById(existing._id);
+      if (reloaded) {
+        // eslint-disable-next-line no-await-in-loop
+        await confirmVolunteerDirectly(reloaded, req.user!.sub);
+        report.confirmedAndNotified.push({ email: row.email, fullName: reloaded.fullName ?? row.fullName });
+      }
+    }
+  }
+
+  await recordAudit({
+    req,
+    action: 'registration.volunteers_imported',
+    resourceType: 'Registration',
+    resourceId: 'batch',
+    after: {
+      inserted: report.inserted.length,
+      updated: report.updated.length,
+      confirmedAndNotified: report.confirmedAndNotified.length,
+      skipped: report.skippedConflicts.length,
+      failed: report.validationFailures.length,
+    },
+  });
+
+  res.status(201).json(new ApiResponse(report));
 });
 
 // Every field an admin can actually see on RegistrationsPage.tsx/AttendeesPage.tsx —
