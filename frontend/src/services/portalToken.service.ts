@@ -20,3 +20,14 @@ export const adminSendPortalCode = async (registrationId: string): Promise<{ ok:
   const res = await api.post<{ success: true; data: { ok: true; sentAt: string } }>(`/admin/portal-tokens/${registrationId}/send-code`);
   return res.data.data;
 };
+
+export interface BulkSendResult {
+  attempted: number;
+  sent: number;
+  failed: number;
+}
+
+export const adminBulkSendPortalCodes = async (): Promise<BulkSendResult> => {
+  const res = await api.post<{ success: true; data: BulkSendResult }>('/admin/portal-tokens/bulk-send');
+  return res.data.data;
+};

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CreditCard } from 'lucide-react';
-import { listRegistrations, type AdminRegistration } from '../../services/admin.service';
+import { CreditCard, Send } from 'lucide-react';
+import { listRegistrations, bulkSendPaymentReminders, type AdminRegistration } from '../../services/admin.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { useToast } from '../../contexts/ToastContext';
 
 type PaymentStatus = NonNullable<AdminRegistration['paymentStatus']>;
 
@@ -17,11 +19,14 @@ const STATUS_BADGE: Record<PaymentStatus, string> = {
 const naira = (kobo?: number) => (kobo ? `₦${Math.round(kobo / 100).toLocaleString('en-NG')}` : '—');
 
 export const PaymentsPage = () => {
+  const toast = useToast();
   const [items, setItems] = useState<AdminRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [status, setStatus] = useState<PaymentStatus | ''>('');
   const [total, setTotal] = useState(0);
+  const [confirmRemind, setConfirmRemind] = useState(false);
+  const [sendingReminders, setSendingReminders] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -40,6 +45,19 @@ export const PaymentsPage = () => {
   const totalCollectedKobo = items
     .filter((r) => r.paymentStatus === 'paid')
     .reduce((sum, r) => sum + (r.amountKobo ?? 0), 0);
+  const sendReminders = async () => {
+    setSendingReminders(true);
+    try {
+      const result = await bulkSendPaymentReminders();
+      toast('success', `Sent ${result.sent} of ${result.attempted} reminder${result.attempted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}.`);
+      setConfirmRemind(false);
+      load();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingReminders(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -67,7 +85,7 @@ export const PaymentsPage = () => {
         </div>
       </div>
 
-      <div className="mt-6 flex items-center gap-3">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as PaymentStatus | '')}
@@ -79,6 +97,13 @@ export const PaymentsPage = () => {
           <option value="failed">Failed</option>
         </select>
         <span className="text-xs text-slate-400">{total} matching</span>
+        <button
+          onClick={() => setConfirmRemind(true)}
+          className="ml-auto flex items-center gap-1.5 rounded-lg bg-orange px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-orange-hover"
+        >
+          <Send size={14} />
+          Send Payment Reminder to All Pending
+        </button>
       </div>
 
       {error && (
@@ -133,6 +158,17 @@ export const PaymentsPage = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmRemind}
+        title="Send payment reminders?"
+        description="Every attendee who hasn't completed payment (unpaid or failed) gets a fresh Paystack payment link by email. This can't be limited to the current filter — it always covers everyone pending."
+        confirmLabel="Send Reminders"
+        danger={false}
+        loading={sendingReminders}
+        onConfirm={sendReminders}
+        onCancel={() => setConfirmRemind(false)}
+      />
     </div>
   );
 };

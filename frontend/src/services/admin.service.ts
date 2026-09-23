@@ -133,6 +133,18 @@ export const deleteRegistration = async (id: string): Promise<void> => {
   await api.delete(`/admin/registrations/${id}`);
 };
 
+export interface BulkPaymentReminderResult {
+  attempted: number;
+  sent: number;
+  failed: number;
+  failedEmails: (string | null | undefined)[];
+}
+
+export const bulkSendPaymentReminders = async (): Promise<BulkPaymentReminderResult> => {
+  const res = await api.post<{ success: true; data: BulkPaymentReminderResult }>('/admin/registrations/bulk-payment-reminder');
+  return res.data.data;
+};
+
 // Same PATCH endpoint as updateRegistrationStatus/updateRegistrationActive above —
 // this is for the exhibitor/attendee-detail edit forms, which need to change core
 // fields (company name, booth size, custom field answers, etc.) rather than status.

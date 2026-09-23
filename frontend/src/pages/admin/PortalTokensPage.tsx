@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Search, Smartphone, Send, CheckCircle2 } from 'lucide-react';
-import { adminListPortalTokens, adminSendPortalCode, type PortalTokenRow } from '../../services/portalToken.service';
+import { Search, Smartphone, Send, CheckCircle2, Mail } from 'lucide-react';
+import { adminListPortalTokens, adminSendPortalCode, adminBulkSendPortalCodes, type PortalTokenRow } from '../../services/portalToken.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../contexts/ToastContext';
 
 export const PortalTokensPage = () => {
@@ -13,6 +14,8 @@ export const PortalTokensPage = () => {
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [bulkSending, setBulkSending] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -45,6 +48,20 @@ export const PortalTokensPage = () => {
     }
   };
 
+  const sendBulkCodes = async () => {
+    setBulkSending(true);
+    try {
+      const result = await adminBulkSendPortalCodes();
+      toast('success', `Sent ${result.sent} of ${result.attempted} access code${result.attempted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}.`);
+      setConfirmBulk(false);
+      load();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setBulkSending(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-5xl">
       <div>
@@ -52,14 +69,23 @@ export const PortalTokensPage = () => {
         <p className="text-sm text-slate-500">Delegate portal access — resend an access code for anyone who lost theirs.</p>
       </div>
 
-      <div className="mt-6 relative max-w-xs">
-        <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search name or email..."
-          className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
-        />
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="relative max-w-xs flex-1">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search name or email..."
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+          />
+        </div>
+        <button
+          onClick={() => setConfirmBulk(true)}
+          className="ml-auto flex items-center gap-1.5 rounded-lg bg-orange px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-orange-hover"
+        >
+          <Mail size={14} />
+          Send to All Never Sent
+        </button>
       </div>
 
       {error && (
@@ -130,6 +156,17 @@ export const PortalTokensPage = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmBulk}
+        title="Send access codes to everyone?"
+        description="Every confirmed registration that's never had an access code or ticket emailed (including anyone imported from the old site) gets their access code and QR ticket now. Already-sent delegates are skipped."
+        confirmLabel="Send to All"
+        danger={false}
+        loading={bulkSending}
+        onConfirm={sendBulkCodes}
+        onCancel={() => setConfirmBulk(false)}
+      />
     </div>
   );
 };
