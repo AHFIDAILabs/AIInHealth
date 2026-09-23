@@ -36,6 +36,7 @@ import * as sessionTypeController from '../../controllers/sessionType.controller
 import * as confirmedAbstractController from '../../controllers/confirmedAbstract.controller.js';
 import * as innovationShowcaseEntryController from '../../controllers/innovationShowcaseEntry.controller.js';
 import * as volunteerTrackController from '../../controllers/volunteerTrack.controller.js';
+import * as volunteerSettingsController from '../../controllers/volunteerSettings.controller.js';
 import * as leadController from '../../controllers/lead.controller.js';
 import * as customFormFieldController from '../../controllers/customFormField.controller.js';
 import * as exhibitorController from '../../controllers/exhibitor.controller.js';
@@ -55,6 +56,7 @@ import { createSponsorshipPackageSchema, updateSponsorshipPackageSchema } from '
 import { createDeliverableSchema, updateDeliverableSchema } from '../../validations/deliverable.validation.js';
 import { createPartnerInteractionSchema } from '../../validations/partnerInteraction.validation.js';
 import { blockIpSchema, setLockdownSchema } from '../../validations/security.validation.js';
+import { setVolunteerSettingsSchema } from '../../validations/volunteerSettings.validation.js';
 
 const router = Router();
 
@@ -157,6 +159,9 @@ router.get('/volunteer-tracks', requireRole('super_admin', 'registrations_office
 router.post('/volunteer-tracks', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminCreate);
 router.patch('/volunteer-tracks/:id', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminUpdate);
 router.delete('/volunteer-tracks/:id', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminDelete);
+
+router.get('/volunteer-settings', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerSettingsController.adminGet);
+router.put('/volunteer-settings', requireRole('super_admin', 'registrations_officer', 'content_editor'), validate(setVolunteerSettingsSchema), volunteerSettingsController.adminSet);
 
 router.get('/exhibitors-stats', requireRole('super_admin', 'registrations_officer', 'viewer'), exhibitorController.adminStats);
 router.get('/exhibitors-analytics', requireRole('super_admin', 'registrations_officer', 'viewer'), exhibitorController.adminAnalytics);

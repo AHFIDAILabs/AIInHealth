@@ -3,6 +3,7 @@ import request from 'supertest';
 import { app, useTestDb } from './helpers.js';
 import { Registration } from '../models/Registration.model.js';
 import { AccessCode } from '../models/AccessCode.model.js';
+import { VolunteerSettings } from '../models/VolunteerSettings.model.js';
 
 const attendeePayload = {
   type: 'attendee' as const,
@@ -149,6 +150,52 @@ describe('POST /api/v1/registrations — volunteer apply-then-confirm lifecycle'
 
     expect(res.status).toBe(422);
     expect(res.body.error.code).toBe('ACCESS_CODE_EMAIL_MISMATCH');
+  });
+});
+
+describe('POST /api/v1/registrations — volunteer applications closed', () => {
+  useTestDb();
+
+  const volunteerPayload = {
+    type: 'volunteer' as const,
+    fullName: 'Closed Test',
+    email: 'closed-test@example.com',
+    phone: '+2348033334444',
+  };
+
+  it('rejects a fresh application while closed', async () => {
+    await VolunteerSettings.create({ applicationsOpen: false, closedReason: 'Volunteer slots are full.' });
+
+    const res = await request(app).post('/api/v1/registrations').send(volunteerPayload);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('VOLUNTEER_APPLICATIONS_CLOSED');
+    expect(res.body.error.message).toBe('Volunteer slots are full.');
+    expect(await Registration.countDocuments({ email: volunteerPayload.email })).toBe(0);
+  });
+
+  it('still lets someone with an already-issued code confirm even while closed', async () => {
+    await VolunteerSettings.create({ applicationsOpen: false });
+    const code = await AccessCode.create({
+      code: 'VOL-CLOSED1',
+      type: 'volunteer',
+      issuedTo: volunteerPayload.email,
+      createdBy: '000000000000000000000001',
+    });
+
+    const res = await request(app)
+      .post('/api/v1/registrations')
+      .send({ ...volunteerPayload, accessCode: code.code });
+
+    expect(res.status).toBe(201);
+    const reg = await Registration.findOne({ email: volunteerPayload.email });
+    expect(reg?.status).toBe('confirmed');
+  });
+
+  it('allows applying again once reopened', async () => {
+    await VolunteerSettings.create({ applicationsOpen: true });
+    const res = await request(app).post('/api/v1/registrations').send(volunteerPayload);
+    expect(res.status).toBe(201);
   });
 });
 

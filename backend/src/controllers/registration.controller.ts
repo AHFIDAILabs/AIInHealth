@@ -25,6 +25,7 @@ import { generateCode } from './accessCode.controller.js';
 import { initializePaymentForRegistration } from './payment.controller.js';
 import { sendRegistrationPaymentLinkEmail } from '../services/email.service.js';
 import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
+import { getOrCreateVolunteerSettings } from '../models/VolunteerSettings.model.js';
 import { logger } from '../config/logger.js';
 import type { TicketCategory } from '../types/enums.js';
 import type { HydratedDocument } from 'mongoose';
@@ -129,6 +130,18 @@ export const create = catchAsync(async (req: Request, res: Response) => {
       if (existingApplication) {
         res.status(200).json(new ApiResponse({ id: existingApplication.id, message: VOLUNTEER_ALREADY_APPLIED_MESSAGE }));
         return;
+      }
+
+      // Only gates a genuinely NEW application — someone who already has a
+      // code (the branch below) is someone staff already selected, so they
+      // can still confirm their spot even while new applications are closed.
+      const volunteerSettings = await getOrCreateVolunteerSettings();
+      if (!volunteerSettings.applicationsOpen) {
+        throw new ApiError(
+          422,
+          volunteerSettings.closedReason || 'Volunteer applications are closed right now. Please check back later.',
+          'VOLUNTEER_APPLICATIONS_CLOSED'
+        );
       }
 
       const registration = await Registration.create(input);
