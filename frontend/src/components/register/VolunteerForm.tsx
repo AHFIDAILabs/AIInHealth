@@ -9,6 +9,7 @@ import { RegisterSuccess } from './RegisterSuccess';
 import { submitRegistration } from '../../services/registration.service';
 import { getApiErrorMessage } from '../../services/api';
 import { listVolunteerTracks, type PublicVolunteerTrack } from '../../services/volunteerTrack.service';
+import { fetchVolunteerApplicationsStatus } from '../../services/volunteerSettings.service';
 
 const TSHIRT_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 
@@ -27,9 +28,20 @@ export const VolunteerForm = () => {
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [tracks, setTracks] = useState<PublicVolunteerTrack[]>([]);
+  // null while loading — treated as "open" (don't flash a false "closed"
+  // notice before the real status arrives); an already-issued access code is
+  // never blocked by this either way, only a fresh application is.
+  const [applicationsOpen, setApplicationsOpen] = useState<boolean | null>(null);
+  const [closedReason, setClosedReason] = useState<string | undefined>();
 
   useEffect(() => {
     listVolunteerTracks().then(setTracks).catch(() => setTracks([]));
+    fetchVolunteerApplicationsStatus()
+      .then((status) => {
+        setApplicationsOpen(status.open);
+        setClosedReason(status.reason);
+      })
+      .catch(() => setApplicationsOpen(true));
   }, []);
 
   const {
@@ -64,12 +76,24 @@ export const VolunteerForm = () => {
 
   if (confirmation) return <RegisterSuccess message={confirmation} onReset={resetAll} />;
 
+  // Applications closed blocks only a fresh submission (no code) — someone
+  // who already has a code is someone staff already selected, so the form
+  // and its Access Code field stay fully usable either way.
+  const applicationsClosed = applicationsOpen === false;
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-        Interested in volunteering? Apply below. It&rsquo;s free, and takes a minute. If you&rsquo;re selected,
-        we&rsquo;ll email you an access code to confirm your spot; come back here and enter it when you get it.
+        {applicationsClosed
+          ? "We're not accepting new volunteer applications right now — if you already have an access code from us, enter it below to confirm your spot."
+          : "Interested in volunteering? Apply below. It's free, and takes a minute. If you're selected, we'll email you an access code to confirm your spot; come back here and enter it when you get it."}
       </p>
+
+      {applicationsClosed && !hasCode && (
+        <Banner variant="warning">
+          {closedReason || 'Volunteer applications are closed right now.'} You can still confirm below if you already have an access code.
+        </Banner>
+      )}
 
       {serverError && <Banner variant="error">{serverError}</Banner>}
 
@@ -115,8 +139,8 @@ export const VolunteerForm = () => {
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit" variant="primary" loading={isSubmitting}>
-          {hasCode ? 'Confirm Volunteer Registration' : 'Submit Application'}
+        <Button type="submit" variant="primary" loading={isSubmitting} disabled={applicationsClosed && !hasCode}>
+          {hasCode ? 'Confirm Volunteer Registration' : applicationsClosed ? 'Applications Closed' : 'Submit Application'}
         </Button>
       </div>
     </form>

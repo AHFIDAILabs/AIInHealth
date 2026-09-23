@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as authService from '../../services/auth.service';
 import { NOTIFICATION_EVENTS, type NotificationEvent } from '../../services/auth.service';
 import { enablePush, disablePush, isPushSupported } from '../../services/push.service';
@@ -9,6 +9,12 @@ import { ImagePicker } from '../../components/ui/ImagePicker';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadAdminImage } from '../../services/upload.service';
+import { fetchAdminVolunteerSettings, setVolunteerApplicationsOpen } from '../../services/volunteerSettings.service';
+
+// Same roles that manage Volunteers elsewhere (Registrations' Volunteers
+// filter, Volunteer Tracks) — not the personal-account roles above, this is
+// the one event-wide setting on an otherwise per-admin page.
+const VOLUNTEER_SETTINGS_ROLES = ['super_admin', 'registrations_officer', 'content_editor'];
 
 const EVENT_LABEL: Record<NotificationEvent, string> = {
   'registration.new': 'New registration submitted',
@@ -125,6 +131,32 @@ export const SettingsPage = () => {
     }
   };
 
+  const canManageVolunteerSettings = !!user && VOLUNTEER_SETTINGS_ROLES.includes(user.role);
+  const [volunteerOpen, setVolunteerOpenState] = useState<boolean | null>(null);
+  const [volunteerBusy, setVolunteerBusy] = useState(false);
+
+  useEffect(() => {
+    if (!canManageVolunteerSettings) return;
+    fetchAdminVolunteerSettings()
+      .then((s) => setVolunteerOpenState(s.open))
+      .catch((err) => toast('error', getApiErrorMessage(err)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManageVolunteerSettings]);
+
+  const toggleVolunteerApplications = async (next: boolean) => {
+    const reason = !next ? window.prompt('Optional: reason shown to admins (and visitors) — e.g. "Volunteer slots are full."') ?? undefined : undefined;
+    setVolunteerBusy(true);
+    try {
+      const settings = await setVolunteerApplicationsOpen(next, reason);
+      setVolunteerOpenState(settings.open);
+      toast('success', next ? 'Volunteer applications reopened' : 'Volunteer applications closed');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setVolunteerBusy(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="font-display text-2xl font-semibold text-navy">Settings</h1>
@@ -222,6 +254,31 @@ export const SettingsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Event-wide setting — not scoped to this admin's own account, unlike
+          every card above. Visible only to the roles that actually manage
+          Volunteers elsewhere (Registrations' Volunteers filter, Volunteer
+          Tracks) — see VOLUNTEER_SETTINGS_ROLES. */}
+      {canManageVolunteerSettings && (
+        <div className="mt-6 rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Volunteer Applications</p>
+          <div className="mt-4">
+            {volunteerOpen === null ? (
+              <p className="text-sm text-slate-400">Loading…</p>
+            ) : (
+              <AdminToggle
+                label={volunteerBusy ? 'Accepting new applications (updating…)' : 'Accepting new applications'}
+                checked={volunteerOpen}
+                onChange={toggleVolunteerApplications}
+              />
+            )}
+            <p className="mt-2 text-xs text-slate-400">
+              Turn this off to stop new volunteer applications on the public Register page — anyone who already has an
+              access code can still confirm their spot either way.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
