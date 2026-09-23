@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck } from 'lucide-react';
+import { CalendarCheck, ChevronDown } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { SessionRsvpModal } from '../../components/ui/SessionRsvpModal';
 import { SpeakerModal } from '../../components/ui/SpeakerModal';
@@ -250,7 +250,14 @@ export const Agenda = () => {
   // Pulled out of the timeline loop so it can render once per session
   // whether that session is alone in its time slot or sharing a row with
   // parallel-track siblings — same card markup either way.
-  const SessionCard = ({ s }: { s: DisplaySession }) => (
+  const SessionCard = ({ s }: { s: DisplaySession }) => {
+    const [briefExpanded, setBriefExpanded] = useState(false);
+    // A short brief (a one-line room note, say) never needs a toggle at all —
+    // only the longer ones (e.g. a full list of oral abstract titles, per the
+    // Oral Abstracts session type) default to collapsed.
+    const briefIsLong = (s.description?.length ?? 0) > 220;
+
+    return (
     <div
       className={`mb-2 flex-1 rounded-xl p-5 shadow-sm ${
         s.cardStyle === 'standard' ? `${CARD_STYLE_CLASSES.standard} border-l-4` : CARD_STYLE_CLASSES[s.cardStyle]
@@ -301,9 +308,25 @@ export const Agenda = () => {
               <p className={`text-[10px] font-bold uppercase tracking-widest ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-400'}`}>
                 Session Brief
               </p>
-              <p className={`mt-1 whitespace-pre-line text-[13px] leading-relaxed ${s.cardStyle === 'standard' ? 'text-slate-600' : 'text-slate-200'}`}>
+              <p
+                className={`mt-1 whitespace-pre-line text-[13px] leading-relaxed ${briefIsLong && !briefExpanded ? 'line-clamp-3' : ''} ${
+                  s.cardStyle === 'standard' ? 'text-slate-600' : 'text-slate-200'
+                }`}
+              >
                 {s.description}
               </p>
+              {briefIsLong && (
+                <button
+                  type="button"
+                  onClick={() => setBriefExpanded((prev) => !prev)}
+                  className={`mt-1.5 flex items-center gap-1 text-[11px] font-semibold ${
+                    s.cardStyle === 'standard' ? 'text-orange hover:text-orange-hover' : 'text-white/80 hover:text-white'
+                  }`}
+                >
+                  {briefExpanded ? 'Show less' : 'Read more'}
+                  <ChevronDown size={12} className={`transition-transform ${briefExpanded ? 'rotate-180' : ''}`} />
+                </button>
+              )}
             </div>
           )}
 
@@ -354,7 +377,8 @@ export const Agenda = () => {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <>
