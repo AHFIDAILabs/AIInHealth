@@ -30,14 +30,19 @@ const recipientName = (r: { fullName?: string | null; contactName?: string | nul
 // got it there (payment, a 100%-scholarship/free comp, a volunteer's redeemed
 // code, or an admin confirming directly): the confirmation itself, and —
 // separately — their actual check-in QR code, not just a link to go fetch it
-// from the portal. Both best-effort: a send failure here must never fail the
-// request that just confirmed the registration.
+// from the portal. Both best-effort: a send failure here must never THROW and
+// fail the request that just confirmed the registration — every existing
+// fire-and-forget `void sendConfirmationAndTicketEmails(...)` call site relies
+// on that. The boolean return value is for callers that DO need to know
+// whether it actually went out (e.g. a bulk import reporting real counts,
+// rather than reporting every attempted send as a success regardless of
+// whether it silently failed).
 export const sendConfirmationAndTicketEmails = async (
   registration: HydratedDocument<RegistrationDoc>,
   options: ConfirmationEmailOptions = {}
-): Promise<void> => {
+): Promise<boolean> => {
   const to = recipientEmail(registration);
-  if (!to) return;
+  if (!to) return false;
   try {
     const accessCode = await ensureDelegateAccessCode(registration);
     const fullName = recipientName(registration);
@@ -64,8 +69,10 @@ export const sendConfirmationAndTicketEmails = async (
 
     registration.portalLastLinkSentAt = new Date();
     await registration.save();
+    return true;
   } catch (err) {
     logger.error({ err, registrationId: registration.id }, 'Failed to send confirmation/ticket email');
+    return false;
   }
 };
 

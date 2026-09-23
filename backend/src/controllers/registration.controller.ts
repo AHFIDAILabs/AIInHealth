@@ -68,8 +68,8 @@ const DUPLICATE_SUBMIT_WINDOW_MS = 2 * 60 * 1000;
 // confirmation-shaped emails for one event. Kept as its own named function
 // since both call sites below read more clearly calling
 // `notifyVolunteerConfirmed(registration)` than the more generic name.
-const notifyVolunteerConfirmed = async (registration: HydratedDocument<RegistrationDoc>): Promise<void> => {
-  await sendConfirmationAndTicketEmails(registration);
+const notifyVolunteerConfirmed = async (registration: HydratedDocument<RegistrationDoc>): Promise<boolean> => {
+  return sendConfirmationAndTicketEmails(registration);
 };
 
 // When an admin confirms a volunteer directly (RegistrationsPage's status action)
@@ -78,7 +78,7 @@ const notifyVolunteerConfirmed = async (registration: HydratedDocument<Registrat
 // since there's no self-redemption step left to do — purely so Access Codes
 // stays a consistent audit trail (this code is never shown as a portal login
 // credential — see notifyVolunteerConfirmed above).
-const confirmVolunteerDirectly = async (registration: HydratedDocument<RegistrationDoc>, adminUserId: string): Promise<void> => {
+const confirmVolunteerDirectly = async (registration: HydratedDocument<RegistrationDoc>, adminUserId: string): Promise<boolean> => {
   try {
     if (!registration.accessCode) {
       let generated = generateCode('volunteer');
@@ -96,9 +96,10 @@ const confirmVolunteerDirectly = async (registration: HydratedDocument<Registrat
       registration.accessCode = accessCode.code;
       await registration.save();
     }
-    await notifyVolunteerConfirmed(registration);
+    return await notifyVolunteerConfirmed(registration);
   } catch (err) {
     logger.error({ err, registrationId: registration.id }, 'Failed to issue/send volunteer confirmation');
+    return false;
   }
 };
 
@@ -468,7 +469,30 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
       return;
     }
 
-    const { authorizationUrl } = await initializePaymentForRegistration(registration);
+    // The registration already exists at this point (created above) — a
+    // Paystack failure/timeout here must not 500 the whole request and leave
+    // the admin with no idea the record exists (a retry would then hit the
+    // {type,email} unique index as a confusing 409). Report success with the
+    // registration created but no payment link yet instead; "Send Payment
+    // Reminder to All Pending" on the Payments page (adminBulkSendPaymentReminders)
+    // will pick this record up and mint a fresh link on the next run.
+    let authorizationUrl: string | null = null;
+    try {
+      ({ authorizationUrl } = await initializePaymentForRegistration(registration));
+    } catch (err) {
+      logger.error({ err, registrationId: registration.id }, 'initializePaymentForRegistration failed for admin-created registration');
+      res.status(201).json(
+        new ApiResponse({
+          id: registration.id,
+          status: registration.status,
+          requiresPayment: true,
+          paymentLinkSent: false,
+          authorizationUrl: null,
+          paymentLinkError: 'Registration was created, but the Paystack payment link could not be generated. Use "Send Payment Reminder" on the Payments page to send it once Paystack is reachable again.',
+        })
+      );
+      return;
+    }
     const amountNaira = Math.round((registration.amountKobo ?? 0) / 100);
     if (registration.email) {
       sendRegistrationPaymentLinkEmail(registration.email, registration.fullName || 'there', {
@@ -697,8 +721,17 @@ interface VolunteerImportReport {
   inserted: { email: string; fullName: string; status: RegistrationStatus }[];
   updated: { email: string; changedFields: string[] }[];
   confirmedAndNotified: { email: string; fullName: string }[];
+  // A row that WAS marked confirmed in the DB but whose access-code issuance
+  // or email send actually failed (e.g. Microsoft Graph rate-limited it) —
+  // distinct from confirmedAndNotified so this never silently reports a send
+  // that didn't really go out as a success.
+  notificationFailures: { email: string; fullName: string }[];
   skippedConflicts: { row: number; email: string; reason: string }[];
   validationFailures: { row: number; email?: string; error: string }[];
+  // A row that passed validation but threw while actually being written (a
+  // transient DB error, a duplicate-key race) — isolated per-row so one bad
+  // row can't abort the rest of the batch or the audit log entry.
+  rowFailures: { row: number; email: string; error: string }[];
 }
 
 const VOLUNTEER_IMPORT_STATUS_MAP: Record<string, RegistrationStatus> = {
@@ -756,8 +789,10 @@ export const adminImportVolunteers = catchAsync(async (req: Request, res: Respon
     inserted: [],
     updated: [],
     confirmedAndNotified: [],
+    notificationFailures: [],
     skippedConflicts: [],
     validationFailures: [],
+    rowFailures: [],
   };
 
   interface ImportRow {
@@ -824,86 +859,99 @@ export const adminImportVolunteers = catchAsync(async (req: Request, res: Respon
   }
 
   for (const row of winners) {
-    // eslint-disable-next-line no-await-in-loop
-    const existing = await Registration.findOne({ type: 'volunteer', email: row.email });
-
-    if (!existing) {
+    // Isolated per row — a transient DB error or duplicate-key race on one
+    // row must not abort the rest of the batch (unlike a bare throw here,
+    // which would also skip recordAudit below entirely for every row already
+    // processed). Mirrors the runInBatches isolation the other two bulk
+    // actions in this file already get.
+    try {
       // eslint-disable-next-line no-await-in-loop
-      const created = await Registration.create({
-        type: 'volunteer',
-        status: row.status,
-        fullName: row.fullName,
-        email: row.email,
-        phone: row.phone,
-        tshirtSize: row.tshirtSize,
-        trackSelected: row.trackSelected,
-        tags: row.notes ? [`Notes: ${row.notes}`] : undefined,
-        qrToken: row.status === 'confirmed' ? generateQrToken() : undefined,
-        createdAt: row.registeredAt,
-      });
-      report.inserted.push({ email: row.email, fullName: row.fullName, status: row.status });
-      if (row.status === 'confirmed') {
+      const existing = await Registration.findOne({ type: 'volunteer', email: row.email });
+
+      if (!existing) {
         // eslint-disable-next-line no-await-in-loop
-        await confirmVolunteerDirectly(created, req.user!.sub);
-        report.confirmedAndNotified.push({ email: row.email, fullName: row.fullName });
+        const created = await Registration.create({
+          type: 'volunteer',
+          status: row.status,
+          fullName: row.fullName,
+          email: row.email,
+          phone: row.phone,
+          tshirtSize: row.tshirtSize,
+          trackSelected: row.trackSelected,
+          tags: row.notes ? [`Notes: ${row.notes}`] : undefined,
+          qrToken: row.status === 'confirmed' ? generateQrToken() : undefined,
+          createdAt: row.registeredAt,
+        });
+        report.inserted.push({ email: row.email, fullName: row.fullName, status: row.status });
+        if (row.status === 'confirmed') {
+          // eslint-disable-next-line no-await-in-loop
+          const notified = await confirmVolunteerDirectly(created, req.user!.sub);
+          (notified ? report.confirmedAndNotified : report.notificationFailures).push({ email: row.email, fullName: row.fullName });
+        }
+        continue;
       }
-      continue;
-    }
 
-    if (existing.status === 'confirmed' && row.status !== 'confirmed') {
-      report.skippedConflicts.push({
-        row: row.rowNum,
-        email: row.email,
-        reason: `Already confirmed in the system — import says "${row.status}", left untouched.`,
-      });
-      continue;
-    }
-
-    const wasConfirmed = existing.status === 'confirmed';
-    const changedFields: string[] = [];
-    const set: Record<string, unknown> = {};
-
-    const refresh: Array<[string | undefined, keyof RegistrationDoc]> = [
-      [row.fullName, 'fullName'],
-      [row.phone, 'phone'],
-      [row.tshirtSize, 'tshirtSize'],
-      [row.trackSelected, 'trackSelected'],
-    ];
-    for (const [value, field] of refresh) {
-      if (value === undefined) continue;
-      if (value !== (existing[field] ?? undefined)) changedFields.push(field);
-      set[field] = value;
-    }
-    if (row.notes) {
-      const tag = `Notes: ${row.notes}`;
-      if (!(existing.tags ?? []).includes(tag)) {
-        set.tags = [...(existing.tags ?? []), tag];
-        changedFields.push('tags');
+      if (existing.status === 'confirmed' && row.status !== 'confirmed') {
+        report.skippedConflicts.push({
+          row: row.rowNum,
+          email: row.email,
+          reason: `Already confirmed in the system — import says "${row.status}", left untouched.`,
+        });
+        continue;
       }
-    }
-    if (row.status !== existing.status) {
-      set.status = row.status;
-      changedFields.push('status');
-    }
-    if (row.status === 'confirmed' && !existing.qrToken) {
-      set.qrToken = generateQrToken();
-      changedFields.push('qrToken');
-    }
 
-    if (Object.keys(set).length > 0) {
-      // eslint-disable-next-line no-await-in-loop
-      await Registration.updateOne({ _id: existing._id }, { $set: set });
-      report.updated.push({ email: row.email, changedFields });
-    }
+      const wasConfirmed = existing.status === 'confirmed';
+      const changedFields: string[] = [];
+      const set: Record<string, unknown> = {};
 
-    if (row.status === 'confirmed' && !wasConfirmed) {
-      // eslint-disable-next-line no-await-in-loop
-      const reloaded = await Registration.findById(existing._id);
-      if (reloaded) {
+      const refresh: Array<[string | undefined, keyof RegistrationDoc]> = [
+        [row.fullName, 'fullName'],
+        [row.phone, 'phone'],
+        [row.tshirtSize, 'tshirtSize'],
+        [row.trackSelected, 'trackSelected'],
+      ];
+      for (const [value, field] of refresh) {
+        if (value === undefined) continue;
+        if (value !== (existing[field] ?? undefined)) changedFields.push(field);
+        set[field] = value;
+      }
+      if (row.notes) {
+        const tag = `Notes: ${row.notes}`;
+        if (!(existing.tags ?? []).includes(tag)) {
+          set.tags = [...(existing.tags ?? []), tag];
+          changedFields.push('tags');
+        }
+      }
+      if (row.status !== existing.status) {
+        set.status = row.status;
+        changedFields.push('status');
+      }
+      if (row.status === 'confirmed' && !existing.qrToken) {
+        set.qrToken = generateQrToken();
+        changedFields.push('qrToken');
+      }
+
+      if (Object.keys(set).length > 0) {
         // eslint-disable-next-line no-await-in-loop
-        await confirmVolunteerDirectly(reloaded, req.user!.sub);
-        report.confirmedAndNotified.push({ email: row.email, fullName: reloaded.fullName ?? row.fullName });
+        await Registration.updateOne({ _id: existing._id }, { $set: set });
+        report.updated.push({ email: row.email, changedFields });
       }
+
+      if (row.status === 'confirmed' && !wasConfirmed) {
+        // eslint-disable-next-line no-await-in-loop
+        const reloaded = await Registration.findById(existing._id);
+        if (reloaded) {
+          // eslint-disable-next-line no-await-in-loop
+          const notified = await confirmVolunteerDirectly(reloaded, req.user!.sub);
+          (notified ? report.confirmedAndNotified : report.notificationFailures).push({
+            email: row.email,
+            fullName: reloaded.fullName ?? row.fullName,
+          });
+        }
+      }
+    } catch (err) {
+      logger.error({ err, row: row.rowNum, email: row.email }, 'Volunteer import row failed');
+      report.rowFailures.push({ row: row.rowNum, email: row.email, error: err instanceof Error ? err.message : 'Unknown error' });
     }
   }
 
@@ -916,8 +964,10 @@ export const adminImportVolunteers = catchAsync(async (req: Request, res: Respon
       inserted: report.inserted.length,
       updated: report.updated.length,
       confirmedAndNotified: report.confirmedAndNotified.length,
+      notificationFailed: report.notificationFailures.length,
       skipped: report.skippedConflicts.length,
-      failed: report.validationFailures.length,
+      validationFailed: report.validationFailures.length,
+      rowFailed: report.rowFailures.length,
     },
   });
 

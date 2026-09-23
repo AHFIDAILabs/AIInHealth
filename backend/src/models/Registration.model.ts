@@ -96,6 +96,15 @@ const registrationSchema = new Schema(
     // categories and every non-attendee type; those never touch this beyond the default.
     paymentStatus: { type: String, enum: PAYMENT_STATUSES, default: 'not_required' },
     paymentReference: { type: String, trim: true }, // Paystack transaction reference
+    // Every reference this registration has EVER had, before it got overwritten
+    // by a fresh one (payment.controller.ts's initializePaymentForRegistration
+    // pushes the old value here first). Needed because a payer can still
+    // complete checkout through an OLDER link after a newer one was minted
+    // (e.g. a bulk payment reminder always opens a fresh transaction) — without
+    // this, confirmPaymentByReference's lookup-by-current-paymentReference finds
+    // nothing for that older reference, and a real successful Paystack charge
+    // would never get matched back to a registration at all.
+    previousPaymentReferences: { type: [String], default: undefined },
     // Not secret — the same checkout link Paystack already shows the payer. Kept so
     // a retried "Pay Now" click within the idempotency window (payment.controller.ts's
     // initialize) can hand back the SAME transaction instead of opening a new one on
@@ -182,6 +191,11 @@ registrationSchema.index({ type: 1, createdAt: -1 });
 // already essentially impossible; this is a defense-in-depth backstop, not a
 // currently-exploitable gap.
 registrationSchema.index({ paymentReference: 1 }, { unique: true, sparse: true });
+// Not unique — confirmPaymentByReference looks up by EITHER paymentReference OR
+// this array, so it just needs to be fast, not enforce uniqueness (an old
+// reference retired here can never collide with a NEW live paymentReference
+// anyway, since that one's already enforced unique above).
+registrationSchema.index({ previousPaymentReferences: 1 });
 
 // At most one registration per (type, email/contactEmail) — closes the gap that
 // let delegate.controller.ts's requestAccessCode silently pick the *most recent*

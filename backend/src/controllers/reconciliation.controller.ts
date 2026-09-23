@@ -47,10 +47,13 @@ export const list = catchAsync(async (_req: Request, res: Response) => {
 
 // POST /admin/reconciliations/:reference/resync — force re-verify one reference
 // against Paystack directly (the same idempotent path payments/verify uses).
+// allowAmountMismatch: true — an admin looking at this exact row's flagged
+// mismatch and choosing to push it through anyway is a deliberate human
+// decision, unlike the automatic webhook/frontend-verify paths.
 export const resync = catchAsync(async (req: Request, res: Response) => {
-  await confirmPaymentByReference(req.params.reference);
-  const registration = await Registration.findOne({ paymentReference: req.params.reference }).select(
-    'paymentStatus status amountKobo'
-  );
+  await confirmPaymentByReference(req.params.reference, { allowAmountMismatch: true });
+  const registration = await Registration.findOne({
+    $or: [{ paymentReference: req.params.reference }, { previousPaymentReferences: req.params.reference }],
+  }).select('paymentStatus status amountKobo');
   res.json(new ApiResponse({ ok: true, registration }));
 });

@@ -79,6 +79,14 @@ export const initializePaymentForRegistration = async (
     metadata: { registrationId: registration.id, ticketCategory: registration.ticketCategory },
   });
 
+  // Retire the OLD reference (if any) rather than just discarding it — a payer
+  // who still has an older checkout link open (e.g. this call is a bulk
+  // reminder minting a fresh one) can still complete THAT payment; Paystack's
+  // webhook/redirect will carry the old reference, and confirmPaymentByReference
+  // needs to still be able to find this registration by it.
+  if (registration.paymentReference && registration.paymentReference !== reference) {
+    registration.previousPaymentReferences = [...(registration.previousPaymentReferences ?? []), registration.paymentReference];
+  }
   registration.paymentReference = reference;
   registration.paymentAuthorizationUrl = authorizationUrl;
   registration.paymentInitializedAt = new Date();
@@ -91,8 +99,19 @@ export const initializePaymentForRegistration = async (
 // Shared by both the frontend's post-redirect verify call and the webhook — always
 // re-verifies against Paystack directly rather than trusting either caller's data,
 // and is safe to run twice for the same reference (already-paid short-circuits).
-export const confirmPaymentByReference = async (reference: string): Promise<void> => {
-  const registration = await Registration.findOne({ paymentReference: reference });
+//
+// allowAmountMismatch: only ever passed true by the admin Reconciliations
+// "resync" action (reconciliation.controller.ts) — a human who's already
+// looking at the flagged mismatch and deciding to push it through anyway. Every
+// automatic path (the frontend's post-redirect verify, the webhook) leaves this
+// false, so an amount that doesn't match what we expected never auto-confirms.
+export const confirmPaymentByReference = async (reference: string, options: { allowAmountMismatch?: boolean } = {}): Promise<void> => {
+  // Matches on the CURRENT reference or any RETIRED one (previousPaymentReferences) —
+  // a payer can still complete checkout through an older link after a newer
+  // reference was minted (e.g. a bulk payment reminder always opens a fresh
+  // transaction); without this, a real successful charge on that older
+  // reference would never match any registration at all.
+  const registration = await Registration.findOne({ $or: [{ paymentReference: reference }, { previousPaymentReferences: reference }] });
   if (!registration) {
     logger.warn({ reference }, 'Payment confirmation for unknown reference');
     return;
@@ -102,7 +121,36 @@ export const confirmPaymentByReference = async (reference: string): Promise<void
   const result = await paystack.verifyTransaction(reference);
 
   if (result.status !== 'success') {
-    await Registration.updateOne({ paymentReference: reference, paymentStatus: { $ne: 'paid' } }, { $set: { paymentStatus: 'failed' } });
+    await Registration.updateOne({ _id: registration._id, paymentStatus: { $ne: 'paid' } }, { $set: { paymentStatus: 'failed' } });
+    return;
+  }
+
+  // Paystack's checkout page amount is generated server-side from what WE sent
+  // at initialize, so a legitimate flow never diverges — a mismatch means
+  // something is wrong (reference confusion, a stale/reused reference, direct
+  // tampering) and must never silently confirm a seat for the wrong price.
+  // Surfaced through the existing Reconciliations mismatch flag
+  // (reconciliation.controller.ts) for a human to actually look at, instead.
+  // Skipped when Paystack isn't configured (local dev/test) — verifyTransaction's
+  // dev fallback always reports amountKobo: 0, which isn't a real amount to
+  // compare against and would otherwise permanently "mismatch" every dev payment.
+  if (
+    paystack.paystackConfigured &&
+    !options.allowAmountMismatch &&
+    registration.amountKobo != null &&
+    result.amountKobo !== registration.amountKobo
+  ) {
+    logger.error(
+      { reference, expectedKobo: registration.amountKobo, verifiedKobo: result.amountKobo, registrationId: registration.id },
+      'Payment amount mismatch — refusing to auto-confirm; awaiting manual reconciliation'
+    );
+    await emitAdminNotification({
+      type: 'registration.new',
+      title: 'Payment amount mismatch — needs review',
+      body: `${registration.fullName || registration.email} paid ${result.amountKobo} kobo, expected ${registration.amountKobo} kobo (ref ${reference})`,
+      resourceType: 'Registration',
+      resourceId: registration.id,
+    });
     return;
   }
 
@@ -120,7 +168,7 @@ export const confirmPaymentByReference = async (reference: string): Promise<void
   // Only the call that actually wins this update proceeds to notify/email below,
   // so the race can't double-send the confirmation + ticket emails.
   const updated = await Registration.findOneAndUpdate(
-    { paymentReference: reference, paymentStatus: { $ne: 'paid' } },
+    { _id: registration._id, paymentStatus: { $ne: 'paid' } },
     {
       $set: {
         paymentStatus: 'paid',
@@ -155,9 +203,12 @@ export const verify = catchAsync(async (req: Request, res: Response) => {
   const { reference } = req.params;
   await confirmPaymentByReference(reference);
 
-  const registration = await Registration.findOne({ paymentReference: reference }).select(
-    'fullName ticketCategory paymentStatus status amountKobo'
-  );
+  // Same $or as confirmPaymentByReference itself — this reference may since have
+  // been retired to previousPaymentReferences by a later initialize() call, in
+  // which case it no longer matches the registration's current paymentReference.
+  const registration = await Registration.findOne({
+    $or: [{ paymentReference: reference }, { previousPaymentReferences: reference }],
+  }).select('fullName ticketCategory paymentStatus status amountKobo');
   if (!registration) throw new ApiError(404, 'Payment reference not found', 'NOT_FOUND');
 
   res.json(

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { isValidObjectId } from 'mongoose';
+import xss from 'xss';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -37,7 +38,15 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   if (comm.status !== 'draft') throw new ApiError(400, 'Only a draft communication can be edited', 'NOT_DRAFT');
 
   if (input.subject !== undefined) comm.subject = input.subject;
-  if (input.body !== undefined) comm.body = input.body;
+  // This is the ONE write path for `body` after the auto-generated template
+  // (communication.service.ts's TEMPLATES, whose interpolated fields are
+  // already escaped) — an admin types raw HTML directly into a textarea here,
+  // and it later goes out unmodified as a real email AND gets rendered via
+  // dangerouslySetInnerHTML in another admin's dashboard. Sanitize on write so
+  // neither consumer ever sees a stored copy of a <script>/onerror=/iframe
+  // payload, whether typed by a legitimately confused admin or an attacker
+  // controlling a lower-privileged content_editor account.
+  if (input.body !== undefined) comm.body = xss(input.body);
   await comm.save();
 
   res.json(new ApiResponse(comm));

@@ -8,22 +8,40 @@ import { resendAccessCodeAndTicket } from '../services/registrationNotification.
 import { recordAudit } from '../services/audit.service.js';
 import { generateQrToken } from '../services/qr.service.js';
 import { runInBatches } from '../utils/batch.js';
+import { REGISTRATION_STATUSES, REGISTRATION_TYPES } from '../types/enums.js';
 
 const delegateName = (r: { fullName?: string | null; contactName?: string | null; companyName?: string | null }) =>
   r.fullName || r.contactName || r.companyName || 'there';
 const delegateEmail = (r: { email?: string | null; contactEmail?: string | null }) => r.email || r.contactEmail || null;
 
-// GET /admin/portal-tokens — every confirmed registration and its portal access state
+// GET /admin/portal-tokens — every confirmed registration and its portal access
+// state, filterable by Status/Type same as RegistrationsPage.tsx. Status
+// defaults to 'confirmed' (portal access only ever exists for a confirmed
+// registration) when the param is omitted entirely — the same default this
+// endpoint always had — but an explicit empty string ("All Statuses" in the
+// UI) lifts that default so the admin can still see other statuses if needed.
 export const adminList = catchAsync(async (req: Request, res: Response) => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-  const filter: Record<string, unknown> = { status: 'confirmed' };
+  const statusParam = typeof req.query.status === 'string' ? req.query.status : undefined;
+  const typeParam = typeof req.query.type === 'string' ? req.query.type : undefined;
+
+  const filter: Record<string, unknown> = {};
+  if (statusParam === undefined) {
+    filter.status = 'confirmed';
+  } else if (statusParam && (REGISTRATION_STATUSES as readonly string[]).includes(statusParam)) {
+    filter.status = statusParam;
+  }
+  if (typeParam && (REGISTRATION_TYPES as readonly string[]).includes(typeParam)) {
+    filter.type = typeParam;
+  }
+
   if (q) {
     const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     filter.$or = [{ fullName: rx }, { contactName: rx }, { companyName: rx }, { email: rx }, { contactEmail: rx }];
   }
 
   const items = await Registration.find(filter)
-    .select('type fullName contactName companyName email contactEmail qrToken directoryOptIn portalLastLinkSentAt checkedIn')
+    .select('type status fullName contactName companyName email contactEmail qrToken directoryOptIn portalLastLinkSentAt checkedIn')
     .sort({ portalLastLinkSentAt: -1, createdAt: -1 })
     .limit(200)
     .lean();
@@ -33,6 +51,7 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
       items.map((r) => ({
         id: r._id,
         type: r.type,
+        status: r.status,
         name: delegateName(r),
         email: delegateEmail(r),
         hasTicket: Boolean(r.qrToken),

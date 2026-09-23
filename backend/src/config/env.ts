@@ -97,6 +97,14 @@ const productionRequiredSchema = envSchema.superRefine((val, ctx) => {
   if (!val.CLOUDINARY_CLOUD_NAME || !val.CLOUDINARY_API_KEY || !val.CLOUDINARY_API_SECRET) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['CLOUDINARY_API_SECRET'], message: 'CLOUDINARY_CLOUD_NAME/CLOUDINARY_API_KEY/CLOUDINARY_API_SECRET are all required in production' });
   }
+  // Without this, paystack.service.ts's `configured` flag goes false and
+  // verifyTransaction() unconditionally returns { status: 'success' } for ANY
+  // reference — on the public, unauthenticated GET /payment/verify/:reference
+  // route. A blank key must fail startup loudly, not silently turn payment
+  // verification into an always-succeeds no-op in production.
+  if (!val.PAYSTACK_SECRET_KEY || !val.PAYSTACK_PUBLIC_KEY) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['PAYSTACK_SECRET_KEY'], message: 'PAYSTACK_SECRET_KEY/PAYSTACK_PUBLIC_KEY are both required in production' });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;
