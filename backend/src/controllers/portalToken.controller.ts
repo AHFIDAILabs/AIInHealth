@@ -15,15 +15,18 @@ const delegateName = (r: { fullName?: string | null; contactName?: string | null
 const delegateEmail = (r: { email?: string | null; contactEmail?: string | null }) => r.email || r.contactEmail || null;
 
 // GET /admin/portal-tokens — every confirmed registration and its portal access
-// state, filterable by Status/Type same as RegistrationsPage.tsx. Status
-// defaults to 'confirmed' (portal access only ever exists for a confirmed
-// registration) when the param is omitted entirely — the same default this
-// endpoint always had — but an explicit empty string ("All Statuses" in the
-// UI) lifts that default so the admin can still see other statuses if needed.
+// state, filterable by Status/Type and paginated, same as RegistrationsPage.tsx
+// (registration.controller.ts's adminList). Status defaults to 'confirmed'
+// (portal access only ever exists for a confirmed registration) when the
+// param is omitted entirely — the same default this endpoint always had —
+// but an explicit empty string ("All Statuses" in the UI) lifts that default
+// so the admin can still see other statuses if needed.
 export const adminList = catchAsync(async (req: Request, res: Response) => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
   const statusParam = typeof req.query.status === 'string' ? req.query.status : undefined;
   const typeParam = typeof req.query.type === 'string' ? req.query.type : undefined;
+  const page = Math.max(1, Number.parseInt(String(req.query.page ?? '1'), 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit ?? '20'), 10) || 20));
 
   const filter: Record<string, unknown> = {};
   if (statusParam === undefined) {
@@ -40,11 +43,16 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
     filter.$or = [{ fullName: rx }, { contactName: rx }, { companyName: rx }, { email: rx }, { contactEmail: rx }];
   }
 
-  const items = await Registration.find(filter)
-    .select('type status fullName contactName companyName email contactEmail qrToken directoryOptIn portalLastLinkSentAt checkedIn')
-    .sort({ portalLastLinkSentAt: -1, createdAt: -1 })
-    .limit(200)
-    .lean();
+  const skip = (page - 1) * limit;
+  const [items, total] = await Promise.all([
+    Registration.find(filter)
+      .select('type status fullName contactName companyName email contactEmail qrToken directoryOptIn portalLastLinkSentAt checkedIn')
+      .sort({ portalLastLinkSentAt: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Registration.countDocuments(filter),
+  ]);
 
   res.json(
     new ApiResponse(
@@ -58,7 +66,8 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
         directoryOptIn: r.directoryOptIn,
         checkedIn: r.checkedIn,
         portalLastLinkSentAt: r.portalLastLinkSentAt,
-      }))
+      })),
+      { page, limit, total, pages: Math.ceil(total / limit) || 1 }
     )
   );
 });
