@@ -116,6 +116,150 @@ const CARD_STYLE_CLASSES: Record<SessionCardStyle, string> = {
   break: '',
 };
 
+interface SessionCardProps {
+  s: DisplaySession;
+  onRsvp: (session: { _id: string; title: string }) => void;
+  onSpeakerClick: (speaker: AdminSpeaker) => void;
+  resolveSpeaker: (sp: DisplaySpeaker, trackName: string) => AdminSpeaker;
+}
+
+// A real top-level component, not one declared inside Agenda's render body —
+// a locally-declared component gets a brand-new identity on every render of
+// its parent, which makes React remount it (and can make sibling instances'
+// state bleed together) instead of preserving each card's own
+// briefExpanded state independently. Every value it needs from Agenda's
+// scope (the RSVP/speaker-modal openers, resolveSpeaker) is passed in as a
+// prop instead of closed over.
+const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker }: SessionCardProps) => {
+  const [briefExpanded, setBriefExpanded] = useState(false);
+  // A short brief (a one-line room note, say) never needs a toggle at all —
+  // only the longer ones (e.g. a full list of oral abstract titles, per the
+  // Oral Abstracts session type) default to collapsed.
+  const briefIsLong = (s.description?.length ?? 0) > 220;
+
+  return (
+    <div
+      className={`mb-2 flex-1 rounded-xl p-5 shadow-sm ${
+        s.cardStyle === 'standard' ? `${CARD_STYLE_CLASSES.standard} border-l-4` : CARD_STYLE_CLASSES[s.cardStyle]
+      }`}
+      style={s.cardStyle === 'standard' ? { borderLeftColor: s.track?.color ?? '#E8792C' } : undefined}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                s.cardStyle === 'standard' ? 'bg-orange/10 text-orange' : 'bg-white/15 text-white'
+              }`}
+            >
+              {s.format}
+            </span>
+            {s.track && (
+              <span
+                className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                  s.cardStyle === 'standard' ? 'bg-offwhite text-slate-500' : 'bg-white/10 text-slate-200'
+                }`}
+              >
+                {s.track.name}
+              </span>
+            )}
+            {s.requiresRsvp && (
+              <button
+                type="button"
+                onClick={() => onRsvp({ _id: s.key, title: s.title })}
+                className="flex items-center gap-1 rounded-full bg-orange px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-orange-hover"
+              >
+                <CalendarCheck size={11} /> RSVP
+              </button>
+            )}
+          </div>
+
+          <p className={`mt-2 font-display text-base font-bold sm:text-lg ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>
+            {s.title}
+          </p>
+          {s.room && (
+            <p className={`mt-0.5 text-[12px] font-medium ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-300'}`}>
+              {s.room}
+            </p>
+          )}
+
+          {s.description && (
+            <div className="mt-3">
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-400'}`}>
+                Session Brief
+              </p>
+              <p
+                className={`mt-1 whitespace-pre-line text-[13px] leading-relaxed ${briefIsLong && !briefExpanded ? 'line-clamp-3' : ''} ${
+                  s.cardStyle === 'standard' ? 'text-slate-600' : 'text-slate-200'
+                }`}
+              >
+                {s.description}
+              </p>
+              {briefIsLong && (
+                <button
+                  type="button"
+                  onClick={() => setBriefExpanded((prev) => !prev)}
+                  className={`mt-1.5 flex items-center gap-1 text-[11px] font-semibold ${
+                    s.cardStyle === 'standard' ? 'text-orange hover:text-orange-hover' : 'text-white/80 hover:text-white'
+                  }`}
+                >
+                  {briefExpanded ? 'Show less' : 'Read more'}
+                  <ChevronDown size={12} className={`transition-transform ${briefExpanded ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {s.speakers.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {s.speakers.map((sp) => (
+                <button
+                  key={sp._id}
+                  type="button"
+                  onClick={() => onSpeakerClick(resolveSpeaker(sp, s.track?.name ?? 'General Session'))}
+                  className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-left transition-colors ${
+                    s.cardStyle === 'standard'
+                      ? 'border-slate-200 bg-white hover:border-orange/40 hover:bg-orange/5'
+                      : 'border-white/20 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy text-[10px] font-semibold text-white">
+                    {sp.photoUrl ? (
+                      <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full object-cover" />
+                    ) : (
+                      sp.fullName[0]
+                    )}
+                  </span>
+                  <span className={`text-xs font-medium ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>{sp.fullName}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {s.partners.length > 0 && (
+          <div className="flex shrink-0 flex-wrap justify-end gap-3">
+            {s.partners.map((p) => (
+              <div key={p._id} className="flex w-20 flex-col items-center gap-1.5 text-center">
+                <span className="flex h-12 w-20 items-center justify-center rounded-lg bg-white p-2 shadow-sm">
+                  {p.logoUrl ? (
+                    <img src={p.logoUrl} alt={p.name} className="max-h-full max-w-full object-contain" />
+                  ) : (
+                    <span className="text-[10px] font-semibold text-navy">{p.name}</span>
+                  )}
+                </span>
+                <span className={`text-[10px] font-medium leading-tight ${s.cardStyle === 'standard' ? 'text-slate-500' : 'text-slate-300'}`}>
+                  {p.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export const Agenda = () => {
   const [dayKey, setDayKey] = useState<SessionDay>('day1');
   const [realSessions, setRealSessions] = useState<AdminSession[] | null>(null);
@@ -246,139 +390,6 @@ export const Agenda = () => {
   };
 
   const dateLabel = DAY_DATES[dayKey].toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-
-  // Pulled out of the timeline loop so it can render once per session
-  // whether that session is alone in its time slot or sharing a row with
-  // parallel-track siblings — same card markup either way.
-  const SessionCard = ({ s }: { s: DisplaySession }) => {
-    const [briefExpanded, setBriefExpanded] = useState(false);
-    // A short brief (a one-line room note, say) never needs a toggle at all —
-    // only the longer ones (e.g. a full list of oral abstract titles, per the
-    // Oral Abstracts session type) default to collapsed.
-    const briefIsLong = (s.description?.length ?? 0) > 220;
-
-    return (
-    <div
-      className={`mb-2 flex-1 rounded-xl p-5 shadow-sm ${
-        s.cardStyle === 'standard' ? `${CARD_STYLE_CLASSES.standard} border-l-4` : CARD_STYLE_CLASSES[s.cardStyle]
-      }`}
-      style={s.cardStyle === 'standard' ? { borderLeftColor: s.track?.color ?? '#E8792C' } : undefined}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span
-              className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
-                s.cardStyle === 'standard' ? 'bg-orange/10 text-orange' : 'bg-white/15 text-white'
-              }`}
-            >
-              {s.format}
-            </span>
-            {s.track && (
-              <span
-                className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                  s.cardStyle === 'standard' ? 'bg-offwhite text-slate-500' : 'bg-white/10 text-slate-200'
-                }`}
-              >
-                {s.track.name}
-              </span>
-            )}
-            {s.requiresRsvp && (
-              <button
-                type="button"
-                onClick={() => setRsvpSession({ _id: s.key, title: s.title })}
-                className="flex items-center gap-1 rounded-full bg-orange px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-orange-hover"
-              >
-                <CalendarCheck size={11} /> RSVP
-              </button>
-            )}
-          </div>
-
-          <p className={`mt-2 font-display text-base font-bold sm:text-lg ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>
-            {s.title}
-          </p>
-          {s.room && (
-            <p className={`mt-0.5 text-[12px] font-medium ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-300'}`}>
-              {s.room}
-            </p>
-          )}
-
-          {s.description && (
-            <div className="mt-3">
-              <p className={`text-[10px] font-bold uppercase tracking-widest ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-400'}`}>
-                Session Brief
-              </p>
-              <p
-                className={`mt-1 whitespace-pre-line text-[13px] leading-relaxed ${briefIsLong && !briefExpanded ? 'line-clamp-3' : ''} ${
-                  s.cardStyle === 'standard' ? 'text-slate-600' : 'text-slate-200'
-                }`}
-              >
-                {s.description}
-              </p>
-              {briefIsLong && (
-                <button
-                  type="button"
-                  onClick={() => setBriefExpanded((prev) => !prev)}
-                  className={`mt-1.5 flex items-center gap-1 text-[11px] font-semibold ${
-                    s.cardStyle === 'standard' ? 'text-orange hover:text-orange-hover' : 'text-white/80 hover:text-white'
-                  }`}
-                >
-                  {briefExpanded ? 'Show less' : 'Read more'}
-                  <ChevronDown size={12} className={`transition-transform ${briefExpanded ? 'rotate-180' : ''}`} />
-                </button>
-              )}
-            </div>
-          )}
-
-          {s.speakers.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {s.speakers.map((sp) => (
-                <button
-                  key={sp._id}
-                  type="button"
-                  onClick={() => setActiveSpeaker(resolveSpeaker(sp, s.track?.name ?? 'General Session'))}
-                  className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-left transition-colors ${
-                    s.cardStyle === 'standard'
-                      ? 'border-slate-200 bg-white hover:border-orange/40 hover:bg-orange/5'
-                      : 'border-white/20 bg-white/5 hover:bg-white/10'
-                  }`}
-                >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy text-[10px] font-semibold text-white">
-                    {sp.photoUrl ? (
-                      <img src={sp.photoUrl} alt={sp.fullName} className="h-full w-full object-cover" />
-                    ) : (
-                      sp.fullName[0]
-                    )}
-                  </span>
-                  <span className={`text-xs font-medium ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>{sp.fullName}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {s.partners.length > 0 && (
-          <div className="flex shrink-0 flex-wrap justify-end gap-3">
-            {s.partners.map((p) => (
-              <div key={p._id} className="flex w-20 flex-col items-center gap-1.5 text-center">
-                <span className="flex h-12 w-20 items-center justify-center rounded-lg bg-white p-2 shadow-sm">
-                  {p.logoUrl ? (
-                    <img src={p.logoUrl} alt={p.name} className="max-h-full max-w-full object-contain" />
-                  ) : (
-                    <span className="text-[10px] font-semibold text-navy">{p.name}</span>
-                  )}
-                </span>
-                <span className={`text-[10px] font-medium leading-tight ${s.cardStyle === 'standard' ? 'text-slate-500' : 'text-slate-300'}`}>
-                  {p.name}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-    );
-  };
 
   return (
     <>
@@ -530,7 +541,13 @@ export const Agenda = () => {
                             it always had. */}
                         <div className="flex flex-1 flex-col gap-4 sm:flex-row">
                           {group.map((s) => (
-                            <SessionCard key={s.key} s={s} />
+                            <SessionCard
+                              key={s.key}
+                              s={s}
+                              onRsvp={setRsvpSession}
+                              onSpeakerClick={setActiveSpeaker}
+                              resolveSpeaker={resolveSpeaker}
+                            />
                           ))}
                         </div>
                       </div>

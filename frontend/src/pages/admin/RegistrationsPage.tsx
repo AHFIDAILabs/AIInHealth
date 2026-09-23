@@ -211,7 +211,16 @@ export const RegistrationsPage = () => {
       load();
     } catch (err) {
       setImportError(getApiErrorMessage(err));
-      setImportReport({ totalRows: 0, inserted: [], updated: [], confirmedAndNotified: [], skippedConflicts: [], validationFailures: [] });
+      setImportReport({
+        totalRows: 0,
+        inserted: [],
+        updated: [],
+        confirmedAndNotified: [],
+        notificationFailures: [],
+        skippedConflicts: [],
+        validationFailures: [],
+        rowFailures: [],
+      });
     } finally {
       setImporting(false);
     }
@@ -1146,6 +1155,30 @@ export const RegistrationsPage = () => {
                   <p className="text-success">{importReport.inserted.length} new volunteer registration(s) added.</p>
                   <p className="text-slate-600">{importReport.updated.length} existing record(s) updated.</p>
                   <p className="font-semibold text-orange">{importReport.confirmedAndNotified.length} volunteer(s) confirmed and emailed their access code + ticket.</p>
+                  {importReport.notificationFailures.length > 0 && (
+                    <div className="rounded-lg bg-danger/5 p-3 text-danger">
+                      <p className="font-semibold">{importReport.notificationFailures.length} confirmed but the email failed to send:</p>
+                      <ul className="mt-1 list-disc pl-4">
+                        {importReport.notificationFailures.map((f) => (
+                          <li key={f.email}>
+                            {f.fullName} ({f.email}) — use "Send Code" on Portal Tokens to retry.
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {importReport.rowFailures.length > 0 && (
+                    <div className="rounded-lg bg-danger/5 p-3 text-danger">
+                      <p className="font-semibold">{importReport.rowFailures.length} row(s) errored and were skipped:</p>
+                      <ul className="mt-1 list-disc pl-4">
+                        {importReport.rowFailures.map((f) => (
+                          <li key={f.row}>
+                            Row {f.row} ({f.email}): {f.error}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {importReport.skippedConflicts.length > 0 && (
                     <div className="rounded-lg bg-warning/5 p-3 text-warning">
                       <p className="font-semibold">{importReport.skippedConflicts.length} row(s) skipped — already confirmed:</p>

@@ -1,8 +1,10 @@
 import { api } from './api';
+import type { RegistrationStatus, RegistrationType } from './admin.service';
 
 export interface PortalTokenRow {
   id: string;
-  type: 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer';
+  type: RegistrationType;
+  status: RegistrationStatus;
   name: string;
   email: string | null;
   hasTicket: boolean;
@@ -11,8 +13,17 @@ export interface PortalTokenRow {
   portalLastLinkSentAt?: string;
 }
 
-export const adminListPortalTokens = async (q?: string): Promise<PortalTokenRow[]> => {
-  const res = await api.get<{ success: true; data: PortalTokenRow[] }>('/admin/portal-tokens', { params: { q } });
+export interface ListPortalTokensParams {
+  q?: string;
+  // Omit entirely to keep the endpoint's own default (confirmed only —
+  // portal access only ever exists for a confirmed registration); pass ''
+  // explicitly for "All Statuses".
+  status?: RegistrationStatus | '';
+  type?: RegistrationType | '';
+}
+
+export const adminListPortalTokens = async (params: ListPortalTokensParams = {}): Promise<PortalTokenRow[]> => {
+  const res = await api.get<{ success: true; data: PortalTokenRow[] }>('/admin/portal-tokens', { params });
   return res.data.data;
 };
 

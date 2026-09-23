@@ -150,8 +150,10 @@ export interface VolunteerImportReport {
   inserted: { email: string; fullName: string; status: RegistrationStatus }[];
   updated: { email: string; changedFields: string[] }[];
   confirmedAndNotified: { email: string; fullName: string }[];
+  notificationFailures: { email: string; fullName: string }[];
   skippedConflicts: { row: number; email: string; reason: string }[];
   validationFailures: { row: number; email?: string; error: string }[];
+  rowFailures: { row: number; email: string; error: string }[];
 }
 
 export const importVolunteersCsv = async (file: File): Promise<VolunteerImportReport> => {
