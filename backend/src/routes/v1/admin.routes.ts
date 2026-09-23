@@ -112,6 +112,11 @@ router.delete(
   requireRole('super_admin', 'registrations_officer'),
   registrationController.adminDelete
 );
+router.post(
+  '/registrations/bulk-payment-reminder',
+  requireRole('super_admin', 'registrations_officer'),
+  registrationController.adminBulkSendPaymentReminders
+);
 
 // Access codes directly gate free entry — same role scope as reviewing registrations,
 // plus content_editor for volunteer-type codes only (enforced in the controller).
@@ -125,6 +130,7 @@ router.post('/payments/reconciliations/:reference/resync', requireRole('super_ad
 
 router.get('/portal-tokens', requireRole('super_admin', 'registrations_officer'), portalTokenController.adminList);
 router.post('/portal-tokens/:id/send-code', requireRole('super_admin', 'registrations_officer'), portalTokenController.adminSendCode);
+router.post('/portal-tokens/bulk-send', requireRole('super_admin', 'registrations_officer'), portalTokenController.adminBulkSendCodes);
 
 const contentRoles = ['super_admin', 'content_editor'] as const;
 

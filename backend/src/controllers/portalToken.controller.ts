@@ -6,6 +6,8 @@ import { ApiError } from '../utils/ApiError.js';
 import { Registration } from '../models/Registration.model.js';
 import { resendAccessCodeAndTicket } from '../services/registrationNotification.service.js';
 import { recordAudit } from '../services/audit.service.js';
+import { generateQrToken } from '../services/qr.service.js';
+import { runInBatches } from '../utils/batch.js';
 
 const delegateName = (r: { fullName?: string | null; contactName?: string | null; companyName?: string | null }) =>
   r.fullName || r.contactName || r.companyName || 'there';
@@ -64,4 +66,37 @@ export const adminSendCode = catchAsync(async (req: Request, res: Response) => {
   });
 
   res.status(201).json(new ApiResponse({ ok: true, sentAt: result?.sentAt }));
+});
+
+// POST /admin/portal-tokens/bulk-send — one click, every confirmed
+// registration that's NEVER had anything sent (portalLastLinkSentAt unset)
+// gets its access code + QR ticket email. Deliberately keyed on
+// portalLastLinkSentAt rather than "missing qrToken" — a registration
+// imported from the previous site can already have a qrToken (the migration
+// script mints one for anything paid/comped) despite that person never
+// actually having been emailed it, so "missing qrToken" alone would wrongly
+// skip them. For the (rarer) case where qrToken really is missing too, one is
+// generated here first — resendAccessCodeAndTicket silently skips the QR
+// email otherwise rather than minting one itself.
+export const adminBulkSendCodes = catchAsync(async (req: Request, res: Response) => {
+  const targets = await Registration.find({ status: 'confirmed', portalLastLinkSentAt: { $exists: false } });
+
+  const { succeeded, failed } = await runInBatches(targets, 10, async (reg) => {
+    if (!delegateEmail(reg)) throw new Error('No email on file');
+    if (!reg.qrToken) {
+      reg.qrToken = generateQrToken();
+      await reg.save();
+    }
+    await resendAccessCodeAndTicket(reg);
+  });
+
+  await recordAudit({
+    req,
+    action: 'portal_token.bulk_sent',
+    resourceType: 'Registration',
+    resourceId: 'bulk',
+    after: { attempted: targets.length, sent: succeeded, failed: failed.length },
+  });
+
+  res.json(new ApiResponse({ attempted: targets.length, sent: succeeded, failed: failed.length }));
 });

@@ -18,7 +18,8 @@ import {
 } from '../validations/registration.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
-import { isFreeTicketCategory } from '../config/pricing.js';
+import { isFreeTicketCategory, priceForRegistration } from '../config/pricing.js';
+import { runInBatches } from '../utils/batch.js';
 import { ATTENDEE_ACCESS_CODE_TYPES, GROUP_DISCOUNT_MIN_ATTENDEES } from '../types/enums.js';
 import { generateQrToken } from '../services/qr.service.js';
 import { generateCode } from './accessCode.controller.js';
@@ -644,6 +645,50 @@ export const adminDelete = catchAsync(async (req: Request, res: Response) => {
     ...(deletedLeads > 0 && { after: { deletedLeads } }),
   });
   res.json(new ApiResponse({ id: req.params.id }));
+});
+
+// POST /admin/registrations/bulk-payment-reminder — one click, every attendee
+// who started registering but never completed payment (or tried and it
+// failed) gets a fresh Paystack link by email. Always mints a NEW transaction
+// per registration rather than reusing any stored paymentAuthorizationUrl —
+// unlike the visitor's own "Pay Now" retry (payment.controller.ts's
+// initialize, which reuses a link within a 30-minute window), a reminder sent
+// out of the blue days later shouldn't gamble on a possibly-stale link still
+// working. Processed in small concurrent batches (utils/batch.ts) rather than
+// one unbounded Promise.all — safe at the scale this event runs at (low
+// hundreds), not built for a mailing list of tens of thousands.
+export const adminBulkSendPaymentReminders = catchAsync(async (req: Request, res: Response) => {
+  const targets = await Registration.find({ type: 'attendee', paymentStatus: { $in: ['unpaid', 'failed'] } });
+
+  const { succeeded, failed } = await runInBatches(targets, 10, async (reg) => {
+    if (!reg.email) throw new Error('No email on file');
+    const { authorizationUrl } = await initializePaymentForRegistration(reg);
+    const attendeeCount = 1 + (reg.groupAttendees?.length ?? 0);
+    const amountNaira = priceForRegistration(reg.ticketCategory as TicketCategory, attendeeCount, reg.discountPercent ?? undefined);
+    await sendRegistrationPaymentLinkEmail(reg.email, reg.fullName || 'there', {
+      authorizationUrl,
+      ticketCategory: reg.ticketCategory ?? '',
+      amountNaira,
+      discountPercent: reg.discountPercent ?? undefined,
+    });
+  });
+
+  await recordAudit({
+    req,
+    action: 'registration.bulk_payment_reminder_sent',
+    resourceType: 'Registration',
+    resourceId: 'bulk',
+    after: { attempted: targets.length, sent: succeeded, failed: failed.length },
+  });
+
+  res.json(
+    new ApiResponse({
+      attempted: targets.length,
+      sent: succeeded,
+      failed: failed.length,
+      failedEmails: failed.map((f) => f.item.email).filter(Boolean),
+    })
+  );
 });
 
 // Every field an admin can actually see on RegistrationsPage.tsx/AttendeesPage.tsx —
