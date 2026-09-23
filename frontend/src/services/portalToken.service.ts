@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { RegistrationStatus, RegistrationType } from './admin.service';
+import type { RegistrationStatus, RegistrationType, Paginated } from './admin.service';
 
 export interface PortalTokenRow {
   id: string;
@@ -20,11 +20,15 @@ export interface ListPortalTokensParams {
   // explicitly for "All Statuses".
   status?: RegistrationStatus | '';
   type?: RegistrationType | '';
+  page?: number;
+  limit?: number;
 }
 
-export const adminListPortalTokens = async (params: ListPortalTokensParams = {}): Promise<PortalTokenRow[]> => {
-  const res = await api.get<{ success: true; data: PortalTokenRow[] }>('/admin/portal-tokens', { params });
-  return res.data.data;
+export const adminListPortalTokens = async (params: ListPortalTokensParams = {}): Promise<Paginated<PortalTokenRow>> => {
+  const res = await api.get<{ success: true; data: PortalTokenRow[]; meta: Omit<Paginated<never>, 'items'> }>('/admin/portal-tokens', {
+    params,
+  });
+  return { items: res.data.data, ...res.data.meta };
 };
 
 export const adminSendPortalCode = async (registrationId: string): Promise<{ ok: true; sentAt: string }> => {

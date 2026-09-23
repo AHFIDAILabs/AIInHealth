@@ -29,6 +29,9 @@ export const PortalTokensPage = () => {
   // Statuses" option ('') for anyone who wants to see the rest too.
   const [status, setStatus] = useState<RegistrationStatus | ''>('confirmed');
   const [type, setType] = useState<RegistrationType | ''>('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [confirmBulk, setConfirmBulk] = useState(false);
   const [bulkSending, setBulkSending] = useState(false);
@@ -36,11 +39,15 @@ export const PortalTokensPage = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListPortalTokens({ q: q || undefined, status, type: type || undefined })
-      .then(setItems)
+    adminListPortalTokens({ q: q || undefined, status, type: type || undefined, page, limit: 20 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [q, status, type]);
+  }, [q, status, type, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
@@ -90,14 +97,20 @@ export const PortalTokensPage = () => {
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
             placeholder="Search name or email..."
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
           />
         </div>
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value as RegistrationStatus | '')}
+          onChange={(e) => {
+            setPage(1);
+            setStatus(e.target.value as RegistrationStatus | '');
+          }}
           className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Statuses</option>
@@ -109,7 +122,10 @@ export const PortalTokensPage = () => {
         </select>
         <select
           value={type}
-          onChange={(e) => setType(e.target.value as RegistrationType | '')}
+          onChange={(e) => {
+            setPage(1);
+            setType(e.target.value as RegistrationType | '');
+          }}
           className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Types</option>
@@ -122,6 +138,7 @@ export const PortalTokensPage = () => {
         {(status !== 'confirmed' || type || q) && (
           <button
             onClick={() => {
+              setPage(1);
               setStatus('confirmed');
               setType('');
               setQ('');
@@ -216,6 +233,28 @@ export const PortalTokensPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>
+              Page {page} of {pages} &middot; {total} total
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <button
+                disabled={page >= pages}
+                onClick={() => setPage((p) => p + 1)}
+                className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}

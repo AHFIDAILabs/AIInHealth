@@ -139,7 +139,7 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker }: SessionCardP
 
   return (
     <div
-      className={`mb-2 flex-1 rounded-xl p-5 shadow-sm ${
+      className={`flex-1 rounded-xl p-5 shadow-sm ${
         s.cardStyle === 'standard' ? `${CARD_STYLE_CLASSES.standard} border-l-4` : CARD_STYLE_CLASSES[s.cardStyle]
       }`}
       style={s.cardStyle === 'standard' ? { borderLeftColor: s.track?.color ?? '#E8792C' } : undefined}
@@ -536,10 +536,12 @@ export const Agenda = () => {
                           {!isConcurrent && <span className="text-[11px] font-medium text-slate-400">{first.endTime}</span>}
                         </div>
 
-                        {/* Parallel-track sessions sit in a row (stacked on mobile); a
-                            single session at this time still gets the full-width card
-                            it always had. */}
-                        <div className="flex flex-1 flex-col gap-4 sm:flex-row">
+                        {/* Parallel-track sessions lay out two per row (stacked on
+                            mobile) — a 3rd/5th/etc. session wraps onto its own new
+                            row rather than all of them squeezing into one line. A
+                            single session at this time still gets the full-width
+                            card it always had. */}
+                        <div className={isConcurrent ? 'grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2' : 'flex flex-1 flex-col gap-4'}>
                           {group.map((s) => (
                             <SessionCard
                               key={s.key}
