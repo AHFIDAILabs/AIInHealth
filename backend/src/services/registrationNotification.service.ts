@@ -2,7 +2,7 @@ import type { HydratedDocument } from 'mongoose';
 import { logger } from '../config/logger.js';
 import type { RegistrationDoc } from '../models/Registration.model.js';
 import { ensureDelegateAccessCode } from './delegateToken.service.js';
-import { qrDataUrlForToken } from './qr.service.js';
+import { qrPngBufferForToken } from './qr.service.js';
 import {
   sendPaymentConfirmationEmail,
   sendRegistrationConfirmedEmail,
@@ -58,8 +58,8 @@ export const sendConfirmationAndTicketEmails = async (
     // Separate email, sent right after — check-in doesn't need a portal login at
     // all, just this QR shown at the desk on either day.
     if (registration.qrToken) {
-      const qrDataUrl = await qrDataUrlForToken(registration.qrToken);
-      await sendTicketQrEmail(to, fullName, qrDataUrl);
+      const qrPngBuffer = await qrPngBufferForToken(registration.qrToken);
+      await sendTicketQrEmail(to, fullName, qrPngBuffer);
     }
 
     registration.portalLastLinkSentAt = new Date();
@@ -89,8 +89,8 @@ export const resendAccessCodeAndTicket = async (
   await sendDelegateAccessCodeEmail(to, fullName, accessCode);
 
   if (registration.qrToken) {
-    const qrDataUrl = await qrDataUrlForToken(registration.qrToken);
-    await sendTicketQrEmail(to, fullName, qrDataUrl);
+    const qrPngBuffer = await qrPngBufferForToken(registration.qrToken);
+    await sendTicketQrEmail(to, fullName, qrPngBuffer);
   }
 
   registration.portalLastLinkSentAt = new Date();

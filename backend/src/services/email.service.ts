@@ -33,10 +33,20 @@ const getGraphAccessToken = async (): Promise<string> => {
   return cachedToken.value;
 };
 
+// A real inline attachment (Microsoft Graph's isInline + contentId, referenced
+// in the HTML as `<img src="cid:...">`) — unlike a data: URI `<img src>`, this
+// renders in every mail client, Outlook's Win32/Word-engine client included.
+interface InlineImage {
+  contentId: string;
+  contentBytes: Buffer;
+  contentType: string;
+}
+
 interface SendEmailInput {
   to: string;
   subject: string;
   html: string;
+  inlineImages?: InlineImage[];
 }
 
 // Static brand assets served straight from the frontend's public/ folder
@@ -106,7 +116,7 @@ const wrapEmailBody = (innerHtml: string): string => `
  * every email this app ever sends looks consistently like it's coming from
  * the AI in Health Summit without each template needing to remember to add it.
  */
-export const sendEmail = async ({ to, subject, html }: SendEmailInput): Promise<void> => {
+export const sendEmail = async ({ to, subject, html, inlineImages }: SendEmailInput): Promise<void> => {
   const brandedHtml = wrapEmailBody(html);
 
   if (!graphConfigured) {
@@ -123,6 +133,16 @@ export const sendEmail = async ({ to, subject, html }: SendEmailInput): Promise<
         subject,
         body: { contentType: 'HTML', content: brandedHtml },
         toRecipients: [{ emailAddress: { address: to } }],
+        ...(inlineImages?.length && {
+          attachments: inlineImages.map((img) => ({
+            '@odata.type': '#microsoft.graph.fileAttachment',
+            name: `${img.contentId}.png`,
+            contentType: img.contentType,
+            contentBytes: img.contentBytes.toString('base64'),
+            isInline: true,
+            contentId: img.contentId,
+          })),
+        }),
       },
       saveToSentItems: false,
     }),
@@ -333,21 +353,24 @@ export const sendRegistrationConfirmedEmail = async (
 };
 
 // Sent right after a registration is confirmed (paid, comped, or an admin
-// confirming directly) — every attendee's actual check-in credential, not just a
-// link to go fetch it from the portal. The QR image is a data: URI (same
-// qrDataUrlForToken() the portal's own /delegate/ticket/qr page already renders),
-// so it shows inline in the email body without needing a Graph attachment.
-export const sendTicketQrEmail = async (to: string, fullName: string, qrDataUrl: string): Promise<void> => {
+// confirming directly) — every attendee's actual check-in credential, not just
+// a link to go fetch it from the portal. Sent as a real inline attachment
+// (cid:qrcode), NOT a data: URI `<img src>` — several major mail clients
+// (Outlook's Win32/Word-engine client especially) strip data: URIs from an
+// HTML email body, so the QR code would silently never render for those
+// recipients even though the send itself "succeeded".
+export const sendTicketQrEmail = async (to: string, fullName: string, qrPngBuffer: Buffer): Promise<void> => {
   await sendEmail({
     to,
     subject: 'Your check-in QR code — AI in Health Summit 2026',
     html: `
       <p>Hi ${fullName},</p>
       <p>Here's your e-ticket for the AI in Health Summit 2026. Show this QR code at the registration desk to check in on either day (19&ndash;20 October 2026) — it's yours for both days, no need to re-download.</p>
-      <p><img src="${qrDataUrl}" alt="Check-in QR code" width="220" height="220" /></p>
+      <p><img src="cid:qrcode" alt="Check-in QR code" width="220" height="220" /></p>
       <p><strong>Venue:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
       <p>Keep this email handy, or sign in to the delegate portal any time to view it again.</p>
     `,
+    inlineImages: [{ contentId: 'qrcode', contentBytes: qrPngBuffer, contentType: 'image/png' }],
   });
 };
 
