@@ -20,12 +20,11 @@ import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
 import { isFreeTicketCategory } from '../config/pricing.js';
 import { ATTENDEE_ACCESS_CODE_TYPES, GROUP_DISCOUNT_MIN_ATTENDEES } from '../types/enums.js';
-import { generateQrToken, qrDataUrlForToken } from '../services/qr.service.js';
+import { generateQrToken } from '../services/qr.service.js';
 import { generateCode } from './accessCode.controller.js';
 import { initializePaymentForRegistration } from './payment.controller.js';
-import { sendVolunteerConfirmedEmail, sendTicketQrEmail, sendRegistrationPaymentLinkEmail } from '../services/email.service.js';
+import { sendRegistrationPaymentLinkEmail } from '../services/email.service.js';
 import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
-import { ensureDelegateAccessCode } from '../services/delegateToken.service.js';
 import { logger } from '../config/logger.js';
 import type { TicketCategory } from '../types/enums.js';
 import type { HydratedDocument } from 'mongoose';
@@ -57,32 +56,17 @@ const TEAM_ALREADY_REGISTERED_MESSAGE = "You've already registered — check you
 // Idempotency window for the non-volunteer create() branch below — see its comment.
 const DUPLICATE_SUBMIT_WINDOW_MS = 2 * 60 * 1000;
 
-// Fires the "you're in — complete your profile (with a photo)" email for a
-// newly-confirmed volunteer, whichever path got them there (self-redeemed code,
-// or an admin confirming them directly). Best-effort — a send failure here
-// shouldn't fail the request that just confirmed them. The code shown here is
-// the reusable delegate portal access code (ensureDelegateAccessCode) — NOT
-// the AccessCode-collection code that may have been redeemed to get to this
-// confirmed state (confirmVolunteerDirectly below mints one of those purely
-// for its own audit trail; it's never itself a login credential).
+// Fires the confirmation + QR ticket emails for a newly-confirmed volunteer,
+// whichever path got them there (self-redeemed code, or an admin confirming
+// them directly). Just the shared sender every other registration type
+// already uses (adminCreate's volunteer branch included) — this used to be
+// its own hand-rolled pair of sends (an old pre-QR "you've been selected"
+// email plus the QR email), which meant a volunteer got two separate
+// confirmation-shaped emails for one event. Kept as its own named function
+// since both call sites below read more clearly calling
+// `notifyVolunteerConfirmed(registration)` than the more generic name.
 const notifyVolunteerConfirmed = async (registration: HydratedDocument<RegistrationDoc>): Promise<void> => {
-  if (!registration.email) return;
-  try {
-    const accessCode = await ensureDelegateAccessCode(registration);
-    await sendVolunteerConfirmedEmail(registration.email, registration.fullName || 'there', { accessCode });
-    // Separate email, sent right after the confirmation above — their actual
-    // check-in QR, not just a link to go fetch it from the portal (matches the
-    // same two-email pattern every other confirmation path uses — see
-    // registrationNotification.service.ts).
-    if (registration.qrToken) {
-      const qrDataUrl = await qrDataUrlForToken(registration.qrToken);
-      await sendTicketQrEmail(registration.email, registration.fullName || 'there', qrDataUrl);
-    }
-    registration.portalLastLinkSentAt = new Date();
-    await registration.save();
-  } catch (err) {
-    logger.error({ err, registrationId: registration.id }, 'Failed to send volunteer confirmation email');
-  }
+  await sendConfirmationAndTicketEmails(registration);
 };
 
 // When an admin confirms a volunteer directly (RegistrationsPage's status action)

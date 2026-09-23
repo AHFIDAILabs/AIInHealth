@@ -26,6 +26,15 @@ export const TICKET_CATEGORIES = [
 ] as const;
 export type TicketCategory = (typeof TICKET_CATEGORIES)[number];
 
+// These three were the free/discounted categories being abused — self-selected
+// with no verification to skip or cut the registration fee. Now gated: the
+// public attendee form requires an uploaded official ID photo for any of
+// these (registration.validation.ts's attendeeSchema), and none of them
+// auto-confirms anymore, even student_researcher after a successful payment
+// (payment.controller.ts's confirmPaymentByReference) — an admin must review
+// the ID and confirm manually (registration.controller.ts's adminUpdate).
+export const ID_VERIFICATION_TICKET_CATEGORIES = ['student_researcher', 'government_official', 'accredited_media'] as const;
+
 export const BOOTH_SIZES = ['small', 'medium', 'large'] as const;
 export type BoothSize = (typeof BOOTH_SIZES)[number];
 

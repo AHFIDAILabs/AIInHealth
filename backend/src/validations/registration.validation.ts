@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { TICKET_CATEGORIES, BOOTH_SIZES, REGISTRATION_TYPES, REGISTRATION_STATUSES, PAYMENT_STATUSES } from '../types/enums.js';
+import {
+  TICKET_CATEGORIES,
+  BOOTH_SIZES,
+  REGISTRATION_TYPES,
+  REGISTRATION_STATUSES,
+  PAYMENT_STATUSES,
+  ID_VERIFICATION_TICKET_CATEGORIES,
+} from '../types/enums.js';
 import { optionalUrlField } from './common.js';
 
 const groupAttendeeSchema = z.object({
@@ -23,6 +30,12 @@ const attendeeSchema = z.object({
   // be type 'scholarship') in registration.controller.ts, which is also where its
   // discountPercent gets copied onto this registration.
   accessCode: z.string().trim().max(32).optional().or(z.literal('')),
+  // Required when ticketCategory is one of ID_VERIFICATION_TICKET_CATEGORIES —
+  // enforced below in the union-level superRefine (can't express "required
+  // only when this sibling field has value X" as a plain per-field rule).
+  // Already a hosted Cloudinary URL by the time this reaches here — the
+  // public upload endpoint (POST /registrations/upload-id) runs first.
+  idCardUrl: z.string().trim().url().optional(),
 });
 
 const exhibitorSchema = z.object({
@@ -81,8 +94,30 @@ const teamSchema = z.object({
   organization: z.string().trim().optional(),
 });
 
+// Superseding the plain discriminatedUnion below with a conditional check
+// that spans two of its fields ("idCardUrl is required, but only when
+// ticketCategory is one of the gated ones") — not expressible as a per-field
+// rule inside attendeeSchema itself, since z.discriminatedUnion requires
+// every member to be a plain ZodObject (a .superRefine() on attendeeSchema
+// directly would turn it into a ZodEffects and break the union).
+const registrationUnion = z
+  .discriminatedUnion('type', [attendeeSchema, exhibitorSchema, sponsorSchema, volunteerSchema, teamSchema])
+  .superRefine((data, ctx) => {
+    if (
+      data.type === 'attendee' &&
+      (ID_VERIFICATION_TICKET_CATEGORIES as readonly string[]).includes(data.ticketCategory) &&
+      !data.idCardUrl
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['idCardUrl'],
+        message: 'Upload a photo of your official ID to register with this ticket category.',
+      });
+    }
+  });
+
 export const createRegistrationSchema = z.object({
-  body: z.discriminatedUnion('type', [attendeeSchema, exhibitorSchema, sponsorSchema, volunteerSchema, teamSchema]),
+  body: registrationUnion,
 });
 
 export type CreateRegistrationInput = z.infer<typeof createRegistrationSchema>['body'];
@@ -126,6 +161,10 @@ export const updateRegistrationStatusSchema = z.object({
       tshirtSize: z.string().trim().max(20).optional(),
       trackSelected: z.string().trim().max(200).optional(),
       trackAssigned: z.string().trim().max(200).optional(),
+      // Lets an admin re-upload/replace or clear an attendee's ID photo after
+      // the fact — see attendeeSchema's idCardUrl above for what gates this
+      // at public-submission time.
+      idCardUrl: z.string().trim().url().optional().or(z.literal('')),
     })
     .refine((data) => Object.values(data).some((v) => v !== undefined), {
       message: 'Provide at least one field to update.',
@@ -148,6 +187,10 @@ const adminAttendeeSchema = z.object({
   jobTitle: z.string().trim().optional(),
   country: z.string().trim().min(2, 'Enter your country'),
   scholarshipDiscount: z.union([z.literal(10), z.literal(25), z.literal(50), z.literal(100)]).optional(),
+  // Optional here (unlike the public form) — an admin hand-registering
+  // someone is already a trusted action, same reasoning as every other
+  // public-only friction this schema already skips per the comment above.
+  idCardUrl: z.string().trim().url().optional(),
 });
 
 const adminVolunteerSchema = z.object({

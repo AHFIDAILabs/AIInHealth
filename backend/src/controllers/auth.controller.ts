@@ -19,9 +19,9 @@ import { recordAudit } from '../services/audit.service.js';
 const requestMeta = (req: Request) => ({ userAgent: req.headers['user-agent'], ip: req.ip });
 
 export const login = catchAsync(async (req: Request, res: Response) => {
-  const { email, password } = req.body as LoginInput;
-  const { accessToken, refreshToken, user } = await authService.login(email, password, requestMeta(req));
-  setAuthCookies(res, accessToken, refreshToken);
+  const { email, password, rememberMe } = req.body as LoginInput;
+  const { accessToken, refreshToken, user } = await authService.login(email, password, requestMeta(req), rememberMe);
+  setAuthCookies(res, accessToken, refreshToken, rememberMe);
   res.status(200).json(new ApiResponse({ user }));
 });
 
@@ -29,12 +29,12 @@ export const refresh = catchAsync(async (req: Request, res: Response) => {
   const rawToken = req.cookies?.refresh_token as string | undefined;
   if (!rawToken) throw new ApiError(401, 'No active session', 'NO_REFRESH_TOKEN');
 
-  const { userId, newRawToken } = await rotateRefreshToken(rawToken, requestMeta(req));
+  const { userId, newRawToken, rememberMe } = await rotateRefreshToken(rawToken, requestMeta(req));
   const user = await User.findById(userId);
   if (!user || !user.isActive) throw new ApiError(401, 'Account no longer active', 'ACCOUNT_INACTIVE');
 
   const accessToken = signAccessToken({ sub: user.id, role: user.role as never });
-  setAuthCookies(res, accessToken, newRawToken);
+  setAuthCookies(res, accessToken, newRawToken, rememberMe);
   res.status(200).json(new ApiResponse({ ok: true }));
 });
 

@@ -18,7 +18,7 @@ interface RequestMeta {
   ip?: string;
 }
 
-export const login = async (email: string, password: string, meta: RequestMeta) => {
+export const login = async (email: string, password: string, meta: RequestMeta, rememberMe = false) => {
   const normalizedEmail = email.toLowerCase();
   const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
 
@@ -63,7 +63,7 @@ export const login = async (email: string, password: string, meta: RequestMeta) 
   await user.save();
 
   const accessToken = signAccessToken({ sub: user.id, role: user.role as Role });
-  const refreshToken = await issueRefreshToken(user.id, meta);
+  const refreshToken = await issueRefreshToken(user.id, meta, rememberMe);
 
   return {
     accessToken,

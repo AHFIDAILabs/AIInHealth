@@ -266,28 +266,6 @@ export const sendReviewerAssignmentEmail = async (
   });
 };
 
-export const sendVolunteerConfirmedEmail = async (
-  to: string,
-  fullName: string,
-  data: { accessCode: string }
-): Promise<void> => {
-  const portalUrl = `${env.FRONTEND_ORIGIN}/portal/login`;
-  await sendEmail({
-    to,
-    subject: "You've been selected — AI in Health Summit 2026 Volunteer",
-    html: `
-      <p>Hi ${fullName},</p>
-      <p>Congratulations — you've been chosen as a volunteer for the AI in Health Summit 2026!</p>
-      <p>Your portal access code is:</p>
-      <p style="font-size:20px;font-weight:700;letter-spacing:1px;">${data.accessCode}</p>
-      <p><a href="${portalUrl}">Click here to go to the delegate portal</a>, then enter your email and this code to sign in and complete your profile — add a photo, so our team can recognize you at the event. The code stays valid through ${delegateAccessCodeExpiresLabel} (about a week after the Summit), so there's no rush.</p>
-      <p>From there you can also view your e-ticket and QR check-in code.</p>
-      <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
-      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
-    `,
-  });
-};
-
 export const sendPaymentConfirmationEmail = async (
   to: string,
   fullName: string,
@@ -303,6 +281,30 @@ export const sendPaymentConfirmationEmail = async (
       <p>Your delegate portal access code is: <strong style="font-size:18px;letter-spacing:1px;">${data.accessCode}</strong></p>
       <p><a href="${portalUrl}">Visit the delegate portal</a> and enter your email and this code to sign in — it's yours to reuse anytime through ${delegateAccessCodeExpiresLabel}, no rush and no re-requesting needed. From there you can access your e-ticket / QR check-in code.</p>
       <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
+    `,
+  });
+};
+
+// Sent instead of sendPaymentConfirmationEmail when the ticket category is one
+// of ID_VERIFICATION_TICKET_CATEGORIES (student_researcher, government_official,
+// accredited_media) — payment succeeded, but the seat is deliberately NOT
+// confirmed yet (see payment.controller.ts's confirmPaymentByReference): an
+// admin still has to check the uploaded ID before it's a real seat. No QR
+// code here — there's nothing to check in with until that happens.
+export const sendPaymentPendingIdVerificationEmail = async (
+  to: string,
+  fullName: string,
+  data: { amountNaira: number; ticketCategory: string }
+): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Payment received — verifying your ID — AI in Health Summit 2026',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Your payment of <strong>&#8358;${data.amountNaira.toLocaleString('en-NG')}</strong> (${data.ticketCategory.replace(/_/g, ' ')}) was successful — thank you.</p>
+      <p>This ticket category requires our team to verify the official ID you uploaded before your seat is confirmed. This is usually quick — you'll receive a second email with your confirmation and check-in QR code once it's approved.</p>
+      <p>If anything looks off with your submission, we'll reach out directly.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });
 };

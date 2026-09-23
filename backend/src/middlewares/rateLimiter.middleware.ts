@@ -157,3 +157,16 @@ export const abstractLimiter = rateLimit({
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many submissions. Try again in 15 minutes.' } },
   handler: onLimitExceeded('abstractLimiter', 'low'),
 });
+
+// The public ID-card upload used by the attendee form's ID_VERIFICATION_TICKET_CATEGORIES
+// gate (registration.routes.ts) — hit before the registration itself exists, so
+// there's no email in the request body yet to key on the way registrationLimiter
+// does; IP-only, same reasoning as apiLimiter's blanket net.
+export const idCardUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many uploads. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('idCardUploadLimiter', 'medium'),
+});

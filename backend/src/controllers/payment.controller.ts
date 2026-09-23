@@ -12,8 +12,9 @@ import { nairaToKobo, priceForRegistration, isFreeTicketCategory } from '../conf
 import { generateQrToken } from '../services/qr.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
 import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
+import { sendPaymentPendingIdVerificationEmail } from '../services/email.service.js';
 import type { InitializePaymentInput } from '../validations/payment.validation.js';
-import type { TicketCategory } from '../types/enums.js';
+import { ID_VERIFICATION_TICKET_CATEGORIES, type TicketCategory } from '../types/enums.js';
 
 // A retried "Pay Now" click (double-click, a network timeout the client retries)
 // shouldn't open a second Paystack transaction for the same seat — Paystack has no
@@ -105,6 +106,14 @@ export const confirmPaymentByReference = async (reference: string): Promise<void
     return;
   }
 
+  // A ticket category in ID_VERIFICATION_TICKET_CATEGORIES (student_researcher —
+  // the only one of the three that's actually PAID, hence reaching Paystack at
+  // all) never auto-confirms on payment alone, even a successful one — an
+  // admin still has to check the uploaded ID first. Paying just moves it from
+  // "unpaid" to "paid, awaiting review" (status stays 'pending'), not straight
+  // to a confirmed seat with a live QR ticket.
+  const requiresIdReview = ID_VERIFICATION_TICKET_CATEGORIES.includes(registration.ticketCategory as (typeof ID_VERIFICATION_TICKET_CATEGORIES)[number]);
+
   // Atomic, filtered on paymentStatus not already 'paid': the frontend's
   // post-redirect verify call and Paystack's webhook call legitimately race for
   // the same reference (both can arrive within milliseconds of a real checkout).
@@ -115,9 +124,9 @@ export const confirmPaymentByReference = async (reference: string): Promise<void
     {
       $set: {
         paymentStatus: 'paid',
-        status: 'confirmed',
+        ...(requiresIdReview ? {} : { status: 'confirmed' }),
         paidAt: result.paidAt ? new Date(result.paidAt) : new Date(),
-        ...(registration.qrToken ? {} : { qrToken: generateQrToken() }),
+        ...(!requiresIdReview && !registration.qrToken && { qrToken: generateQrToken() }),
       },
     },
     { new: true }
@@ -126,13 +135,20 @@ export const confirmPaymentByReference = async (reference: string): Promise<void
 
   await emitAdminNotification({
     type: 'registration.new',
-    title: 'Payment confirmed',
+    title: requiresIdReview ? 'Payment received — ID verification needed' : 'Payment confirmed',
     body: `${updated.fullName} — ${updated.ticketCategory}`,
     resourceType: 'Registration',
     resourceId: updated.id,
   });
 
-  void sendConfirmationAndTicketEmails(updated, { amountNaira: Math.round((updated.amountKobo ?? 0) / 100) });
+  if (requiresIdReview) {
+    void sendPaymentPendingIdVerificationEmail(updated.email!, updated.fullName || 'there', {
+      amountNaira: Math.round((updated.amountKobo ?? 0) / 100),
+      ticketCategory: updated.ticketCategory ?? '',
+    });
+  } else {
+    void sendConfirmationAndTicketEmails(updated, { amountNaira: Math.round((updated.amountKobo ?? 0) / 100) });
+  }
 };
 
 export const verify = catchAsync(async (req: Request, res: Response) => {

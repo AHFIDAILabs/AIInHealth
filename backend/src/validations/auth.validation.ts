@@ -14,6 +14,9 @@ export const loginSchema = z.object({
   body: z.object({
     email: z.string().trim().toLowerCase().email(),
     password: z.string().min(1, 'Password is required'),
+    // Controls only the refresh cookie's persistence — see cookies.ts's
+    // setAuthCookies for what this actually changes.
+    rememberMe: z.boolean().optional().default(false),
   }),
 });
 

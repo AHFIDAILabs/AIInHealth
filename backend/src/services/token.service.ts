@@ -36,7 +36,8 @@ const refreshTtlMs = () => env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 export const issueRefreshToken = async (
   userId: string,
-  meta: { userAgent?: string; ip?: string }
+  meta: { userAgent?: string; ip?: string },
+  rememberMe = false
 ): Promise<string> => {
   const raw = crypto.randomBytes(64).toString('hex');
   await RefreshToken.create({
@@ -46,6 +47,7 @@ export const issueRefreshToken = async (
     userAgent: meta.userAgent,
     ip: meta.ip,
     expiresAt: new Date(Date.now() + refreshTtlMs()),
+    rememberMe,
   });
   return raw; // only moment this is ever in plaintext
 };
@@ -58,7 +60,7 @@ export const issueRefreshToken = async (
 export const rotateRefreshToken = async (
   rawToken: string,
   meta: { userAgent?: string; ip?: string }
-): Promise<{ userId: string; newRawToken: string }> => {
+): Promise<{ userId: string; newRawToken: string; rememberMe: boolean }> => {
   const tokenHash = sha256(rawToken);
   const existing = await RefreshToken.findOne({ tokenHash });
 
@@ -82,8 +84,11 @@ export const rotateRefreshToken = async (
   existing.status = 'used';
   await existing.save();
 
-  const newRawToken = await issueRefreshToken(existing.user.toString(), meta);
-  return { userId: existing.user.toString(), newRawToken };
+  // Carries the original login's "Remember me" choice forward onto the
+  // rotated token, so it doesn't reset to a session-only cookie on the very
+  // next silent refresh.
+  const newRawToken = await issueRefreshToken(existing.user.toString(), meta, existing.rememberMe);
+  return { userId: existing.user.toString(), newRawToken, rememberMe: existing.rememberMe };
 };
 
 export const revokeRefreshToken = async (rawToken: string): Promise<void> => {

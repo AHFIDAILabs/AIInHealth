@@ -27,6 +27,12 @@ const registrationSchema = new Schema(
     organization: { type: String, trim: true },
     jobTitle: { type: String, trim: true },
     country: { type: String, trim: true },
+    // Required (see registration.validation.ts's attendeeSchema) when
+    // ticketCategory is one of ID_VERIFICATION_TICKET_CATEGORIES — a photo of
+    // the attendee's official ID (student card, government ID, press
+    // credential), for the admin to check before confirming. Same
+    // Cloudinary-URL-string pattern as avatarUrl below.
+    idCardUrl: { type: String, trim: true },
     groupAttendees: [
       {
         _id: false,

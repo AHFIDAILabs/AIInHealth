@@ -11,11 +11,19 @@ const baseCookieOptions = {
   path: '/',
 };
 
-export const setAuthCookies = (res: Response, accessToken: string, refreshToken: string): void => {
+// rememberMe controls only the REFRESH cookie's persistence — the access
+// token cookie always gets its normal short maxAge regardless, since that's
+// just how long a single JWT lives, not the "stay signed in" choice. Left
+// unchecked, the refresh cookie gets no maxAge at all (a session cookie —
+// the browser drops it the moment it's closed, so the admin is signed out
+// next visit); checked, it persists for the full REFRESH_TOKEN_TTL_DAYS, same
+// as every login did before this existed. See RefreshToken.model.ts's
+// rememberMe field for how this survives token rotation.
+export const setAuthCookies = (res: Response, accessToken: string, refreshToken: string, rememberMe = false): void => {
   res.cookie('access_token', accessToken, { ...baseCookieOptions, maxAge: 15 * 60 * 1000 });
   res.cookie('refresh_token', refreshToken, {
     ...baseCookieOptions,
-    maxAge: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
+    ...(rememberMe && { maxAge: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000 }),
     path: '/api/v1/auth', // only sent back to auth routes, minimizes exposure
   });
 };

@@ -12,7 +12,38 @@ const attendeePayload = {
   email: 'amina.yusuf@example.com',
   phone: '+2348012345678',
   country: 'Nigeria',
+  // government_official is one of ID_VERIFICATION_TICKET_CATEGORIES — any
+  // syntactically valid URL satisfies createRegistrationSchema's check, this
+  // suite isn't testing the upload step itself.
+  idCardUrl: 'https://res.cloudinary.com/demo/image/upload/sample-id.jpg',
 };
+
+describe('POST /api/v1/registrations — ID_VERIFICATION_TICKET_CATEGORIES gate', () => {
+  useTestDb();
+
+  it('rejects a gated ticket category with no idCardUrl', async () => {
+    const { idCardUrl: _omit, ...withoutId } = attendeePayload;
+    const res = await request(app).post('/api/v1/registrations').send(withoutId);
+    expect(res.status).toBe(422);
+  });
+
+  it('accepts a gated category with idCardUrl, and lands pending — not auto-confirmed', async () => {
+    const res = await request(app).post('/api/v1/registrations').send(attendeePayload);
+    expect(res.status).toBe(201);
+
+    const reg = await Registration.findById(res.body.data.id);
+    expect(reg?.idCardUrl).toBe(attendeePayload.idCardUrl);
+    expect(reg?.status).toBe('pending');
+  });
+
+  it('does not require idCardUrl for a non-gated ticket category', async () => {
+    const { idCardUrl: _omit, ...rest } = attendeePayload;
+    const res = await request(app)
+      .post('/api/v1/registrations')
+      .send({ ...rest, ticketCategory: 'nigerian_professional', email: 'not-gated@example.com' });
+    expect(res.status).toBe(201);
+  });
+});
 
 describe('POST /api/v1/registrations — attendee/exhibitor/sponsor idempotency', () => {
   useTestDb();
