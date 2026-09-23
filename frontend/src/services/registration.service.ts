@@ -12,6 +12,13 @@ export type TicketCategory =
 
 export type BoothSize = 'small' | 'medium' | 'large';
 
+// Mirrors backend/src/types/enums.ts's ID_VERIFICATION_TICKET_CATEGORIES —
+// these were the free/discounted categories being self-selected with no
+// verification to skip or cut the registration fee. The attendee form
+// requires an uploaded official ID photo for any of these; none of them
+// auto-confirms anymore either (an admin must review the ID first).
+export const ID_VERIFICATION_TICKET_CATEGORIES: TicketCategory[] = ['student_researcher', 'government_official', 'accredited_media'];
+
 export interface GroupAttendee {
   fullName: string;
   email: string;
@@ -33,6 +40,10 @@ export interface AttendeePayload {
   // price charged at payment, not shown/computed here. The 10% tier additionally
   // requires registrationMode 'group' with 5+ total attendees, enforced server-side.
   accessCode?: string;
+  // Required (server-enforced) when ticketCategory is one of
+  // ID_VERIFICATION_TICKET_CATEGORIES above — a hosted Cloudinary URL from
+  // uploadRegistrationIdCard, not a raw file.
+  idCardUrl?: string;
 }
 
 export interface ExhibitorPayload {

@@ -1,4 +1,5 @@
-import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useState, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 const labelClass = 'mb-1.5 block text-[13px] font-semibold text-navy';
 // text-base (16px) below sm, dropping to the denser 13px from sm up — iOS
@@ -18,14 +19,38 @@ interface AdminInputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 export const AdminInput = forwardRef<HTMLInputElement, AdminInputProps>(
-  ({ label, error, id, className = '', ...rest }, ref) => {
+  ({ label, error, id, className = '', type, ...rest }, ref) => {
     const fieldId = id ?? label.toLowerCase().replace(/\s+/g, '-');
+    // Same automatic show/hide toggle as FormField.tsx (the dark-themed login
+    // pages' equivalent of this component) — any AdminInput with
+    // type="password" (Settings' change-password form) gets it for free.
+    const isPassword = type === 'password';
+    const [visible, setVisible] = useState(false);
     return (
       <div>
         <label htmlFor={fieldId} className={labelClass}>
           {label}
         </label>
-        <input ref={ref} id={fieldId} className={`${baseClass} ${errorRing(error)} ${className}`} {...rest} />
+        <div className="relative">
+          <input
+            ref={ref}
+            id={fieldId}
+            type={isPassword ? (visible ? 'text' : 'password') : type}
+            className={`${baseClass} ${errorRing(error)} ${isPassword ? 'pr-10' : ''} ${className}`}
+            {...rest}
+          />
+          {isPassword && (
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => setVisible((v) => !v)}
+              aria-label={visible ? 'Hide password' : 'Show password'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+            >
+              {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          )}
+        </div>
         {error && <p className="mt-1.5 text-xs font-medium text-danger">{error}</p>}
       </div>
     );

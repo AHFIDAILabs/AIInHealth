@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Download, X, ClipboardList, Plus, Trash2, Ban, Copy, Check } from 'lucide-react';
+import { Search, Download, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard } from 'lucide-react';
 import {
   listRegistrations,
   updateRegistrationStatus,
@@ -595,6 +595,7 @@ export const RegistrationsPage = () => {
                         <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_BADGE[r.status]}`}>
                           {r.status}
                         </span>
+                        {r.idCardUrl && <IdCard size={13} className="shrink-0 text-warning" aria-label="ID uploaded, needs review" />}
                         {!r.isActive && (
                           <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500">
                             Inactive
@@ -708,6 +709,22 @@ export const RegistrationsPage = () => {
                     <p className="text-sm text-slate-500">{displayEmail(active)}</p>
                   </div>
                 </div>
+
+                {active.idCardUrl && (
+                  <div className="mt-5 rounded-xl border border-warning/30 bg-warning/5 p-3">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-warning">
+                      <IdCard size={13} /> Official ID — review before confirming
+                    </p>
+                    <a href={active.idCardUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block">
+                      <img
+                        src={active.idCardUrl}
+                        alt="Uploaded official ID"
+                        className="h-32 w-full rounded-lg border border-slate-200 object-cover transition-opacity hover:opacity-90"
+                      />
+                    </a>
+                    <p className="mt-1.5 text-xs text-slate-400">Click to open full size in a new tab.</p>
+                  </div>
+                )}
 
                 <div className="mt-5 space-y-3 border-t border-slate-100 pt-5 text-sm">
                   {displayOrg(active) !== '—' && (

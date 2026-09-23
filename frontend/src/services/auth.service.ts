@@ -32,8 +32,12 @@ export interface AdminUser {
   isRootAdmin?: boolean;
 }
 
-export const login = async (email: string, password: string): Promise<AdminUser> => {
-  const res = await api.post<{ success: true; data: { user: AdminUser } }>('/auth/login', { email, password });
+// rememberMe controls only how long the session survives closing the browser
+// — see backend cookies.ts's setAuthCookies. Defaults to false: unchecked,
+// signing out happens the moment the browser closes, same as any other site's
+// "Remember me" left unticked.
+export const login = async (email: string, password: string, rememberMe = false): Promise<AdminUser> => {
+  const res = await api.post<{ success: true; data: { user: AdminUser } }>('/auth/login', { email, password, rememberMe });
   return res.data.data.user;
 };
 

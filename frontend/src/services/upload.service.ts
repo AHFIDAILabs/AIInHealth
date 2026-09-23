@@ -14,6 +14,10 @@ const uploadTo = async (path: string, file: File): Promise<string> => {
 
 export const uploadAdminImage = (file: File): Promise<string> => uploadTo('/admin/uploads/image', file);
 export const uploadDelegateImage = (file: File): Promise<string> => uploadTo('/delegate/uploads/image', file);
+// Public — no session to ride yet at this point in the attendee form (the
+// registration itself doesn't exist until submit). Its own rate limit
+// instead of an auth check — see backend registration.routes.ts.
+export const uploadRegistrationIdCard = (file: File): Promise<string> => uploadTo('/registrations/upload-id', file);
 
 export interface UploadedMedia {
   url: string;

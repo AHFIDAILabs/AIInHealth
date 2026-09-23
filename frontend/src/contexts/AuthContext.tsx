@@ -6,7 +6,7 @@ interface AuthContextValue {
   user: AdminUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: AdminUser) => void;
 }
@@ -25,8 +25,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const loggedInUser = await authService.login(email, password);
+  const login = useCallback(async (email: string, password: string, rememberMe = false) => {
+    const loggedInUser = await authService.login(email, password, rememberMe);
     setUser(loggedInUser);
   }, []);
 

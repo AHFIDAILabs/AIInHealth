@@ -5,6 +5,7 @@ import { getApiErrorMessage } from '../../../services/api';
 import { Banner } from '../../../components/ui/Banner';
 import { SkeletonRows } from '../../../components/ui/Skeleton';
 import { CARD_CLASS } from '../../../lib/adminUi';
+import { useToast } from '../../../contexts/ToastContext';
 
 const ROLE_LABEL: Record<string, string> = {
   super_admin: 'Super Admin',
@@ -14,10 +15,12 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export const SessionsTab = () => {
+  const toast = useToast();
   const [items, setItems] = useState<AdminSession[] | null>(null);
+  // Reserved for the list-load failure — the revoke action reports through
+  // toast instead.
   const [error, setError] = useState('');
   const [revoking, setRevoking] = useState(false);
-  const [result, setResult] = useState('');
 
   const load = () => {
     listSessions()
@@ -35,14 +38,12 @@ export const SessionsTab = () => {
     )
       return;
     setRevoking(true);
-    setError('');
-    setResult('');
     try {
       const { revokedCount } = await revokeAllSessions();
-      setResult(`${revokedCount} session${revokedCount === 1 ? '' : 's'} revoked.`);
+      toast('success', `${revokedCount} session${revokedCount === 1 ? '' : 's'} revoked`);
       load();
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      toast('error', getApiErrorMessage(err));
     } finally {
       setRevoking(false);
     }
@@ -67,7 +68,6 @@ export const SessionsTab = () => {
         </button>
       </div>
 
-      {result && <Banner variant="success">{result}</Banner>}
       {error && <Banner variant="error">{error}</Banner>}
 
       <div className={`overflow-hidden ${CARD_CLASS}`}>

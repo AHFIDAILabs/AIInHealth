@@ -7,6 +7,7 @@ import { Banner } from '../../../components/ui/Banner';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { HorizontalBarChart } from '../analytics/HorizontalBarChart';
 import { CARD_CLASS, CHART_HEX } from '../../../lib/adminUi';
+import { useToast } from '../../../contexts/ToastContext';
 
 // Reuses this app's own established status hex values (Banner.tsx's variant
 // colors / tailwind.config.js) rather than inventing a new palette — severity
@@ -64,7 +65,11 @@ const buildHourlyRows = (rows: SecurityOverview['eventsByHour']) => {
 };
 
 export const OverviewTab = () => {
+  const toast = useToast();
   const [data, setData] = useState<SecurityOverview | null>(null);
+  // Reserved for the initial list-load failure — a lockdown-toggle failure
+  // reports through toast instead, so a transient error doesn't blank out an
+  // already-loaded dashboard.
   const [error, setError] = useState('');
   const [lockdownBusy, setLockdownBusy] = useState(false);
 
@@ -88,9 +93,10 @@ export const OverviewTab = () => {
     setLockdownBusy(true);
     try {
       await setLockdown(enabling, reason);
+      toast('success', enabling ? 'Lockdown mode enabled' : 'Lockdown mode disabled');
       load();
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      toast('error', getApiErrorMessage(err));
     } finally {
       setLockdownBusy(false);
     }

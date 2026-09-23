@@ -5,9 +5,14 @@ import { getApiErrorMessage } from '../../../services/api';
 import { Banner } from '../../../components/ui/Banner';
 import { SkeletonRows } from '../../../components/ui/Skeleton';
 import { CARD_CLASS } from '../../../lib/adminUi';
+import { useToast } from '../../../contexts/ToastContext';
 
 export const BlockedIpsTab = () => {
+  const toast = useToast();
   const [items, setItems] = useState<BlockedIp[] | null>(null);
+  // Reserved for the list-load failure specifically (a persistent, page-level
+  // problem) — every transient action below (block/unblock) reports through
+  // toast instead, same split every other admin CRUD page already uses.
   const [error, setError] = useState('');
   const [ip, setIp] = useState('');
   const [reason, setReason] = useState('');
@@ -26,14 +31,14 @@ export const BlockedIpsTab = () => {
     if (!ip.trim()) return;
     if (!window.confirm(`Block ${ip.trim()}? Every request from this IP will be rejected until you unblock it.`)) return;
     setSubmitting(true);
-    setError('');
     try {
       await blockIp(ip.trim(), reason.trim() || undefined);
+      toast('success', `${ip.trim()} blocked`);
       setIp('');
       setReason('');
       load();
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      toast('error', getApiErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -43,9 +48,10 @@ export const BlockedIpsTab = () => {
     if (!window.confirm(`Unblock ${target}?`)) return;
     try {
       await unblockIp(target);
+      toast('success', `${target} unblocked`);
       load();
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      toast('error', getApiErrorMessage(err));
     }
   };
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Download, X, Users, UserCheck, QrCode, Wallet, Plus, Trash2, Ban } from 'lucide-react';
+import { Search, Download, X, Users, UserCheck, QrCode, Wallet, Plus, Trash2, Ban, IdCard } from 'lucide-react';
 import {
   listRegistrations,
   updateRegistrationStatus,
@@ -342,7 +342,12 @@ export const AttendeesPage = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3 capitalize text-slate-600">{r.ticketCategory?.replace(/_/g, ' ') ?? '—'}</td>
+                    <td className="px-3 py-3 capitalize text-slate-600">
+                      <div className="flex items-center gap-1.5">
+                        {r.ticketCategory?.replace(/_/g, ' ') ?? '—'}
+                        {r.idCardUrl && <IdCard size={13} className="shrink-0 text-warning" aria-label="ID uploaded, needs review" />}
+                      </div>
+                    </td>
                     <td className="px-3 py-3 capitalize text-slate-600">{r.paymentStatus?.replace('_', ' ') ?? '—'}</td>
                     <td className="px-3 py-3 text-slate-600">{r.checkedIn ? 'Yes' : 'No'}</td>
                     <td className="px-3 py-3">
@@ -418,6 +423,22 @@ export const AttendeesPage = () => {
                     <p className="text-sm text-slate-500">{active.email}</p>
                   </div>
                 </div>
+
+                {active.idCardUrl && (
+                  <div className="mt-5 rounded-xl border border-warning/30 bg-warning/5 p-3">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-warning">
+                      <IdCard size={13} /> Official ID — review before confirming
+                    </p>
+                    <a href={active.idCardUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block">
+                      <img
+                        src={active.idCardUrl}
+                        alt="Uploaded official ID"
+                        className="h-32 w-full rounded-lg border border-slate-200 object-cover transition-opacity hover:opacity-90"
+                      />
+                    </a>
+                    <p className="mt-1.5 text-xs text-slate-400">Click to open full size in a new tab.</p>
+                  </div>
+                )}
 
                 <div className="mt-5 space-y-3 border-t border-slate-100 pt-5 text-sm">
                   {active.organization && <DetailRow label="Organization" value={active.organization} />}

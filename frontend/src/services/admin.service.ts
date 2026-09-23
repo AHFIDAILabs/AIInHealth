@@ -42,6 +42,10 @@ export interface AdminRegistration {
   // Self-uploaded via the delegate portal — primarily for volunteer/staff
   // recognition at the event, but available on any confirmed registration.
   avatarUrl?: string;
+  // Attendee only — required at submission for ID_VERIFICATION_TICKET_CATEGORIES
+  // (student_researcher/government_official/accredited_media), for admin
+  // review before confirming. See registration.service.ts's own comment.
+  idCardUrl?: string;
   // Volunteer only.
   tshirtSize?: string;
   trackSelected?: string;

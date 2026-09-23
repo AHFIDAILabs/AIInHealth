@@ -13,6 +13,7 @@ import { getApiErrorMessage } from '../../services/api';
 const schema = z.object({
   email: z.string().trim().toLowerCase().email('Enter a valid email'),
   password: z.string().min(1, 'Password is required'),
+  rememberMe: z.boolean().optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -30,7 +31,7 @@ export const LoginPage = () => {
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
     try {
-      await login(values.email, values.password);
+      await login(values.email, values.password, values.rememberMe);
       navigate('/admin/dashboard');
     } catch (err: unknown) {
       const message = getApiErrorMessage(err);
@@ -57,7 +58,15 @@ export const LoginPage = () => {
           {...register('password')}
         />
 
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-600 bg-navy text-orange accent-orange focus:outline-none focus:ring-2 focus:ring-orange/50"
+              {...register('rememberMe')}
+            />
+            Remember me
+          </label>
           <Link to="/admin/forgot-password" className="text-sm font-semibold text-orange hover:text-orange-hover">
             Forgot password?
           </Link>

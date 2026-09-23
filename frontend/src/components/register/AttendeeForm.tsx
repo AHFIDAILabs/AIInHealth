@@ -8,7 +8,8 @@ import { Button } from '../ui/Button';
 import { Banner } from '../ui/Banner';
 import { LightField } from '../ui/LightField';
 import { RegisterSuccess } from './RegisterSuccess';
-import { submitRegistration, type TicketCategory } from '../../services/registration.service';
+import { IdCardUpload } from './IdCardUpload';
+import { submitRegistration, ID_VERIFICATION_TICKET_CATEGORIES, type TicketCategory } from '../../services/registration.service';
 import { initializePayment } from '../../services/payment.service';
 import { getApiErrorMessage } from '../../services/api';
 import { TICKET_PRICE_NGN, formatNaira } from '../../lib/pricing';
@@ -28,19 +29,31 @@ const groupAttendeeSchema = z.object({
   email: z.string().trim().toLowerCase().email('Enter a valid email'),
 });
 
-const schema = z.object({
-  registrationMode: z.enum(['individual', 'group']),
-  ticketCategory: z.enum(TICKET_VALUES, { errorMap: () => ({ message: 'Choose a ticket category' }) }),
-  fullName: z.string().trim().min(2, 'Enter your full name'),
-  email: z.string().trim().toLowerCase().email('Enter a valid email'),
-  phone: z.string().trim().min(6, 'Enter a valid phone number'),
-  organization: z.string().trim().optional(),
-  jobTitle: z.string().trim().optional(),
-  country: z.string().trim().min(2, 'Enter your country'),
-  groupAttendees: z.array(groupAttendeeSchema).optional(),
-  // Optional — see the note above the field for why.
-  accessCode: z.string().trim().max(32).optional().or(z.literal('')),
-});
+const schema = z
+  .object({
+    registrationMode: z.enum(['individual', 'group']),
+    ticketCategory: z.enum(TICKET_VALUES, { errorMap: () => ({ message: 'Choose a ticket category' }) }),
+    fullName: z.string().trim().min(2, 'Enter your full name'),
+    email: z.string().trim().toLowerCase().email('Enter a valid email'),
+    phone: z.string().trim().min(6, 'Enter a valid phone number'),
+    organization: z.string().trim().optional(),
+    jobTitle: z.string().trim().optional(),
+    country: z.string().trim().min(2, 'Enter your country'),
+    groupAttendees: z.array(groupAttendeeSchema).optional(),
+    // Optional — see the note above the field for why.
+    accessCode: z.string().trim().max(32).optional().or(z.literal('')),
+    idCardUrl: z.string().optional(),
+  })
+  // Required only for the categories people were abusing to skip/cut the fee —
+  // see ID_VERIFICATION_TICKET_CATEGORIES's own comment. Mirrors the same
+  // check the backend runs (registration.validation.ts), which is the real
+  // enforcement; this just gives an immediate client-side error instead of a
+  // round trip.
+  .superRefine((data, ctx) => {
+    if (ID_VERIFICATION_TICKET_CATEGORIES.includes(data.ticketCategory) && !data.idCardUrl) {
+      ctx.addIssue({ code: 'custom', path: ['idCardUrl'], message: 'Upload a photo of your official ID to continue.' });
+    }
+  });
 type FormValues = z.infer<typeof schema>;
 
 export const AttendeeForm = () => {
@@ -206,6 +219,28 @@ export const AttendeeForm = () => {
               </div>
               {errors.ticketCategory && <p className="mt-2 text-xs font-medium text-danger">{errors.ticketCategory.message}</p>}
             </div>
+
+            {ID_VERIFICATION_TICKET_CATEGORIES.includes(ticketCategory) && (
+              <div>
+                <p className="text-sm font-semibold text-navy">Official ID</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  This ticket category requires a quick verification — upload a clear photo of your{' '}
+                  {ticketCategory === 'student_researcher'
+                    ? 'student ID card'
+                    : ticketCategory === 'government_official'
+                      ? 'government-issued ID'
+                      : 'press/media accreditation card'}
+                  . Our team reviews it before your registration is confirmed.
+                </p>
+                <div className="mt-3">
+                  <IdCardUpload
+                    value={watch('idCardUrl')}
+                    onChange={(url) => setValue('idCardUrl', url, { shouldValidate: true })}
+                    error={errors.idCardUrl?.message}
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <LightField
