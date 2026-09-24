@@ -57,6 +57,9 @@ export const AccessCodesPage = () => {
   const [q, setQ] = useState('');
   const [typeFilter, setTypeFilter] = useState<AccessCodeType | ''>(contentEditorOnly ? 'volunteer' : '');
   const [statusFilter, setStatusFilter] = useState<AccessCodeStatus | ''>('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>({ ...EMPTY_FORM, type: contentEditorOnly ? 'volunteer' : EMPTY_FORM.type });
@@ -72,11 +75,15 @@ export const AccessCodesPage = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListAccessCodes({ q: q || undefined, type: typeFilter || undefined, status: statusFilter || undefined, limit: 200 })
-      .then((res) => setItems(res.items))
+    adminListAccessCodes({ q: q || undefined, type: typeFilter || undefined, status: statusFilter || undefined, page, limit: 20 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [q, typeFilter, statusFilter]);
+  }, [q, typeFilter, statusFilter, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
@@ -112,9 +119,10 @@ export const AccessCodesPage = () => {
         expiresAt: form.expiresAt || undefined,
         discountPercent: form.type === 'scholarship' ? (form.discountPercent as AccessCodeDiscount) : undefined,
       });
-      setItems((prev) => [...created, ...prev]);
       toast('success', `${created.length} code${created.length === 1 ? '' : 's'} generated and emailed`);
       setFormOpen(false);
+      if (page === 1) load();
+      else setPage(1);
     } catch (err) {
       setFormError(getApiErrorMessage(err));
     } finally {
@@ -165,7 +173,7 @@ export const AccessCodesPage = () => {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">{contentEditorOnly ? 'Volunteer Access Codes' : 'Access Codes'}</h1>
-          <p className="text-sm text-slate-500">{items.length} code{items.length === 1 ? '' : 's'}</p>
+          <p className="text-sm text-slate-500">{total} code{total === 1 ? '' : 's'}</p>
         </div>
         <button
           onClick={openCreate}
@@ -180,7 +188,10 @@ export const AccessCodesPage = () => {
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
             placeholder="Search by code or issued-to..."
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
           />
@@ -188,7 +199,10 @@ export const AccessCodesPage = () => {
         {!contentEditorOnly && (
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as AccessCodeType | '')}
+            onChange={(e) => {
+              setPage(1);
+              setTypeFilter(e.target.value as AccessCodeType | '');
+            }}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
           >
             <option value="">All Types</option>
@@ -201,7 +215,10 @@ export const AccessCodesPage = () => {
         )}
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as AccessCodeStatus | '')}
+          onChange={(e) => {
+            setPage(1);
+            setStatusFilter(e.target.value as AccessCodeStatus | '');
+          }}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Statuses</option>
@@ -318,6 +335,18 @@ export const AccessCodesPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}

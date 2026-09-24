@@ -130,6 +130,9 @@ export const MediaPage = () => {
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [typeFilter, setTypeFilter] = useState<MediaType | ''>('');
   const [dayFilter, setDayFilter] = useState<MediaDay | ''>('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const [formOpen, setFormOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -146,16 +149,27 @@ export const MediaPage = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListMedia({ q: q || undefined, type: typeFilter || undefined, day: dayFilter || undefined, limit: 100 })
-      .then((res) => setItems(res.items))
+    adminListMedia({ q: q || undefined, type: typeFilter || undefined, day: dayFilter || undefined, page, limit: 40 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [q, typeFilter, dayFilter]);
+  }, [q, typeFilter, dayFilter, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
     return () => clearTimeout(id);
   }, [load, q]);
+
+  const clearFilters = () => {
+    setQ('');
+    setTypeFilter('');
+    setDayFilter('');
+    setPage(1);
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -202,8 +216,8 @@ export const MediaPage = () => {
         setItems((prev) => prev.map((i) => (i._id === editing._id ? updated : i)));
         toast('success', 'Media updated');
       } else {
-        const created = await adminCreateMedia(form);
-        setItems((prev) => [created, ...prev]);
+        await adminCreateMedia(form);
+        load();
         toast('success', 'Media added');
       }
       setFormOpen(false);
@@ -230,6 +244,7 @@ export const MediaPage = () => {
     try {
       await adminDeleteMedia(toDelete._id);
       setItems((prev) => prev.filter((i) => i._id !== toDelete._id));
+      setTotal((prev) => prev - 1);
       toast('success', 'Media removed');
       setToDelete(null);
     } catch (err) {
@@ -251,7 +266,7 @@ export const MediaPage = () => {
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">Gallery</h1>
           <p className="text-sm text-slate-500">
-            {items.length} item{items.length === 1 ? '' : 's'} &middot; published items appear on the public Gallery and Home page instantly
+            {total} item{total === 1 ? '' : 's'} &middot; published items appear on the public Gallery and Home page instantly
           </p>
         </div>
         <div className="flex gap-2.5">
@@ -275,16 +290,22 @@ export const MediaPage = () => {
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
             placeholder="Search captions..."
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {TYPE_FILTERS.map((t) => (
             <button
               key={t.label}
-              onClick={() => setTypeFilter(t.value)}
+              onClick={() => {
+                setPage(1);
+                setTypeFilter(t.value);
+              }}
               className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                 typeFilter === t.value ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
               }`}
@@ -296,7 +317,10 @@ export const MediaPage = () => {
           {DAY_FILTERS.map((d) => (
             <button
               key={d.label}
-              onClick={() => setDayFilter(d.value)}
+              onClick={() => {
+                setPage(1);
+                setDayFilter(d.value);
+              }}
               className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                 dayFilter === d.value ? 'border-navy bg-navy text-white' : 'border-slate-200 text-slate-600 hover:border-navy/40'
               }`}
@@ -304,6 +328,11 @@ export const MediaPage = () => {
               {d.label}
             </button>
           ))}
+          {(q || typeFilter || dayFilter) && (
+            <button onClick={clearFilters} className="ml-1 text-[13px] font-semibold text-orange hover:text-orange-hover">
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -403,6 +432,20 @@ export const MediaPage = () => {
         </div>
       )}
 
+      {!loading && items.length > 0 && (
+        <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-4 py-3 text-[13px] text-slate-500 shadow-card">
+          <span>Page {page} of {pages}</span>
+          <div className="flex gap-2">
+            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+              Previous
+            </button>
+            <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Create/Edit slide-over */}
       <AnimatePresence>
         {formOpen && (
@@ -499,7 +542,7 @@ export const MediaPage = () => {
           <BulkUploadModal
             onClose={() => setBulkOpen(false)}
             onDone={(created) => {
-              setItems((prev) => [...created, ...prev]);
+              load();
               toast('success', `${created.length} item${created.length === 1 ? '' : 's'} uploaded`);
             }}
           />

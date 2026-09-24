@@ -35,7 +35,7 @@ export interface Paginated<T> {
   pages: number;
 }
 
-export const adminListEventTeam = async (params: { q?: string; day?: TeamMemberDay; limit?: number }): Promise<Paginated<EventTeamMember>> => {
+export const adminListEventTeam = async (params: { q?: string; day?: TeamMemberDay; page?: number; limit?: number }): Promise<Paginated<EventTeamMember>> => {
   const res = await api.get<{ success: true; data: EventTeamMember[]; meta: Omit<Paginated<never>, 'items'> }>(
     '/admin/event-team',
     { params }

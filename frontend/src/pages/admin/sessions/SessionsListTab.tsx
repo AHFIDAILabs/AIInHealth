@@ -79,6 +79,9 @@ export const SessionsListTab = () => {
   const [error, setError] = useState('');
   const [dayFilter, setDayFilter] = useState<SessionDay | ''>('');
   const [trackFilter, setTrackFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AdminSession | null>(null);
@@ -100,11 +103,15 @@ export const SessionsListTab = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListSessions({ day: dayFilter || undefined, track: trackFilter || undefined, limit: 200 })
-      .then((res) => setItems(res.items))
+    adminListSessions({ day: dayFilter || undefined, track: trackFilter || undefined, page, limit: 50 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [dayFilter, trackFilter]);
+  }, [dayFilter, trackFilter, page]);
 
   const loadSessionTypes = useCallback(() => {
     adminListSessionTypes().then(setSessionTypes).catch(() => {});
@@ -307,7 +314,7 @@ export const SessionsListTab = () => {
   return (
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-slate-500">{items.length} session{items.length === 1 ? '' : 's'}</p>
+        <p className="text-sm text-slate-500">{total} session{total === 1 ? '' : 's'}</p>
         <button
           onClick={openCreate}
           className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:bg-orange-hover"
@@ -319,7 +326,10 @@ export const SessionsListTab = () => {
       <div className="mt-4 flex flex-wrap gap-3">
         <select
           value={dayFilter}
-          onChange={(e) => setDayFilter(e.target.value as SessionDay | '')}
+          onChange={(e) => {
+            setPage(1);
+            setDayFilter(e.target.value as SessionDay | '');
+          }}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Days</option>
@@ -331,7 +341,10 @@ export const SessionsListTab = () => {
         </select>
         <select
           value={trackFilter}
-          onChange={(e) => setTrackFilter(e.target.value)}
+          onChange={(e) => {
+            setPage(1);
+            setTrackFilter(e.target.value);
+          }}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Tracks</option>
@@ -459,6 +472,20 @@ export const SessionsListTab = () => {
             </div>
           );
         })
+      )}
+
+      {!loading && items.length > 0 && (
+        <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-4 py-3 text-[13px] text-slate-500 shadow-card">
+          <span>Page {page} of {pages}</span>
+          <div className="flex gap-2">
+            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+              Previous
+            </button>
+            <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+              Next
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Create/Edit slide-over */}

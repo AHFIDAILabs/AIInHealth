@@ -21,7 +21,11 @@ export interface Paginated<T> {
   pages: number;
 }
 
-export const adminListCommunications = async (params: { status?: CommunicationStatus; limit?: number }): Promise<Paginated<AdminCommunication>> => {
+export const adminListCommunications = async (params: {
+  status?: CommunicationStatus;
+  page?: number;
+  limit?: number;
+}): Promise<Paginated<AdminCommunication>> => {
   const res = await api.get<{ success: true; data: AdminCommunication[]; meta: Omit<Paginated<never>, 'items'> }>(
     '/admin/communications',
     { params }

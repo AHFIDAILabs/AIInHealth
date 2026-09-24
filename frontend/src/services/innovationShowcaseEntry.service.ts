@@ -75,6 +75,7 @@ export const adminListInnovationShowcaseEntries = async (params: {
   category?: string;
   published?: 'true' | 'false';
   q?: string;
+  page?: number;
   limit?: number;
 }): Promise<Paginated<InnovationShowcaseEntry>> => {
   const res = await api.get<{

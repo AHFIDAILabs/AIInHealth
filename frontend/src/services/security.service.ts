@@ -94,9 +94,18 @@ export const listSecurityEvents = async (params: ListSecurityEventsParams): Prom
   return { items: res.data.data, ...res.data.meta };
 };
 
-export const listBlockedIps = async (): Promise<BlockedIp[]> => {
-  const res = await api.get<{ success: true; data: BlockedIp[] }>('/admin/security/blocked-ips');
-  return res.data.data;
+export interface ListBlockedIpsParams {
+  q?: string;
+  page?: number;
+  limit?: number;
+}
+
+export const listBlockedIps = async (params: ListBlockedIpsParams = {}): Promise<Paginated<BlockedIp>> => {
+  const res = await api.get<{ success: true; data: BlockedIp[]; meta: Omit<Paginated<never>, 'items'> }>(
+    '/admin/security/blocked-ips',
+    { params }
+  );
+  return { items: res.data.data, ...res.data.meta };
 };
 
 export const blockIp = async (ip: string, reason?: string): Promise<void> => {

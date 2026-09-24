@@ -45,6 +45,9 @@ export const ConfirmedAbstractsPage = () => {
   const [q, setQ] = useState('');
   const [trackFilter, setTrackFilter] = useState('');
   const [tracks, setTracks] = useState<PublicTrack[] | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AdminConfirmedAbstract | null>(null);
@@ -64,16 +67,26 @@ export const ConfirmedAbstractsPage = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListConfirmedAbstracts({ q: q || undefined, track: trackFilter || undefined, limit: 200 })
-      .then((res) => setItems(res.items))
+    adminListConfirmedAbstracts({ q: q || undefined, track: trackFilter || undefined, page, limit: 50 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [q, trackFilter]);
+  }, [q, trackFilter, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
     return () => clearTimeout(id);
   }, [load, q]);
+
+  const clearFilters = () => {
+    setQ('');
+    setTrackFilter('');
+    setPage(1);
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -121,8 +134,8 @@ export const ConfirmedAbstractsPage = () => {
         setItems((prev) => prev.map((i) => (i._id === editing._id ? updated : i)));
         toast('success', 'Abstract updated');
       } else {
-        const created = await adminCreateConfirmedAbstract(form);
-        setItems((prev) => [...prev, created]);
+        await adminCreateConfirmedAbstract(form);
+        load();
         toast('success', 'Abstract added');
       }
       setFormOpen(false);
@@ -149,6 +162,7 @@ export const ConfirmedAbstractsPage = () => {
     try {
       await adminDeleteConfirmedAbstract(toDelete._id);
       setItems((prev) => prev.filter((i) => i._id !== toDelete._id));
+      setTotal((prev) => prev - 1);
       toast('success', `${toDelete.code} removed`);
       setToDelete(null);
     } catch (err) {
@@ -164,7 +178,7 @@ export const ConfirmedAbstractsPage = () => {
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">Confirmed Abstracts</h1>
           <p className="text-sm text-slate-500">
-            {items.length} presenter{items.length === 1 ? '' : 's'} &middot; shown on the public /abstracts/confirmed page
+            {total} presenter{total === 1 ? '' : 's'} &middot; shown on the public /abstracts/confirmed page
           </p>
         </div>
         <button
@@ -180,14 +194,20 @@ export const ConfirmedAbstractsPage = () => {
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
             placeholder="Search by author, title, or code..."
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
           />
         </div>
         <select
           value={trackFilter}
-          onChange={(e) => setTrackFilter(e.target.value)}
+          onChange={(e) => {
+            setPage(1);
+            setTrackFilter(e.target.value);
+          }}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Tracks</option>
@@ -197,6 +217,11 @@ export const ConfirmedAbstractsPage = () => {
             </option>
           ))}
         </select>
+        {(q || trackFilter) && (
+          <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
+            Clear
+          </button>
+        )}
       </div>
 
       {error && (
@@ -272,6 +297,18 @@ export const ConfirmedAbstractsPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}

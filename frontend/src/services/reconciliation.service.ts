@@ -14,11 +14,22 @@ export interface ReconciliationRow {
   mismatch: boolean;
 }
 
-export const fetchReconciliations = async (): Promise<{ configured: boolean; rows: ReconciliationRow[] }> => {
-  const res = await api.get<{ success: true; data: { configured: boolean; rows: ReconciliationRow[] } }>(
-    '/admin/payments/reconciliations'
-  );
-  return res.data.data;
+export interface ReconciliationsResult {
+  configured: boolean;
+  rows: ReconciliationRow[];
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export const fetchReconciliations = async (params: { page?: number; limit?: number } = {}): Promise<ReconciliationsResult> => {
+  const res = await api.get<{
+    success: true;
+    data: { configured: boolean; rows: ReconciliationRow[] };
+    meta: { page: number; limit: number; total: number; pages: number };
+  }>('/admin/payments/reconciliations', { params });
+  return { ...res.data.data, ...res.data.meta };
 };
 
 export const resyncReconciliation = async (reference: string): Promise<void> => {

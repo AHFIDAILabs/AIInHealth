@@ -5,12 +5,15 @@ import { FileText, X, Search, CheckCircle2, Clock, Users2 } from 'lucide-react';
 import {
   adminListAbstracts,
   adminUpdateAbstract,
+  fetchAbstractsAnalytics,
   ABSTRACT_STATUSES,
   ABSTRACT_DECISIONS,
   type AdminAbstract,
   type AbstractStatus,
   type AbstractDecision,
+  type AbstractAnalytics,
 } from '../../../services/abstract.service';
+import { listTracks, type PublicTrack } from '../../../services/track.service';
 import { getApiErrorMessage } from '../../../services/api';
 import { SkeletonRows, Skeleton } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
@@ -69,26 +72,59 @@ export const AbstractsListTab = () => {
   const [items, setItems] = useState<AdminAbstract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState<AbstractStatus | ''>('');
+  const [decisionFilter, setDecisionFilter] = useState<AbstractDecision | ''>('');
+  const [trackFilter, setTrackFilter] = useState('');
+  const [tracks, setTracks] = useState<PublicTrack[]>([]);
   const [searchParams] = useSearchParams();
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [active, setActive] = useState<AdminAbstract | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
   const [updating, setUpdating] = useState(false);
 
+  const [stats, setStats] = useState<AbstractAnalytics | null>(null);
+
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListAbstracts({ status: statusFilter || undefined, q: q || undefined, limit: 100 })
-      .then((res) => setItems(res.items))
+    adminListAbstracts({
+      status: statusFilter || undefined,
+      decision: decisionFilter || undefined,
+      track: trackFilter || undefined,
+      q: q || undefined,
+      page,
+      limit: 20,
+    })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [statusFilter, q]);
+  }, [statusFilter, decisionFilter, trackFilter, q, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
     return () => clearTimeout(id);
   }, [load, q]);
+
+  const refreshStats = () => fetchAbstractsAnalytics().then(setStats).catch(() => undefined);
+  useEffect(() => {
+    refreshStats();
+    listTracks().then(setTracks).catch(() => undefined);
+  }, []);
+
+  const clearFilters = () => {
+    setStatusFilter('');
+    setDecisionFilter('');
+    setTrackFilter('');
+    setQ('');
+    setPage(1);
+  };
 
   const openDetail = (abstract: AdminAbstract) => {
     setActive(abstract);
@@ -102,6 +138,7 @@ export const AbstractsListTab = () => {
       setItems((prev) => prev.map((a) => (a._id === abstract._id ? { ...a, ...updated } : a)));
       setActive((prev) => (prev ? { ...prev, ...updated } : prev));
       toast('success', `Marked as ${STATUS_LABEL[status]}`);
+      refreshStats();
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -116,6 +153,7 @@ export const AbstractsListTab = () => {
       setItems((prev) => prev.map((a) => (a._id === abstract._id ? { ...a, ...updated } : a)));
       setActive((prev) => (prev ? { ...prev, ...updated } : prev));
       toast('success', `Decision recorded: ${DECISION_LABEL[decision]}`);
+      refreshStats();
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -138,17 +176,17 @@ export const AbstractsListTab = () => {
     }
   };
 
-  const decidedCount = items.filter((a) => a.status === 'accepted' || a.status === 'rejected').length;
-  const underReviewCount = items.filter((a) => a.status === 'under_review').length;
-  const reviewsCompletedTotal = items.reduce((sum, a) => sum + a.reviewsCompleted, 0);
+  const decidedCount = (stats?.statusCounts.accepted ?? 0) + (stats?.statusCounts.rejected ?? 0);
+  const underReviewCount = stats?.statusCounts.under_review ?? 0;
+  const reviewsCompletedTotal = stats?.reviewCompletion.completed ?? 0;
 
   return (
     <div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard icon={FileText} color="bg-orange/15 text-orange" label="Total Abstracts" value={loading ? null : items.length} />
-        <StatCard icon={CheckCircle2} color="bg-success/15 text-success" label="Decisions Made" value={loading ? null : decidedCount} />
-        <StatCard icon={Clock} color="bg-info/15 text-info" label="Under Review" value={loading ? null : underReviewCount} />
-        <StatCard icon={Users2} color="bg-chart-violet/15 text-chart-violet" label="Reviews Completed" value={loading ? null : reviewsCompletedTotal} />
+        <StatCard icon={FileText} color="bg-orange/15 text-orange" label="Total Abstracts" value={stats ? stats.total : null} />
+        <StatCard icon={CheckCircle2} color="bg-success/15 text-success" label="Decisions Made" value={stats ? decidedCount : null} />
+        <StatCard icon={Clock} color="bg-info/15 text-info" label="Under Review" value={stats ? underReviewCount : null} />
+        <StatCard icon={Users2} color="bg-chart-violet/15 text-chart-violet" label="Reviews Completed" value={stats ? reviewsCompletedTotal : null} />
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -156,14 +194,20 @@ export const AbstractsListTab = () => {
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
             placeholder="Search title, author..."
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
           />
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => setStatusFilter('')}
+            onClick={() => {
+              setPage(1);
+              setStatusFilter('');
+            }}
             className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${!statusFilter ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
           >
             All
@@ -171,13 +215,51 @@ export const AbstractsListTab = () => {
           {ABSTRACT_STATUSES.map((s) => (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => {
+                setPage(1);
+                setStatusFilter(s);
+              }}
               className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${statusFilter === s ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
             >
               {STATUS_LABEL[s]}
             </button>
           ))}
         </div>
+        <select
+          value={decisionFilter}
+          onChange={(e) => {
+            setPage(1);
+            setDecisionFilter(e.target.value as AbstractDecision | '');
+          }}
+          className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
+          <option value="">All Decisions</option>
+          {ABSTRACT_DECISIONS.map((d) => (
+            <option key={d} value={d}>
+              {DECISION_LABEL[d]}
+            </option>
+          ))}
+        </select>
+        <select
+          value={trackFilter}
+          onChange={(e) => {
+            setPage(1);
+            setTrackFilter(e.target.value);
+          }}
+          className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
+          <option value="">All Tracks</option>
+          {tracks.map((t) => (
+            <option key={t._id} value={t.name}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        {(statusFilter || decisionFilter || trackFilter || q) && (
+          <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
+            Clear
+          </button>
+        )}
       </div>
 
       {error && (
@@ -194,7 +276,14 @@ export const AbstractsListTab = () => {
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-chart-violet/15 text-chart-violet">
               <FileText size={22} />
             </span>
-            <p className="mt-4 font-semibold text-navy">No abstract submissions yet</p>
+            <p className="mt-4 font-semibold text-navy">
+              {statusFilter || decisionFilter || trackFilter || q ? 'No abstracts match your filters' : 'No abstract submissions yet'}
+            </p>
+            {(statusFilter || decisionFilter || trackFilter || q) && (
+              <button onClick={clearFilters} className="mt-2 text-sm font-semibold text-orange hover:text-orange-hover">
+                Clear filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -239,6 +328,20 @@ export const AbstractsListTab = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && items.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages} &middot; {total} abstract{total === 1 ? '' : 's'}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

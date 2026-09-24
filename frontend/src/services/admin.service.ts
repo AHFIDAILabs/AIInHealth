@@ -90,6 +90,7 @@ export interface ListRegistrationsParams {
   status?: RegistrationStatus;
   type?: RegistrationType;
   paymentStatus?: AdminRegistration['paymentStatus'];
+  ticketCategory?: TicketCategory;
   q?: string;
   page?: number;
   limit?: number;
@@ -105,6 +106,21 @@ export interface Paginated<T> {
 
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
   const res = await api.get<{ success: true; data: DashboardStats }>('/admin/dashboard');
+  return res.data.data;
+};
+
+export interface PaymentStats {
+  collectedNaira: number;
+  paidCount: number;
+  unpaidCount: number;
+  failedCount: number;
+}
+
+// Server-side totals for the Payments page's stat cards — computed across
+// every matching attendee registration, not just the current page, so they
+// stay correct once there's more than one page of results.
+export const fetchPaymentStats = async (): Promise<PaymentStats> => {
+  const res = await api.get<{ success: true; data: PaymentStats }>('/admin/payments-stats');
   return res.data.data;
 };
 

@@ -96,6 +96,9 @@ export const SponsorsTab = () => {
   const [error, setError] = useState('');
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [statusFilter, setStatusFilter] = useState<PartnerStatus | ''>('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [analytics, setAnalytics] = useState<PartnerAnalytics | null>(null);
   const [packages, setPackages] = useState<AdminSponsorshipPackage[]>([]);
 
@@ -122,11 +125,15 @@ export const SponsorsTab = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListPartners({ q: q || undefined, status: statusFilter || undefined, limit: 200 })
-      .then((res) => setItems(res.items))
+    adminListPartners({ q: q || undefined, status: statusFilter || undefined, page, limit: 20 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [q, statusFilter]);
+  }, [q, statusFilter, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
@@ -209,9 +216,10 @@ export const SponsorsTab = () => {
         setItems((prev) => prev.map((p) => (p._id === editing._id ? updated : p)));
         toast('success', 'Updated');
       } else {
-        const created = await adminCreatePartner(payload);
-        setItems((prev) => [...prev, created]);
+        await adminCreatePartner(payload);
         toast('success', 'Added');
+        if (page === 1) load();
+        else setPage(1);
       }
       setFormOpen(false);
       fetchPartnerAnalytics().then(setAnalytics).catch(() => {});
@@ -228,6 +236,7 @@ export const SponsorsTab = () => {
     try {
       await adminDeletePartner(toDelete._id);
       setItems((prev) => prev.filter((p) => p._id !== toDelete._id));
+      setTotal((prev) => prev - 1);
       toast('success', `${toDelete.name} removed`);
       setToDelete(null);
     } catch (err) {
@@ -306,14 +315,20 @@ export const SponsorsTab = () => {
             <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => {
+                setPage(1);
+                setQ(e.target.value);
+              }}
               placeholder="Search company, contact..."
               className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
             />
           </div>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as PartnerStatus | '')}
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value as PartnerStatus | '');
+            }}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
           >
             <option value="">All Statuses</option>
@@ -323,6 +338,7 @@ export const SponsorsTab = () => {
               </option>
             ))}
           </select>
+          <span className="text-xs text-slate-400">{total} sponsor{total === 1 ? '' : 's'}</span>
         </div>
         <button
           onClick={openCreate}
@@ -415,6 +431,20 @@ export const SponsorsTab = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && items.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

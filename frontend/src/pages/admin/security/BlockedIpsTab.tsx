@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Ban, Plus } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Ban, Plus, Search } from 'lucide-react';
 import { listBlockedIps, blockIp, unblockIp, type BlockedIp } from '../../../services/security.service';
 import { getApiErrorMessage } from '../../../services/api';
 import { Banner } from '../../../components/ui/Banner';
@@ -17,14 +17,25 @@ export const BlockedIpsTab = () => {
   const [ip, setIp] = useState('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const load = () => {
-    listBlockedIps()
-      .then(setItems)
+  const load = useCallback(() => {
+    listBlockedIps({ q: q || undefined, page, limit: 50 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)));
-  };
+  }, [q, page]);
 
-  useEffect(load, []);
+  useEffect(() => {
+    const id = setTimeout(load, q ? 350 : 0);
+    return () => clearTimeout(id);
+  }, [load, q]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +99,22 @@ export const BlockedIpsTab = () => {
 
       {error && <Banner variant="error">{error}</Banner>}
 
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-xs flex-1">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={q}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
+            placeholder="Search IP or reason..."
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+          />
+        </div>
+        <span className="text-xs text-slate-400">{total} blocked</span>
+      </div>
+
       <div className={`overflow-hidden ${CARD_CLASS}`}>
         {items === null ? (
           <SkeletonRows rows={4} cols={3} />
@@ -117,6 +144,30 @@ export const BlockedIpsTab = () => {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {items !== null && items.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>
+              Page {page} of {pages}
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <button
+                disabled={page >= pages}
+                onClick={() => setPage((p) => p + 1)}
+                className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

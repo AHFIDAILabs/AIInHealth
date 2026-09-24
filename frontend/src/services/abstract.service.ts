@@ -57,6 +57,7 @@ export const adminListAbstracts = async (params: {
   decision?: AbstractDecision;
   track?: string;
   q?: string;
+  page?: number;
   limit?: number;
 }): Promise<Paginated<AdminAbstract>> => {
   const res = await api.get<{ success: true; data: AdminAbstract[]; meta: Omit<Paginated<never>, 'items'> }>(
@@ -97,6 +98,7 @@ export const adminListReviewMatrix = async (params: {
   decision?: AbstractDecision;
   track?: string;
   q?: string;
+  page?: number;
   limit?: number;
 }): Promise<Paginated<ReviewMatrixRow>> => {
   const res = await api.get<{ success: true; data: ReviewMatrixRow[]; meta: Omit<Paginated<never>, 'items'> }>(

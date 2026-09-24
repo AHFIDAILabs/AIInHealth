@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CreditCard, Send } from 'lucide-react';
-import { listRegistrations, bulkSendPaymentReminders, type AdminRegistration } from '../../services/admin.service';
+import { CreditCard, Send, Search, Download, Wallet, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import {
+  listRegistrations,
+  bulkSendPaymentReminders,
+  exportRegistrationsUrl,
+  fetchPaymentStats,
+  type AdminRegistration,
+  type PaymentStats,
+} from '../../services/admin.service';
+import type { TicketCategory } from '../../services/registration.service';
+import { TICKET_PRICE_NGN, formatNaira } from '../../lib/pricing';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { AnalyticsStatCard } from './analytics/AnalyticsStatCard';
 import { useToast } from '../../contexts/ToastContext';
 
 type PaymentStatus = NonNullable<AdminRegistration['paymentStatus']>;
@@ -16,6 +26,16 @@ const STATUS_BADGE: Record<PaymentStatus, string> = {
   failed: 'text-danger bg-danger/10',
 };
 
+const TICKET_CATEGORIES = Object.keys(TICKET_PRICE_NGN) as TicketCategory[];
+const TICKET_LABEL: Record<TicketCategory, string> = {
+  international_delegate: 'International Delegate',
+  nigerian_professional: 'Nigerian Professional',
+  student_researcher: 'Student / Researcher',
+  vip: 'VIP',
+  government_official: 'Government Official',
+  accredited_media: 'Accredited Media',
+};
+
 const naira = (kobo?: number) => (kobo ? `₦${Math.round(kobo / 100).toLocaleString('en-NG')}` : '—');
 
 export const PaymentsPage = () => {
@@ -23,28 +43,53 @@ export const PaymentsPage = () => {
   const [items, setItems] = useState<AdminRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [q, setQ] = useState('');
   const [status, setStatus] = useState<PaymentStatus | ''>('');
+  const [ticketCategory, setTicketCategory] = useState<TicketCategory | ''>('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<PaymentStats | null>(null);
   const [confirmRemind, setConfirmRemind] = useState(false);
   const [sendingReminders, setSendingReminders] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    listRegistrations({ type: 'attendee', paymentStatus: status || undefined, limit: 100 })
+    listRegistrations({
+      type: 'attendee',
+      paymentStatus: status || undefined,
+      ticketCategory: ticketCategory || undefined,
+      q: q || undefined,
+      page,
+      limit: 20,
+    })
       .then((res) => {
         setItems(res.items);
+        setPages(res.pages);
         setTotal(res.total);
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [status]);
+  }, [status, ticketCategory, q, page]);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    const id = setTimeout(load, q ? 350 : 0);
+    return () => clearTimeout(id);
+  }, [load, q]);
 
-  const totalCollectedKobo = items
-    .filter((r) => r.paymentStatus === 'paid')
-    .reduce((sum, r) => sum + (r.amountKobo ?? 0), 0);
+  const refreshStats = () => fetchPaymentStats().then(setStats).catch(() => undefined);
+  useEffect(() => {
+    refreshStats();
+  }, []);
+
+  const clearFilters = () => {
+    setStatus('');
+    setTicketCategory('');
+    setQ('');
+    setPage(1);
+  };
+
   const sendReminders = async () => {
     setSendingReminders(true);
     try {
@@ -52,6 +97,7 @@ export const PaymentsPage = () => {
       toast('success', `Sent ${result.sent} of ${result.attempted} reminder${result.attempted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}.`);
       setConfirmRemind(false);
       load();
+      refreshStats();
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -61,34 +107,45 @@ export const PaymentsPage = () => {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-navy">Payments</h1>
-        <p className="text-sm text-slate-500">Paystack transactions for paid ticket categories.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-navy">Payments</h1>
+          <p className="text-sm text-slate-500">Paystack transactions for paid ticket categories.</p>
+        </div>
+        <a
+          href={exportRegistrationsUrl({ type: 'attendee', paymentStatus: status || undefined, ticketCategory: ticketCategory || undefined, q: q || undefined })}
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy hover:border-orange/40"
+        >
+          <Download size={16} /> Export CSV
+        </a>
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Collected</p>
-          <p className="mt-1.5 font-display text-xl font-bold text-navy">{naira(totalCollectedKobo)}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Paid Registrations</p>
-          <p className="mt-1.5 font-display text-xl font-bold text-navy">{items.filter((r) => r.paymentStatus === 'paid').length}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Unpaid</p>
-          <p className="mt-1.5 font-display text-xl font-bold text-navy">{items.filter((r) => r.paymentStatus === 'unpaid').length}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Failed</p>
-          <p className="mt-1.5 font-display text-xl font-bold text-navy">{items.filter((r) => r.paymentStatus === 'failed').length}</p>
-        </div>
+        <AnalyticsStatCard icon={Wallet} label="Collected" value={stats ? formatNaira(stats.collectedNaira) : null} />
+        <AnalyticsStatCard icon={CheckCircle2} label="Paid Registrations" value={stats?.paidCount ?? null} />
+        <AnalyticsStatCard icon={Clock} label="Unpaid" value={stats?.unpaidCount ?? null} />
+        <AnalyticsStatCard icon={XCircle} label="Failed" value={stats?.failedCount ?? null} />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={q}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
+            placeholder="Search name, email, reference..."
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+          />
+        </div>
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value as PaymentStatus | '')}
+          onChange={(e) => {
+            setPage(1);
+            setStatus(e.target.value as PaymentStatus | '');
+          }}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Payment Statuses</option>
@@ -96,6 +153,26 @@ export const PaymentsPage = () => {
           <option value="paid">Paid</option>
           <option value="failed">Failed</option>
         </select>
+        <select
+          value={ticketCategory}
+          onChange={(e) => {
+            setPage(1);
+            setTicketCategory(e.target.value as TicketCategory | '');
+          }}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
+          <option value="">All Ticket Categories</option>
+          {TICKET_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {TICKET_LABEL[c]}
+            </option>
+          ))}
+        </select>
+        {(status || ticketCategory || q) && (
+          <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
+            Clear
+          </button>
+        )}
         <span className="text-xs text-slate-400">{total} matching</span>
         <button
           onClick={() => setConfirmRemind(true)}
@@ -121,6 +198,11 @@ export const PaymentsPage = () => {
               <CreditCard size={22} />
             </span>
             <p className="mt-4 font-semibold text-navy">No matching transactions</p>
+            {(status || ticketCategory || q) && (
+              <button onClick={clearFilters} className="mt-2 text-sm font-semibold text-orange hover:text-orange-hover">
+                Clear filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -155,6 +237,30 @@ export const PaymentsPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && items.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>
+              Page {page} of {pages}
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <button
+                disabled={page >= pages}
+                onClick={() => setPage((p) => p + 1)}
+                className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

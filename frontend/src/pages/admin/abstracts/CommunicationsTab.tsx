@@ -41,15 +41,22 @@ export const CommunicationsTab = () => {
   const [subjectDraft, setSubjectDraft] = useState('');
   const [bodyDraft, setBodyDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListCommunications({ status: statusFilter || undefined, limit: 100 })
-      .then((res) => setItems(res.items))
+    adminListCommunications({ status: statusFilter || undefined, page, limit: 20 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [statusFilter]);
+  }, [statusFilter, page]);
 
   useEffect(load, [load]);
 
@@ -109,7 +116,10 @@ export const CommunicationsTab = () => {
     <div>
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => setStatusFilter('')}
+          onClick={() => {
+            setPage(1);
+            setStatusFilter('');
+          }}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${!statusFilter ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
         >
           All
@@ -117,7 +127,10 @@ export const CommunicationsTab = () => {
         {STATUS_OPTIONS.map((s) => (
           <button
             key={s}
-            onClick={() => setStatusFilter(s)}
+            onClick={() => {
+              setPage(1);
+              setStatusFilter(s);
+            }}
             className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${statusFilter === s ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
           >
             {STATUS_LABEL[s]}
@@ -166,6 +179,20 @@ export const CommunicationsTab = () => {
               ))}
             </tbody>
           </table>
+          </div>
+        )}
+
+        {!loading && items.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages} &middot; {total} communication{total === 1 ? '' : 's'}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

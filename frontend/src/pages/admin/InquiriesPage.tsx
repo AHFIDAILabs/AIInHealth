@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Mail, X, ArrowRightCircle } from 'lucide-react';
+import { Mail, X, ArrowRightCircle, Search } from 'lucide-react';
 import {
   adminListInquiries,
   adminUpdateInquiryStatus,
@@ -28,19 +28,30 @@ export const InquiriesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<InquiryStatus | ''>('');
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [active, setActive] = useState<AdminInquiry | null>(null);
   const [updating, setUpdating] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListInquiries({ status: statusFilter || undefined, limit: 100 })
-      .then((res) => setItems(res.items))
+    adminListInquiries({ status: statusFilter || undefined, q: q || undefined, page, limit: 20 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [statusFilter]);
+  }, [statusFilter, q, page]);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    const id = setTimeout(load, q ? 350 : 0);
+    return () => clearTimeout(id);
+  }, [load, q]);
 
   const updateStatus = async (inquiry: AdminInquiry, status: InquiryStatus) => {
     setUpdating(true);
@@ -73,25 +84,45 @@ export const InquiriesPage = () => {
     <div className="mx-auto max-w-5xl">
       <div>
         <h1 className="font-display text-2xl font-semibold text-navy">Partnership Inquiries</h1>
-        <p className="text-sm text-slate-500">{items.length} inquir{items.length === 1 ? 'y' : 'ies'}</p>
+        <p className="text-sm text-slate-500">{total} inquir{total === 1 ? 'y' : 'ies'}</p>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <button
-          onClick={() => setStatusFilter('')}
-          className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${!statusFilter ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
-        >
-          All
-        </button>
-        {INQUIRY_STATUSES.map((s) => (
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
           <button
-            key={s}
-            onClick={() => setStatusFilter(s)}
-            className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${statusFilter === s ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
+            onClick={() => {
+              setPage(1);
+              setStatusFilter('');
+            }}
+            className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${!statusFilter ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
           >
-            {s}
+            All
           </button>
-        ))}
+          {INQUIRY_STATUSES.map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                setPage(1);
+                setStatusFilter(s);
+              }}
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${statusFilter === s ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        <div className="relative sm:max-w-xs">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={q}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
+            placeholder="Search organization, contact, email..."
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+          />
+        </div>
       </div>
 
       {error && (
@@ -138,6 +169,20 @@ export const InquiriesPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && items.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

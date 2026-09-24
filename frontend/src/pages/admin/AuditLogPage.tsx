@@ -55,6 +55,9 @@ export const AuditLogPage = () => {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -64,17 +67,28 @@ export const AuditLogPage = () => {
       resourceType: resourceFilter || undefined,
       from: from || undefined,
       to: to || undefined,
+      page,
       limit: 50,
     })
       .then((res) => {
         setItems(res.items);
         setActions(res.actions);
+        setPages(res.pages);
+        setTotal(res.total);
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [actionFilter, resourceFilter, from, to]);
+  }, [actionFilter, resourceFilter, from, to, page]);
 
   useEffect(load, [load]);
+
+  const clearFilters = () => {
+    setActionFilter('');
+    setResourceFilter('');
+    setFrom('');
+    setTo('');
+    setPage(1);
+  };
 
   const resourceTypes = Array.from(new Set(items.map((i) => i.resourceType))).sort();
 
@@ -85,8 +99,15 @@ export const AuditLogPage = () => {
         <p className="text-sm text-slate-500">Every admin mutation, timestamped and attributed.</p>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-3">
-        <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <select
+          value={actionFilter}
+          onChange={(e) => {
+            setPage(1);
+            setActionFilter(e.target.value);
+          }}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
           <option value="">All Actions</option>
           {actions.map((a) => (
             <option key={a} value={a}>
@@ -94,7 +115,14 @@ export const AuditLogPage = () => {
             </option>
           ))}
         </select>
-        <select value={resourceFilter} onChange={(e) => setResourceFilter(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none">
+        <select
+          value={resourceFilter}
+          onChange={(e) => {
+            setPage(1);
+            setResourceFilter(e.target.value);
+          }}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
           <option value="">All Resources</option>
           {resourceTypes.map((r) => (
             <option key={r} value={r}>
@@ -102,8 +130,29 @@ export const AuditLogPage = () => {
             </option>
           ))}
         </select>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none" />
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none" />
+        <input
+          type="date"
+          value={from}
+          onChange={(e) => {
+            setPage(1);
+            setFrom(e.target.value);
+          }}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        />
+        <input
+          type="date"
+          value={to}
+          onChange={(e) => {
+            setPage(1);
+            setTo(e.target.value);
+          }}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        />
+        {(actionFilter || resourceFilter || from || to) && (
+          <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
+            Clear
+          </button>
+        )}
       </div>
 
       {error && (
@@ -153,6 +202,20 @@ export const AuditLogPage = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {!loading && items.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages} &middot; {total} entr{total === 1 ? 'y' : 'ies'}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

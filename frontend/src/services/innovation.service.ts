@@ -49,6 +49,7 @@ export const adminListInnovations = async (params: {
   track?: string;
   published?: 'true' | 'false';
   q?: string;
+  page?: number;
   limit?: number;
 }): Promise<Paginated<Innovation>> => {
   const res = await api.get<{ success: true; data: Innovation[]; meta: Omit<Paginated<never>, 'items'> }>(

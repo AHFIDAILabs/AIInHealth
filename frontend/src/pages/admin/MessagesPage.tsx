@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MessageSquare, X, CheckCircle2, Mail } from 'lucide-react';
-import { adminListMessages, adminUpdateMessage, type AdminMessage } from '../../services/adminMessage.service';
+import { MessageSquare, X, CheckCircle2, Mail, Search } from 'lucide-react';
+import { adminListMessages, adminUpdateMessage, CONTACT_CATEGORIES, type AdminMessage, type ContactCategory } from '../../services/adminMessage.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
@@ -13,18 +13,36 @@ export const MessagesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<ContactCategory | ''>('');
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [active, setActive] = useState<AdminMessage | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListMessages({ read: unreadOnly ? 'false' : undefined, limit: 100 })
-      .then((res) => setItems(res.items))
+    adminListMessages({
+      read: unreadOnly ? 'false' : undefined,
+      category: categoryFilter || undefined,
+      q: q || undefined,
+      page,
+      limit: 20,
+    })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [unreadOnly]);
+  }, [unreadOnly, categoryFilter, q, page]);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    const id = setTimeout(load, q ? 350 : 0);
+    return () => clearTimeout(id);
+  }, [load, q]);
 
   const openMessage = async (msg: AdminMessage) => {
     setActive(msg);
@@ -58,16 +76,62 @@ export const MessagesPage = () => {
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">Contact Messages</h1>
           <p className="text-sm text-slate-500">
-            {items.length} message{items.length === 1 ? '' : 's'}
-            {unreadCount > 0 && <span className="ml-1.5 font-semibold text-orange">&middot; {unreadCount} unread</span>}
+            {total} message{total === 1 ? '' : 's'}
+            {unreadCount > 0 && <span className="ml-1.5 font-semibold text-orange">&middot; {unreadCount} unread on this page</span>}
           </p>
         </div>
         <button
-          onClick={() => setUnreadOnly((v) => !v)}
+          onClick={() => {
+            setPage(1);
+            setUnreadOnly((v) => !v);
+          }}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${unreadOnly ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
         >
           Unread only
         </button>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={q}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
+            placeholder="Search name, email, message..."
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+          />
+        </div>
+        <select
+          value={categoryFilter}
+          onChange={(e) => {
+            setPage(1);
+            setCategoryFilter(e.target.value as ContactCategory | '');
+          }}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
+          <option value="">All Categories</option>
+          {CONTACT_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        {(q || categoryFilter || unreadOnly) && (
+          <button
+            onClick={() => {
+              setQ('');
+              setCategoryFilter('');
+              setUnreadOnly(false);
+              setPage(1);
+            }}
+            className="text-[13px] font-semibold text-orange hover:text-orange-hover"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {error && (
@@ -108,6 +172,20 @@ export const MessagesPage = () => {
                 {msg.isResolved && <CheckCircle2 size={16} className="mt-1 shrink-0 text-success" />}
               </button>
             ))}
+          </div>
+        )}
+
+        {!loading && items.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

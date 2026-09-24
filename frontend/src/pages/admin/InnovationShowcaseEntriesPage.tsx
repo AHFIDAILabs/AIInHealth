@@ -51,6 +51,12 @@ export const InnovationShowcaseEntriesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [publishedFilter, setPublishedFilter] = useState<'' | 'true' | 'false'>('');
+  const [categories, setCategories] = useState<string[] | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InnovationShowcaseEntry | null>(null);
@@ -61,19 +67,51 @@ export const InnovationShowcaseEntriesPage = () => {
   const [toDelete, setToDelete] = useState<InnovationShowcaseEntry | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // One-time, unpaginated fetch purely to derive the set of categories in use
+  // for the filter dropdown — category is free text (no fixed enum, see
+  // validation schema), same "distinct values from a light full-list fetch"
+  // approach the public InnovationShowcaseConfirmed page uses. Decoupled from
+  // the main paginated `load` below so paging through results doesn't cause
+  // the dropdown's own option list to shrink to just the current page.
+  useEffect(() => {
+    adminListInnovationShowcaseEntries({ limit: 200 })
+      .then((res) => {
+        const cats = Array.from(new Set(res.items.map((e) => e.category).filter((c): c is string => !!c))).sort();
+        setCategories(cats);
+      })
+      .catch(() => setCategories([]));
+  }, []);
+
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListInnovationShowcaseEntries({ q: q || undefined, limit: 200 })
-      .then((res) => setItems(res.items))
+    adminListInnovationShowcaseEntries({
+      q: q || undefined,
+      category: categoryFilter || undefined,
+      published: publishedFilter || undefined,
+      page,
+      limit: 50,
+    })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [q]);
+  }, [q, categoryFilter, publishedFilter, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
     return () => clearTimeout(id);
   }, [load, q]);
+
+  const clearFilters = () => {
+    setQ('');
+    setCategoryFilter('');
+    setPublishedFilter('');
+    setPage(1);
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -124,8 +162,8 @@ export const InnovationShowcaseEntriesPage = () => {
         setItems((prev) => prev.map((i) => (i._id === editing._id ? updated : i)));
         toast('success', 'Entry updated');
       } else {
-        const created = await adminCreateInnovationShowcaseEntry(form);
-        setItems((prev) => [...prev, created]);
+        await adminCreateInnovationShowcaseEntry(form);
+        load();
         toast('success', 'Entry added');
       }
       setFormOpen(false);
@@ -152,6 +190,7 @@ export const InnovationShowcaseEntriesPage = () => {
     try {
       await adminDeleteInnovationShowcaseEntry(toDelete._id);
       setItems((prev) => prev.filter((i) => i._id !== toDelete._id));
+      setTotal((prev) => prev - 1);
       toast('success', `${toDelete.startupName} removed`);
       setToDelete(null);
     } catch (err) {
@@ -167,7 +206,7 @@ export const InnovationShowcaseEntriesPage = () => {
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">Confirmed Innovation Showcase</h1>
           <p className="text-sm text-slate-500">
-            {items.length} startup{items.length === 1 ? '' : 's'} &middot; shown on the public /innovation-showcase/confirmed page
+            {total} startup{total === 1 ? '' : 's'} &middot; shown on the public /innovation-showcase/confirmed page
           </p>
         </div>
         <button
@@ -183,11 +222,46 @@ export const InnovationShowcaseEntriesPage = () => {
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
             placeholder="Search startups..."
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
           />
         </div>
+        <select
+          value={categoryFilter}
+          onChange={(e) => {
+            setPage(1);
+            setCategoryFilter(e.target.value);
+          }}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
+          <option value="">All Categories</option>
+          {categories?.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <select
+          value={publishedFilter}
+          onChange={(e) => {
+            setPage(1);
+            setPublishedFilter(e.target.value as '' | 'true' | 'false');
+          }}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
+          <option value="">All Statuses</option>
+          <option value="true">Published</option>
+          <option value="false">Draft</option>
+        </select>
+        {(q || categoryFilter || publishedFilter) && (
+          <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
+            Clear
+          </button>
+        )}
       </div>
 
       {error && (
@@ -267,6 +341,18 @@ export const InnovationShowcaseEntriesPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}

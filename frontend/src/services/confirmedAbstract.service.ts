@@ -58,6 +58,7 @@ export const adminListConfirmedAbstracts = async (params: {
   track?: string;
   published?: 'true' | 'false';
   q?: string;
+  page?: number;
   limit?: number;
 }): Promise<Paginated<AdminConfirmedAbstract>> => {
   const res = await api.get<{ success: true; data: AdminConfirmedAbstract[]; meta: Omit<Paginated<never>, 'items'> }>(

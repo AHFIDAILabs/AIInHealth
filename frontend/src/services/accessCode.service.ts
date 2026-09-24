@@ -51,6 +51,7 @@ export const adminListAccessCodes = async (params: {
   type?: AccessCodeType;
   status?: AccessCodeStatus;
   q?: string;
+  page?: number;
   limit?: number;
 }): Promise<Paginated<AdminAccessCode>> => {
   const res = await api.get<{ success: true; data: AdminAccessCode[]; meta: Omit<Paginated<never>, 'items'> }>(

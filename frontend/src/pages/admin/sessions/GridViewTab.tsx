@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Clock, MapPin } from 'lucide-react';
 import { adminListSessions, SESSION_DAYS, type AdminSession, type SessionDay } from '../../../services/session.service';
+import { adminListTracks, type AdminTrack } from '../../../services/track.service';
 import { getApiErrorMessage } from '../../../services/api';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
@@ -12,12 +13,27 @@ const DAY_LABEL: Record<SessionDay, string> = { day1: 'Day 1 — 19 Oct', day2: 
 // glance (by day, colored by track). Editing still happens from the List tab.
 export const GridViewTab = () => {
   const [items, setItems] = useState<AdminSession[] | null>(null);
+  const [tracks, setTracks] = useState<AdminTrack[]>([]);
   const [error, setError] = useState('');
+  const [dayFilter, setDayFilter] = useState<SessionDay | ''>('');
+  const [trackFilter, setTrackFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    adminListSessions({ limit: 200 })
-      .then((res) => setItems(res.items))
+  const load = useCallback(() => {
+    adminListSessions({ day: dayFilter || undefined, track: trackFilter || undefined, page, limit: 50 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)));
+  }, [dayFilter, trackFilter, page]);
+
+  useEffect(load, [load]);
+  useEffect(() => {
+    adminListTracks().then(setTracks).catch(() => {});
   }, []);
 
   const grouped = useMemo(() => {
@@ -28,30 +44,83 @@ export const GridViewTab = () => {
     return map;
   }, [items]);
 
-  if (error) return <Banner variant="error">{error}</Banner>;
+  const filterBar = (
+    <div className="mb-6 flex flex-wrap items-center gap-3">
+      <p className="text-sm text-slate-500">{total} session{total === 1 ? '' : 's'}</p>
+      <select
+        value={dayFilter}
+        onChange={(e) => {
+          setPage(1);
+          setDayFilter(e.target.value as SessionDay | '');
+        }}
+        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+      >
+        <option value="">All Days</option>
+        {SESSION_DAYS.map((d) => (
+          <option key={d} value={d}>
+            {DAY_LABEL[d]}
+          </option>
+        ))}
+      </select>
+      <select
+        value={trackFilter}
+        onChange={(e) => {
+          setPage(1);
+          setTrackFilter(e.target.value);
+        }}
+        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+      >
+        <option value="">All Tracks</option>
+        {tracks.map((t) => (
+          <option key={t._id} value={t._id}>
+            {t.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+
+  if (error) {
+    return (
+      <div>
+        {filterBar}
+        <Banner variant="error">{error}</Banner>
+      </div>
+    );
+  }
 
   if (items === null) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-40 rounded-2xl" />
-        ))}
+      <div>
+        {filterBar}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 rounded-2xl" />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 py-20 text-center">
-        <CalendarDays size={28} className="text-slate-300" />
-        <p className="mt-3 font-semibold text-navy">No sessions yet</p>
-        <p className="mt-1 text-sm text-slate-500">Add sessions from the Sessions List tab to see them here.</p>
+      <div>
+        {filterBar}
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 py-20 text-center">
+          <CalendarDays size={28} className="text-slate-300" />
+          <p className="mt-3 font-semibold text-navy">No sessions yet</p>
+          <p className="mt-1 text-sm text-slate-500">
+            {dayFilter || trackFilter ? 'No sessions match your filters.' : 'Add sessions from the Sessions List tab to see them here.'}
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div>
+      {filterBar}
+      <div className="space-y-8">
       {SESSION_DAYS.map((day) => {
         const daySessions = grouped.get(day) ?? [];
         if (daySessions.length === 0) return null;
@@ -108,6 +177,21 @@ export const GridViewTab = () => {
           </div>
         );
       })}
+      </div>
+
+      {pages > 1 && (
+        <div className="mt-6 flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-4 py-3 text-[13px] text-slate-500 shadow-card">
+          <span>Page {page} of {pages}</span>
+          <div className="flex gap-2">
+            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+              Previous
+            </button>
+            <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

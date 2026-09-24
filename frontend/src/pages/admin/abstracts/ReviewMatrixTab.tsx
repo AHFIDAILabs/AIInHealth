@@ -4,7 +4,9 @@ import {
   adminListReviewMatrix,
   adminAssignReviewer,
   adminUnassignReviewer,
+  ABSTRACT_STATUSES,
   type ReviewMatrixRow,
+  type AbstractStatus,
   type ScoreBand,
   type CommunicationStatus,
 } from '../../../services/abstract.service';
@@ -14,6 +16,14 @@ import { SkeletonRows } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
 import { AdminInput } from '../../../components/ui/AdminField';
 import { useToast } from '../../../contexts/ToastContext';
+
+const STATUS_LABEL: Record<AbstractStatus, string> = {
+  submitted: 'Submitted',
+  under_review: 'Under Review',
+  revision_requested: 'Revision Requested',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+};
 
 const BAND_LABEL: Record<ScoreBand, string> = {
   strong_accept: 'Strong Accept',
@@ -169,20 +179,31 @@ export const ReviewMatrixTab = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<AbstractStatus | ''>('');
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListReviewMatrix({ limit: 100 })
-      .then((res) => setRows(res.items))
+    adminListReviewMatrix({ status: statusFilter || undefined, page, limit: 20 })
+      .then((res) => {
+        setRows(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [statusFilter, page]);
 
   useEffect(() => {
     load();
-    adminListReviewers().then(setReviewers).catch(() => setReviewers([]));
   }, [load]);
+
+  useEffect(() => {
+    adminListReviewers().then(setReviewers).catch(() => setReviewers([]));
+  }, []);
 
   const unassign = async (abstractId: string, reviewId: string) => {
     try {
@@ -194,24 +215,42 @@ export const ReviewMatrixTab = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card">
-        <SkeletonRows rows={6} cols={5} />
-      </div>
-    );
-  }
-
   return (
     <div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => {
+            setPage(1);
+            setStatusFilter('');
+          }}
+          className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${!statusFilter ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
+        >
+          All
+        </button>
+        {ABSTRACT_STATUSES.map((s) => (
+          <button
+            key={s}
+            onClick={() => {
+              setPage(1);
+              setStatusFilter(s);
+            }}
+            className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${statusFilter === s ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
+          >
+            {STATUS_LABEL[s]}
+          </button>
+        ))}
+      </div>
+
       {error && (
-        <div className="mb-4">
+        <div className="mt-4">
           <Banner variant="error">{error}</Banner>
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card">
-        {rows.length === 0 ? (
+      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card">
+        {loading ? (
+          <SkeletonRows rows={6} cols={5} />
+        ) : rows.length === 0 ? (
           <div className="py-16 text-center text-sm text-slate-500">No abstracts to review yet.</div>
         ) : (
           <div className="overflow-x-auto">
@@ -336,6 +375,20 @@ export const ReviewMatrixTab = () => {
               })}
             </tbody>
           </table>
+          </div>
+        )}
+
+        {!loading && rows.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages} &middot; {total} abstract{total === 1 ? '' : 's'}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, X, UserCog, Trash2 } from 'lucide-react';
+import { Plus, X, UserCog, Trash2, Search } from 'lucide-react';
 import { adminListUsers, adminCreateUser, adminUpdateUser, adminDeleteUser, type AdminStaffUser, type CreateUserInput } from '../../services/adminUser.service';
 import { ROLES, type Role } from '../../services/auth.service';
 import { getApiErrorMessage } from '../../services/api';
@@ -26,6 +26,9 @@ export const UsersPage = () => {
   const [items, setItems] = useState<AdminStaffUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [total, setTotal] = useState(0);
+  const [q, setQ] = useState('');
+  const [roleFilter, setRoleFilter] = useState<Role | ''>('');
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<CreateUserInput>(EMPTY_FORM);
@@ -41,13 +44,24 @@ export const UsersPage = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListUsers({ limit: 100 })
-      .then((res) => setItems(res.items))
+    adminListUsers({ role: roleFilter || undefined, q: q || undefined, limit: 100 })
+      .then((res) => {
+        setItems(res.items);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [roleFilter, q]);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    const id = setTimeout(load, q ? 350 : 0);
+    return () => clearTimeout(id);
+  }, [load, q]);
+
+  const clearFilters = () => {
+    setRoleFilter('');
+    setQ('');
+  };
 
   const openCreate = () => {
     setForm(EMPTY_FORM);
@@ -64,7 +78,7 @@ export const UsersPage = () => {
     setFormError('');
     try {
       const created = await adminCreateUser(form);
-      setItems((prev) => [created, ...prev]);
+      load();
       toast('success', `Invite sent to ${created.email}`);
       setFormOpen(false);
     } catch (err) {
@@ -119,7 +133,7 @@ export const UsersPage = () => {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">User Management</h1>
-          <p className="text-sm text-slate-500">{items.length} staff account{items.length === 1 ? '' : 's'}</p>
+          <p className="text-sm text-slate-500">{total} staff account{total === 1 ? '' : 's'}</p>
         </div>
         <button
           onClick={openCreate}
@@ -127,6 +141,35 @@ export const UsersPage = () => {
         >
           <Plus size={16} /> Add User
         </button>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search name, email..."
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+          />
+        </div>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value as Role | '')}
+          className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
+          <option value="">All Roles</option>
+          {ROLES.map((r) => (
+            <option key={r} value={r}>
+              {ROLE_LABEL[r]}
+            </option>
+          ))}
+        </select>
+        {(roleFilter || q) && (
+          <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
+            Clear
+          </button>
+        )}
       </div>
 
       {error && (
@@ -143,7 +186,14 @@ export const UsersPage = () => {
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-chart-blue/15 text-chart-blue">
               <UserCog size={22} />
             </span>
-            <p className="mt-4 font-semibold text-navy">No staff accounts yet</p>
+            <p className="mt-4 font-semibold text-navy">
+              {roleFilter || q ? 'No staff accounts match your filters' : 'No staff accounts yet'}
+            </p>
+            {(roleFilter || q) && (
+              <button onClick={clearFilters} className="mt-2 text-sm font-semibold text-orange hover:text-orange-hover">
+                Clear filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">

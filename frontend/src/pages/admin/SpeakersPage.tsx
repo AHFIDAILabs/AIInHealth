@@ -42,6 +42,9 @@ export const SpeakersPage = () => {
   const [track, setTrack] = useState('');
   const [published, setPublished] = useState<'' | 'true' | 'false'>('');
   const [tracks, setTracks] = useState<PublicTrack[] | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AdminSpeaker | null>(null);
@@ -55,8 +58,12 @@ export const SpeakersPage = () => {
   // Reordering only makes sense against the one true full-list order — with a
   // search/track/status filter active, "position 3 of 4 filtered rows" doesn't
   // map cleanly onto the real order values the rest of the (hidden) speakers
-  // hold, so dragging is disabled whenever any filter narrows the list.
-  const canReorder = !q && !track && !published;
+  // hold, so dragging is disabled whenever any filter narrows the list. Same
+  // reasoning extends to pagination: a drop within one page would only touch
+  // that page's `order` values (see handleDrop below), silently clobbering
+  // the global order of every speaker sitting on other pages — so dragging
+  // also requires the whole (unfiltered) result to fit on a single page.
+  const canReorder = !q && !track && !published && pages <= 1;
   const dragIndex = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [reordering, setReordering] = useState(false);
@@ -70,16 +77,27 @@ export const SpeakersPage = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListSpeakers({ q: q || undefined, track: track || undefined, published: published || undefined, limit: 100 })
-      .then((res) => setItems(res.items))
+    adminListSpeakers({ q: q || undefined, track: track || undefined, published: published || undefined, page, limit: 100 })
+      .then((res) => {
+        setItems(res.items);
+        setPages(res.pages);
+        setTotal(res.total);
+      })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [q, track, published]);
+  }, [q, track, published, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
     return () => clearTimeout(id);
   }, [load, q]);
+
+  const clearFilters = () => {
+    setQ('');
+    setTrack('');
+    setPublished('');
+    setPage(1);
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -117,8 +135,8 @@ export const SpeakersPage = () => {
         setItems((prev) => prev.map((s) => (s._id === editing._id ? updated : s)));
         toast('success', 'Speaker updated');
       } else {
-        const created = await adminCreateSpeaker(form);
-        setItems((prev) => [created, ...prev]);
+        await adminCreateSpeaker(form);
+        load();
         toast('success', 'Speaker added');
       }
       setFormOpen(false);
@@ -145,6 +163,7 @@ export const SpeakersPage = () => {
     try {
       await adminDeleteSpeaker(toDelete._id);
       setItems((prev) => prev.filter((s) => s._id !== toDelete._id));
+      setTotal((prev) => prev - 1);
       toast('success', `${toDelete.fullName} removed`);
       setToDelete(null);
     } catch (err) {
@@ -190,7 +209,7 @@ export const SpeakersPage = () => {
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">Speakers</h1>
           <p className="text-sm text-slate-500">
-            {items.length} speaker{items.length === 1 ? '' : 's'}
+            {total} speaker{total === 1 ? '' : 's'}
             {reordering && <span className="ml-2 text-orange">Saving order…</span>}
           </p>
         </div>
@@ -207,14 +226,20 @@ export const SpeakersPage = () => {
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setQ(e.target.value);
+            }}
             placeholder="Search speakers..."
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
           />
         </div>
         <select
           value={track}
-          onChange={(e) => setTrack(e.target.value)}
+          onChange={(e) => {
+            setPage(1);
+            setTrack(e.target.value);
+          }}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Tracks</option>
@@ -226,13 +251,21 @@ export const SpeakersPage = () => {
         </select>
         <select
           value={published}
-          onChange={(e) => setPublished(e.target.value as '' | 'true' | 'false')}
+          onChange={(e) => {
+            setPage(1);
+            setPublished(e.target.value as '' | 'true' | 'false');
+          }}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
         >
           <option value="">All Statuses</option>
           <option value="true">Published</option>
           <option value="false">Draft</option>
         </select>
+        {(q || track || published) && (
+          <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
+            Clear
+          </button>
+        )}
       </div>
 
       {error && (
@@ -242,7 +275,11 @@ export const SpeakersPage = () => {
       )}
 
       {!canReorder && items.length > 0 && (
-        <p className="mt-3 text-xs text-slate-400">Clear search/track/status filters to drag speakers into a new order.</p>
+        <p className="mt-3 text-xs text-slate-400">
+          {pages > 1
+            ? 'Drag-and-drop reordering is unavailable while results span more than one page.'
+            : 'Clear search/track/status filters to drag speakers into a new order.'}
+        </p>
       )}
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover">
@@ -342,6 +379,20 @@ export const SpeakersPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && items.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+            <span>Page {page} of {pages}</span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Previous
+              </button>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40">
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

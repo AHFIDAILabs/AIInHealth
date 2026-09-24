@@ -15,18 +15,23 @@ export const ReconciliationsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resyncing, setResyncing] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    fetchReconciliations()
+    fetchReconciliations({ page, limit: 50 })
       .then((res) => {
         setConfigured(res.configured);
         setRows(res.rows);
+        setPages(res.pages);
+        setTotal(res.total);
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   useEffect(load, [load]);
 
@@ -49,7 +54,9 @@ export const ReconciliationsPage = () => {
     <div className="mx-auto max-w-6xl">
       <div>
         <h1 className="font-display text-2xl font-semibold text-navy">Reconciliations</h1>
-        <p className="text-sm text-slate-500">Recent Paystack transactions cross-checked against our registration records.</p>
+        <p className="text-sm text-slate-500">
+          {total > 0 ? `${total} Paystack transaction${total === 1 ? '' : 's'}, ` : ''}cross-checked against our registration records.
+        </p>
       </div>
 
       {error && (
@@ -72,7 +79,7 @@ export const ReconciliationsPage = () => {
 
       {!loading && configured && mismatches.length > 0 && (
         <div className="mt-6 flex items-center gap-2.5 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
-          <AlertTriangle size={16} /> {mismatches.length} transaction{mismatches.length === 1 ? '' : 's'} need attention below.
+          <AlertTriangle size={16} /> {mismatches.length} transaction{mismatches.length === 1 ? '' : 's'} on this page need attention below.
         </div>
       )}
 
@@ -133,6 +140,30 @@ export const ReconciliationsPage = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {!loading && rows.length > 0 && (
+            <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[13px] text-slate-500">
+              <span>
+                Page {page} of {pages}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={page >= pages}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="rounded-md border border-slate-200 px-3 py-1.5 font-medium disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>
