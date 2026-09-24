@@ -10,6 +10,13 @@ export const listSecurityEventsQuerySchema = z.object({
 });
 export type ListSecurityEventsQuery = z.infer<typeof listSecurityEventsQuerySchema>;
 
+export const listBlockedIpsQuerySchema = z.object({
+  q: z.string().trim().max(64).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+export type ListBlockedIpsQuery = z.infer<typeof listBlockedIpsQuerySchema>;
+
 // IPv4/IPv6-ish — loose on purpose (req.ip can be a v6-mapped v4 address, a
 // bare v6 address, etc.); the real guard against garbage input is that this
 // only ever gets written from either req.ip on an actual request or copy-pasted

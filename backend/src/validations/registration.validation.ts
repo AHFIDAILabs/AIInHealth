@@ -129,6 +129,7 @@ export const listRegistrationsQuerySchema = z.object({
   status: z.enum(REGISTRATION_STATUSES).optional(),
   type: z.enum(REGISTRATION_TYPES).optional(),
   paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
+  ticketCategory: z.enum(TICKET_CATEGORIES).optional(),
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

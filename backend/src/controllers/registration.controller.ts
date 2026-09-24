@@ -553,6 +553,7 @@ const buildAdminFilter = (query: ListRegistrationsQuery, req: Request): FilterQu
   }
   if (query.status) filter.status = query.status;
   if (query.paymentStatus) filter.paymentStatus = query.paymentStatus;
+  if (query.ticketCategory) filter.ticketCategory = query.ticketCategory;
   if (query.q) {
     const rx = new RegExp(query.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     filter.$or = [
@@ -562,6 +563,7 @@ const buildAdminFilter = (query: ListRegistrationsQuery, req: Request): FilterQu
       { companyName: rx },
       { contactEmail: rx },
       { contactName: rx },
+      { paymentReference: rx },
     ];
   }
   return filter;

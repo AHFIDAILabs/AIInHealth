@@ -22,6 +22,7 @@ import * as communicationController from '../../controllers/communication.contro
 import * as eventTeamController from '../../controllers/eventTeam.controller.js';
 import * as portalTokenController from '../../controllers/portalToken.controller.js';
 import * as reconciliationController from '../../controllers/reconciliation.controller.js';
+import * as paymentController from '../../controllers/payment.controller.js';
 import * as analyticsController from '../../controllers/analytics.controller.js';
 import * as integrationsController from '../../controllers/integrations.controller.js';
 import * as newsletterController from '../../controllers/newsletter.controller.js';
@@ -135,6 +136,7 @@ router.post('/access-codes', requireRole('super_admin', 'registrations_officer',
 router.patch('/access-codes/:id/revoke', requireRole('super_admin', 'registrations_officer', 'content_editor'), accessCodeController.adminRevoke);
 router.post('/access-codes/:id/send', requireRole('super_admin', 'registrations_officer', 'content_editor'), accessCodeController.adminSend);
 
+router.get('/payments-stats', requireRole('super_admin', 'registrations_officer', 'viewer'), paymentController.adminStats);
 router.get('/payments/reconciliations', requireRole('super_admin', 'registrations_officer'), reconciliationController.list);
 router.post('/payments/reconciliations/:reference/resync', requireRole('super_admin', 'registrations_officer'), reconciliationController.resync);
 

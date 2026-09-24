@@ -241,3 +241,29 @@ export const webhook = catchAsync(async (req: Request, res: Response) => {
     );
   }
 });
+
+// GET /admin/payments-stats — the Payments page's stat cards. Computed
+// server-side across every matching attendee registration, not just the
+// current page — the page's own `items` array is paginated/filtered and
+// would silently under-count once there's more than one page of results
+// (same reasoning as attendee.controller.ts's adminStats, which this mirrors).
+export const adminStats = catchAsync(async (_req: Request, res: Response) => {
+  const [paidCount, unpaidCount, failedCount, collectedAgg] = await Promise.all([
+    Registration.countDocuments({ type: 'attendee', paymentStatus: 'paid' }),
+    Registration.countDocuments({ type: 'attendee', paymentStatus: 'unpaid' }),
+    Registration.countDocuments({ type: 'attendee', paymentStatus: 'failed' }),
+    Registration.aggregate<{ total: number }>([
+      { $match: { type: 'attendee', paymentStatus: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$amountKobo' } } },
+    ]),
+  ]);
+
+  res.json(
+    new ApiResponse({
+      collectedNaira: Math.round((collectedAgg[0]?.total ?? 0) / 100),
+      paidCount,
+      unpaidCount,
+      failedCount,
+    })
+  );
+});

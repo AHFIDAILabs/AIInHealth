@@ -8,14 +8,21 @@ import { confirmPaymentByReference } from './payment.controller.js';
 // GET /admin/reconciliations — cross-checks recent Paystack transactions for this
 // event (reference prefix AIHS-) against our own payment records, flagging anything
 // Paystack says succeeded that we don't yet show as paid (a missed/late webhook)
-// or where the amounts disagree.
-export const list = catchAsync(async (_req: Request, res: Response) => {
+// or where the amounts disagree. Paginated straight through to Paystack's own
+// /transaction listing (which is itself paginated) — previously hardcoded to
+// just the 100 most recent transactions with no way to see anything older, so
+// a missed webhook on an older transaction was permanently invisible here.
+export const list = catchAsync(async (req: Request, res: Response) => {
   if (!paystack.paystackConfigured) {
-    res.json(new ApiResponse({ configured: false, rows: [] }));
+    res.json(new ApiResponse({ configured: false, rows: [] }, { page: 1, limit: 100, total: 0, pages: 1 }));
     return;
   }
 
-  const transactions = (await paystack.listTransactions({ perPage: 100 })).filter((t) => t.reference.startsWith('AIHS-'));
+  const page = Math.max(1, Number.parseInt(String(req.query.page ?? '1'), 10) || 1);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit ?? '50'), 10) || 50));
+
+  const result = await paystack.listTransactions({ perPage: limit, page });
+  const transactions = result.items.filter((t) => t.reference.startsWith('AIHS-'));
   const references = transactions.map((t) => t.reference);
   const registrations = await Registration.find({ paymentReference: { $in: references } }).select(
     'fullName email ticketCategory paymentStatus amountKobo paymentReference'
@@ -42,7 +49,12 @@ export const list = catchAsync(async (_req: Request, res: Response) => {
     };
   });
 
-  res.json(new ApiResponse({ configured: true, rows }));
+  res.json(
+    new ApiResponse(
+      { configured: true, rows },
+      { page: result.page, limit: result.perPage, total: result.total, pages: Math.max(1, result.pageCount) }
+    )
+  );
 });
 
 // POST /admin/reconciliations/:reference/resync — force re-verify one reference

@@ -10,6 +10,7 @@ import { blockIp, unblockIp, setLockdown } from '../services/securityEvent.servi
 import { recordAudit } from '../services/audit.service.js';
 import {
   listSecurityEventsQuerySchema,
+  listBlockedIpsQuerySchema,
   type BlockIpInput,
   type SetLockdownInput,
 } from '../validations/security.validation.js';
@@ -94,9 +95,23 @@ export const listEvents = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
-export const listBlockedIps = catchAsync(async (_req: Request, res: Response) => {
-  const items = await BlockedIp.find().sort({ createdAt: -1 }).populate('blockedBy', 'fullName email');
-  res.json(new ApiResponse(items));
+export const listBlockedIps = catchAsync(async (req: Request, res: Response) => {
+  const query = listBlockedIpsQuerySchema.parse(req.query);
+  const filter: Record<string, unknown> = {};
+  if (query.q) {
+    const rx = new RegExp(query.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    filter.$or = [{ ip: rx }, { reason: rx }];
+  }
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    BlockedIp.find(filter).sort({ createdAt: -1 }).skip(skip).limit(query.limit).populate('blockedBy', 'fullName email'),
+    BlockedIp.countDocuments(filter),
+  ]);
+
+  res.json(
+    new ApiResponse(items, { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) || 1 })
+  );
 });
 
 export const adminBlockIp = catchAsync(async (req: Request, res: Response) => {

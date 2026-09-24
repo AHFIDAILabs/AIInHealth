@@ -105,16 +105,26 @@ export interface TransactionListItem {
   customerEmail: string | null;
 }
 
-// Lists recent transactions, used by Reconciliations to cross-check Paystack's
-// record against ours. Only meaningful with a live key — returns an empty list
-// (not a fake dev fallback) when unconfigured, since there's nothing to reconcile.
-export const listTransactions = async (params: { perPage?: number; page?: number } = {}): Promise<TransactionListItem[]> => {
-  if (!configured) return [];
+export interface TransactionListResult {
+  items: TransactionListItem[];
+  total: number;
+  page: number;
+  perPage: number;
+  pageCount: number;
+}
 
-  const query = new URLSearchParams({
-    perPage: String(params.perPage ?? 100),
-    page: String(params.page ?? 1),
-  });
+// Lists recent transactions, used by Reconciliations to cross-check Paystack's
+// record against ours. Only meaningful with a live key — returns an empty
+// page (not a fake dev fallback) when unconfigured, since there's nothing to
+// reconcile. Paystack's own `meta` block carries the real total/pageCount —
+// captured here so Reconciliations can paginate properly instead of only ever
+// seeing whatever fit in one hardcoded page.
+export const listTransactions = async (params: { perPage?: number; page?: number } = {}): Promise<TransactionListResult> => {
+  const perPage = params.perPage ?? 100;
+  const page = params.page ?? 1;
+  if (!configured) return { items: [], total: 0, page, perPage, pageCount: 1 };
+
+  const query = new URLSearchParams({ perPage: String(perPage), page: String(page) });
   const res = await fetch(`${BASE_URL}/transaction?${query.toString()}`, {
     headers: { Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}` },
   });
@@ -123,19 +133,26 @@ export const listTransactions = async (params: { perPage?: number; page?: number
     status: boolean;
     message: string;
     data?: Array<{ reference: string; status: TransactionListItem['status']; amount: number; paid_at: string | null; customer?: { email?: string } }>;
+    meta?: { total?: number; page?: number; perPage?: number; pageCount?: number };
   };
 
   if (!res.ok || !data.status || !data.data) {
     throw new Error(`Paystack list transactions failed: ${data.message ?? res.status}`);
   }
 
-  return data.data.map((t) => ({
-    reference: t.reference,
-    status: t.status,
-    amountKobo: t.amount,
-    paidAt: t.paid_at,
-    customerEmail: t.customer?.email ?? null,
-  }));
+  return {
+    items: data.data.map((t) => ({
+      reference: t.reference,
+      status: t.status,
+      amountKobo: t.amount,
+      paidAt: t.paid_at,
+      customerEmail: t.customer?.email ?? null,
+    })),
+    total: data.meta?.total ?? data.data.length,
+    page: data.meta?.page ?? page,
+    perPage: data.meta?.perPage ?? perPage,
+    pageCount: data.meta?.pageCount ?? 1,
+  };
 };
 
 // HMAC SHA512 of the raw request body using the secret key — Paystack's documented
