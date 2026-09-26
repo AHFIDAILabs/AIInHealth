@@ -103,6 +103,14 @@ export type InquiryStatus = (typeof INQUIRY_STATUSES)[number];
 export const CONTACT_CATEGORIES = ['General', 'Press', 'Partnership', 'Protocol'] as const;
 export type ContactCategory = (typeof CONTACT_CATEGORIES)[number];
 
+// AI-assisted inbox triage (services/ai/triage.service.ts) — a sort/flag only,
+// never a gate: a misclassification just means an item is seen slightly later
+// in the admin list, nothing is hidden or auto-actioned. 'protocol_sensitive'
+// covers anything reading as government/ministerial/VIP-adjacent, which this
+// site's audience makes a real, distinct category from generic "high".
+export const AI_PRIORITY_LABELS = ['standard', 'high', 'protocol_sensitive'] as const;
+export type AIPriorityLabel = (typeof AI_PRIORITY_LABELS)[number];
+
 // The live-event types the Socket.IO /admin namespace and web push both fan
 // out — kept as one list so Settings' notification-preference checkboxes and the
 // actual emitters can never drift apart.
@@ -175,6 +183,41 @@ export type AbstractDecision = (typeof ABSTRACT_DECISIONS)[number];
 // into — see utils/reviewScoring.ts's getScoreBand. 80+/70+/60+/below.
 export const SCORE_BANDS = ['strong_accept', 'accept', 'borderline', 'reject'] as const;
 export type ScoreBand = (typeof SCORE_BANDS)[number];
+
+// AI-drafted plain-language abstract summary (services/ai/summarize.service.ts)
+// — 'draft' the moment it's generated, 'approved' only on an explicit admin
+// action. There is no public route exposing Abstract.abstractText today (the
+// public showcase is the separate, decoupled ConfirmedAbstract model, which
+// carries no abstract body at all) — this is internal secretariat/review-
+// committee tooling and Knowledge Product Drafting (2.9) input material, not
+// wired to a public page.
+export const PLAIN_SUMMARY_STATUSES = ['none', 'draft', 'approved'] as const;
+export type PlainSummaryStatus = (typeof PLAIN_SUMMARY_STATUSES)[number];
+
+// AI Feature Suite 2.4 (Multilingual). Scoped to the content models that
+// actually have translatable body text and a real public page rendering it —
+// Session (title/description, on the public Agenda) and Speaker (bio, on the
+// public Speakers page). The spec's own example also names static
+// "Home/About/Register/Partners" page blocks, but no CMS block model backs
+// those pages in this codebase (they're hardcoded marketing JSX) — building
+// one from scratch would be inventing new, unscoped infrastructure rather
+// than implementing this feature, so that part is left out. AU member-state
+// coverage per the spec's own reasoning: French and Portuguese only, no
+// Arabic yet (noted there as a clear v2 candidate).
+export const SUPPORTED_TRANSLATION_LANGS = ['fr', 'pt'] as const;
+export type TranslationLang = (typeof SUPPORTED_TRANSLATION_LANGS)[number];
+export const TRANSLATION_STATUSES = ['none', 'draft', 'approved'] as const;
+export type TranslationStatus = (typeof TRANSLATION_STATUSES)[number];
+
+// AI Feature Suite 2.5 (Global AI-in-Health Policy Tracker). See
+// PolicyTrackerEntry.model.ts and jobs/policyTrackerRefresh.job.ts.
+export const POLICY_FRAMEWORK_STATUSES = ['none_identified', 'drafting', 'adopted', 'unclear'] as const;
+export type PolicyFrameworkStatus = (typeof POLICY_FRAMEWORK_STATUSES)[number];
+// Same human-in-the-loop pattern as 2.3/2.4: nothing the weekly job produces
+// reaches the public GET /policy-tracker route until an admin sets this to
+// 'approved'.
+export const POLICY_ENTRY_STATUSES = ['pending_review', 'approved', 'rejected'] as const;
+export type PolicyEntryStatus = (typeof POLICY_ENTRY_STATUSES)[number];
 
 // Format of a confirmed presentation — see ConfirmedAbstract.model.ts. Kept
 // as its own small enum rather than reusing ABSTRACT_DECISIONS, since this

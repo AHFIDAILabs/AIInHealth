@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ABSTRACT_STATUSES, ABSTRACT_DECISIONS } from '../types/enums.js';
+import { ABSTRACT_STATUSES, ABSTRACT_DECISIONS, PLAIN_SUMMARY_STATUSES } from '../types/enums.js';
 
 export const createAbstractSchema = z.object({
   body: z.object({
@@ -29,6 +29,45 @@ export const adminUpdateAbstractSchema = z.object({
   }),
 });
 export type AdminUpdateAbstractInput = z.infer<typeof adminUpdateAbstractSchema>['body'];
+
+// POST /admin/abstracts/summarize — batch draft-generation, never more than
+// a page's worth selected at once (see AbstractsListTab).
+export const adminSummarizeAbstractsSchema = z.object({
+  body: z.object({
+    ids: z.array(z.string().trim()).min(1).max(50),
+  }),
+});
+export type AdminSummarizeAbstractsInput = z.infer<typeof adminSummarizeAbstractsSchema>['body'];
+
+// PATCH /admin/abstracts/:id/plain-summary — an admin editing and/or
+// approving a draft. Separate from adminUpdateAbstractSchema so summary
+// review never gets tangled with the decision workflow.
+export const adminUpdatePlainSummarySchema = z.object({
+  body: z.object({
+    plainSummary: z.string().trim().min(20, 'Summary is too short').max(1500),
+    plainSummaryStatus: z.enum(PLAIN_SUMMARY_STATUSES).optional(),
+  }),
+});
+export type AdminUpdatePlainSummaryInput = z.infer<typeof adminUpdatePlainSummarySchema>['body'];
+
+// POST /admin/abstracts/triage — admin-only batch job (see
+// abstractController.adminTriage). `ids` selects a specific subset to
+// re-run; omitted, it runs over every abstract not yet trackConfirmedByAdmin.
+export const adminTriageAbstractsSchema = z.object({
+  body: z.object({
+    ids: z.array(z.string().trim()).max(200).optional(),
+  }),
+});
+export type AdminTriageAbstractsInput = z.infer<typeof adminTriageAbstractsSchema>['body'];
+
+// PATCH /admin/abstracts/:id/track — an admin accepting the AI's suggested
+// track or picking their own; either way marks trackConfirmedByAdmin.
+export const adminUpdateTrackSchema = z.object({
+  body: z.object({
+    track: z.string().trim().min(1, 'Choose a track'),
+  }),
+});
+export type AdminUpdateTrackInput = z.infer<typeof adminUpdateTrackSchema>['body'];
 
 export const listAbstractsQuerySchema = z.object({
   status: z.enum(ABSTRACT_STATUSES).optional(),

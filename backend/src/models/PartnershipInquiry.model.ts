@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { INQUIRY_STATUSES } from '../types/enums.js';
+import { INQUIRY_STATUSES, AI_PRIORITY_LABELS } from '../types/enums.js';
 
 const partnershipInquirySchema = new Schema(
   {
@@ -12,11 +12,16 @@ const partnershipInquirySchema = new Schema(
     tierInterested: { type: String, trim: true, maxlength: 200 },
     message: { type: String, trim: true, maxlength: 2000 },
     status: { type: String, enum: INQUIRY_STATUSES, default: 'New' },
+    // Set fire-and-forget by triage.service.ts right after creation — same
+    // sort-hint-not-a-gate semantics as ContactMessage.priorityLabel.
+    priorityLabel: { type: String, enum: AI_PRIORITY_LABELS, default: 'standard' },
+    priorityReason: { type: String, trim: true, maxlength: 200 },
   },
   { timestamps: true }
 );
 
 partnershipInquirySchema.index({ status: 1, createdAt: -1 });
+partnershipInquirySchema.index({ priorityLabel: 1, createdAt: -1 });
 
 export type PartnershipInquiryDoc = InferSchemaType<typeof partnershipInquirySchema>;
 export const PartnershipInquiry = model('PartnershipInquiry', partnershipInquirySchema);

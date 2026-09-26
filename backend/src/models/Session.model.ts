@@ -1,5 +1,16 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { SESSION_DAYS, SESSION_CARD_STYLES } from '../types/enums.js';
+import { SESSION_DAYS, SESSION_CARD_STYLES, TRANSLATION_STATUSES } from '../types/enums.js';
+
+// AI-drafted (services/ai/translate.service.ts), admin-triggered, admin-
+// reviewed — see TRANSLATION_STATUSES' comment in types/enums.ts. The public
+// Agenda page falls back to the English title/description whenever a
+// language's status isn't 'approved', rather than ever showing an
+// unreviewed draft translation to a visitor.
+const translationFields = {
+  title: { type: String, trim: true },
+  description: { type: String, trim: true, maxlength: 3000 },
+  status: { type: String, enum: TRANSLATION_STATUSES, default: 'none' },
+};
 
 const sessionSchema = new Schema(
   {
@@ -40,6 +51,10 @@ const sessionSchema = new Schema(
     // and is admin-visible only.
     requiresRsvp: { type: Boolean, default: false },
     maxAttendees: { type: Number, min: 1 },
+    translations: {
+      fr: translationFields,
+      pt: translationFields,
+    },
     rsvpList: [
       {
         _id: false,

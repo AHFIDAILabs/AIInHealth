@@ -10,9 +10,13 @@ import {
   updateSpeakerSchema,
   listSpeakersQuerySchema,
   reorderSpeakersSchema,
+  adminTranslateSpeakerSchema,
+  adminUpdateSpeakerTranslationSchema,
   type ListSpeakersQuery,
 } from '../validations/speaker.validation.js';
 import { recordAudit } from '../services/audit.service.js';
+import { translateText } from '../services/ai/translate.service.js';
+import { publicTranslations } from '../utils/translations.js';
 
 // Shared by adminCreate/adminUpdate — track is free text now (see
 // Speaker.model.ts), so validity is checked here against the live Track
@@ -28,7 +32,8 @@ export const list = catchAsync(async (req: Request, res: Response) => {
   const track = typeof req.query.track === 'string' ? req.query.track : undefined;
   const filter: FilterQuery<SpeakerDoc> = { isPublished: true, ...(track ? { track } : {}) };
   const speakers = await Speaker.find(filter).sort({ order: 1, createdAt: -1 });
-  res.json(new ApiResponse(speakers));
+  const sanitized = speakers.map((s) => ({ ...s.toObject(), translations: publicTranslations(s.translations) }));
+  res.json(new ApiResponse(sanitized));
 });
 
 const buildAdminFilter = (query: ListSpeakersQuery): FilterQuery<SpeakerDoc> => {
@@ -109,4 +114,48 @@ export const adminDelete = catchAsync(async (req: Request, res: Response) => {
   if (!speaker) throw new ApiError(404, 'Speaker not found', 'NOT_FOUND');
   await recordAudit({ req, action: 'speaker.deleted', resourceType: 'Speaker', resourceId: req.params.id, before: speaker.toObject() });
   res.json(new ApiResponse({ id: req.params.id }));
+});
+
+// POST /admin/speakers/:id/translate — drafts a French/Portuguese bio via
+// Groq. Never shown publicly until an admin approves it (see
+// updateTranslation below and TRANSLATION_STATUSES' comment in types/enums.ts).
+export const translate = catchAsync(async (req: Request, res: Response) => {
+  const { params, body } = adminTranslateSpeakerSchema.parse({ params: req.params, body: req.body });
+  const speaker = await Speaker.findById(params.id);
+  if (!speaker) throw new ApiError(404, 'Speaker not found', 'NOT_FOUND');
+  if (!speaker.bio) throw new ApiError(422, 'This speaker has no bio to translate.', 'NO_BIO');
+
+  const bio = await translateText({ text: speaker.bio, targetLang: body.lang, contentLabel: 'speaker biography' });
+
+  speaker.set(`translations.${body.lang}.bio`, bio);
+  speaker.set(`translations.${body.lang}.status`, 'draft');
+  await speaker.save();
+
+  res.json(new ApiResponse(speaker));
+});
+
+// PATCH /admin/speakers/:id/translations/:lang — an admin editing and/or
+// approving a draft translation.
+export const updateTranslation = catchAsync(async (req: Request, res: Response) => {
+  const { params, body } = adminUpdateSpeakerTranslationSchema.parse({ params: req.params, body: req.body });
+  const before = await Speaker.findById(params.id).select(`translations.${params.lang}.status`);
+  if (!before) throw new ApiError(404, 'Speaker not found', 'NOT_FOUND');
+
+  const update: Record<string, unknown> = {};
+  if (body.bio !== undefined) update[`translations.${params.lang}.bio`] = body.bio;
+  if (body.status !== undefined) update[`translations.${params.lang}.status`] = body.status;
+
+  const speaker = await Speaker.findByIdAndUpdate(params.id, { $set: update }, { new: true });
+  if (!speaker) throw new ApiError(404, 'Speaker not found', 'NOT_FOUND');
+
+  await recordAudit({
+    req,
+    action: 'speaker.translation_updated',
+    resourceType: 'Speaker',
+    resourceId: speaker.id,
+    before: { lang: params.lang, status: before.translations?.[params.lang]?.status },
+    after: { lang: params.lang, status: speaker.translations?.[params.lang]?.status },
+  });
+
+  res.json(new ApiResponse(speaker));
 });

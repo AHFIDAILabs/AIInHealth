@@ -22,6 +22,8 @@ import sessionTypeRoutes from './sessionType.routes.js';
 import volunteerTrackRoutes from './volunteerTrack.routes.js';
 import confirmedAbstractRoutes from './confirmedAbstract.routes.js';
 import innovationShowcaseEntryRoutes from './innovationShowcaseEntry.routes.js';
+import aiRoutes from './ai.routes.js';
+import policyTrackerRoutes from './policyTracker.routes.js';
 
 const router = Router();
 
@@ -48,5 +50,7 @@ router.use('/session-types', sessionTypeRoutes);
 router.use('/volunteer-tracks', volunteerTrackRoutes);
 router.use('/confirmed-abstracts', confirmedAbstractRoutes);
 router.use('/innovation-showcase-entries', innovationShowcaseEntryRoutes);
+router.use('/ai', aiRoutes);
+router.use('/policy-tracker', policyTrackerRoutes);
 
 export default router;

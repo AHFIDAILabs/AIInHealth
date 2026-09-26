@@ -8,6 +8,7 @@ import type { CreateInquiryInput, ListInquiriesQuery } from '../validations/inqu
 import { listInquiriesQuerySchema, updateInquiryStatusSchema } from '../validations/inquiry.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
+import { classifyPriority } from '../services/ai/triage.service.js';
 
 // POST /inquiries/partnership — public
 export const create = catchAsync(async (req: Request, res: Response) => {
@@ -25,6 +26,11 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   res.status(201).json(
     new ApiResponse({ id: inquiry.id, message: "Thanks for your interest — our partnerships team will follow up shortly." })
   );
+
+  // Fire-and-forget, after the response — see triage.service.ts's header comment.
+  void classifyPriority(
+    `Organization: ${input.organizationName}\nContact: ${input.contactName} <${input.contactEmail}>\nTier interested: ${input.tierInterested ?? 'not specified'}\nMessage: ${input.message ?? ''}`
+  ).then((result) => result && PartnershipInquiry.updateOne({ _id: inquiry.id }, { $set: result }).catch(() => {}));
 });
 
 const buildFilter = (query: ListInquiriesQuery): FilterQuery<PartnershipInquiryDoc> => {

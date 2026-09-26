@@ -14,9 +14,14 @@ import {
   addRsvpSchema,
   removeRsvpParamsSchema,
   publicRsvpSchema,
+  adminTranslateSessionSchema,
+  adminUpdateSessionTranslationSchema,
   type ListSessionsQuery,
 } from '../validations/session.validation.js';
 import { recordAudit } from '../services/audit.service.js';
+import { buildMyDay } from '../services/ai/agendaRecommender.service.js';
+import { translateText } from '../services/ai/translate.service.js';
+import { publicTranslations } from '../utils/translations.js';
 
 const SPEAKER_FIELDS = 'fullName title photoUrl';
 const PARTNER_FIELDS = 'name logoUrl website';
@@ -54,7 +59,27 @@ export const list = catchAsync(async (req: Request, res: Response) => {
     .populate({ path: 'speakers', select: SPEAKER_FIELDS, match: { isPublished: true } })
     .populate({ path: 'partners', select: PARTNER_FIELDS, match: { isPublished: true } })
     .populate('track', 'name color');
-  res.json(new ApiResponse(sessions));
+  const sanitized = sessions.map((s) => ({ ...s.toObject(), translations: publicTranslations(s.translations) }));
+  res.json(new ApiResponse(sanitized));
+});
+
+// GET /sessions/recommend?interests=Policy%20%26%20Governance,Clinical%20AI&day=day1
+// "Build My Day" — public, no auth required (a visitor doesn't need to be
+// registered to use this; a signed-in delegate's saved interests can be
+// passed the same way by the frontend). See agendaRecommender.service.ts for
+// why this is a plain scoring algorithm, not an LLM call.
+export const recommend = catchAsync(async (req: Request, res: Response) => {
+  const interestsParam = typeof req.query.interests === 'string' ? req.query.interests : '';
+  const interests = interestsParam.split(',').map((i) => i.trim()).filter(Boolean);
+  const day = req.query.day === 'day1' || req.query.day === 'day2' ? req.query.day : undefined;
+
+  if (interests.length === 0) {
+    res.json(new ApiResponse([]));
+    return;
+  }
+
+  const recommendations = await buildMyDay(interests, day);
+  res.json(new ApiResponse(recommendations));
 });
 
 const buildAdminFilter = (query: ListSessionsQuery): FilterQuery<SessionDoc> => {
@@ -265,4 +290,55 @@ export const publicRsvp = catchAsync(async (req: Request, res: Response) => {
   }
 
   res.status(201).json(new ApiResponse({ status: 'confirmed', message: "You're RSVP'd! See you there." }));
+});
+
+// POST /admin/sessions/:id/translate — drafts a French/Portuguese title +
+// description via Groq. Never shown publicly until an admin approves it
+// (see updateTranslation below and TRANSLATION_STATUSES' comment in
+// types/enums.ts).
+export const translate = catchAsync(async (req: Request, res: Response) => {
+  const { params, body } = adminTranslateSessionSchema.parse({ params: req.params, body: req.body });
+  const session = await Session.findById(params.id);
+  if (!session) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
+
+  const [title, description] = await Promise.all([
+    translateText({ text: session.title, targetLang: body.lang, contentLabel: 'conference session title' }),
+    session.description
+      ? translateText({ text: session.description, targetLang: body.lang, contentLabel: 'conference session description' })
+      : Promise.resolve(''),
+  ]);
+
+  session.set(`translations.${body.lang}.title`, title);
+  session.set(`translations.${body.lang}.description`, description || undefined);
+  session.set(`translations.${body.lang}.status`, 'draft');
+  await session.save();
+
+  res.json(new ApiResponse(session));
+});
+
+// PATCH /admin/sessions/:id/translations/:lang — an admin editing and/or
+// approving a draft translation.
+export const updateTranslation = catchAsync(async (req: Request, res: Response) => {
+  const { params, body } = adminUpdateSessionTranslationSchema.parse({ params: req.params, body: req.body });
+  const before = await Session.findById(params.id).select(`translations.${params.lang}.status`);
+  if (!before) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
+
+  const update: Record<string, unknown> = {};
+  if (body.title !== undefined) update[`translations.${params.lang}.title`] = body.title;
+  if (body.description !== undefined) update[`translations.${params.lang}.description`] = body.description;
+  if (body.status !== undefined) update[`translations.${params.lang}.status`] = body.status;
+
+  const session = await Session.findByIdAndUpdate(params.id, { $set: update }, { new: true });
+  if (!session) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
+
+  await recordAudit({
+    req,
+    action: 'session.translation_updated',
+    resourceType: 'Session',
+    resourceId: session.id,
+    before: { lang: params.lang, status: before.translations?.[params.lang]?.status },
+    after: { lang: params.lang, status: session.translations?.[params.lang]?.status },
+  });
+
+  res.json(new ApiResponse(session));
 });

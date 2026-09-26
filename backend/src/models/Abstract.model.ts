@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { ABSTRACT_STATUSES, ABSTRACT_DECISIONS } from '../types/enums.js';
+import { ABSTRACT_STATUSES, ABSTRACT_DECISIONS, PLAIN_SUMMARY_STATUSES } from '../types/enums.js';
 
 const abstractSchema = new Schema(
   {
@@ -22,6 +22,20 @@ const abstractSchema = new Schema(
     // accepted_poster/rejected ('waitlisted' has no status equivalent).
     decision: { type: String, enum: ABSTRACT_DECISIONS },
     reviewNotes: { type: String, trim: true, maxlength: 1000 }, // admin-only, never shown to the submitter
+    // AI-assisted, admin-triggered — see services/ai/summarize.service.ts and
+    // PLAIN_SUMMARY_STATUSES' comment in types/enums.ts.
+    plainSummary: { type: String, trim: true, maxlength: 1500 },
+    plainSummaryStatus: { type: String, enum: PLAIN_SUMMARY_STATUSES, default: 'none' },
+    plainSummaryGeneratedAt: { type: Date },
+    // Admin-only triage tooling — see services/ai/abstractTriage.service.ts
+    // and abstractController.adminTriage. Computed by an admin-triggered
+    // batch run, never automatic; `track` itself is only ever changed by an
+    // admin explicitly accepting a suggestion or picking their own (see
+    // abstractController.updateTrack), never written to directly by triage.
+    aiSuggestedTrack: { type: String, trim: true },
+    trackConfirmedByAdmin: { type: Boolean, default: false },
+    possibleDuplicateOf: [{ type: Schema.Types.ObjectId, ref: 'Abstract' }],
+    clusterLabel: { type: String, trim: true },
   },
   { timestamps: true }
 );

@@ -11,6 +11,7 @@ export const createPartnerSchema = z.object({
     website: optionalUrlField,
     description: z.string().trim().max(1000).optional(),
     logoUrl: optionalUrlField,
+    logoAlt: z.string().trim().max(200).optional(),
     order: z.coerce.number().int().optional(),
     isPublished: z.boolean().optional(),
     contactName: z.string().trim().optional(),

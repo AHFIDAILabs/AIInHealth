@@ -14,12 +14,16 @@ import { blockedIpGuard } from './middlewares/blockedIp.middleware.js';
 import { lockdownGuard } from './middlewares/lockdown.middleware.js';
 import { notFoundHandler, errorHandler } from './middlewares/errorHandler.middleware.js';
 import { recordSecurityEvent } from './services/securityEvent.service.js';
+import { getRawForwardedFor } from './utils/clientIp.js';
 import healthRoutes from './routes/health.routes.js';
 import apiV1Router from './routes/v1/index.js';
 
 export const app = express();
 
-app.set('trust proxy', 1);
+// See config/env.ts's TRUST_PROXY_HOPS comment before ever changing this —
+// wrong in either direction is a real problem (unhelpful IP logging if too
+// low, spoofable rate-limiting/IP-blocking if too high).
+app.set('trust proxy', env.TRUST_PROXY_HOPS);
 
 app.use(
   helmet({
@@ -81,6 +85,7 @@ app.use(
         type: 'injection.mongo_operator_stripped',
         severity: 'medium',
         ip: req.ip,
+        rawForwardedFor: getRawForwardedFor(req),
         userAgent: req.headers['user-agent'],
         path: req.originalUrl,
         detail: { key },

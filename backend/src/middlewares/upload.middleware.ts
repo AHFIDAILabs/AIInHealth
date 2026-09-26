@@ -62,3 +62,23 @@ export const uploadCsv = multer({
     cb(null, true);
   },
 }).single('file');
+
+const ALLOWED_DOCUMENT_EXTENSIONS = ['.pdf', '.docx', '.txt', '.md'];
+
+// Knowledge Base's "upload a document" flow (knowledgeChunk.controller.ts's
+// adminExtract) — a source document (Concept Note, Partnership Prospectus,
+// FAQ) an admin uploads to auto-propose chunks from, instead of pasting each
+// one by hand. Extension-based filtering, same reasoning as uploadCsv above
+// — browsers report .docx/.pdf mimetypes inconsistently.
+export const uploadDocument = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB — comfortably covers a real multi-page concept note
+  fileFilter: (_req, file, cb) => {
+    const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf('.'));
+    if (!ALLOWED_DOCUMENT_EXTENSIONS.includes(ext)) {
+      cb(new ApiError(422, 'Only PDF, DOCX, TXT, or MD files are allowed.', 'INVALID_FILE_TYPE'));
+      return;
+    }
+    cb(null, true);
+  },
+}).single('file');

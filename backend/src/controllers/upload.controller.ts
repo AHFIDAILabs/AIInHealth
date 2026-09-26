@@ -9,6 +9,16 @@ import { uploadImageToCloudinary, uploadMediaToCloudinary } from '../services/cl
 // speakers, partners, innovations) — mounted separately under /admin and /delegate
 // so each keeps its own auth, but both just hand back a URL for the caller to save
 // wherever they already store one (User.avatarUrl, Registration.avatarUrl, etc).
+//
+// AI alt-text suggestion (AI Feature Suite 2.8) was scoped to plug in right
+// here — pass secureUrl to a vision-capable Groq model, return a suggested
+// alt string alongside the URL for the picker to pre-fill. As of writing,
+// this Groq account's model roster (GET /openai/v1/models) has no
+// vision-capable model at all (no Llama 4 Scout/Maverick, nothing tagged
+// vision) — the spec's own Section 0.3 anticipated exactly this and
+// specifies a clean fallback: ship the manual alt-text field only (see
+// Speaker.model.ts's photoAlt / Partner.model.ts's logoAlt), skip the AI
+// suggestion. Revisit this endpoint if Groq adds a vision model later.
 export const uploadImage = catchAsync(async (req: Request, res: Response) => {
   if (!req.file) {
     throw new ApiError(422, 'No image was uploaded.', 'NO_FILE');

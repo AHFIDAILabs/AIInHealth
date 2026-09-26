@@ -1,6 +1,7 @@
 import rateLimit, { type Options } from 'express-rate-limit';
 import type { NextFunction, Request, Response } from 'express';
 import { recordSecurityEvent } from '../services/securityEvent.service.js';
+import { getRawForwardedFor } from '../utils/clientIp.js';
 import type { SecurityEventSeverity } from '../types/enums.js';
 
 // Shared `handler` for every limiter below — records a security event, then
@@ -14,6 +15,7 @@ const onLimitExceeded =
       type: 'rate_limit.exceeded',
       severity,
       ip: req.ip,
+      rawForwardedFor: getRawForwardedFor(req),
       userAgent: req.headers['user-agent'],
       path: req.originalUrl,
       detail: { limiter: limiterName },
@@ -169,4 +171,19 @@ export const idCardUploadLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many uploads. Try again in 15 minutes.' } },
   handler: onLimitExceeded('idCardUploadLimiter', 'medium'),
+});
+
+// Ask the Concept Note (rag.service.ts) — the one fully public, uncapped-by-
+// design AI endpoint, and the highest-risk one on the shared Groq daily
+// budget (see aiBudget.service.ts). IP-only, tight window: a single visitor
+// asking 5 real questions in 15 minutes is generous; a bot loop hitting this
+// unbounded could exhaust the whole day's budget for every other AI feature
+// in minutes.
+export const askAiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many questions. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('askAiLimiter', 'low'),
 });

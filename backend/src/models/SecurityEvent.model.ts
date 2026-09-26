@@ -12,6 +12,11 @@ const securityEventSchema = new Schema(
     type: { type: String, enum: SECURITY_EVENT_TYPES, required: true },
     severity: { type: String, enum: SECURITY_EVENT_SEVERITIES, required: true },
     ip: { type: String },
+    // The raw X-Forwarded-For header, verbatim — see utils/clientIp.ts. Lets
+    // an admin tell a misconfigured TRUST_PROXY_HOPS (config/env.ts) apart
+    // from a real anonymized/internal-network request just by comparing
+    // this to `ip` in the Security Center UI, without needing a code change.
+    rawForwardedFor: { type: String },
     userAgent: { type: String },
     path: { type: String },
     // Set only when the event is tied to a known account (e.g. a failed

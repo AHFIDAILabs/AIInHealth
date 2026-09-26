@@ -58,6 +58,7 @@ interface RecordSecurityEventParams {
   type: SecurityEventType;
   severity: SecurityEventSeverity;
   ip?: string;
+  rawForwardedFor?: string;
   userAgent?: string;
   path?: string;
   userId?: string;
@@ -75,6 +76,7 @@ export const recordSecurityEvent = async (params: RecordSecurityEventParams): Pr
       type: params.type,
       severity: params.severity,
       ip: params.ip,
+      rawForwardedFor: params.rawForwardedFor,
       userAgent: params.userAgent,
       path: params.path,
       user: params.userId,

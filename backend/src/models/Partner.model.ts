@@ -12,6 +12,9 @@ const partnerSchema = new Schema(
     website: { type: String, trim: true },
     description: { type: String, trim: true, maxlength: 1000 },
     logoUrl: { type: String, trim: true },
+    // WCAG AA alt text for logoUrl — admin-entered (see partner.controller.ts
+    // and SponsorsTab.tsx).
+    logoAlt: { type: String, trim: true, maxlength: 200 },
     order: { type: Number, default: 0 },
     // Whether the logo shows on the public Partners page — an explicit admin
     // action, deliberately independent of `status` below (a "lead" that's

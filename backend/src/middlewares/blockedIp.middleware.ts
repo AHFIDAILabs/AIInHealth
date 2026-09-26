@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { isIpBlocked, recordSecurityEvent } from '../services/securityEvent.service.js';
+import { getRawForwardedFor } from '../utils/clientIp.js';
 import { ApiError } from '../utils/ApiError.js';
 
 // Exempts the Security Command Center's own routes so a root admin can still
@@ -19,6 +20,7 @@ export const blockedIpGuard = (req: Request, _res: Response, next: NextFunction)
     type: 'blocked_ip.request_denied',
     severity: 'medium',
     ip: req.ip,
+    rawForwardedFor: getRawForwardedFor(req),
     userAgent: req.headers['user-agent'],
     path: req.originalUrl,
   });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SESSION_DAYS, SESSION_CARD_STYLES } from '../types/enums.js';
+import { SESSION_DAYS, SESSION_CARD_STYLES, SUPPORTED_TRANSLATION_LANGS, TRANSLATION_STATUSES } from '../types/enums.js';
 
 const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use 24-hour HH:mm format');
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
@@ -83,7 +83,26 @@ export const checkConflictSchema = z.object({
   }),
 });
 
+// POST /admin/sessions/:id/translate — drafts a translation via Groq.
+export const adminTranslateSessionSchema = z.object({
+  params: z.object({ id: objectId }),
+  body: z.object({ lang: z.enum(SUPPORTED_TRANSLATION_LANGS) }),
+});
+
+// PATCH /admin/sessions/:id/translations/:lang — an admin editing and/or
+// approving a draft.
+export const adminUpdateSessionTranslationSchema = z.object({
+  params: z.object({ id: objectId, lang: z.enum(SUPPORTED_TRANSLATION_LANGS) }),
+  body: z.object({
+    title: z.string().trim().min(1).optional(),
+    description: z.string().trim().max(3000).optional(),
+    status: z.enum(TRANSLATION_STATUSES).optional(),
+  }),
+});
+
 export type CreateSessionInput = z.infer<typeof createSessionSchema>['body'];
+export type AdminTranslateSessionInput = z.infer<typeof adminTranslateSessionSchema>;
+export type AdminUpdateSessionTranslationInput = z.infer<typeof adminUpdateSessionTranslationSchema>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema>['body'];
 export type ListSessionsQuery = z.infer<typeof listSessionsQuerySchema>;
 export type CheckConflictInput = z.infer<typeof checkConflictSchema>['body'];

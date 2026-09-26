@@ -30,6 +30,30 @@ const envSchema = z.object({
   // for dev, where it's never actually reachable from Paystack anyway.
   PUBLIC_API_URL: z.string().url().optional(),
 
+  // How many reverse-proxy hops sit between the real visitor and this
+  // server — passed straight to Express's `app.set('trust proxy', ...)`
+  // (app.ts). This is the ONE thing that determines whether `req.ip` (and
+  // every IP this app logs — rate limits, blocked-IP checks, Security
+  // Center events) reflects the real client or an internal hop.
+  //
+  // Get this wrong in either direction:
+  //  - Too LOW: `req.ip` resolves to an internal proxy/LB address instead of
+  //    the real client — every logged IP looks the same/unhelpful (this is
+  //    the bug that prompted adding this setting instead of a hardcoded 1).
+  //  - Too HIGH (or `true`, which trusts unconditionally): a malicious
+  //    client can forge its own X-Forwarded-For header and make Express
+  //    believe whatever IP it wants — defeats rate-limiting and IP-blocking
+  //    entirely. Never set this higher than the real, known hop count.
+  //
+  // How to find the real number: open the live site in a browser, DevTools
+  // → Network → any request → Response Headers. A `cf-ray` header (or
+  // `server: cloudflare`) means Cloudflare is proxying — that's +1 hop on
+  // top of whatever your hosting platform's own load balancer adds (Render/
+  // Railway/Fly's own edge is typically 1 hop by itself, so Cloudflare in
+  // front of one of those is 2 total). No such header usually means you're
+  // hitting the host directly — 1 hop.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(1),
+
   RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().default(30),
 
   // Delegate portal — access-code auth is separate from the admin User/JWT
@@ -66,6 +90,39 @@ const envSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().optional().default(''),
   VAPID_PRIVATE_KEY: z.string().optional().default(''),
   VAPID_SUBJECT: z.string().optional().default('mailto:support@example.com'),
+
+  // Groq — every AI feature (services/ai/*) is additive/optional by design (see
+  // groqClient.ts's header comment): an empty key disables AI features with a
+  // clean per-feature fallback (an empty suggested field, a "not available right
+  // now" message, unprioritized-but-still-saved records), the same no-op-when-
+  // unconfigured convention as email/push above. Deliberately NOT in
+  // productionRequiredSchema below — unlike Paystack, there is no unsafe
+  // fail-open behavior if this is ever blank in production, only a missing
+  // convenience feature.
+  // Model IDs verified live against console.groq.com/v1/models for this
+  // account at build time — llama-3.1-8b-instant/llama-3.3-70b-versatile (an
+  // earlier draft's assumption) came back 404 "does not exist or you do not
+  // have access to it"; Groq's roster had moved on. gpt-oss-20b/120b are the
+  // current working pair. Re-verify against the same endpoint before ever
+  // changing these — don't hardcode a model ID without checking it's live.
+  GROQ_MODEL_STANDARD: z.string().optional().default('openai/gpt-oss-20b'),
+  GROQ_MODEL_ADVANCED: z.string().optional().default('openai/gpt-oss-120b'),
+  GROQ_API_KEY: z.string().optional().default(''),
+  // Daily request-count ceilings, enforced by aiBudget.service.ts's in-memory
+  // counter (per-process — same "fine for a single instance, resets on
+  // restart/deploy" tradeoff rateLimiter.middleware.ts already accepts; no
+  // Redis dependency in this app, see that file's comment). Both default to
+  // 1000: verified live (console.groq.com/docs/rate-limits) that gpt-oss-20b
+  // and gpt-oss-120b share IDENTICAL free-tier limits on this account (30 RPM,
+  // 1,000 requests/day, 8K TPM each) — there is no cheap high-quota tier the
+  // way an earlier draft assumed (that was true of the old llama models, not
+  // these). The two models are now a quality/speed choice, not a
+  // quota/cost choice — budget them the same, and keep the public-facing Ask
+  // the Concept Note feature's own caching/rate-limiting doing the real work
+  // of not burning through a 1,000/day ceiling shared with every other
+  // feature on the same model.
+  AI_DAILY_BUDGET_ADVANCED: z.coerce.number().int().positive().optional().default(1000),
+  AI_DAILY_BUDGET_STANDARD: z.coerce.number().int().positive().optional().default(1000),
 
   // Cloudinary — every profile/logo photo upload (admin settings, delegate portal,
   // speakers, partners, innovations) goes here; there's no local-disk fallback.

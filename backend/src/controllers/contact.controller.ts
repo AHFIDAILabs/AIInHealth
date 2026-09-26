@@ -8,6 +8,7 @@ import type { CreateContactMessageInput, ListMessagesQuery } from '../validation
 import { listMessagesQuerySchema, updateMessageSchema } from '../validations/contact.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
+import { classifyPriority } from '../services/ai/triage.service.js';
 
 // POST /contact — public
 export const create = catchAsync(async (req: Request, res: Response) => {
@@ -23,6 +24,11 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   });
 
   res.status(201).json(new ApiResponse({ id: message.id, message: "Thanks for reaching out — we'll get back to you soon." }));
+
+  // Fire-and-forget, after the response — see triage.service.ts's header comment.
+  void classifyPriority(`Category: ${input.category}\nFrom: ${input.name} <${input.email}>\nMessage: ${input.message}`).then(
+    (result) => result && ContactMessage.updateOne({ _id: message.id }, { $set: result }).catch(() => {})
+  );
 });
 
 const buildFilter = (query: ListMessagesQuery): FilterQuery<ContactMessageDoc> => {

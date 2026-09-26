@@ -18,11 +18,27 @@ import type {
   CreateAbstractInput,
   ListAbstractsQuery,
   AdminUpdateAbstractInput,
+  AdminSummarizeAbstractsInput,
+  AdminUpdatePlainSummaryInput,
+  AdminTriageAbstractsInput,
+  AdminUpdateTrackInput,
 } from '../validations/abstract.validation.js';
-import { listAbstractsQuerySchema, adminUpdateAbstractSchema } from '../validations/abstract.validation.js';
+import {
+  listAbstractsQuerySchema,
+  adminUpdateAbstractSchema,
+  adminSummarizeAbstractsSchema,
+  adminUpdatePlainSummarySchema,
+  adminTriageAbstractsSchema,
+  adminUpdateTrackSchema,
+} from '../validations/abstract.validation.js';
 import type { AdminAssignReviewerInput } from '../validations/reviewer.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
+import { draftPlainSummary } from '../services/ai/summarize.service.js';
+import { suggestTrack, labelCluster } from '../services/ai/abstractTriage.service.js';
+import { embed } from '../services/ai/embeddings.service.js';
+import { greedyCluster, findDuplicatePairs } from '../utils/clustering.js';
+import { runInBatches } from '../utils/batch.js';
 
 // Same double-click/network-retry protection as registration.controller.ts's
 // create() — a short recent window, not a permanent block, so someone submitting a
@@ -106,7 +122,11 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
   const skip = (query.page - 1) * query.limit;
 
   const [items, total] = await Promise.all([
-    Abstract.find(filter).sort({ createdAt: -1 }).skip(skip).limit(query.limit),
+    Abstract.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(query.limit)
+      .populate('possibleDuplicateOf', 'title authorName'),
     Abstract.countDocuments(filter),
   ]);
 
@@ -155,7 +175,10 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   if (input.decision === 'accepted_oral' || input.decision === 'accepted_poster') update.status = 'accepted';
   else if (input.decision === 'rejected') update.status = 'rejected';
 
-  const abstract = await Abstract.findByIdAndUpdate(req.params.id, update, { new: true });
+  const abstract = await Abstract.findByIdAndUpdate(req.params.id, update, { new: true }).populate(
+    'possibleDuplicateOf',
+    'title authorName'
+  );
   if (!abstract) throw new ApiError(404, 'Abstract not found', 'NOT_FOUND');
 
   if (input.decision) {
@@ -170,6 +193,200 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
     before: { status: before.status, decision: before.decision, reviewNotes: before.reviewNotes },
     after: { status: abstract.status, decision: abstract.decision, reviewNotes: abstract.reviewNotes },
   });
+  res.json(new ApiResponse(abstract));
+});
+
+// POST /admin/abstracts/summarize — drafts a "what this means for
+// policymakers" summary per selected abstract via Groq (see
+// services/ai/summarize.service.ts). Never auto-runs on submission and never
+// shown anywhere until an admin approves it via updatePlainSummary — see
+// PLAIN_SUMMARY_STATUSES' comment in types/enums.ts. Batched (not
+// Promise.all) to stay well under Groq's free-tier RPM limit.
+export const adminSummarize = catchAsync(async (req: Request, res: Response) => {
+  const { ids }: AdminSummarizeAbstractsInput = adminSummarizeAbstractsSchema.parse({ body: req.body }).body;
+
+  const abstracts = await Abstract.find({ _id: { $in: ids } });
+  if (abstracts.length === 0) throw new ApiError(404, 'No matching abstracts found', 'NOT_FOUND');
+
+  const { succeeded, failed } = await runInBatches(abstracts, 3, async (abstract) => {
+    const summary = await draftPlainSummary({
+      title: abstract.title,
+      abstractText: abstract.abstractText,
+      track: abstract.track,
+    });
+    abstract.plainSummary = summary;
+    abstract.plainSummaryStatus = 'draft';
+    abstract.plainSummaryGeneratedAt = new Date();
+    await abstract.save();
+    return abstract.id;
+  });
+
+  res.json(
+    new ApiResponse({
+      succeeded,
+      failed: failed.map((f) => ({
+        id: f.item.id,
+        error: f.error instanceof Error ? f.error.message : 'Unknown error',
+      })),
+      // `abstracts`' documents were mutated in place by the handler above for
+      // every succeeded item, so this reflects the post-generation state
+      // without a second query — lets the caller patch its local state
+      // directly instead of refetching the whole list.
+      items: abstracts.map((a) => ({
+        _id: a.id,
+        plainSummary: a.plainSummary,
+        plainSummaryStatus: a.plainSummaryStatus,
+        plainSummaryGeneratedAt: a.plainSummaryGeneratedAt,
+      })),
+    })
+  );
+});
+
+// PATCH /admin/abstracts/:id/plain-summary — an admin editing and/or
+// approving a draft summary. Kept separate from adminUpdate so summary
+// review never gets tangled with the decision workflow.
+export const updatePlainSummary = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Abstract not found', 'NOT_FOUND');
+  const input: AdminUpdatePlainSummaryInput = adminUpdatePlainSummarySchema.parse({ body: req.body }).body;
+
+  const before = await Abstract.findById(req.params.id).select('plainSummaryStatus');
+  if (!before) throw new ApiError(404, 'Abstract not found', 'NOT_FOUND');
+
+  const abstract = await Abstract.findByIdAndUpdate(
+    req.params.id,
+    {
+      plainSummary: input.plainSummary,
+      plainSummaryStatus: input.plainSummaryStatus ?? 'draft',
+    },
+    { new: true }
+  ).populate('possibleDuplicateOf', 'title authorName');
+  if (!abstract) throw new ApiError(404, 'Abstract not found', 'NOT_FOUND');
+
+  await recordAudit({
+    req,
+    action: 'abstract.plain_summary_updated',
+    resourceType: 'Abstract',
+    resourceId: abstract.id,
+    before: { plainSummaryStatus: before.plainSummaryStatus },
+    after: { plainSummaryStatus: abstract.plainSummaryStatus },
+  });
+
+  res.json(new ApiResponse(abstract));
+});
+
+// POST /admin/abstracts/triage — admin-only batch job over imported
+// abstracts: pre-clusters by theme, flags likely near-duplicates, and
+// suggests a track per abstract, to cut down manual sorting on a bulk
+// import. Clustering and duplicate detection are pure embedding-vector math
+// (utils/clustering.ts, zero Groq calls); only the per-abstract track
+// suggestion and per-cluster label call Groq, both batched to stay well
+// under the free-tier RPM limit. `ids` re-runs a specific subset — note that
+// narrows clustering/duplicate comparison to just that subset, not the whole
+// collection, which is fine for the default "everything unconfirmed" run
+// this was built for.
+export const adminTriage = catchAsync(async (req: Request, res: Response) => {
+  const { ids }: AdminTriageAbstractsInput = adminTriageAbstractsSchema.parse({ body: req.body }).body;
+
+  const filter: FilterQuery<AbstractDoc> = ids && ids.length > 0 ? { _id: { $in: ids } } : { trackConfirmedByAdmin: false };
+  const abstracts = await Abstract.find(filter);
+  if (abstracts.length === 0) throw new ApiError(404, 'No abstracts to triage', 'NOT_FOUND');
+  if (abstracts.length > 200) throw new ApiError(422, 'Narrow the selection to 200 or fewer abstracts', 'TOO_MANY');
+
+  const trackNames = (await Track.find().sort({ order: 1, name: 1 })).map((t) => t.name);
+
+  const vectors = await Promise.all(abstracts.map((a) => embed(`${a.title}\n\n${a.abstractText}`)));
+
+  // Near-duplicate detection. The spec's suggested starting threshold
+  // (0.85) was calibrated against a real test pair — two abstracts
+  // describing the same TB-screening model, fully reworded sentence by
+  // sentence but sharing the same figures — which topped out at 0.806
+  // cosine similarity under this embedding model; 0.85 would have missed
+  // it entirely. 0.78 sits above same-topic-different-paper pairs (~0.69-
+  // 0.72 in that same test) with real margin, while still catching a
+  // reworded near-duplicate. Revisit if real import data disagrees.
+  const duplicatePairs = findDuplicatePairs(vectors, 0.78);
+  const duplicatesByIndex = new Map<number, Set<number>>();
+  for (const [i, j] of duplicatePairs) {
+    if (!duplicatesByIndex.has(i)) duplicatesByIndex.set(i, new Set());
+    if (!duplicatesByIndex.has(j)) duplicatesByIndex.set(j, new Set());
+    duplicatesByIndex.get(i)!.add(j);
+    duplicatesByIndex.get(j)!.add(i);
+  }
+
+  // Thematic clustering, then one label call per multi-member cluster.
+  const clusterGroups = greedyCluster(vectors, 0.6);
+  const clusterLabelByCluster = new Map<number, string>();
+  await runInBatches(
+    clusterGroups.map((group, clusterIdx) => ({ group, clusterIdx })).filter((c) => c.group.length >= 2),
+    3,
+    async ({ group, clusterIdx }) => {
+      const label = await labelCluster(group.slice(0, 5).map((idx) => abstracts[idx].title));
+      if (label) clusterLabelByCluster.set(clusterIdx, label);
+    }
+  );
+  const clusterLabelByIndex = new Map<number, string>();
+  clusterGroups.forEach((group, clusterIdx) => {
+    const label = clusterLabelByCluster.get(clusterIdx);
+    if (label) group.forEach((idx) => clusterLabelByIndex.set(idx, label));
+  });
+
+  // Track suggestion — the only per-abstract Groq call.
+  await runInBatches(
+    abstracts.map((abstract, idx) => ({ abstract, idx })),
+    3,
+    async ({ abstract, idx }) => {
+      const suggestion = await suggestTrack({ title: abstract.title, abstractText: abstract.abstractText, trackNames });
+      if (suggestion) abstract.aiSuggestedTrack = suggestion;
+      abstract.possibleDuplicateOf = Array.from(duplicatesByIndex.get(idx) ?? []).map((i) => abstracts[i]._id);
+      abstract.clusterLabel = clusterLabelByIndex.get(idx);
+      await abstract.save();
+    }
+  );
+
+  res.json(
+    new ApiResponse({
+      triaged: abstracts.length,
+      trackSuggested: abstracts.filter((a) => !!a.aiSuggestedTrack).length,
+      duplicatePairs: duplicatePairs.length,
+      clusters: clusterGroups.filter((g) => g.length >= 2).length,
+      items: abstracts.map((a) => ({
+        _id: a.id,
+        aiSuggestedTrack: a.aiSuggestedTrack,
+        possibleDuplicateOf: a.possibleDuplicateOf,
+        clusterLabel: a.clusterLabel,
+      })),
+    })
+  );
+});
+
+// PATCH /admin/abstracts/:id/track — an admin accepting the AI's suggested
+// track or picking their own; either way records the decision as confirmed
+// so reporting treats it as authoritative over any future re-triage.
+export const updateTrack = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Abstract not found', 'NOT_FOUND');
+  const { track }: AdminUpdateTrackInput = adminUpdateTrackSchema.parse({ body: req.body }).body;
+
+  const trackExists = await Track.exists({ name: track });
+  if (!trackExists) throw new ApiError(422, 'Select a valid track.', 'INVALID_TRACK');
+
+  const before = await Abstract.findById(req.params.id).select('track');
+  if (!before) throw new ApiError(404, 'Abstract not found', 'NOT_FOUND');
+
+  const abstract = await Abstract.findByIdAndUpdate(req.params.id, { track, trackConfirmedByAdmin: true }, { new: true }).populate(
+    'possibleDuplicateOf',
+    'title authorName'
+  );
+  if (!abstract) throw new ApiError(404, 'Abstract not found', 'NOT_FOUND');
+
+  await recordAudit({
+    req,
+    action: 'abstract.track_updated',
+    resourceType: 'Abstract',
+    resourceId: abstract.id,
+    before: { track: before.track },
+    after: { track: abstract.track },
+  });
+
   res.json(new ApiResponse(abstract));
 });
 

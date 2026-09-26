@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as adminController from '../../controllers/admin.controller.js';
 import * as registrationController from '../../controllers/registration.controller.js';
+import * as knowledgeChunkController from '../../controllers/knowledgeChunk.controller.js';
 import * as speakerController from '../../controllers/speaker.controller.js';
 import * as sessionController from '../../controllers/session.controller.js';
 import * as partnerController from '../../controllers/partner.controller.js';
@@ -43,11 +44,14 @@ import * as customFormFieldController from '../../controllers/customFormField.co
 import * as exhibitorController from '../../controllers/exhibitor.controller.js';
 import * as attendeeController from '../../controllers/attendee.controller.js';
 import * as securityController from '../../controllers/security.controller.js';
+import * as policySourceController from '../../controllers/policySource.controller.js';
+import * as policyTrackerController from '../../controllers/policyTracker.controller.js';
+import * as translationReviewController from '../../controllers/translationReview.controller.js';
 import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { requireRootAdmin } from '../../middlewares/requireRootAdmin.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { uploadImage, uploadMedia, uploadCsv } from '../../middlewares/upload.middleware.js';
+import { uploadImage, uploadMedia, uploadCsv, uploadDocument } from '../../middlewares/upload.middleware.js';
 import { subscribePushSchema, unsubscribePushSchema } from '../../validations/push.validation.js';
 import { sendAnnouncementSchema } from '../../validations/delegateAnnouncement.validation.js';
 import { replaceRubricSchema } from '../../validations/rubric.validation.js';
@@ -153,6 +157,8 @@ router.post('/speakers', requireRole(...contentRoles), speakerController.adminCr
 router.patch('/speakers/reorder', requireRole(...contentRoles), speakerController.adminReorder);
 router.patch('/speakers/:id', requireRole(...contentRoles), speakerController.adminUpdate);
 router.delete('/speakers/:id', requireRole(...contentRoles), speakerController.adminDelete);
+router.post('/speakers/:id/translate', requireRole(...contentRoles), speakerController.translate);
+router.patch('/speakers/:id/translations/:lang', requireRole(...contentRoles), speakerController.updateTranslation);
 
 router.get('/sessions', requireRole(...contentRoles), sessionController.adminList);
 router.post('/sessions/check-conflict', requireRole(...contentRoles), sessionController.checkConflict);
@@ -161,6 +167,10 @@ router.patch('/sessions/:id', requireRole(...contentRoles), sessionController.ad
 router.delete('/sessions/:id', requireRole(...contentRoles), sessionController.adminDelete);
 router.post('/sessions/:id/rsvp', requireRole(...contentRoles), sessionController.adminAddRsvp);
 router.delete('/sessions/:id/rsvp/:email', requireRole(...contentRoles), sessionController.adminRemoveRsvp);
+router.post('/sessions/:id/translate', requireRole(...contentRoles), sessionController.translate);
+router.patch('/sessions/:id/translations/:lang', requireRole(...contentRoles), sessionController.updateTranslation);
+
+router.get('/translations/pending', requireRole(...contentRoles), translationReviewController.adminListPending);
 
 router.get('/tracks', requireRole(...contentRoles), trackController.adminList);
 router.post('/tracks', requireRole(...contentRoles), trackController.adminCreate);
@@ -257,6 +267,19 @@ router.delete('/innovation-showcase-entries/:id', requireRole(...contentRoles), 
 
 router.get('/abstracts', requireRole(...contentRoles), abstractController.adminList);
 router.patch('/abstracts/:id', requireRole(...contentRoles), abstractController.adminUpdate);
+router.post('/abstracts/summarize', requireRole(...contentRoles), abstractController.adminSummarize);
+router.patch('/abstracts/:id/plain-summary', requireRole(...contentRoles), abstractController.updatePlainSummary);
+router.post('/abstracts/triage', requireRole(...contentRoles), abstractController.adminTriage);
+router.patch('/abstracts/:id/track', requireRole(...contentRoles), abstractController.updateTrack);
+
+router.get('/policy-sources', requireRole(...contentRoles), policySourceController.adminList);
+router.post('/policy-sources', requireRole(...contentRoles), policySourceController.adminCreate);
+router.patch('/policy-sources/:id', requireRole(...contentRoles), policySourceController.adminUpdate);
+router.delete('/policy-sources/:id', requireRole(...contentRoles), policySourceController.adminDelete);
+
+router.get('/policy-tracker', requireRole(...contentRoles), policyTrackerController.adminList);
+router.patch('/policy-tracker/:id', requireRole(...contentRoles), policyTrackerController.adminUpdate);
+router.post('/policy-tracker/refresh-now', requireRole(...contentRoles), policyTrackerController.adminRefreshNow);
 router.post(
   '/abstracts/:id/assignments',
   requireRole(...contentRoles),
@@ -285,6 +308,19 @@ router.patch(
 );
 router.post('/communications/:id/send', requireRole(...contentRoles), communicationController.adminSend);
 router.post('/communications/:id/cancel', requireRole(...contentRoles), communicationController.adminCancel);
+
+// Ask the Concept Note's source material — see KnowledgeChunk.model.ts.
+router.get('/ai/knowledge-chunks', requireRole(...contentRoles), knowledgeChunkController.adminList);
+router.post('/ai/knowledge-chunks', requireRole(...contentRoles), knowledgeChunkController.adminCreate);
+router.patch('/ai/knowledge-chunks/:id', requireRole(...contentRoles), knowledgeChunkController.adminUpdate);
+router.delete('/ai/knowledge-chunks/:id', requireRole(...contentRoles), knowledgeChunkController.adminDelete);
+router.post(
+  '/ai/knowledge-chunks/extract',
+  requireRole(...contentRoles),
+  uploadDocument,
+  knowledgeChunkController.adminExtract
+);
+router.post('/ai/knowledge-chunks/bulk-create', requireRole(...contentRoles), knowledgeChunkController.adminBulkCreate);
 
 router.get('/media', requireRole(...contentRoles), mediaController.adminList);
 router.post('/media', requireRole(...contentRoles), mediaController.adminCreate);
