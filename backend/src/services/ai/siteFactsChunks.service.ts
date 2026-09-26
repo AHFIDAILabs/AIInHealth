@@ -35,10 +35,23 @@ const SPEAKERS_PER_CHUNK = 8;
 // answer's token budget on an irrelevant speaker roster just because it
 // exists.
 export const getSiteFactsChunks = async (): Promise<FactChunk[]> => {
+  // Split into two single-fact, question-framed chunks rather than one
+  // combined sentence — verified live that the combined version ("takes
+  // place on <date>, at <venue>") scored only 0.14 against "What is the
+  // venue?", below MIN_FACT_SCORE, so a visitor asking a plain venue
+  // question got zero context and a false "I don't have that information".
+  // Same fix already applied to the Speakers chunk below: a short
+  // question-style opener plus a single focused fact embeds far more
+  // strongly against the question it's meant to answer than a denser,
+  // multi-fact sentence does.
   const chunks: FactChunk[] = [
     {
       sourceDocument: 'Event Facts',
-      text: `The AI in Health Summit 2026 takes place on ${EVENT_DATE_RANGE}, at ${VENUE_NAME}, ${VENUE_STREET_ADDRESS}, ${VENUE_CITY}.`,
+      text: `Where is the AI in Health Summit 2026 taking place? What is the venue? The event is held at ${VENUE_NAME}, ${VENUE_STREET_ADDRESS}, ${VENUE_CITY}.`,
+    },
+    {
+      sourceDocument: 'Event Facts',
+      text: `When is the AI in Health Summit 2026? What are the event dates? The summit takes place on ${EVENT_DATE_RANGE}.`,
     },
   ];
 

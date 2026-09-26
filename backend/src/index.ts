@@ -3,6 +3,7 @@ import { logger } from './config/logger.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { ensureSuperAdminSeeded } from './services/bootstrap.service.js';
 import { loadSecurityCaches } from './services/securityEvent.service.js';
+import { warmupEmbeddings } from './services/ai/embeddings.service.js';
 import { app } from './app.js';
 import { initAdminSocket } from './sockets/adminNamespace.js';
 import { startScheduledJobs } from './jobs/index.js';
@@ -23,6 +24,10 @@ const start = async (): Promise<void> => {
 
   initAdminSocket(server);
   startScheduledJobs();
+
+  // Fire-and-forget: don't hold up the health-check port on a ~90MB model
+  // download. See warmupEmbeddings's own comment for why this matters.
+  void warmupEmbeddings();
 
   const shutdown = async (signal: string) => {
     logger.info(`${signal} received, shutting down gracefully`);

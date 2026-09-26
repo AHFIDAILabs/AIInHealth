@@ -35,6 +35,23 @@ export const embed = async (text: string): Promise<number[]> => {
   return Array.from(output.data);
 };
 
+// Called once, non-blocking, at server boot (index.ts) — without this, the
+// ~90MB model download/load happens inline on whichever real visitor's
+// request is the first to call embed() after a deploy or restart. On a host
+// with an ephemeral filesystem (the cached model doesn't survive a restart),
+// that means EVERY restart re-pays the download cost on a live user's
+// request instead of at boot, and a slow/failed download (network hiccup,
+// registry timeout) surfaces as rag.service's generic "at capacity" fallback
+// with no visible cause. Warming up here moves that cost — and any failure —
+// to boot time, where it shows up in deploy logs instead.
+export const warmupEmbeddings = async (): Promise<void> => {
+  try {
+    await embed('warmup');
+  } catch (err) {
+    logger.error({ err }, 'embeddings.service: warmup failed — Ask the Concept Note will retry lazily on first real request');
+  }
+};
+
 // Cosine similarity between two equal-length, already-normalized vectors —
 // since embed() above normalizes, this reduces to a plain dot product, but
 // written out in full so it stays correct even if that assumption ever
