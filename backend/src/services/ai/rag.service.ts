@@ -4,6 +4,7 @@ import { env } from '../../config/env.js';
 import { KnowledgeChunk } from '../../models/KnowledgeChunk.model.js';
 import { embed, cosineSimilarity } from './embeddings.service.js';
 import { complete } from './groqClient.js';
+import { getSiteFactsChunks } from './siteFactsChunks.service.js';
 
 export type AskLang = 'en' | 'fr' | 'pt';
 
@@ -30,6 +31,19 @@ const systemPrompt = (lang: AskLang): string =>
   `You are answering questions about the AI in Health Summit 2026 using ONLY the context provided below. If the context doesn't contain the answer, say "${NO_CONTEXT_ANSWERS[lang]}" — never speculate, never answer from outside the provided context. Keep answers under 150 words. Answer in ${LANG_NAMES[lang]}, regardless of what language the context or the question are in.`;
 
 const TOP_K = 5;
+// Site-facts chunks get their OWN top-N, separate from (and always added on
+// top of) the KnowledgeChunk competition above — verified live that even a
+// well-framed fact chunk scores far lower than a topical KnowledgeChunk
+// tends to (proper-noun-heavy text embeds weakly), so letting facts compete
+// for the same TOP_K slots as a large admin-curated corpus reliably crowded
+// them out even for directly relevant questions (e.g. the actual speaker
+// roster losing to a vaguely speaker-adjacent agenda chunk). MIN_FACT_SCORE
+// is the floor below which a fact chunk is considered irrelevant to this
+// question and left out entirely — calibrated against real scores: an
+// unrelated question scored ~0.05-0.08, a directly relevant one scored
+// ~0.20-0.34 even after the framing-sentence fix above.
+const FACT_TOP_N = 2;
+const MIN_FACT_SCORE = 0.18;
 
 export interface AskResult {
   answer: string;
@@ -58,18 +72,49 @@ export const askConceptNote = async (question: string, lang: AskLang = 'en'): Pr
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.answer;
 
-  const chunks = await KnowledgeChunk.find({ isActive: true }).lean();
-  if (chunks.length === 0) {
-    return { answer: NO_CONTEXT_ANSWERS[lang], sources: [] };
-  }
-
   let result: AskResult;
   try {
+    // Two sources feed the same retrieval pool: admin-curated KnowledgeChunks
+    // (already embedded, stored) and always-available site facts — dates,
+    // venue, the published speaker roster — assembled fresh from the live DB
+    // on every call (siteFactsChunks.service.ts) and embedded on the fly.
+    // Folding both into one top-K ranking means a visitor can get a correct
+    // answer to "when/where is it" or "who's speaking" even with zero
+    // admin-curated chunks, while an unrelated question still only pulls in
+    // whichever handful are actually relevant — never both sources in full,
+    // regardless of the question.
+    const [kbChunks, factChunks] = await Promise.all([
+      KnowledgeChunk.find({ isActive: true }).lean(),
+      getSiteFactsChunks(),
+    ]);
+    const factChunksEmbedded = await Promise.all(
+      factChunks.map(async (chunk) => ({ ...chunk, embedding: await embed(chunk.text) }))
+    );
+
     const questionEmbedding = await embed(question);
-    const scored = chunks
-      .map((chunk) => ({ chunk, score: cosineSimilarity(questionEmbedding, chunk.embedding) }))
+
+    // KnowledgeChunks compete amongst themselves for TOP_K, exactly as before.
+    const kbScored = kbChunks
+      .map((c) => ({
+        chunk: { sourceDocument: c.sourceDocument, sectionHeading: c.sectionHeading, text: c.text },
+        score: cosineSimilarity(questionEmbedding, c.embedding),
+      }))
       .sort((a, b) => b.score - a.score)
       .slice(0, TOP_K);
+
+    // Site facts compete only amongst themselves, then get added on top —
+    // see MIN_FACT_SCORE's comment above for why they never compete
+    // head-to-head against the KB corpus for a shared set of slots.
+    const factScored = factChunksEmbedded
+      .map((c) => ({
+        chunk: { sourceDocument: c.sourceDocument, sectionHeading: undefined as string | undefined, text: c.text },
+        score: cosineSimilarity(questionEmbedding, c.embedding),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, FACT_TOP_N)
+      .filter((s) => s.score >= MIN_FACT_SCORE);
+
+    const scored = [...factScored, ...kbScored];
 
     const context = scored
       .map(({ chunk }) => `[${chunk.sourceDocument}${chunk.sectionHeading ? ` — ${chunk.sectionHeading}` : ''}]\n${chunk.text}`)
