@@ -40,7 +40,7 @@ export const ConfirmedVoices = () => {
                 {speaker.photoUrl ? (
                   <img
                     src={speaker.photoUrl}
-                    alt={speaker.fullName}
+                    alt={speaker.photoAlt || speaker.fullName}
                     className="h-28 w-28 rounded-full border-2 border-white object-cover shadow-md shadow-navy/10 transition-transform duration-300 group-hover:scale-105 group-hover:border-orange/40 sm:h-32 sm:w-32"
                   />
                 ) : (

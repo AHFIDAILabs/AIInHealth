@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Mail, X, ArrowRightCircle, Search } from 'lucide-react';
+import { Mail, X, ArrowRightCircle, Search, ShieldAlert, Flame } from 'lucide-react';
 import {
   adminListInquiries,
   adminUpdateInquiryStatus,
@@ -19,6 +19,26 @@ const STATUS_COLOR: Record<InquiryStatus, string> = {
   Contacted: 'bg-warning/10 text-warning',
   Converted: 'bg-success/10 text-success',
   Declined: 'bg-danger/10 text-danger',
+};
+
+// AI-suggested triage — see triage.service.ts. Only rendered for the two
+// non-default labels; 'standard'/unset is the common case and needs no badge.
+const PriorityBadge = ({ inq }: { inq: AdminInquiry }) => {
+  if (inq.priorityLabel === 'protocol_sensitive') {
+    return (
+      <span title={inq.priorityReason} className="flex w-fit items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-semibold text-danger">
+        <ShieldAlert size={11} /> Protocol
+      </span>
+    );
+  }
+  if (inq.priorityLabel === 'high') {
+    return (
+      <span title={inq.priorityReason} className="flex w-fit items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold text-warning">
+        <Flame size={11} /> High
+      </span>
+    );
+  }
+  return null;
 };
 
 export const InquiriesPage = () => {
@@ -156,7 +176,10 @@ export const InquiriesPage = () => {
               <tbody className="divide-y divide-slate-100">
                 {items.map((inq) => (
                   <tr key={inq._id} onClick={() => setActive(inq)} className="cursor-pointer hover:bg-offwhite">
-                    <td className="px-4 py-3 font-medium text-navy">{inq.organizationName}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-navy">{inq.organizationName}</p>
+                      <PriorityBadge inq={inq} />
+                    </td>
                     <td className="px-3 py-3 text-slate-500">
                       {inq.contactName} <span className="text-slate-400">&middot; {inq.contactEmail}</span>
                     </td>
@@ -212,6 +235,7 @@ export const InquiriesPage = () => {
               </div>
 
               <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
+                <PriorityBadge inq={active} />
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Contact</p>
                   <p className="mt-1 text-sm text-navy">{active.contactName}</p>

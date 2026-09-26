@@ -1,8 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { InitialsAvatar } from './InitialsAvatar';
 import { ButtonLink } from './Button';
 import type { AdminSpeaker } from '../../services/speaker.service';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface SpeakerModalProps {
   speaker: AdminSpeaker | null;
@@ -13,7 +15,16 @@ interface SpeakerModalProps {
 // grid and the Home page's Confirmed Voices strip, so the two never drift apart.
 // Backed by the real GET /speakers data, so organization/bio show up whenever
 // they're actually filled in (unlike the old static roster, which never had them).
-export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
+export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => {
+  const { t } = useTranslation();
+  const { lang } = useLanguage();
+  // speaker.translations only ever carries a language key when that
+  // translation's status is 'approved' (stripped server-side otherwise —
+  // see backend utils/translations.ts), so the `||` fallback below is the
+  // only gate needed.
+  const bio = (lang !== 'en' && speaker?.translations?.[lang]?.bio) || speaker?.bio;
+
+  return (
   <AnimatePresence>
     {speaker && (
       <motion.div
@@ -33,7 +44,7 @@ export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
         >
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close', 'Close')}
             className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-navy/60 text-white backdrop-blur-sm hover:bg-navy/80"
           >
             <X size={18} />
@@ -48,7 +59,7 @@ export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
           <div className="flex h-64 w-full overflow-hidden rounded-t-2xl sm:h-72">
             <div className="relative h-full w-2/5 shrink-0 overflow-hidden bg-navy-secondary">
               {speaker.photoUrl ? (
-                <img src={speaker.photoUrl} alt={speaker.fullName} className="h-full w-full object-cover object-top" />
+                <img src={speaker.photoUrl} alt={speaker.photoAlt || speaker.fullName} className="h-full w-full object-cover object-top" />
               ) : (
                 <InitialsAvatar name={speaker.fullName} className="h-full w-full rounded-none" />
               )}
@@ -64,13 +75,14 @@ export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => (
           </div>
 
           <div className="p-6 sm:p-7">
-            {speaker.bio && <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">{speaker.bio}</p>}
+            {bio && <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">{bio}</p>}
             <ButtonLink to="/agenda" variant="primary" className="!mt-6 !py-2.5 !text-sm">
-              View Related Sessions
+              {t('speakerModal.viewRelatedSessions', 'View Related Sessions')}
             </ButtonLink>
           </div>
         </motion.div>
       </motion.div>
     )}
   </AnimatePresence>
-);
+  );
+};

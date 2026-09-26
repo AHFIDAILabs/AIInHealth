@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, ChevronDown } from 'lucide-react';
+import { CalendarCheck, ChevronDown, Sparkles, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { SessionRsvpModal } from '../../components/ui/SessionRsvpModal';
 import { SpeakerModal } from '../../components/ui/SpeakerModal';
 import {
   listPublicSessions,
+  recommendAgenda,
   type AdminSession,
   type SessionDay,
   type SessionCardStyle,
   type SessionPartnerRef,
+  type RecommendedSession,
 } from '../../services/session.service';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
+import { useLanguage, type SiteLanguage } from '../../contexts/LanguageContext';
 
 interface DisplaySpeaker {
   _id: string;
@@ -34,20 +38,27 @@ interface DisplaySession {
   cardStyle: SessionCardStyle;
 }
 
-const fromRealSession = (s: AdminSession): DisplaySession => ({
-  key: s._id,
-  startTime: s.startTime,
-  endTime: s.endTime,
-  title: s.title,
-  format: s.format,
-  track: s.track ? { name: s.track.name, color: s.track.color } : null,
-  room: s.room,
-  speakers: s.speakers,
-  partners: s.partners,
-  description: s.description,
-  requiresRsvp: s.requiresRsvp,
-  cardStyle: s.cardStyle ?? 'standard',
-});
+// `s.translations` only ever carries a language key when that translation's
+// status is 'approved' — the backend strips drafts before this even reaches
+// the public API (see utils/translations.ts) — so no separate status check
+// is needed here beyond the `||` fallback to English.
+const fromRealSession = (s: AdminSession, lang: SiteLanguage): DisplaySession => {
+  const t = lang !== 'en' ? s.translations?.[lang] : undefined;
+  return {
+    key: s._id,
+    startTime: s.startTime,
+    endTime: s.endTime,
+    title: t?.title || s.title,
+    format: s.format,
+    track: s.track ? { name: s.track.name, color: s.track.color } : null,
+    room: s.room,
+    speakers: s.speakers,
+    partners: s.partners,
+    description: t?.description || s.description,
+    requiresRsvp: s.requiresRsvp,
+    cardStyle: s.cardStyle ?? 'standard',
+  };
+};
 
 // The Summit's two real calendar days — kept in sync with
 // SessionsListTab.tsx's own DAY_TO_DATE and jobs/sessionReminder.job.ts.
@@ -97,11 +108,14 @@ const STATIC_DAYS: { key: SessionDay; sessions: DisplaySession[] }[] = [
   },
 ];
 
-const timeOfDay = (startTime: string): 'Morning Sessions' | 'Afternoon Sessions' | 'Evening Sessions' => {
+// Stable, untranslated ids — used as section.label for grouping/React keys.
+// Translated only at the render site (TIME_OF_DAY_LABEL below), same
+// id-vs-display-label split as Navbar.tsx's NAV_ITEMS.
+const timeOfDay = (startTime: string): 'morning' | 'afternoon' | 'evening' => {
   const hour = Number(startTime.slice(0, 2));
-  if (hour < 12) return 'Morning Sessions';
-  if (hour < 17) return 'Afternoon Sessions';
-  return 'Evening Sessions';
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
 };
 
 // 'break' never actually reaches CARD_STYLE_CLASSES[...] at runtime — a break
@@ -131,6 +145,7 @@ interface SessionCardProps {
 // scope (the RSVP/speaker-modal openers, resolveSpeaker) is passed in as a
 // prop instead of closed over.
 const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker }: SessionCardProps) => {
+  const { t } = useTranslation();
   const [briefExpanded, setBriefExpanded] = useState(false);
   // A short brief (a one-line room note, say) never needs a toggle at all —
   // only the longer ones (e.g. a full list of oral abstract titles, per the
@@ -169,7 +184,7 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker }: SessionCardP
                 onClick={() => onRsvp({ _id: s.key, title: s.title })}
                 className="flex items-center gap-1 rounded-full bg-orange px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-orange-hover"
               >
-                <CalendarCheck size={11} /> RSVP
+                <CalendarCheck size={11} /> {t('agenda.card.rsvp', 'RSVP')}
               </button>
             )}
           </div>
@@ -186,7 +201,7 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker }: SessionCardP
           {s.description && (
             <div className="mt-3">
               <p className={`text-[10px] font-bold uppercase tracking-widest ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-400'}`}>
-                Session Brief
+                {t('agenda.card.sessionBrief', 'Session Brief')}
               </p>
               <p
                 className={`mt-1 whitespace-pre-line text-[13px] leading-relaxed ${briefIsLong && !briefExpanded ? 'line-clamp-3' : ''} ${
@@ -203,7 +218,7 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker }: SessionCardP
                     s.cardStyle === 'standard' ? 'text-orange hover:text-orange-hover' : 'text-white/80 hover:text-white'
                   }`}
                 >
-                  {briefExpanded ? 'Show less' : 'Read more'}
+                  {briefExpanded ? t('agenda.card.showLess', 'Show less') : t('agenda.card.readMore', 'Read more')}
                   <ChevronDown size={12} className={`transition-transform ${briefExpanded ? 'rotate-180' : ''}`} />
                 </button>
               )}
@@ -216,7 +231,7 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker }: SessionCardP
                 <button
                   key={sp._id}
                   type="button"
-                  onClick={() => onSpeakerClick(resolveSpeaker(sp, s.track?.name ?? 'General Session'))}
+                  onClick={() => onSpeakerClick(resolveSpeaker(sp, s.track?.name ?? t('agenda.card.generalSession', 'General Session')))}
                   className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-left transition-colors ${
                     s.cardStyle === 'standard'
                       ? 'border-slate-200 bg-white hover:border-orange/40 hover:bg-orange/5'
@@ -261,6 +276,13 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker }: SessionCardP
 };
 
 export const Agenda = () => {
+  const { t } = useTranslation();
+  const TIME_OF_DAY_LABEL: Record<'morning' | 'afternoon' | 'evening', string> = {
+    morning: t('agenda.timeOfDay.morning', 'Morning Sessions'),
+    afternoon: t('agenda.timeOfDay.afternoon', 'Afternoon Sessions'),
+    evening: t('agenda.timeOfDay.evening', 'Evening Sessions'),
+  };
+  const { lang } = useLanguage();
   const [dayKey, setDayKey] = useState<SessionDay>('day1');
   const [realSessions, setRealSessions] = useState<AdminSession[] | null>(null);
   const [rsvpSession, setRsvpSession] = useState<{ _id: string; title: string } | null>(null);
@@ -270,6 +292,11 @@ export const Agenda = () => {
   const [formatFilter, setFormatFilter] = useState('');
   const [trackFilter, setTrackFilter] = useState('');
   const [roomFilter, setRoomFilter] = useState('');
+
+  const [buildMyDayOpen, setBuildMyDayOpen] = useState(false);
+  const [selectedInterests, setSelectedInterests] = useState<Set<string>>(new Set());
+  const [myDayResults, setMyDayResults] = useState<RecommendedSession[] | null>(null);
+  const [myDayLoading, setMyDayLoading] = useState(false);
 
   useEffect(() => {
     listPublicSessions()
@@ -310,11 +337,11 @@ export const Agenda = () => {
           .sort((a, b) => a.startTime.localeCompare(b.startTime));
         return {
           key: staticDay.key,
-          sessions: realForDay.length > 0 ? realForDay.map(fromRealSession) : staticDay.sessions,
+          sessions: realForDay.length > 0 ? realForDay.map((s) => fromRealSession(s, lang)) : staticDay.sessions,
           isLive: realForDay.length > 0,
         };
       }),
-    [realSessions]
+    [realSessions, lang]
   );
 
   const day = days.find((d) => d.key === dayKey)!;
@@ -322,7 +349,7 @@ export const Agenda = () => {
   // Filter dropdown/pill options are drawn from BOTH days' real data (not just
   // the active day), so switching days doesn't make an option disappear —
   // only the sessions shown change.
-  const allRealSessions = useMemo(() => (realSessions ?? []).map(fromRealSession), [realSessions]);
+  const allRealSessions = useMemo(() => (realSessions ?? []).map((s) => fromRealSession(s, lang)), [realSessions, lang]);
   const trackOptions = useMemo(() => {
     const map = new Map<string, string>();
     allRealSessions.forEach((s) => {
@@ -330,6 +357,26 @@ export const Agenda = () => {
     });
     return Array.from(map.entries());
   }, [allRealSessions]);
+  const toggleInterest = (name: string) => {
+    setSelectedInterests((prev) => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
+  };
+
+  const runBuildMyDay = async () => {
+    setMyDayLoading(true);
+    try {
+      const results = await recommendAgenda(Array.from(selectedInterests));
+      setMyDayResults(results);
+    } catch {
+      setMyDayResults([]);
+    } finally {
+      setMyDayLoading(false);
+    }
+  };
+
   const roomOptions = useMemo(
     () => Array.from(new Set(allRealSessions.map((s) => s.room).filter((r): r is string => !!r))).sort(),
     [allRealSessions]
@@ -356,8 +403,8 @@ export const Agenda = () => {
   // just labels that existing order (Morning/Afternoon/Evening), it never
   // re-sorts.
   const sections = useMemo(() => {
-    const order: DisplaySession['key'][] = [];
-    const map = new Map<string, DisplaySession[]>();
+    const order: ReturnType<typeof timeOfDay>[] = [];
+    const map = new Map<ReturnType<typeof timeOfDay>, DisplaySession[]>();
     filteredSessions.forEach((s) => {
       const label = timeOfDay(s.startTime);
       if (!map.has(label)) {
@@ -394,9 +441,12 @@ export const Agenda = () => {
   return (
     <>
       <PageHero
-        eyebrow="Programme"
-        title="Two Days, One National Agenda"
-        subtitle="A working agenda combining thought leadership with actionable deal-making and policy dialogue. Final timings and speakers will be confirmed closer to the Summit."
+        eyebrow={t('agenda.hero.eyebrow', 'Programme')}
+        title={t('agenda.hero.title', 'Two Days, One National Agenda')}
+        subtitle={t(
+          'agenda.hero.subtitle',
+          'A working agenda combining thought leadership with actionable deal-making and policy dialogue. Final timings and speakers will be confirmed closer to the Summit.'
+        )}
       />
 
       {/* Day tabs — sticky under the fixed site header, reading the same
@@ -419,7 +469,7 @@ export const Agenda = () => {
                   <span className={`font-display text-2xl font-bold ${isActive ? 'text-white' : 'text-slate-500'}`}>{dayOfMonth}</span>
                   <span className="text-left leading-tight">
                     <span className={`block text-[13px] font-semibold ${isActive ? 'text-white' : 'text-slate-400'}`}>
-                      {key === 'day1' ? 'Day 1' : 'Day 2'}
+                      {key === 'day1' ? t('agenda.day1', 'Day 1') : t('agenda.day2', 'Day 2')}
                     </span>
                     <span className="block text-[10px] font-medium uppercase tracking-wide text-slate-500">
                       {weekday} {month}
@@ -433,7 +483,7 @@ export const Agenda = () => {
             href="/partners"
             className="ml-2 flex shrink-0 items-center self-center rounded-full bg-orange px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-orange-hover sm:px-4"
           >
-            Partner With Us
+            {t('agenda.partnerWithUs', 'Partner With Us')}
           </a>
         </div>
       </div>
@@ -448,7 +498,7 @@ export const Agenda = () => {
                 !formatFilter ? 'bg-navy text-white' : 'border border-slate-200 bg-white text-slate-600 hover:border-orange/40'
               }`}
             >
-              All
+              {t('common.all', 'All')}
             </button>
             {formatOptions.map((f) => (
               <button
@@ -467,7 +517,7 @@ export const Agenda = () => {
               onChange={(e) => setTrackFilter(e.target.value)}
               className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 focus:border-orange/40 focus:outline-none"
             >
-              <option value="">All Tracks</option>
+              <option value="">{t('agenda.filters.allTracks', 'All Tracks')}</option>
               {trackOptions.map(([name]) => (
                 <option key={name} value={name}>
                   {name}
@@ -479,23 +529,103 @@ export const Agenda = () => {
               onChange={(e) => setRoomFilter(e.target.value)}
               className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 focus:border-orange/40 focus:outline-none"
             >
-              <option value="">All Rooms</option>
+              <option value="">{t('agenda.filters.allRooms', 'All Rooms')}</option>
               {roomOptions.map((r) => (
                 <option key={r} value={r}>
                   {r}
                 </option>
               ))}
             </select>
+            <button
+              onClick={() => setBuildMyDayOpen((v) => !v)}
+              className={`ml-auto flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors ${
+                buildMyDayOpen ? 'bg-orange text-white' : 'border border-orange/40 bg-orange/5 text-orange hover:bg-orange/10'
+              }`}
+            >
+              <Sparkles size={14} /> {t('agenda.buildMyDay.toggle', 'Build My Day')}
+            </button>
           </div>
 
+          {buildMyDayOpen && (
+            <div className="mt-4 rounded-2xl border border-orange/20 bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-display text-base font-bold text-navy">{t('agenda.buildMyDay.heading', 'Build My Day')}</p>
+                  <p className="mt-0.5 text-[13px] text-slate-500">
+                    {t(
+                      'agenda.buildMyDay.subtitle',
+                      "Pick what you're interested in — we'll suggest a conflict-free personal schedule from the published sessions."
+                    )}
+                  </p>
+                </div>
+                <button onClick={() => setBuildMyDayOpen(false)} className="shrink-0 text-slate-400 hover:text-navy">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {trackOptions.map(([name]) => (
+                  <button
+                    key={name}
+                    onClick={() => toggleInterest(name)}
+                    className={`rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors ${
+                      selectedInterests.has(name) ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
+                    }`}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={runBuildMyDay}
+                disabled={selectedInterests.size === 0 || myDayLoading}
+                className="mt-4 flex items-center gap-1.5 rounded-lg bg-orange px-4 py-2 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-50"
+              >
+                <Sparkles size={14} /> {myDayLoading ? t('agenda.buildMyDay.building', 'Building…') : t('agenda.buildMyDay.showPicks', 'Show My Picks')}
+              </button>
+
+              {myDayResults && (
+                <div className="mt-5 border-t border-slate-100 pt-4">
+                  {myDayResults.length === 0 ? (
+                    <p className="text-[13px] text-slate-500">
+                      {t('agenda.buildMyDay.noMatches', 'No published sessions match those interests yet — check back closer to the Summit.')}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-orange">
+                        {t('agenda.buildMyDay.yourPicks', 'Your Picks')} &middot; {myDayResults.length}{' '}
+                        {myDayResults.length === 1 ? t('agenda.buildMyDay.sessionSingular', 'session') : t('agenda.buildMyDay.sessionPlural', 'sessions')}
+                      </p>
+                      <div className="mt-3 space-y-3">
+                        {myDayResults.map((r) => (
+                          <div key={r.session._id} className="rounded-xl border border-slate-100 bg-offwhite/60 p-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                              {r.session.day === 'day1' ? t('agenda.day1', 'Day 1') : t('agenda.day2', 'Day 2')} &middot; {r.session.startTime}
+                            </p>
+                            <p className="mt-0.5 font-semibold text-navy">
+                              {(lang !== 'en' && r.session.translations?.[lang]?.title) || r.session.title}
+                            </p>
+                            <p className="mt-1 text-[12px] text-slate-500">{r.rationale}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <p className="mt-4 text-[13px] text-slate-400">
-            Day {dayKey === 'day1' ? '1' : '2'} &middot; {dateLabel} &mdash; {filteredSessions.length} session
-            {filteredSessions.length === 1 ? '' : 's'} shown
+            {t('agenda.summary.day', 'Day')} {dayKey === 'day1' ? '1' : '2'} &middot; {dateLabel} &mdash; {filteredSessions.length}{' '}
+            {filteredSessions.length === 1 ? t('agenda.buildMyDay.sessionSingular', 'session') : t('agenda.buildMyDay.sessionPlural', 'sessions')}{' '}
+            {t('agenda.summary.shown', 'shown')}
           </p>
 
           {!day.isLive && (
             <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">
-              Indicative programme: confirmed sessions publish here as they're finalized
+              {t('agenda.indicativeProgramme', "Indicative programme: confirmed sessions publish here as they're finalized")}
             </p>
           )}
 
@@ -504,7 +634,7 @@ export const Agenda = () => {
             {sections.map((section) => (
               <div key={section.label}>
                 <div className="mb-5 flex items-center gap-3">
-                  <p className="shrink-0 text-xs font-bold uppercase tracking-widest text-orange">{section.label}</p>
+                  <p className="shrink-0 text-xs font-bold uppercase tracking-widest text-orange">{TIME_OF_DAY_LABEL[section.label]}</p>
                   <span className="h-px flex-1 bg-slate-200" />
                 </div>
 
@@ -561,7 +691,7 @@ export const Agenda = () => {
 
             {filteredSessions.length === 0 && (
               <p className="rounded-xl border border-slate-200 bg-white py-12 text-center text-sm text-slate-400">
-                No sessions match these filters yet.
+                {t('agenda.noMatches', 'No sessions match these filters yet.')}
               </p>
             )}
           </div>

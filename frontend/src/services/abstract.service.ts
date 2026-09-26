@@ -12,6 +12,11 @@ export type ScoreBand = (typeof SCORE_BANDS)[number];
 
 export type CommunicationStatus = 'draft' | 'sent' | 'failed' | 'cancelled';
 
+// AI-drafted, admin-triggered — see backend's PLAIN_SUMMARY_STATUSES comment.
+// Internal secretariat/review-committee tooling; never shown on a public page.
+export const PLAIN_SUMMARY_STATUSES = ['none', 'draft', 'approved'] as const;
+export type PlainSummaryStatus = (typeof PLAIN_SUMMARY_STATUSES)[number];
+
 export interface SubmitAbstractInput {
   title: string;
   authorName: string;
@@ -42,6 +47,18 @@ export interface AdminAbstract extends SubmitAbstractInput {
   consensus: number | null;
   scoreBand: ScoreBand | null;
   notificationStatus: CommunicationStatus | null;
+  plainSummary?: string;
+  plainSummaryStatus: PlainSummaryStatus;
+  plainSummaryGeneratedAt?: string;
+  // AI triage — see backend abstractController.adminTriage/updateTrack.
+  // possibleDuplicateOf comes populated (title/authorName only) from
+  // adminListAbstracts so the UI can show something readable without a
+  // second round-trip; it is NOT populated on adminUpdateTrack's response,
+  // so that call only ever patches `track`/`trackConfirmedByAdmin` locally.
+  aiSuggestedTrack?: string;
+  trackConfirmedByAdmin: boolean;
+  possibleDuplicateOf: Array<{ _id: string; title: string; authorName: string }>;
+  clusterLabel?: string;
 }
 
 export interface Paginated<T> {
@@ -142,5 +159,54 @@ export interface AbstractAnalytics {
 
 export const fetchAbstractsAnalytics = async (): Promise<AbstractAnalytics> => {
   const res = await api.get<{ success: true; data: AbstractAnalytics }>('/admin/abstracts-analytics');
+  return res.data.data;
+};
+
+// --- Plain-language summaries (AI-drafted, admin-approved) ---
+
+export interface SummarizeResult {
+  succeeded: number;
+  failed: Array<{ id: string; error: string }>;
+  items: Array<{
+    _id: string;
+    plainSummary?: string;
+    plainSummaryStatus: PlainSummaryStatus;
+    plainSummaryGeneratedAt?: string;
+  }>;
+}
+
+export const adminSummarizeAbstracts = async (ids: string[]): Promise<SummarizeResult> => {
+  const res = await api.post<{ success: true; data: SummarizeResult }>('/admin/abstracts/summarize', { ids });
+  return res.data.data;
+};
+
+export const adminUpdatePlainSummary = async (
+  id: string,
+  input: { plainSummary: string; plainSummaryStatus?: PlainSummaryStatus }
+): Promise<AdminAbstract> => {
+  const res = await api.patch<{ success: true; data: AdminAbstract }>(`/admin/abstracts/${id}/plain-summary`, input);
+  return res.data.data;
+};
+
+// --- AI triage (admin-only batch job: track suggestion, near-duplicate
+// detection, thematic clustering) ---
+
+export interface TriageResult {
+  triaged: number;
+  trackSuggested: number;
+  duplicatePairs: number;
+  clusters: number;
+}
+
+// Omit ids to run over every abstract not yet trackConfirmedByAdmin (the
+// default "triage the unsorted pile" use case); pass ids to re-run a
+// specific selection.
+export const adminTriageAbstracts = async (ids?: string[]): Promise<TriageResult> => {
+  const res = await api.post<{ success: true; data: TriageResult }>('/admin/abstracts/triage', ids ? { ids } : {});
+  return res.data.data;
+};
+
+export const adminUpdateTrack = async (id: string, track: string): Promise<AdminAbstract> => {
+  const res = await api.patch<{ success: true; data: AdminAbstract }>(`/admin/abstracts/${id}/track`, { track });
   return res.data.data;
 };

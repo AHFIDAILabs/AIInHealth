@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, X, CalendarDays, Pencil, Trash2, AlertTriangle, Search, Ban } from 'lucide-react';
+import { Plus, X, CalendarDays, Pencil, Trash2, AlertTriangle, Search, Ban, Sparkles } from 'lucide-react';
 import {
   adminListSessions,
   adminCreateSession,
@@ -9,11 +9,16 @@ import {
   adminCheckConflict,
   adminAddSessionRsvp,
   adminRemoveSessionRsvp,
+  adminTranslateSession,
+  adminUpdateSessionTranslation,
   SESSION_DAYS,
   SESSION_CARD_STYLES,
+  SUPPORTED_TRANSLATION_LANGS,
   type AdminSession,
   type SessionInput,
   type SessionDay,
+  type TranslationLang,
+  type TranslationStatus,
 } from '../../../services/session.service';
 import { adminListSpeakers, type AdminSpeaker } from '../../../services/speaker.service';
 import { adminListTracks, type AdminTrack } from '../../../services/track.service';
@@ -49,6 +54,17 @@ const EMPTY_FORM: SessionInput = {
 };
 
 const DAY_LABEL: Record<SessionDay, string> = { day1: 'Day 1 — 19 Oct', day2: 'Day 2 — 20 Oct' };
+const LANG_LABEL: Record<TranslationLang, string> = { fr: 'French', pt: 'Portuguese' };
+const TRANSLATION_STATUS_LABEL: Record<TranslationStatus, string> = {
+  none: 'No Draft Yet',
+  draft: 'Draft — Needs Review',
+  approved: 'Approved',
+};
+const TRANSLATION_STATUS_COLOR: Record<TranslationStatus, string> = {
+  none: 'bg-slate-100 text-slate-500',
+  draft: 'bg-warning/10 text-warning',
+  approved: 'bg-success/10 text-success',
+};
 
 // Plain labels for the admin form's dropdown — the enum values themselves
 // (session.service.ts's SESSION_CARD_STYLES) are what's actually stored.
@@ -99,6 +115,13 @@ export const SessionsListTab = () => {
   const [rsvpSaving, setRsvpSaving] = useState(false);
   const [rsvpRemovingEmail, setRsvpRemovingEmail] = useState<string | null>(null);
   const [rsvpError, setRsvpError] = useState('');
+
+  const [translationDrafts, setTranslationDrafts] = useState<Record<TranslationLang, { title: string; description: string }>>({
+    fr: { title: '', description: '' },
+    pt: { title: '', description: '' },
+  });
+  const [translating, setTranslating] = useState<Record<TranslationLang, boolean>>({ fr: false, pt: false });
+  const [translationSaving, setTranslationSaving] = useState<Record<TranslationLang, boolean>>({ fr: false, pt: false });
 
   const load = useCallback(() => {
     setLoading(true);
@@ -195,7 +218,49 @@ export const SessionsListTab = () => {
     setRsvpError('');
     setFormError('');
     setConflictWarning([]);
+    setTranslationDrafts({
+      fr: { title: session.translations?.fr?.title ?? '', description: session.translations?.fr?.description ?? '' },
+      pt: { title: session.translations?.pt?.title ?? '', description: session.translations?.pt?.description ?? '' },
+    });
     setFormOpen(true);
+  };
+
+  const generateTranslation = async (lang: TranslationLang) => {
+    if (!editing) return;
+    setTranslating((prev) => ({ ...prev, [lang]: true }));
+    try {
+      const updated = await adminTranslateSession(editing._id, lang);
+      setEditing(updated);
+      setItems((prev) => prev.map((s) => (s._id === updated._id ? updated : s)));
+      setTranslationDrafts((prev) => ({
+        ...prev,
+        [lang]: { title: updated.translations?.[lang]?.title ?? '', description: updated.translations?.[lang]?.description ?? '' },
+      }));
+      toast('success', `${LANG_LABEL[lang]} draft generated`);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setTranslating((prev) => ({ ...prev, [lang]: false }));
+    }
+  };
+
+  const saveTranslation = async (lang: TranslationLang, status: TranslationStatus) => {
+    if (!editing) return;
+    setTranslationSaving((prev) => ({ ...prev, [lang]: true }));
+    try {
+      const updated = await adminUpdateSessionTranslation(editing._id, lang, {
+        title: translationDrafts[lang].title,
+        description: translationDrafts[lang].description,
+        status,
+      });
+      setEditing(updated);
+      setItems((prev) => prev.map((s) => (s._id === updated._id ? updated : s)));
+      toast('success', status === 'approved' ? `${LANG_LABEL[lang]} translation approved` : `${LANG_LABEL[lang]} draft saved`);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setTranslationSaving((prev) => ({ ...prev, [lang]: false }));
+    }
   };
 
   const toggleSpeaker = (id: string) => {
@@ -585,6 +650,68 @@ export const SessionsListTab = () => {
                 )}
 
                 <AdminTextarea label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Session details..." />
+
+                {editing && (
+                  <div>
+                    <p className="mb-1.5 text-[13px] font-semibold text-navy">Translations (AI Draft)</p>
+                    <div className="space-y-3">
+                      {SUPPORTED_TRANSLATION_LANGS.map((lang) => {
+                        const status = editing.translations?.[lang]?.status ?? 'none';
+                        return (
+                          <div key={lang} className="rounded-lg border border-slate-200 p-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[13px] font-semibold text-navy">{LANG_LABEL[lang]}</span>
+                              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${TRANSLATION_STATUS_COLOR[status]}`}>
+                                {TRANSLATION_STATUS_LABEL[status]}
+                              </span>
+                            </div>
+                            <div className="mt-2 space-y-2">
+                              <AdminInput
+                                label="Title"
+                                id={`session-translation-title-${lang}-${editing._id}`}
+                                value={translationDrafts[lang].title}
+                                onChange={(e) =>
+                                  setTranslationDrafts((prev) => ({ ...prev, [lang]: { ...prev[lang], title: e.target.value } }))
+                                }
+                              />
+                              <AdminTextarea
+                                label="Description"
+                                id={`session-translation-description-${lang}-${editing._id}`}
+                                value={translationDrafts[lang].description}
+                                onChange={(e) =>
+                                  setTranslationDrafts((prev) => ({ ...prev, [lang]: { ...prev[lang], description: e.target.value } }))
+                                }
+                              />
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button
+                                onClick={() => generateTranslation(lang)}
+                                disabled={translating[lang]}
+                                className="flex items-center gap-1.5 rounded-lg border border-orange/30 px-3 py-1.5 text-xs font-semibold text-orange hover:bg-orange/5 disabled:opacity-60"
+                              >
+                                <Sparkles size={13} /> {translating[lang] ? 'Generating…' : status === 'none' ? 'Generate with AI' : 'Regenerate with AI'}
+                              </button>
+                              <button
+                                onClick={() => saveTranslation(lang, 'draft')}
+                                disabled={translationSaving[lang]}
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-navy hover:border-orange/40 disabled:opacity-50"
+                              >
+                                Save as Draft
+                              </button>
+                              <button
+                                onClick={() => saveTranslation(lang, 'approved')}
+                                disabled={translationSaving[lang]}
+                                className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success/90 disabled:opacity-50"
+                              >
+                                Approve
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <AdminInput

@@ -25,6 +25,7 @@ import { InnovationShowcase } from './pages/public/InnovationShowcase';
 import { InnovationShowcaseConfirmed } from './pages/public/InnovationShowcaseConfirmed';
 import { AbstractShowcase } from './pages/public/AbstractShowcase';
 import { ParticipantsOutcomes } from './pages/public/ParticipantsOutcomes';
+import { PolicyTracker } from './pages/public/PolicyTracker';
 import { Partners } from './pages/public/Partners';
 import { Gallery } from './pages/public/Gallery';
 import { AboutAhfid } from './pages/public/AboutAhfid';
@@ -61,6 +62,9 @@ import { CheckInPage } from './pages/admin/CheckInPage';
 import { ReconciliationsPage } from './pages/admin/ReconciliationsPage';
 import { AbstractsPage } from './pages/admin/AbstractsPage';
 import { MediaPage } from './pages/admin/MediaPage';
+import { KnowledgeBasePage } from './pages/admin/KnowledgeBasePage';
+import { PolicyTrackerPage } from './pages/admin/PolicyTrackerPage';
+import { TranslationsQueuePage } from './pages/admin/TranslationsQueuePage';
 import { EventTeamPage } from './pages/admin/EventTeamPage';
 import { SecurityPage } from './pages/admin/SecurityPage';
 import { PortalTokensPage } from './pages/admin/PortalTokensPage';
@@ -98,6 +102,7 @@ function App() {
             <Route path="/innovation-showcase/confirmed" element={<InnovationShowcaseConfirmed />} />
             <Route path="/abstracts/confirmed" element={<AbstractShowcase />} />
             <Route path="/participants-outcomes" element={<ParticipantsOutcomes />} />
+            <Route path="/policy-tracker" element={<PolicyTracker />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/about-ahfid" element={<AboutAhfid />} />
@@ -155,6 +160,9 @@ function App() {
                 <Route path="/admin/newsletter" element={<NewsletterPage />} />
                 <Route path="/admin/abstracts" element={<AbstractsPage />} />
                 <Route path="/admin/media" element={<MediaPage />} />
+                <Route path="/admin/knowledge-base" element={<KnowledgeBasePage />} />
+                <Route path="/admin/policy-tracker" element={<PolicyTrackerPage />} />
+                <Route path="/admin/translations" element={<TranslationsQueuePage />} />
               </Route>
 
               <Route element={<RequireRole roles={['super_admin', 'content_editor', 'registrations_officer', 'viewer']} />}>

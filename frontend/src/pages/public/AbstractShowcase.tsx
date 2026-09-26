@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, X, FileText, Mic, StickyNote, Globe2, Layers } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
@@ -8,8 +9,6 @@ import { Banner } from '../../components/ui/Banner';
 import { InitialsAvatar } from '../../components/ui/InitialsAvatar';
 import { listConfirmedAbstracts, type ConfirmedAbstract } from '../../services/confirmedAbstract.service';
 import { getApiErrorMessage } from '../../services/api';
-
-const PRESENTATION_LABEL: Record<string, string> = { oral: 'Oral Presentation', poster: 'Poster Presentation' };
 
 // Full-width banner — used both on the grid card (top ~45%, see the card
 // markup below, which fixes its own height via aspect-ratio so that
@@ -39,6 +38,15 @@ const CardHeadshot = ({ name, photoUrl }: { name: string; photoUrl?: string }) =
 // only ever shows the safe subset of fields (see ConfirmedAbstract.model.ts):
 // no author email, no visa/funding requests.
 export const AbstractShowcase = () => {
+  const { t } = useTranslation();
+
+  // Built inside the component (not a module constant) so the labels can go
+  // through t(), same reasoning as Navbar.tsx's NAV_ITEMS.
+  const PRESENTATION_LABEL: Record<string, string> = {
+    oral: t('abstractShowcase.presentationType.oral', 'Oral Presentation'),
+    poster: t('abstractShowcase.presentationType.poster', 'Poster Presentation'),
+  };
+
   const [abstracts, setAbstracts] = useState<ConfirmedAbstract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -72,24 +80,24 @@ export const AbstractShowcase = () => {
     [abstracts]
   );
   const stats = [
-    { label: 'Confirmed Presenters', value: abstracts.length },
-    { label: 'Tracks Represented', value: availableTracks.length - 1 },
-    { label: 'Countries', value: countryCount },
+    { id: 'confirmedPresenters', label: t('abstractShowcase.stats.confirmedPresenters', 'Confirmed Presenters'), value: abstracts.length },
+    { id: 'tracksRepresented', label: t('abstractShowcase.stats.tracksRepresented', 'Tracks Represented'), value: availableTracks.length - 1 },
+    { id: 'countries', label: t('abstractShowcase.stats.countries', 'Countries'), value: countryCount },
   ];
 
   return (
     <>
       <PageHero
-        eyebrow="Research & Abstracts"
-        title="Confirmed Abstract Presentations"
-        subtitle="The researchers and presenters confirmed for the Summit's oral and poster sessions."
+        eyebrow={t('abstractShowcase.hero.eyebrow', 'Research & Abstracts')}
+        title={t('abstractShowcase.hero.title', 'Confirmed Abstract Presentations')}
+        subtitle={t('abstractShowcase.hero.subtitle', "The researchers and presenters confirmed for the Summit's oral and poster sessions.")}
       />
 
       {!loading && abstracts.length > 0 && (
         <section className="border-b border-slate-100 bg-offwhite py-10">
           <div className="mx-auto grid max-w-4xl grid-cols-3 gap-4 px-4 text-center sm:px-6 lg:px-8">
             {stats.map((s, i) => (
-              <Reveal key={s.label} delay={i * 0.06}>
+              <Reveal key={s.id} delay={i * 0.06}>
                 <p className="font-display text-3xl font-bold text-navy sm:text-4xl">{s.value}</p>
                 <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{s.label}</p>
               </Reveal>
@@ -112,20 +120,20 @@ export const AbstractShowcase = () => {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by author or title..."
+                placeholder={t('abstractShowcase.search.placeholder', 'Search by author or title...')}
                 className="w-full rounded-full border border-slate-200 bg-offwhite py-2.5 pl-10 pr-4 text-base sm:text-sm text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              {availableTracks.map((t) => (
+              {availableTracks.map((trackOption) => (
                 <button
-                  key={t}
-                  onClick={() => setTrack(t)}
+                  key={trackOption}
+                  onClick={() => setTrack(trackOption)}
                   className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                    track === t ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
+                    track === trackOption ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
                   }`}
                 >
-                  {t}
+                  {trackOption === 'All' ? t('abstractShowcase.filters.all', 'All') : trackOption}
                 </button>
               ))}
             </div>
@@ -141,15 +149,17 @@ export const AbstractShowcase = () => {
             <Reveal className="mt-14 rounded-2xl border border-dashed border-slate-300 py-16 text-center">
               {abstracts.length === 0 ? (
                 <>
-                  <p className="font-display text-lg font-semibold text-navy">Confirmations coming soon</p>
+                  <p className="font-display text-lg font-semibold text-navy">{t('abstractShowcase.empty.title', 'Confirmations coming soon')}</p>
                   <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-                    We&rsquo;re still finalizing the confirmed presenter list. Check back soon, or submit your own
-                    abstract.
+                    {t(
+                      'abstractShowcase.empty.body',
+                      'We’re still finalizing the confirmed presenter list. Check back soon, or submit your own abstract.'
+                    )}
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="font-display text-lg font-semibold text-navy">No presentations match your filters</p>
+                  <p className="font-display text-lg font-semibold text-navy">{t('abstractShowcase.filters.noMatch', 'No presentations match your filters')}</p>
                   <button
                     onClick={() => {
                       setQuery('');
@@ -157,7 +167,7 @@ export const AbstractShowcase = () => {
                     }}
                     className="mt-3 text-sm font-semibold text-orange hover:text-orange-hover"
                   >
-                    Clear filters
+                    {t('abstractShowcase.filters.clear', 'Clear filters')}
                   </button>
                 </>
               )}
@@ -209,13 +219,13 @@ export const AbstractShowcase = () => {
       <section className="relative overflow-hidden bg-navy py-20">
         <div className="relative mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
           <Reveal>
-            <p className="text-xs font-semibold uppercase tracking-widest text-orange">Have research to share?</p>
-            <h2 className="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl">Submit Your Abstract</h2>
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange">{t('abstractShowcase.cta.eyebrow', 'Have research to share?')}</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl">{t('abstractShowcase.cta.heading', 'Submit Your Abstract')}</h2>
             <p className="mx-auto mt-3 max-w-xl text-slate-300">
-              Share your research with the Summit&rsquo;s Research &amp; Abstracts track.
+              {t('abstractShowcase.cta.body', 'Share your research with the Summit’s Research & Abstracts track.')}
             </p>
             <ButtonLink to="/abstracts/submit" variant="secondary" className="mt-6 !border-white/40 !bg-white/10">
-              Submit an Abstract
+              {t('abstractShowcase.cta.apply', 'Submit an Abstract')}
             </ButtonLink>
           </Reveal>
         </div>
@@ -240,7 +250,7 @@ export const AbstractShowcase = () => {
             >
               <button
                 onClick={() => setActive(null)}
-                aria-label="Close"
+                aria-label={t('common.close', 'Close')}
                 className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-navy/60 text-white backdrop-blur-sm hover:bg-navy/80"
               >
                 <X size={18} />
@@ -263,7 +273,9 @@ export const AbstractShowcase = () => {
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="flex items-center gap-1 rounded-full bg-navy-secondary px-3 py-1 text-[11px] font-semibold text-white">
                       {active.presentationType === 'poster' ? <StickyNote size={12} /> : <Mic size={12} />}
-                      {active.presentationType ? PRESENTATION_LABEL[active.presentationType] : 'Presentation'}
+                      {active.presentationType
+                        ? PRESENTATION_LABEL[active.presentationType]
+                        : t('abstractShowcase.detail.presentation', 'Presentation')}
                     </span>
                     {active.track && (
                       <span className="flex items-center gap-1 rounded-full bg-orange/10 px-3 py-1 text-[11px] font-semibold text-orange">
@@ -277,11 +289,13 @@ export const AbstractShowcase = () => {
               <div className="p-7">
                 <div className="rounded-xl bg-offwhite p-4">
                   <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                    <FileText size={12} /> Abstract Title
+                    <FileText size={12} /> {t('abstractShowcase.detail.abstractTitle', 'Abstract Title')}
                   </p>
                   <h3 className="mt-1.5 whitespace-pre-line font-display text-base font-semibold leading-snug text-navy">{active.title}</h3>
                 </div>
-                <p className="mt-4 text-center text-xs text-slate-400">Abstract Code: {active.code}</p>
+                <p className="mt-4 text-center text-xs text-slate-400">
+                  {t('abstractShowcase.detail.abstractCode', 'Abstract Code: {{code}}', { code: active.code })}
+                </p>
               </div>
             </motion.div>
           </motion.div>

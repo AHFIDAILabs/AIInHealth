@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, X, Globe2, Sparkles, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
@@ -10,6 +11,7 @@ import { listInnovations, type Innovation } from '../../services/innovation.serv
 import { getApiErrorMessage } from '../../services/api';
 
 export const InnovationShowcase = () => {
+  const { t } = useTranslation();
   const [innovations, setInnovations] = useState<Innovation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,9 +43,12 @@ export const InnovationShowcase = () => {
   return (
     <>
       <PageHero
-        eyebrow="Innovation Showcase"
-        title="Health AI, Built in Africa"
-        subtitle="Startups and builders demonstrating AI-driven diagnostics, operations, and delivery tools already in use across African health systems."
+        eyebrow={t('innovationShowcase.hero.eyebrow', 'Innovation Showcase')}
+        title={t('innovationShowcase.hero.title', 'Health AI, Built in Africa')}
+        subtitle={t(
+          'innovationShowcase.hero.subtitle',
+          'Startups and builders demonstrating AI-driven diagnostics, operations, and delivery tools already in use across African health systems.'
+        )}
       />
 
       <section className="bg-white py-24">
@@ -59,7 +64,7 @@ export const InnovationShowcase = () => {
               to="/innovation-showcase/confirmed"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"
             >
-              View Confirmed Showcase Startups <ArrowRight size={15} />
+              {t('innovationShowcase.viewConfirmed', 'View Confirmed Showcase Startups')} <ArrowRight size={15} />
             </Link>
           </Reveal>
 
@@ -69,22 +74,22 @@ export const InnovationShowcase = () => {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search innovations..."
+                placeholder={t('innovationShowcase.search.placeholder', 'Search innovations...')}
                 className="w-full rounded-full border border-slate-200 bg-offwhite py-2.5 pl-10 pr-4 text-base sm:text-sm text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              {availableTracks.map((t) => (
+              {availableTracks.map((trackOption) => (
                 <button
-                  key={t}
-                  onClick={() => setTrack(t)}
+                  key={trackOption}
+                  onClick={() => setTrack(trackOption)}
                   className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                    track === t
+                    track === trackOption
                       ? 'border-orange bg-orange text-white'
                       : 'border-slate-200 text-slate-600 hover:border-orange/40'
                   }`}
                 >
-                  {t}
+                  {trackOption === 'All' ? t('innovationShowcase.filters.all', 'All') : trackOption}
                 </button>
               ))}
             </div>
@@ -100,15 +105,17 @@ export const InnovationShowcase = () => {
             <Reveal className="mt-14 rounded-2xl border border-dashed border-slate-300 py-16 text-center">
               {innovations.length === 0 ? (
                 <>
-                  <p className="font-display text-lg font-semibold text-navy">Applications are still open</p>
+                  <p className="font-display text-lg font-semibold text-navy">{t('innovationShowcase.empty.title', 'Applications are still open')}</p>
                   <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-                    We&rsquo;re still confirming the innovations showcasing at the Summit. Check back soon, or
-                    apply to showcase your work.
+                    {t(
+                      'innovationShowcase.empty.body',
+                      'We’re still confirming the innovations showcasing at the Summit. Check back soon, or apply to showcase your work.'
+                    )}
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="font-display text-lg font-semibold text-navy">No innovations match your filters</p>
+                  <p className="font-display text-lg font-semibold text-navy">{t('innovationShowcase.filters.noMatch', 'No innovations match your filters')}</p>
                   <button
                     onClick={() => {
                       setQuery('');
@@ -116,7 +123,7 @@ export const InnovationShowcase = () => {
                     }}
                     className="mt-3 text-sm font-semibold text-orange hover:text-orange-hover"
                   >
-                    Clear filters
+                    {t('innovationShowcase.filters.clear', 'Clear filters')}
                   </button>
                 </>
               )}
@@ -155,14 +162,16 @@ export const InnovationShowcase = () => {
       <section className="relative overflow-hidden bg-navy py-20">
         <div className="relative mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
           <Reveal>
-            <p className="text-xs font-semibold uppercase tracking-widest text-orange">Building in Health AI?</p>
-            <h2 className="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl">Showcase Your Innovation</h2>
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange">{t('innovationShowcase.cta.eyebrow', 'Building in Health AI?')}</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl">{t('innovationShowcase.cta.heading', 'Showcase Your Innovation')}</h2>
             <p className="mx-auto mt-3 max-w-xl text-slate-300">
-              We&rsquo;re curating a floor of the boldest African health-AI builders. Register your interest and
-              our team will follow up on showcase details.
+              {t(
+                'innovationShowcase.cta.body',
+                'We’re curating a floor of the boldest African health-AI builders. Register your interest and our team will follow up on showcase details.'
+              )}
             </p>
             <ButtonLink to="/register" variant="secondary" className="mt-6 !border-white/40 !bg-white/10">
-              Register Interest
+              {t('innovationShowcase.cta.apply', 'Register Interest')}
             </ButtonLink>
           </Reveal>
         </div>
@@ -188,7 +197,7 @@ export const InnovationShowcase = () => {
             >
               <button
                 onClick={() => setActive(null)}
-                aria-label="Close"
+                aria-label={t('common.close', 'Close')}
                 className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
               >
                 <X size={18} />
@@ -211,13 +220,13 @@ export const InnovationShowcase = () => {
               <dl className="mt-5 space-y-1.5 text-sm">
                 {active.founderName && (
                   <div className="flex gap-2">
-                    <dt className="text-slate-400">Founder</dt>
+                    <dt className="text-slate-400">{t('innovationShowcase.detail.founder', 'Founder')}</dt>
                     <dd className="text-navy">{active.founderName}</dd>
                   </div>
                 )}
                 {active.organization && (
                   <div className="flex gap-2">
-                    <dt className="text-slate-400">Organization</dt>
+                    <dt className="text-slate-400">{t('innovationShowcase.detail.organization', 'Organization')}</dt>
                     <dd className="text-navy">{active.organization}</dd>
                   </div>
                 )}
@@ -229,7 +238,7 @@ export const InnovationShowcase = () => {
                   rel="noopener noreferrer"
                   className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"
                 >
-                  <Globe2 size={15} /> Visit website
+                  <Globe2 size={15} /> {t('common.visitWebsite', 'Visit website')}
                 </a>
               )}
             </motion.div>

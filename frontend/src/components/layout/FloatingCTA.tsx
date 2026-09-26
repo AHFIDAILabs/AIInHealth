@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 // A secondary, always-on conversion surface distinct from the navbar's own CTA —
 // stays pinned to the viewport as the page grows longer with this upgrade (mega-menu,
 // two newsletter captures, a press-quote band...), so registering is never more than
 // a thumb's reach away, however far a visitor has scrolled. Dismissible per session.
 export const FloatingCTA = () => {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState(false);
 
   return (
@@ -24,11 +26,11 @@ export const FloatingCTA = () => {
             to="/register"
             className="flex items-center gap-1.5 text-[13px] font-semibold text-white transition-colors hover:text-orange"
           >
-            Register Interest <ArrowRight size={14} />
+            {t('home.hero.registerInterest', 'Register Interest')} <ArrowRight size={14} />
           </Link>
           <button
             onClick={() => setDismissed(true)}
-            aria-label="Dismiss"
+            aria-label={t('common.dismiss', 'Dismiss')}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             <X size={14} />

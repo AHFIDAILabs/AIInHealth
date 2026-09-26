@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { useCountdown } from '../../hooks/useCountdown';
 import { Reveal } from '../ui/Reveal';
 import { VENUE_SHORT } from '../../lib/siteInfo';
@@ -11,12 +12,6 @@ const SUMMIT_DATE = new Date('2026-10-19T09:00:00+01:00');
 
 const UNITS = ['days', 'hours', 'minutes', 'seconds'] as const;
 type Unit = (typeof UNITS)[number];
-const UNIT_LABEL: Record<Unit, string> = {
-  days: 'Days',
-  hours: 'Hours',
-  minutes: 'Minutes',
-  seconds: 'Seconds',
-};
 
 // Standalone dark "glass" countdown card — distinct from HeroCountdown, which
 // stays as the borderless on-photo clock inside the hero itself. This is the
@@ -30,6 +25,13 @@ const UNIT_LABEL: Record<Unit, string> = {
 // render, rather than running a second independent setInterval that could
 // drift out of sync with the displayed numbers.
 export const CountdownCard = () => {
+  const { t } = useTranslation();
+  const UNIT_LABEL: Record<Unit, string> = {
+    days: t('common.days', 'Days'),
+    hours: t('common.hours', 'Hours'),
+    minutes: t('common.minutes', 'Minutes'),
+    seconds: t('common.seconds', 'Seconds'),
+  };
   const countdown = useCountdown(SUMMIT_DATE);
   const [soundOn, setSoundOn] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -84,7 +86,7 @@ export const CountdownCard = () => {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange opacity-75" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-orange" />
             </span>
-            Live &middot; Summit starts in
+            {t('home.countdown.liveLabel', 'Live · Summit starts in')}
           </span>
 
           <button
@@ -97,7 +99,7 @@ export const CountdownCard = () => {
                 : 'border-white/15 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
             }`}
           >
-            {soundOn ? '🔔 Tick sound on' : '🔕 Enable tick sound'}
+            {soundOn ? t('home.countdown.soundOn', '🔔 Tick sound on') : t('home.countdown.soundOff', '🔕 Enable tick sound')}
           </button>
         </div>
 

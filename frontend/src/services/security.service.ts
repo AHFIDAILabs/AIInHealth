@@ -18,6 +18,11 @@ export interface SecurityEvent {
   type: SecurityEventType;
   severity: SecurityEventSeverity;
   ip?: string;
+  // Raw X-Forwarded-For header, verbatim — compare against `ip` to tell a
+  // misconfigured TRUST_PROXY_HOPS (backend config/env.ts) apart from a
+  // genuinely internal/anonymized request. Each hop appends its own
+  // address, left-to-right, real client first.
+  rawForwardedFor?: string;
   userAgent?: string;
   path?: string;
   user?: { _id: string; fullName: string; email: string } | null;

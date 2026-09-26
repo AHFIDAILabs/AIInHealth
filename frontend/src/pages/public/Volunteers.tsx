@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { HeartHandshake } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
@@ -12,23 +13,27 @@ import { listPublicVolunteers, type PublicVolunteer } from '../../services/volun
 // change. No search/filter/modal like Speakers.tsx: there's no bio to drill
 // into, just a name, photo, and track.
 export const Volunteers = () => {
+  const { t } = useTranslation();
   const [volunteers, setVolunteers] = useState<PublicVolunteer[] | null>(null);
   const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     listPublicVolunteers()
       .then(setVolunteers)
-      .catch(() => setLoadError('Could not load volunteers right now. Please try again shortly.'));
-  }, []);
+      .catch(() => setLoadError(t('volunteers.loadError', 'Could not load volunteers right now. Please try again shortly.')));
+  }, [t]);
 
   const noneYet = volunteers !== null && volunteers.length === 0;
 
   return (
     <>
       <PageHero
-        eyebrow="Volunteers"
-        title="The Team Making It Happen"
-        subtitle="Confirmed volunteers helping run the Summit on the ground in Abuja: guest services, technical support, and more."
+        eyebrow={t('volunteers.hero.eyebrow', 'Volunteers')}
+        title={t('volunteers.hero.title', 'The Team Making It Happen')}
+        subtitle={t(
+          'volunteers.hero.subtitle',
+          'Confirmed volunteers helping run the Summit on the ground in Abuja: guest services, technical support, and more.'
+        )}
       />
 
       <section className="bg-white py-24">
@@ -46,8 +51,8 @@ export const Volunteers = () => {
           ) : noneYet ? (
             <Reveal className="rounded-2xl border border-dashed border-slate-300 py-16 text-center">
               <HeartHandshake size={32} className="mx-auto text-orange" />
-              <p className="mt-4 font-display text-lg font-semibold text-navy">Volunteer profiles coming soon</p>
-              <p className="mt-2 text-sm text-slate-500">Confirmed volunteers will appear here as they complete their profile.</p>
+              <p className="mt-4 font-display text-lg font-semibold text-navy">{t('volunteers.empty.heading', 'Volunteer profiles coming soon')}</p>
+              <p className="mt-2 text-sm text-slate-500">{t('volunteers.empty.body', 'Confirmed volunteers will appear here as they complete their profile.')}</p>
             </Reveal>
           ) : (
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
@@ -72,12 +77,12 @@ export const Volunteers = () => {
           )}
 
           <Reveal className="mt-16 rounded-2xl border border-dashed border-slate-300 bg-offwhite p-8 text-center">
-            <p className="font-display text-lg font-semibold text-navy">Want to Volunteer?</p>
+            <p className="font-display text-lg font-semibold text-navy">{t('volunteers.cta.heading', 'Want to Volunteer?')}</p>
             <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-              We&rsquo;re still building the team for guest services, technical support, and event coordination.
+              {t('volunteers.cta.body', 'We’re still building the team for guest services, technical support, and event coordination.')}
             </p>
             <ButtonLink to="/register" variant="secondary" className="!mt-4 !border-slate-300 !bg-white !text-navy !py-2.5 !text-sm">
-              Apply to Volunteer
+              {t('volunteers.cta.button', 'Apply to Volunteer')}
             </ButtonLink>
           </Reveal>
         </div>

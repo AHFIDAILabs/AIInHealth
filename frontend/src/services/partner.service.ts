@@ -9,6 +9,8 @@ export interface AdminPartner {
   website?: string;
   description?: string;
   logoUrl?: string;
+  // WCAG AA alt text for logoUrl.
+  logoAlt?: string;
   order: number;
   isPublished: boolean;
   contactName?: string;
@@ -33,6 +35,7 @@ export interface PartnerInput {
   website?: string;
   description?: string;
   logoUrl?: string;
+  logoAlt?: string;
   order?: number;
   isPublished?: boolean;
   contactName?: string;

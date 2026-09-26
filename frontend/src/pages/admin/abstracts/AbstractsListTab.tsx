@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FileText, X, Search, CheckCircle2, Clock, Users2 } from 'lucide-react';
+import { FileText, X, Search, CheckCircle2, Clock, Users2, Sparkles, AlertTriangle, Layers } from 'lucide-react';
 import {
   adminListAbstracts,
   adminUpdateAbstract,
+  adminSummarizeAbstracts,
+  adminUpdatePlainSummary,
+  adminTriageAbstracts,
+  adminUpdateTrack,
   fetchAbstractsAnalytics,
   ABSTRACT_STATUSES,
   ABSTRACT_DECISIONS,
@@ -12,12 +16,14 @@ import {
   type AbstractStatus,
   type AbstractDecision,
   type AbstractAnalytics,
+  type PlainSummaryStatus,
+  type SummarizeResult,
 } from '../../../services/abstract.service';
 import { listTracks, type PublicTrack } from '../../../services/track.service';
 import { getApiErrorMessage } from '../../../services/api';
 import { SkeletonRows, Skeleton } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
-import { AdminTextarea } from '../../../components/ui/AdminField';
+import { AdminTextarea, AdminSelect } from '../../../components/ui/AdminField';
 import { useToast } from '../../../contexts/ToastContext';
 import { CARD_CLASS } from '../../../lib/adminUi';
 
@@ -49,6 +55,18 @@ const DECISION_COLOR: Record<AbstractDecision, string> = {
   accepted_poster: 'bg-success/10 text-success',
   rejected: 'bg-danger/10 text-danger',
   waitlisted: 'bg-warning/10 text-warning',
+};
+
+const SUMMARY_STATUS_LABEL: Record<PlainSummaryStatus, string> = {
+  none: 'No Draft Yet',
+  draft: 'Draft — Needs Review',
+  approved: 'Approved',
+};
+
+const SUMMARY_STATUS_COLOR: Record<PlainSummaryStatus, string> = {
+  none: 'bg-slate-100 text-slate-500',
+  draft: 'bg-warning/10 text-warning',
+  approved: 'bg-success/10 text-success',
 };
 
 const StatCard = ({ icon: Icon, color, label, value }: { icon: typeof FileText; color: string; label: string; value: number | null }) => (
@@ -86,6 +104,16 @@ export const AbstractsListTab = () => {
   const [updating, setUpdating] = useState(false);
 
   const [stats, setStats] = useState<AbstractAnalytics | null>(null);
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSummarizing, setBulkSummarizing] = useState(false);
+  const [summaryDraft, setSummaryDraft] = useState('');
+  const [summaryGenerating, setSummaryGenerating] = useState(false);
+  const [summarySaving, setSummarySaving] = useState(false);
+
+  const [triageRunning, setTriageRunning] = useState(false);
+  const [trackDraft, setTrackDraft] = useState('');
+  const [trackSaving, setTrackSaving] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -129,6 +157,115 @@ export const AbstractsListTab = () => {
   const openDetail = (abstract: AdminAbstract) => {
     setActive(abstract);
     setNotesDraft(abstract.reviewNotes ?? '');
+    setSummaryDraft(abstract.plainSummary ?? '');
+    setTrackDraft(abstract.track);
+  };
+
+  const applySummaryResult = (result: SummarizeResult) => {
+    setItems((prev) => prev.map((a) => (result.items.find((r) => r._id === a._id) ? { ...a, ...result.items.find((r) => r._id === a._id) } : a)));
+    setActive((prev) => {
+      if (!prev) return prev;
+      const match = result.items.find((r) => r._id === prev._id);
+      return match ? { ...prev, ...match } : prev;
+    });
+  };
+
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const bulkSummarize = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkSummarizing(true);
+    try {
+      const result = await adminSummarizeAbstracts(Array.from(selectedIds));
+      applySummaryResult(result);
+      if (result.failed.length > 0) {
+        toast('error', `${result.succeeded} drafted, ${result.failed.length} failed — try again in a moment`);
+      } else {
+        toast('success', `${result.succeeded} summary draft${result.succeeded === 1 ? '' : 's'} generated`);
+      }
+      setSelectedIds(new Set());
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setBulkSummarizing(false);
+    }
+  };
+
+  const generateSummary = async () => {
+    if (!active) return;
+    setSummaryGenerating(true);
+    try {
+      const result = await adminSummarizeAbstracts([active._id]);
+      applySummaryResult(result);
+      const match = result.items.find((r) => r._id === active._id);
+      if (match?.plainSummary) setSummaryDraft(match.plainSummary);
+      if (result.failed.length > 0) toast('error', result.failed[0].error);
+      else toast('success', 'Summary draft generated');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSummaryGenerating(false);
+    }
+  };
+
+  const saveSummary = async (status: PlainSummaryStatus) => {
+    if (!active) return;
+    if (summaryDraft.trim().length < 20) {
+      toast('error', 'Summary must be at least 20 characters');
+      return;
+    }
+    setSummarySaving(true);
+    try {
+      const updated = await adminUpdatePlainSummary(active._id, { plainSummary: summaryDraft.trim(), plainSummaryStatus: status });
+      setItems((prev) => prev.map((a) => (a._id === active._id ? { ...a, ...updated } : a)));
+      setActive((prev) => (prev ? { ...prev, ...updated } : prev));
+      toast('success', status === 'approved' ? 'Summary approved' : 'Summary saved as draft');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSummarySaving(false);
+    }
+  };
+
+  const runTriage = async (ids?: string[]) => {
+    setTriageRunning(true);
+    try {
+      const result = await adminTriageAbstracts(ids);
+      toast(
+        'success',
+        `Triaged ${result.triaged} · ${result.trackSuggested} track suggestions · ${result.duplicatePairs} possible duplicate pair${result.duplicatePairs === 1 ? '' : 's'} · ${result.clusters} theme cluster${result.clusters === 1 ? '' : 's'}`
+      );
+      setSelectedIds(new Set());
+      load();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setTriageRunning(false);
+    }
+  };
+
+  const saveTrack = async (track: string) => {
+    if (!active) return;
+    setTrackSaving(true);
+    try {
+      const updated = await adminUpdateTrack(active._id, track);
+      setItems((prev) => prev.map((a) => (a._id === active._id ? { ...a, ...updated } : a)));
+      setActive((prev) => (prev ? { ...prev, ...updated } : prev));
+      setTrackDraft(updated.track);
+      toast('success', 'Track updated');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setTrackSaving(false);
+    }
   };
 
   const updateStatus = async (abstract: AdminAbstract, status: AbstractStatus) => {
@@ -187,6 +324,20 @@ export const AbstractsListTab = () => {
         <StatCard icon={CheckCircle2} color="bg-success/15 text-success" label="Decisions Made" value={stats ? decidedCount : null} />
         <StatCard icon={Clock} color="bg-info/15 text-info" label="Under Review" value={stats ? underReviewCount : null} />
         <StatCard icon={Users2} color="bg-chart-violet/15 text-chart-violet" label="Reviews Completed" value={stats ? reviewsCompletedTotal : null} />
+      </div>
+
+      <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-2.5 shadow-card">
+        <p className="text-[13px] text-slate-500">
+          AI triage suggests a track, flags possible near-duplicates, and groups abstracts by theme — nothing here changes an
+          abstract until you accept it.
+        </p>
+        <button
+          onClick={() => runTriage()}
+          disabled={triageRunning}
+          className="ml-3 flex shrink-0 items-center gap-1.5 rounded-lg border border-orange/30 px-3.5 py-1.5 text-[13px] font-semibold text-orange hover:bg-orange/5 disabled:opacity-60"
+        >
+          <Layers size={14} /> {triageRunning ? 'Triaging…' : 'Run AI Triage (Unconfirmed)'}
+        </button>
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -262,6 +413,31 @@ export const AbstractsListTab = () => {
         )}
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-orange/20 bg-orange/5 px-4 py-2.5">
+          <p className="text-[13px] font-medium text-navy">{selectedIds.size} selected</p>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSelectedIds(new Set())} className="text-[13px] font-semibold text-slate-500 hover:text-navy">
+              Clear
+            </button>
+            <button
+              onClick={() => runTriage(Array.from(selectedIds))}
+              disabled={triageRunning}
+              className="flex items-center gap-1.5 rounded-lg border border-orange/30 px-3.5 py-1.5 text-[13px] font-semibold text-orange hover:bg-orange/5 disabled:opacity-60"
+            >
+              <Layers size={14} /> {triageRunning ? 'Triaging…' : 'Run AI Triage'}
+            </button>
+            <button
+              onClick={bulkSummarize}
+              disabled={bulkSummarizing}
+              className="flex items-center gap-1.5 rounded-lg bg-orange px-3.5 py-1.5 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
+            >
+              <Sparkles size={14} /> {bulkSummarizing ? 'Generating…' : 'Generate Plain Summaries'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="mt-4">
           <Banner variant="error">{error}</Banner>
@@ -270,7 +446,7 @@ export const AbstractsListTab = () => {
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover">
         {loading ? (
-          <SkeletonRows rows={6} cols={7} />
+          <SkeletonRows rows={6} cols={9} />
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-chart-violet/15 text-chart-violet">
@@ -290,23 +466,46 @@ export const AbstractsListTab = () => {
             <table className="w-full text-left text-[13px]">
               <thead className="border-b border-slate-100 bg-offwhite/60 text-[11px] uppercase tracking-wide text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Title</th>
+                  <th className="w-8 px-4 py-3" />
+                  <th className="px-3 py-3 font-semibold">Title</th>
                   <th className="px-3 py-3 font-semibold">Author</th>
                   <th className="px-3 py-3 font-semibold">Track</th>
                   <th className="px-3 py-3 font-semibold">Status</th>
                   <th className="px-3 py-3 font-semibold">Reviews</th>
                   <th className="px-3 py-3 font-semibold">Decision</th>
+                  <th className="px-3 py-3 font-semibold">Summary</th>
                   <th className="px-3 py-3 font-semibold">Submitted</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {items.map((a) => (
                   <tr key={a._id} onClick={() => openDetail(a)} className="cursor-pointer hover:bg-offwhite">
-                    <td className="max-w-xs truncate px-4 py-3 font-medium text-navy">{a.title}</td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(a._id)}
+                        onClick={(e) => toggleSelect(a._id, e)}
+                        onChange={() => undefined}
+                        className="h-4 w-4 rounded border-slate-300 text-orange focus:ring-orange/40"
+                      />
+                    </td>
+                    <td className="max-w-xs truncate px-3 py-3 font-medium text-navy">{a.title}</td>
                     <td className="px-3 py-3 text-slate-500">
                       {a.authorName} <span className="text-slate-400">&middot; {a.organization || a.authorEmail}</span>
                     </td>
-                    <td className="px-3 py-3 text-slate-500">{a.track}</td>
+                    <td className="px-3 py-3 text-slate-500">
+                      <div className="flex items-center gap-1.5">
+                        <span>{a.track}</span>
+                        {a.possibleDuplicateOf.length > 0 && (
+                          <AlertTriangle size={13} className="shrink-0 text-warning" aria-label="Possible duplicate" />
+                        )}
+                      </div>
+                      {!a.trackConfirmedByAdmin && a.aiSuggestedTrack && a.aiSuggestedTrack !== a.track && (
+                        <span className="mt-0.5 flex items-center gap-1 text-[11px] text-chart-violet">
+                          <Sparkles size={11} /> AI: {a.aiSuggestedTrack}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-3">
                       <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_COLOR[a.status]}`}>{STATUS_LABEL[a.status]}</span>
                     </td>
@@ -322,6 +521,11 @@ export const AbstractsListTab = () => {
                       ) : (
                         <span className="text-slate-300">&mdash;</span>
                       )}
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${SUMMARY_STATUS_COLOR[a.plainSummaryStatus]}`}>
+                        {SUMMARY_STATUS_LABEL[a.plainSummaryStatus]}
+                      </span>
                     </td>
                     <td className="px-3 py-3 text-slate-400">{new Date(a.createdAt).toLocaleDateString()}</td>
                   </tr>
@@ -390,12 +594,115 @@ export const AbstractsListTab = () => {
                   </div>
                 )}
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Track</p>
-                  <p className="mt-1 text-sm text-navy">{active.track}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Track</p>
+                    {active.trackConfirmedByAdmin && (
+                      <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-[11px] font-semibold text-success">Confirmed</span>
+                    )}
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <AdminSelect
+                      label=""
+                      id={`track-${active._id}`}
+                      value={trackDraft}
+                      onChange={(e) => setTrackDraft(e.target.value)}
+                      className="!py-1.5"
+                    >
+                      {tracks.map((t) => (
+                        <option key={t._id} value={t.name}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                    <button
+                      onClick={() => saveTrack(trackDraft)}
+                      disabled={trackSaving || trackDraft === active.track}
+                      className="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-navy hover:border-orange/40 disabled:opacity-40"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  {!active.trackConfirmedByAdmin && active.aiSuggestedTrack && active.aiSuggestedTrack !== active.track && (
+                    <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-chart-violet/5 px-3 py-2">
+                      <span className="flex items-center gap-1.5 text-xs text-chart-violet">
+                        <Sparkles size={12} /> AI suggests: {active.aiSuggestedTrack}
+                      </span>
+                      <button
+                        onClick={() => saveTrack(active.aiSuggestedTrack!)}
+                        disabled={trackSaving}
+                        className="shrink-0 text-xs font-semibold text-chart-violet hover:underline disabled:opacity-50"
+                      >
+                        Accept
+                      </button>
+                    </div>
+                  )}
+                  {active.clusterLabel && (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                      <Layers size={12} /> Theme cluster: {active.clusterLabel}
+                    </p>
+                  )}
+                  {active.possibleDuplicateOf.length > 0 && (
+                    <div className="mt-2 rounded-lg bg-warning/5 px-3 py-2">
+                      <p className="flex items-center gap-1.5 text-xs font-semibold text-warning">
+                        <AlertTriangle size={12} /> Possible duplicate of:
+                      </p>
+                      <ul className="mt-1 space-y-0.5">
+                        {active.possibleDuplicateOf.map((dup) => (
+                          <li key={dup._id} className="text-xs text-slate-600">
+                            {dup.title} <span className="text-slate-400">&middot; {dup.authorName}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Abstract</p>
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-navy">{active.abstractText}</p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Plain-Language Summary (AI Draft)</p>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${SUMMARY_STATUS_COLOR[active.plainSummaryStatus]}`}>
+                      {SUMMARY_STATUS_LABEL[active.plainSummaryStatus]}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">
+                    For the programme committee — "what this means for policymakers." Never shown to the submitter or the public until approved.
+                  </p>
+                  <div className="mt-2">
+                    <AdminTextarea
+                      label="Summary Text"
+                      id={`plain-summary-${active._id}`}
+                      maxLength={1500}
+                      value={summaryDraft}
+                      onChange={(e) => setSummaryDraft(e.target.value)}
+                      placeholder="Generate a draft with AI, or write one directly…"
+                    />
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      onClick={generateSummary}
+                      disabled={summaryGenerating}
+                      className="flex items-center gap-1.5 rounded-lg border border-orange/30 px-3 py-1.5 text-xs font-semibold text-orange hover:bg-orange/5 disabled:opacity-60"
+                    >
+                      <Sparkles size={13} /> {summaryGenerating ? 'Generating…' : active.plainSummary ? 'Regenerate with AI' : 'Generate with AI'}
+                    </button>
+                    <button
+                      onClick={() => saveSummary('draft')}
+                      disabled={summarySaving || summaryDraft.trim().length < 20}
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-navy hover:border-orange/40 disabled:opacity-50"
+                    >
+                      Save as Draft
+                    </button>
+                    <button
+                      onClick={() => saveSummary('approved')}
+                      disabled={summarySaving || summaryDraft.trim().length < 20}
+                      className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success/90 disabled:opacity-50"
+                    >
+                      Approve
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">

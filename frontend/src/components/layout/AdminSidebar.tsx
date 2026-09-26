@@ -30,6 +30,9 @@ import {
   Rss,
   Rocket,
   ShieldAlert,
+  Sparkles,
+  Globe2,
+  Languages,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -85,6 +88,9 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Abstracts', to: '/admin/abstracts', icon: FileText, roles: contentRoles },
       { label: 'Confirmed Abstracts', to: '/admin/confirmed-abstracts', icon: FileText, roles: contentRoles },
       { label: 'Gallery', to: '/admin/media', icon: Images, roles: contentRoles },
+      { label: 'Knowledge Base', to: '/admin/knowledge-base', icon: Sparkles, roles: contentRoles },
+      { label: 'Policy Tracker', to: '/admin/policy-tracker', icon: Globe2, roles: contentRoles },
+      { label: 'Translations', to: '/admin/translations', icon: Languages, roles: contentRoles },
     ],
   },
   {

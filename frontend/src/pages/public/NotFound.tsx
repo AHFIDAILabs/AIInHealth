@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import { AbujaSkyline } from '../../components/ui/AbujaSkyline';
 import { ButtonLink } from '../../components/ui/Button';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 export const NotFound = () => {
+  const { t } = useTranslation();
   useDocumentTitle('Page Not Found');
 
   return (
@@ -18,10 +20,12 @@ export const NotFound = () => {
     <div className="pointer-events-none absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange/[0.06] blur-[100px]" />
 
     <p className="relative font-display text-7xl font-bold text-orange">404</p>
-    <h1 className="relative mt-3 font-display text-2xl font-semibold text-navy">Page Not Found</h1>
-    <p className="relative mt-2 max-w-sm text-slate-500">The page you&rsquo;re looking for doesn&rsquo;t exist or has moved.</p>
+    <h1 className="relative mt-3 font-display text-2xl font-semibold text-navy">{t('notFound.heading', 'Page Not Found')}</h1>
+    <p className="relative mt-2 max-w-sm text-slate-500">
+      {t('notFound.body', 'The page you’re looking for doesn’t exist or has moved.')}
+    </p>
     <ButtonLink to="/" variant="primary" className="relative mt-8">
-      Return Home
+      {t('notFound.returnHome', 'Return Home')}
     </ButtonLink>
 
     <AbujaSkyline tone="onLight" className="pointer-events-none absolute bottom-0 left-0 h-24 w-full" opacity={0.18} />

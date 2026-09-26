@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, X, Globe2, Sparkles, Users, Layers, Rocket } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
@@ -36,6 +37,7 @@ const CardLogo = ({ name, logoUrl }: { name: string; logoUrl?: string }) =>
 // curated directory) — this page surfaces the richer application-form
 // content (solution, problem, tech, TRL) that model never captured.
 export const InnovationShowcaseConfirmed = () => {
+  const { t } = useTranslation();
   const [entries, setEntries] = useState<InnovationShowcaseEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -73,24 +75,27 @@ export const InnovationShowcaseConfirmed = () => {
     [entries]
   );
   const stats = [
-    { label: 'Confirmed Startups', value: entries.length },
-    { label: 'Categories', value: availableCategories.length - 1 },
-    { label: 'Countries', value: countryCount },
+    { id: 'confirmedStartups', label: t('innovationShowcaseConfirmed.stats.confirmedStartups', 'Confirmed Startups'), value: entries.length },
+    { id: 'categories', label: t('innovationShowcaseConfirmed.stats.categories', 'Categories'), value: availableCategories.length - 1 },
+    { id: 'countries', label: t('innovationShowcaseConfirmed.stats.countries', 'Countries'), value: countryCount },
   ];
 
   return (
     <>
       <PageHero
-        eyebrow="Innovation Showcase"
-        title="Confirmed Showcase Startups"
-        subtitle="The health-AI startups confirmed to demo live at the Summit, selected through our judging process."
+        eyebrow={t('innovationShowcaseConfirmed.hero.eyebrow', 'Innovation Showcase')}
+        title={t('innovationShowcaseConfirmed.hero.title', 'Confirmed Showcase Startups')}
+        subtitle={t(
+          'innovationShowcaseConfirmed.hero.subtitle',
+          'The health-AI startups confirmed to demo live at the Summit, selected through our judging process.'
+        )}
       />
 
       {!loading && entries.length > 0 && (
         <section className="border-b border-slate-100 bg-offwhite py-10">
           <div className="mx-auto grid max-w-4xl grid-cols-3 gap-4 px-4 text-center sm:px-6 lg:px-8">
             {stats.map((s, i) => (
-              <Reveal key={s.label} delay={i * 0.06}>
+              <Reveal key={s.id} delay={i * 0.06}>
                 <p className="font-display text-3xl font-bold text-navy sm:text-4xl">{s.value}</p>
                 <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{s.label}</p>
               </Reveal>
@@ -113,7 +118,7 @@ export const InnovationShowcaseConfirmed = () => {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search startups..."
+                placeholder={t('innovationShowcaseConfirmed.search.placeholder', 'Search startups...')}
                 className="w-full rounded-full border border-slate-200 bg-offwhite py-2.5 pl-10 pr-4 text-base sm:text-sm text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
               />
             </div>
@@ -122,12 +127,12 @@ export const InnovationShowcaseConfirmed = () => {
                 <button
                   key={c}
                   onClick={() => setCategory(c)}
-                  title={c}
+                  title={c === 'All' ? t('innovationShowcaseConfirmed.filters.all', 'All') : c}
                   className={`max-w-[220px] truncate rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                     category === c ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
                   }`}
                 >
-                  {c}
+                  {c === 'All' ? t('innovationShowcaseConfirmed.filters.all', 'All') : c}
                 </button>
               ))}
             </div>
@@ -143,14 +148,14 @@ export const InnovationShowcaseConfirmed = () => {
             <Reveal className="mt-14 rounded-2xl border border-dashed border-slate-300 py-16 text-center">
               {entries.length === 0 ? (
                 <>
-                  <p className="font-display text-lg font-semibold text-navy">Confirmations coming soon</p>
+                  <p className="font-display text-lg font-semibold text-navy">{t('innovationShowcaseConfirmed.empty.title', 'Confirmations coming soon')}</p>
                   <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-                    We&rsquo;re still finalizing the confirmed showcase cohort. Check back soon.
+                    {t('innovationShowcaseConfirmed.empty.body', 'We’re still finalizing the confirmed showcase cohort. Check back soon.')}
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="font-display text-lg font-semibold text-navy">No startups match your filters</p>
+                  <p className="font-display text-lg font-semibold text-navy">{t('innovationShowcaseConfirmed.filters.noMatch', 'No startups match your filters')}</p>
                   <button
                     onClick={() => {
                       setQuery('');
@@ -158,7 +163,7 @@ export const InnovationShowcaseConfirmed = () => {
                     }}
                     className="mt-3 text-sm font-semibold text-orange hover:text-orange-hover"
                   >
-                    Clear filters
+                    {t('innovationShowcaseConfirmed.filters.clear', 'Clear filters')}
                   </button>
                 </>
               )}
@@ -202,13 +207,13 @@ export const InnovationShowcaseConfirmed = () => {
       <section className="relative overflow-hidden bg-navy py-20">
         <div className="relative mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
           <Reveal>
-            <p className="text-xs font-semibold uppercase tracking-widest text-orange">Building in Health AI?</p>
-            <h2 className="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl">Showcase Your Innovation</h2>
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange">{t('innovationShowcaseConfirmed.cta.eyebrow', 'Building in Health AI?')}</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl">{t('innovationShowcaseConfirmed.cta.heading', 'Showcase Your Innovation')}</h2>
             <p className="mx-auto mt-3 max-w-xl text-slate-300">
-              We&rsquo;re curating a floor of the boldest African health-AI builders for future editions.
+              {t('innovationShowcaseConfirmed.cta.body', 'We’re curating a floor of the boldest African health-AI builders for future editions.')}
             </p>
             <ButtonLink to="/register" variant="secondary" className="mt-6 !border-white/40 !bg-white/10">
-              Register Interest
+              {t('innovationShowcaseConfirmed.cta.apply', 'Register Interest')}
             </ButtonLink>
           </Reveal>
         </div>
@@ -233,7 +238,7 @@ export const InnovationShowcaseConfirmed = () => {
             >
               <button
                 onClick={() => setActive(null)}
-                aria-label="Close"
+                aria-label={t('common.close', 'Close')}
                 className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-navy/60 text-white backdrop-blur-sm hover:bg-navy/80"
               >
                 <X size={18} />
@@ -272,14 +277,14 @@ export const InnovationShowcaseConfirmed = () => {
                   {active.founderNames && (
                     <div className="flex gap-2">
                       <dt className="flex shrink-0 items-center gap-1 text-slate-400">
-                        <Users size={13} /> Founders
+                        <Users size={13} /> {t('innovationShowcaseConfirmed.detail.founders', 'Founders')}
                       </dt>
                       <dd className="text-navy">{active.founderNames}</dd>
                     </div>
                   )}
                   {active.trl && (
                     <div className="flex gap-2">
-                      <dt className="text-slate-400">TRL</dt>
+                      <dt className="text-slate-400">{t('innovationShowcaseConfirmed.detail.trl', 'TRL')}</dt>
                       <dd className="text-navy">{active.trl}</dd>
                     </div>
                   )}
@@ -288,7 +293,7 @@ export const InnovationShowcaseConfirmed = () => {
                 {active.solutionDescription && (
                   <div className="mt-5">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      {active.solutionName || 'The Solution'}
+                      {active.solutionName || t('innovationShowcaseConfirmed.detail.theSolution', 'The Solution')}
                     </p>
                     <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-slate-600">{active.solutionDescription}</p>
                   </div>
@@ -296,21 +301,21 @@ export const InnovationShowcaseConfirmed = () => {
 
                 {active.problemAddressed && (
                   <div className="mt-5">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">The Problem</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('innovationShowcaseConfirmed.detail.theProblem', 'The Problem')}</p>
                     <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-slate-600">{active.problemAddressed}</p>
                   </div>
                 )}
 
                 {active.aiTechnologies && (
                   <div className="mt-5">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">AI / ML Technologies</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('innovationShowcaseConfirmed.detail.aiTechnologies', 'AI / ML Technologies')}</p>
                     <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{active.aiTechnologies}</p>
                   </div>
                 )}
 
                 {active.uniqueValue && (
                   <div className="mt-5">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">What Makes It Unique</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('innovationShowcaseConfirmed.detail.uniqueValue', 'What Makes It Unique')}</p>
                     <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-slate-600">{active.uniqueValue}</p>
                   </div>
                 )}
@@ -322,7 +327,7 @@ export const InnovationShowcaseConfirmed = () => {
                     rel="noopener noreferrer"
                     className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"
                   >
-                    <Globe2 size={15} /> Visit website
+                    <Globe2 size={15} /> {t('common.visitWebsite', 'Visit website')}
                   </a>
                 )}
               </div>

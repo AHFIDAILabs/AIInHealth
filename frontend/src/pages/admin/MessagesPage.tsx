@@ -1,11 +1,31 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MessageSquare, X, CheckCircle2, Mail, Search } from 'lucide-react';
+import { MessageSquare, X, CheckCircle2, Mail, Search, ShieldAlert, Flame } from 'lucide-react';
 import { adminListMessages, adminUpdateMessage, CONTACT_CATEGORIES, type AdminMessage, type ContactCategory } from '../../services/adminMessage.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 import { useToast } from '../../contexts/ToastContext';
+
+// AI-suggested triage — see triage.service.ts. Only rendered for the two
+// non-default labels; 'standard'/unset is the common case and needs no badge.
+const PriorityBadge = ({ msg }: { msg: AdminMessage }) => {
+  if (msg.priorityLabel === 'protocol_sensitive') {
+    return (
+      <span title={msg.priorityReason} className="mt-1 flex shrink-0 items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-semibold text-danger">
+        <ShieldAlert size={11} /> Protocol
+      </span>
+    );
+  }
+  if (msg.priorityLabel === 'high') {
+    return (
+      <span title={msg.priorityReason} className="mt-1 flex shrink-0 items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold text-warning">
+        <Flame size={11} /> High
+      </span>
+    );
+  }
+  return null;
+};
 
 export const MessagesPage = () => {
   const toast = useToast();
@@ -169,6 +189,7 @@ export const MessagesPage = () => {
                   <p className="mt-0.5 truncate text-xs text-slate-500">{msg.message}</p>
                 </div>
                 <span className="mt-1 shrink-0 rounded-full bg-navy-secondary px-2 py-0.5 text-[10px] font-medium text-orange">{msg.category}</span>
+                <PriorityBadge msg={msg} />
                 {msg.isResolved && <CheckCircle2 size={16} className="mt-1 shrink-0 text-success" />}
               </button>
             ))}
@@ -221,6 +242,7 @@ export const MessagesPage = () => {
                   </a>
                   <span className="rounded-full bg-navy-secondary px-2.5 py-0.5 text-[11px] font-medium text-orange">{active.category}</span>
                 </div>
+                <PriorityBadge msg={active} />
                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-navy">{active.message}</p>
                 <p className="text-xs text-slate-400">{new Date(active.createdAt).toLocaleString()}</p>
               </div>

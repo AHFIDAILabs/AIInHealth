@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Plus, X, Users, Pencil, Trash2, GripVertical } from 'lucide-react';
+import { Search, Plus, X, Users, Pencil, Trash2, GripVertical, Sparkles } from 'lucide-react';
 import {
   adminListSpeakers,
   adminCreateSpeaker,
   adminUpdateSpeaker,
   adminDeleteSpeaker,
   adminReorderSpeakers,
+  adminTranslateSpeaker,
+  adminUpdateSpeakerTranslation,
+  SUPPORTED_TRANSLATION_LANGS,
   type AdminSpeaker,
   type SpeakerInput,
+  type TranslationLang,
+  type TranslationStatus,
 } from '../../services/speaker.service';
 import { listTracks, type PublicTrack } from '../../services/track.service';
 import { getApiErrorMessage } from '../../services/api';
@@ -28,9 +33,22 @@ const emptyForm = (defaultTrack: string): SpeakerInput => ({
   bio: '',
   track: defaultTrack,
   photoUrl: '',
+  photoAlt: '',
   hoverPhotoUrl: '',
   isPublished: false,
 });
+
+const LANG_LABEL: Record<TranslationLang, string> = { fr: 'French', pt: 'Portuguese' };
+const TRANSLATION_STATUS_LABEL: Record<TranslationStatus, string> = {
+  none: 'No Draft Yet',
+  draft: 'Draft — Needs Review',
+  approved: 'Approved',
+};
+const TRANSLATION_STATUS_COLOR: Record<TranslationStatus, string> = {
+  none: 'bg-slate-100 text-slate-500',
+  draft: 'bg-warning/10 text-warning',
+  approved: 'bg-success/10 text-success',
+};
 
 export const SpeakersPage = () => {
   const toast = useToast();
@@ -54,6 +72,10 @@ export const SpeakersPage = () => {
 
   const [toDelete, setToDelete] = useState<AdminSpeaker | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [translationDrafts, setTranslationDrafts] = useState<Record<TranslationLang, string>>({ fr: '', pt: '' });
+  const [translating, setTranslating] = useState<Record<TranslationLang, boolean>>({ fr: false, pt: false });
+  const [translationSaving, setTranslationSaving] = useState<Record<TranslationLang, boolean>>({ fr: false, pt: false });
 
   // Reordering only makes sense against the one true full-list order — with a
   // search/track/status filter active, "position 3 of 4 filtered rows" doesn't
@@ -115,11 +137,44 @@ export const SpeakersPage = () => {
       bio: speaker.bio ?? '',
       track: speaker.track,
       photoUrl: speaker.photoUrl ?? '',
+      photoAlt: speaker.photoAlt ?? '',
       hoverPhotoUrl: speaker.hoverPhotoUrl ?? '',
       isPublished: speaker.isPublished,
     });
+    setTranslationDrafts({ fr: speaker.translations?.fr?.bio ?? '', pt: speaker.translations?.pt?.bio ?? '' });
     setFormError('');
     setFormOpen(true);
+  };
+
+  const generateTranslation = async (lang: TranslationLang) => {
+    if (!editing) return;
+    setTranslating((prev) => ({ ...prev, [lang]: true }));
+    try {
+      const updated = await adminTranslateSpeaker(editing._id, lang);
+      setEditing(updated);
+      setItems((prev) => prev.map((s) => (s._id === updated._id ? updated : s)));
+      setTranslationDrafts((prev) => ({ ...prev, [lang]: updated.translations?.[lang]?.bio ?? '' }));
+      toast('success', `${LANG_LABEL[lang]} draft generated`);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setTranslating((prev) => ({ ...prev, [lang]: false }));
+    }
+  };
+
+  const saveTranslation = async (lang: TranslationLang, status: TranslationStatus) => {
+    if (!editing) return;
+    setTranslationSaving((prev) => ({ ...prev, [lang]: true }));
+    try {
+      const updated = await adminUpdateSpeakerTranslation(editing._id, lang, { bio: translationDrafts[lang], status });
+      setEditing(updated);
+      setItems((prev) => prev.map((s) => (s._id === updated._id ? updated : s)));
+      toast('success', status === 'approved' ? `${LANG_LABEL[lang]} translation approved` : `${LANG_LABEL[lang]} draft saved`);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setTranslationSaving((prev) => ({ ...prev, [lang]: false }));
+    }
   };
 
   const submit = async () => {
@@ -447,6 +502,18 @@ export const SpeakersPage = () => {
                   fallbackText={form.fullName}
                 />
                 <div>
+                  <AdminInput
+                    label="Photo Alt Text"
+                    maxLength={200}
+                    value={form.photoAlt ?? ''}
+                    onChange={(e) => setForm({ ...form, photoAlt: e.target.value })}
+                    placeholder={form.fullName ? `e.g. Portrait of ${form.fullName}` : 'Describe the photo for screen readers'}
+                  />
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    For screen readers — required for accessibility (WCAG AA). Covers the hover photo too.
+                  </p>
+                </div>
+                <div>
                   <ImagePicker
                     label="Hover Photo (optional)"
                     value={form.hoverPhotoUrl}
@@ -467,6 +534,57 @@ export const SpeakersPage = () => {
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
                   placeholder="Short professional biography..."
                 />
+                {editing && (
+                  <div>
+                    <p className="mb-1.5 text-[13px] font-semibold text-navy">Bio Translations (AI Draft)</p>
+                    <div className="space-y-3">
+                      {SUPPORTED_TRANSLATION_LANGS.map((lang) => {
+                        const status = editing.translations?.[lang]?.status ?? 'none';
+                        return (
+                          <div key={lang} className="rounded-lg border border-slate-200 p-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[13px] font-semibold text-navy">{LANG_LABEL[lang]}</span>
+                              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${TRANSLATION_STATUS_COLOR[status]}`}>
+                                {TRANSLATION_STATUS_LABEL[status]}
+                              </span>
+                            </div>
+                            <div className="mt-2">
+                              <AdminTextarea
+                                label="Bio"
+                                id={`speaker-translation-bio-${lang}-${editing._id}`}
+                                value={translationDrafts[lang]}
+                                onChange={(e) => setTranslationDrafts((prev) => ({ ...prev, [lang]: e.target.value }))}
+                              />
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button
+                                onClick={() => generateTranslation(lang)}
+                                disabled={translating[lang] || !form.bio?.trim()}
+                                className="flex items-center gap-1.5 rounded-lg border border-orange/30 px-3 py-1.5 text-xs font-semibold text-orange hover:bg-orange/5 disabled:opacity-60"
+                              >
+                                <Sparkles size={13} /> {translating[lang] ? 'Generating…' : status === 'none' ? 'Generate with AI' : 'Regenerate with AI'}
+                              </button>
+                              <button
+                                onClick={() => saveTranslation(lang, 'draft')}
+                                disabled={translationSaving[lang]}
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-navy hover:border-orange/40 disabled:opacity-50"
+                              >
+                                Save as Draft
+                              </button>
+                              <button
+                                onClick={() => saveTranslation(lang, 'approved')}
+                                disabled={translationSaving[lang]}
+                                className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success/90 disabled:opacity-50"
+                              >
+                                Approve
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <AdminToggle label="Published" checked={!!form.isPublished} onChange={(v) => setForm({ ...form, isPublished: v })} />
               </div>
 

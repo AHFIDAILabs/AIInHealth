@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PlayCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -7,23 +8,33 @@ import { GalleryModal } from '../../components/ui/GalleryModal';
 import { listPublicMedia, type AdminMedia, type MediaType, type MediaDay } from '../../services/media.service';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
-const TABS: { label: string; value: MediaType | 'all' }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Photos', value: 'photo' },
-  { label: 'Videos', value: 'video' },
-];
-
-const DAY_TABS: { label: string; value: MediaDay | 'all' }[] = [
-  { label: 'All Moments', value: 'all' },
-  { label: 'Day 1', value: 'day1' },
-  { label: 'Day 2', value: 'day2' },
-  { label: 'General', value: 'general' },
-];
-
-const DAY_LABEL: Record<MediaDay, string> = { day1: 'Day 1', day2: 'Day 2', general: 'General' };
-
 export const Gallery = () => {
+  const { t } = useTranslation();
   useDocumentTitle('Gallery');
+
+  // Built inside the component (not a module constant) so `label` can go
+  // through t() — `value` is the stable, untranslated identifier the
+  // filters/state actually compare against, same reasoning as Navbar.tsx's
+  // NAV_ITEMS.
+  const TABS: { label: string; value: MediaType | 'all' }[] = [
+    { label: t('gallery.tabs.all', 'All'), value: 'all' },
+    { label: t('gallery.tabs.photos', 'Photos'), value: 'photo' },
+    { label: t('gallery.tabs.videos', 'Videos'), value: 'video' },
+  ];
+
+  const DAY_TABS: { label: string; value: MediaDay | 'all' }[] = [
+    { label: t('gallery.dayTabs.allMoments', 'All Moments'), value: 'all' },
+    { label: t('gallery.dayTabs.day1', 'Day 1'), value: 'day1' },
+    { label: t('gallery.dayTabs.day2', 'Day 2'), value: 'day2' },
+    { label: t('gallery.dayTabs.general', 'General'), value: 'general' },
+  ];
+
+  const DAY_LABEL: Record<MediaDay, string> = {
+    day1: t('gallery.dayTabs.day1', 'Day 1'),
+    day2: t('gallery.dayTabs.day2', 'Day 2'),
+    general: t('gallery.dayTabs.general', 'General'),
+  };
+
   const [media, setMedia] = useState<AdminMedia[] | null>(null);
   const [loadError, setLoadError] = useState('');
   const [tab, setTab] = useState<MediaType | 'all'>('all');
@@ -33,8 +44,10 @@ export const Gallery = () => {
   useEffect(() => {
     listPublicMedia()
       .then(setMedia)
-      .catch(() => setLoadError('Could not load the Gallery right now. Please try again shortly.'));
-  }, []);
+      .catch(() =>
+        setLoadError(t('gallery.error.loadFailed', 'Could not load the Gallery right now. Please try again shortly.'))
+      );
+  }, [t]);
 
   const filtered = useMemo(() => {
     if (!media) return [];
@@ -51,9 +64,12 @@ export const Gallery = () => {
   return (
     <>
       <PageHero
-        eyebrow="Media"
-        title="Moments From the Summit"
-        subtitle="Photos and video clips from AI in Health Summit 2026, posted by our team as the event unfolds."
+        eyebrow={t('gallery.hero.eyebrow', 'Media')}
+        title={t('gallery.hero.title', 'Moments From the Summit')}
+        subtitle={t(
+          'gallery.hero.subtitle',
+          'Photos and video clips from AI in Health Summit 2026, posted by our team as the event unfolds.'
+        )}
       />
 
       <section className="bg-white py-24">
@@ -61,15 +77,15 @@ export const Gallery = () => {
           {!noMediaAtAll && (
             <Reveal className="flex flex-col items-center gap-3">
               <div className="flex flex-wrap justify-center gap-2">
-                {TABS.map((t) => (
+                {TABS.map((tabItem) => (
                   <button
-                    key={t.value}
-                    onClick={() => setTab(t.value)}
+                    key={tabItem.value}
+                    onClick={() => setTab(tabItem.value)}
                     className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                      tab === t.value ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
+                      tab === tabItem.value ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
                     }`}
                   >
-                    {t.label}
+                    {tabItem.label}
                   </button>
                 ))}
               </div>
@@ -103,12 +119,16 @@ export const Gallery = () => {
             </div>
           ) : noMediaAtAll ? (
             <Reveal className="mt-14 rounded-2xl border border-dashed border-slate-300 py-16 text-center">
-              <p className="font-display text-lg font-semibold text-navy">The gallery is still empty</p>
-              <p className="mt-2 text-sm text-slate-500">Photos and videos will start appearing here as the Summit approaches.</p>
+              <p className="font-display text-lg font-semibold text-navy">{t('gallery.empty.title', 'The gallery is still empty')}</p>
+              <p className="mt-2 text-sm text-slate-500">
+                {t('gallery.empty.subtitle', 'Photos and videos will start appearing here as the Summit approaches.')}
+              </p>
             </Reveal>
           ) : filtered.length === 0 ? (
             <Reveal className="mt-14 rounded-2xl border border-dashed border-slate-300 py-16 text-center">
-              <p className="font-display text-lg font-semibold text-navy">No {tab === 'photo' ? 'photos' : 'videos'} yet</p>
+              <p className="font-display text-lg font-semibold text-navy">
+                {tab === 'photo' ? t('gallery.empty.noPhotosYet', 'No photos yet') : t('gallery.empty.noVideosYet', 'No videos yet')}
+              </p>
             </Reveal>
           ) : (
             <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

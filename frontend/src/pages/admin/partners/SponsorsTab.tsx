@@ -62,6 +62,7 @@ const EMPTY_FORM: PartnerInput = {
   website: '',
   description: '',
   logoUrl: '',
+  logoAlt: '',
   order: 0,
   isPublished: false,
   contactName: '',
@@ -187,6 +188,7 @@ export const SponsorsTab = () => {
       website: partner.website ?? '',
       description: partner.description ?? '',
       logoUrl: partner.logoUrl ?? '',
+      logoAlt: partner.logoAlt ?? '',
       order: partner.order,
       isPublished: partner.isPublished,
       contactName: partner.contactName ?? '',
@@ -527,6 +529,16 @@ export const SponsorsTab = () => {
                   size={56}
                   fallbackText={form.name}
                 />
+                <div>
+                  <AdminInput
+                    label="Logo Alt Text"
+                    maxLength={200}
+                    value={form.logoAlt ?? ''}
+                    onChange={(e) => setForm({ ...form, logoAlt: e.target.value })}
+                    placeholder={form.name ? `e.g. ${form.name} logo` : 'Describe the logo for screen readers'}
+                  />
+                  <p className="mt-1.5 text-xs text-slate-400">For screen readers — required for accessibility (WCAG AA).</p>
+                </div>
                 <AdminTextarea label="Description" maxLength={1000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Short description..." />
                 <AdminInput
                   label="Order (on public page)"

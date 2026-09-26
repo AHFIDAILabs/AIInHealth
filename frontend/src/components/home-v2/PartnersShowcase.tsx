@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Reveal } from '../ui/Reveal';
 import { listPublicPartners, type AdminPartner } from '../../services/partner.service';
 
@@ -33,7 +34,7 @@ const Swatch = ({ p, isTopTier, dense = false }: { p: AdminPartner; isTopTier: b
   const logo = p.logoUrl ? (
     <img
       src={p.logoUrl}
-      alt={p.name}
+      alt={p.logoAlt || p.name}
       title={p.name}
       className={`h-20 object-contain transition-all duration-300 sm:h-24 ${dense ? 'w-28 sm:w-36' : 'w-full'}`}
     />
@@ -103,6 +104,7 @@ const LogoGrid = ({ group, dense = false }: { group: PackageGroup; dense?: boole
 // same self-hiding rule as ConvenedWith.
 const COMBINED_ROW_PACKAGE_NAMES = new Set(['Host', 'Title Partners', 'Technical Collaborating Partner']);
 export const PartnersShowcase = () => {
+  const { t } = useTranslation();
   const [partners, setPartners] = useState<AdminPartner[]>([]);
 
   useEffect(() => {
@@ -151,9 +153,9 @@ export const PartnersShowcase = () => {
     <section className="w-full bg-navy py-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-white">Partners</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-white">{t('footer.summit.partners', 'Partners')}</p>
           <h2 className="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl">
-            Convened with leading institutions
+            {t('home.partners.heading', 'Convened with leading institutions')}
           </h2>
         </Reveal>
       </div>

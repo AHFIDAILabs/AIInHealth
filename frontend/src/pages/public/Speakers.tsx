@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Landmark, Stethoscope, Rocket, TrendingUp, Globe2, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
@@ -8,37 +9,62 @@ import { SpeakerModal } from '../../components/ui/SpeakerModal';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 
-// Broader categories the Summit convenes beyond the confirmed roster below — no
-// individuals invented here, just the groups the programme is built around.
-const CATEGORIES = [
-  {
-    icon: Landmark,
-    title: 'Government & Policy Leaders',
-    body: 'Federal and state health ministries, regulators, and continental policy bodies shaping the national AI-in-health framework.',
-  },
-  {
-    icon: Globe2,
-    title: 'Global Health Institutions',
-    body: 'WHO, multilateral agencies, and development partners bringing global standards and financing perspectives.',
-  },
-  {
-    icon: Stethoscope,
-    title: 'Clinical & Research Innovators',
-    body: 'Clinicians, researchers, and academic institutions building and validating AI tools in African health settings.',
-  },
-  {
-    icon: Rocket,
-    title: 'Healthtech Founders & Builders',
-    body: 'Startup founders and engineers demonstrating AI-driven diagnostics, operations, and delivery tools already in use.',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Investors & Development Partners',
-    body: 'Venture investors and impact funders sourcing Africa’s next wave of health AI investment.',
-  },
-];
-
 export const Speakers = () => {
+  const { t } = useTranslation();
+
+  // Broader categories the Summit convenes beyond the confirmed roster below —
+  // no individuals invented here, just the groups the programme is built
+  // around. Built inside the component (not a module constant) so `title`/
+  // `body` can go through t() — `id` is the stable, untranslated identifier
+  // used for `key={cat.id}` below, same reasoning as Navbar.tsx's NAV_ITEMS.
+  const CATEGORIES = [
+    {
+      id: 'government',
+      icon: Landmark,
+      title: t('speakers.categories.government.title', 'Government & Policy Leaders'),
+      body: t(
+        'speakers.categories.government.body',
+        'Federal and state health ministries, regulators, and continental policy bodies shaping the national AI-in-health framework.'
+      ),
+    },
+    {
+      id: 'globalHealth',
+      icon: Globe2,
+      title: t('speakers.categories.globalHealth.title', 'Global Health Institutions'),
+      body: t(
+        'speakers.categories.globalHealth.body',
+        'WHO, multilateral agencies, and development partners bringing global standards and financing perspectives.'
+      ),
+    },
+    {
+      id: 'clinical',
+      icon: Stethoscope,
+      title: t('speakers.categories.clinical.title', 'Clinical & Research Innovators'),
+      body: t(
+        'speakers.categories.clinical.body',
+        'Clinicians, researchers, and academic institutions building and validating AI tools in African health settings.'
+      ),
+    },
+    {
+      id: 'healthtech',
+      icon: Rocket,
+      title: t('speakers.categories.healthtech.title', 'Healthtech Founders & Builders'),
+      body: t(
+        'speakers.categories.healthtech.body',
+        'Startup founders and engineers demonstrating AI-driven diagnostics, operations, and delivery tools already in use.'
+      ),
+    },
+    {
+      id: 'investors',
+      icon: TrendingUp,
+      title: t('speakers.categories.investors.title', 'Investors & Development Partners'),
+      body: t(
+        'speakers.categories.investors.body',
+        'Venture investors and impact funders sourcing Africa’s next wave of health AI investment.'
+      ),
+    },
+  ];
+
   const [speakers, setSpeakers] = useState<AdminSpeaker[] | null>(null);
   const [loadError, setLoadError] = useState('');
   const [query, setQuery] = useState('');
@@ -48,8 +74,10 @@ export const Speakers = () => {
   useEffect(() => {
     listPublicSpeakers()
       .then(setSpeakers)
-      .catch(() => setLoadError('Could not load speakers right now. Please try again shortly.'));
-  }, []);
+      .catch(() =>
+        setLoadError(t('speakers.error.loadFailed', 'Could not load speakers right now. Please try again shortly.'))
+      );
+  }, [t]);
 
   // Derived from whichever speakers are actually published, not a separate
   // fixed list — so the filter pills always match the real tracks in use
@@ -72,9 +100,12 @@ export const Speakers = () => {
   return (
     <>
       <PageHero
-        eyebrow="Speakers"
-        title="Voices Shaping AI in African Healthcare"
-        subtitle="Ministers, regulators, and global health leaders confirmed for Abuja, with more of the lineup still being finalized."
+        eyebrow={t('speakers.hero.eyebrow', 'Speakers')}
+        title={t('speakers.hero.title', 'Voices Shaping AI in African Healthcare')}
+        subtitle={t(
+          'speakers.hero.subtitle',
+          'Ministers, regulators, and global health leaders confirmed for Abuja, with more of the lineup still being finalized.'
+        )}
       />
 
       <section className="bg-white py-24">
@@ -86,22 +117,22 @@ export const Speakers = () => {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search speakers..."
+                  placeholder={t('speakers.search.placeholder', 'Search speakers...')}
                   className="w-full rounded-full border border-slate-200 bg-offwhite py-2.5 pl-10 pr-4 text-base sm:text-sm text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
                 />
               </div>
               <div className="flex flex-wrap gap-2">
-                {filterTracks.map((t) => (
+                {filterTracks.map((trackOption) => (
                   <button
-                    key={t}
-                    onClick={() => setTrack(t)}
+                    key={trackOption}
+                    onClick={() => setTrack(trackOption)}
                     className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                      track === t
+                      track === trackOption
                         ? 'border-orange bg-orange text-white'
                         : 'border-slate-200 text-slate-600 hover:border-orange/40'
                     }`}
                   >
-                    {t}
+                    {trackOption === 'All' ? t('speakers.filters.all', 'All') : trackOption}
                   </button>
                 ))}
               </div>
@@ -120,12 +151,12 @@ export const Speakers = () => {
             </div>
           ) : noSpeakersAtAll ? (
             <Reveal className="mt-14 rounded-2xl border border-dashed border-slate-300 py-16 text-center">
-              <p className="font-display text-lg font-semibold text-navy">Speakers to be announced</p>
-              <p className="mt-2 text-sm text-slate-500">Check back soon as the full lineup is confirmed.</p>
+              <p className="font-display text-lg font-semibold text-navy">{t('speakers.empty.title', 'Speakers to be announced')}</p>
+              <p className="mt-2 text-sm text-slate-500">{t('speakers.empty.subtitle', 'Check back soon as the full lineup is confirmed.')}</p>
             </Reveal>
           ) : filtered.length === 0 ? (
             <Reveal className="mt-14 rounded-2xl border border-dashed border-slate-300 py-16 text-center">
-              <p className="font-display text-lg font-semibold text-navy">No speakers match your filters</p>
+              <p className="font-display text-lg font-semibold text-navy">{t('speakers.filters.noMatch', 'No speakers match your filters')}</p>
               <button
                 onClick={() => {
                   setQuery('');
@@ -133,7 +164,7 @@ export const Speakers = () => {
                 }}
                 className="mt-3 text-sm font-semibold text-orange hover:text-orange-hover"
               >
-                Clear filters
+                {t('speakers.filters.clear', 'Clear filters')}
               </button>
             </Reveal>
           ) : (
@@ -146,7 +177,7 @@ export const Speakers = () => {
                         {speaker.photoUrl ? (
                           <img
                             src={speaker.photoUrl}
-                            alt={speaker.fullName}
+                            alt={speaker.photoAlt || speaker.fullName}
                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (
@@ -176,16 +207,19 @@ export const Speakers = () => {
       <section className="border-t border-slate-100 bg-offwhite py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <Reveal className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-orange">Still Being Finalized</p>
-            <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">More Voices at the Summit</h2>
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange">{t('speakers.categories.eyebrow', 'Still Being Finalized')}</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">{t('speakers.categories.heading', 'More Voices at the Summit')}</h2>
             <p className="mx-auto mt-2 max-w-xl text-slate-600">
-              Beyond the confirmed speakers above, delegates convene across five groups shaping the programme.
+              {t(
+                'speakers.categories.subtitle',
+                'Beyond the confirmed speakers above, delegates convene across five groups shaping the programme.'
+              )}
             </p>
           </Reveal>
 
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {CATEGORIES.map((cat, i) => (
-              <Reveal key={cat.title} delay={i * 0.06}>
+              <Reveal key={cat.id} delay={i * 0.06}>
                 <div className="h-full rounded-2xl border border-slate-200 bg-white p-6 transition-colors hover:border-orange/40">
                   <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-navy-secondary text-orange">
                     <cat.icon size={20} />
@@ -198,10 +232,10 @@ export const Speakers = () => {
 
             <Reveal delay={CATEGORIES.length * 0.06}>
               <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center">
-                <p className="font-display text-lg font-semibold text-navy">Speaking at the Summit?</p>
-                <p className="mt-2 text-sm text-slate-600">We&rsquo;re still confirming our full lineup.</p>
+                <p className="font-display text-lg font-semibold text-navy">{t('speakers.cta.speakingHeading', 'Speaking at the Summit?')}</p>
+                <p className="mt-2 text-sm text-slate-600">{t('speakers.cta.speakingBody', 'We’re still confirming our full lineup.')}</p>
                 <ButtonLink to="/register" variant="secondary" className="!mt-4 !border-slate-300 !bg-white !text-navy !py-2.5 !text-sm">
-                  Nominate / Apply to Speak
+                  {t('speakers.cta.nominate', 'Nominate / Apply to Speak')}
                 </ButtonLink>
               </div>
             </Reveal>

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Send, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Button } from '../../components/ui/Button';
@@ -26,6 +27,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export const AbstractSubmission = () => {
+  const { t } = useTranslation();
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [tracks, setTracks] = useState<PublicTrack[] | null>(null);
@@ -71,9 +73,12 @@ export const AbstractSubmission = () => {
   return (
     <>
       <PageHero
-        eyebrow="Research & Abstracts"
-        title="Submit Your Abstract"
-        subtitle="Share your research with the Summit's Research & Abstracts track. Accepted abstracts are featured in the Poster & Abstract sessions."
+        eyebrow={t('abstractSubmission.eyebrow', 'Research & Abstracts')}
+        title={t('abstractSubmission.title', 'Submit Your Abstract')}
+        subtitle={t(
+          'abstractSubmission.subtitle',
+          "Share your research with the Summit's Research & Abstracts track. Accepted abstracts are featured in the Poster & Abstract sessions."
+        )}
       />
 
       <section className="bg-offwhite pb-16 pt-16 sm:pt-20">
@@ -82,7 +87,7 @@ export const AbstractSubmission = () => {
             to="/abstracts/confirmed"
             className="mb-6 flex items-center justify-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"
           >
-            View Confirmed Abstract Presentations <ArrowRight size={15} />
+            {t('abstractSubmission.viewConfirmed', 'View Confirmed Abstract Presentations')} <ArrowRight size={15} />
           </Link>
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-glow-subtle sm:p-9">
             {confirmation ? (
@@ -91,25 +96,48 @@ export const AbstractSubmission = () => {
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
                 {serverError && <Banner variant="error">{serverError}</Banner>}
                 {tracks?.length === 0 && (
-                  <Banner variant="error">No tracks are configured yet. Please check back shortly.</Banner>
+                  <Banner variant="error">
+                    {t('abstractSubmission.form.noTracks', 'No tracks are configured yet. Please check back shortly.')}
+                  </Banner>
                 )}
 
-                <LightField label="Abstract Title" error={errors.title?.message} {...register('title')} />
+                <LightField label={t('abstractSubmission.form.title', 'Abstract Title')} error={errors.title?.message} {...register('title')} />
 
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <LightField label="Presenting Author" error={errors.authorName?.message} {...register('authorName')} />
-                  <LightField label="Email" type="email" error={errors.authorEmail?.message} {...register('authorEmail')} />
+                  <LightField
+                    label={t('abstractSubmission.form.presentingAuthor', 'Presenting Author')}
+                    error={errors.authorName?.message}
+                    {...register('authorName')}
+                  />
+                  <LightField
+                    label={t('abstractSubmission.form.email', 'Email')}
+                    type="email"
+                    error={errors.authorEmail?.message}
+                    {...register('authorEmail')}
+                  />
                 </div>
 
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <LightField label="Organization" error={errors.organization?.message} {...register('organization')} />
-                  <LightSelect label="Track" error={errors.track?.message} disabled={!tracks} {...register('track')}>
+                  <LightField
+                    label={t('abstractSubmission.form.organization', 'Organization')}
+                    error={errors.organization?.message}
+                    {...register('organization')}
+                  />
+                  <LightSelect
+                    label={t('abstractSubmission.form.track', 'Track')}
+                    error={errors.track?.message}
+                    disabled={!tracks}
+                    {...register('track')}
+                  >
                     {!tracks ? (
-                      <option value="">Loading tracks…</option>
+                      <option value="">{t('abstractSubmission.form.loadingTracks', 'Loading tracks…')}</option>
                     ) : (
-                      tracks.map((t) => (
-                        <option key={t._id} value={t.name}>
-                          {t.name}
+                      // Track names come from the admin-managed track list at runtime
+                      // (see the useEffect above) — dynamic API content, not
+                      // translated here.
+                      tracks.map((track) => (
+                        <option key={track._id} value={track.name}>
+                          {track.name}
                         </option>
                       ))
                     )}
@@ -117,16 +145,19 @@ export const AbstractSubmission = () => {
                 </div>
 
                 <LightField
-                  label="Co-Authors (optional)"
-                  placeholder="Comma-separated names"
+                  label={t('abstractSubmission.form.coAuthors', 'Co-Authors (optional)')}
+                  placeholder={t('abstractSubmission.form.coAuthorsPlaceholder', 'Comma-separated names')}
                   error={errors.coAuthors?.message}
                   {...register('coAuthors')}
                 />
 
                 <div>
                   <LightTextArea
-                    label="Abstract"
-                    placeholder="Background, methods, results, conclusion (min. 100 characters)..."
+                    label={t('abstractSubmission.form.abstract', 'Abstract')}
+                    placeholder={t(
+                      'abstractSubmission.form.abstractPlaceholder',
+                      'Background, methods, results, conclusion (min. 100 characters)...'
+                    )}
                     error={errors.abstractText?.message}
                     {...register('abstractText')}
                   />
@@ -135,7 +166,7 @@ export const AbstractSubmission = () => {
 
                 <div className="flex justify-end">
                   <Button type="submit" variant="primary" loading={isSubmitting} disabled={!tracks || tracks.length === 0}>
-                    Submit Abstract <Send size={16} className="ml-1" />
+                    {t('abstractSubmission.form.submit', 'Submit Abstract')} <Send size={16} className="ml-1" />
                   </Button>
                 </div>
               </form>

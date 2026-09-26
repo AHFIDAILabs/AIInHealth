@@ -1,5 +1,16 @@
 import { api } from './api';
 
+// AI Feature Suite 2.4 (Multilingual) — see session.service.ts's identical
+// comment. Bio-only for Speaker (no title/description like Session has).
+export const SUPPORTED_TRANSLATION_LANGS = ['fr', 'pt'] as const;
+export type TranslationLang = (typeof SUPPORTED_TRANSLATION_LANGS)[number];
+export type TranslationStatus = 'none' | 'draft' | 'approved';
+
+export interface SpeakerTranslation {
+  bio?: string;
+  status: TranslationStatus;
+}
+
 export interface AdminSpeaker {
   _id: string;
   fullName: string;
@@ -11,10 +22,14 @@ export interface AdminSpeaker {
   // options via track.service.ts's listTracks().
   track: string;
   photoUrl?: string;
+  // WCAG AA alt text for photoUrl — covers hoverPhotoUrl too (a decorative
+  // hover-state swap of the same photo, not distinct content).
+  photoAlt?: string;
   // Shown on hover on the homepage speaker grid, in place of photoUrl — a
   // second, independently-uploaded image. Falls back to photoUrl itself
   // when unset (see backend Speaker.model.ts's comment).
   hoverPhotoUrl?: string;
+  translations?: Partial<Record<TranslationLang, SpeakerTranslation>>;
   isPublished: boolean;
   order: number;
   createdAt: string;
@@ -28,6 +43,7 @@ export interface SpeakerInput {
   bio?: string;
   track: string;
   photoUrl?: string;
+  photoAlt?: string;
   hoverPhotoUrl?: string;
   isPublished?: boolean;
   order?: number;
@@ -81,5 +97,21 @@ export const adminDeleteSpeaker = async (id: string): Promise<void> => {
 // connection or an early tab close can't leave the list half-reordered.
 export const adminReorderSpeakers = async (order: { id: string; order: number }[]): Promise<AdminSpeaker[]> => {
   const res = await api.patch<{ success: true; data: AdminSpeaker[] }>('/admin/speakers/reorder', { order });
+  return res.data.data;
+};
+
+// --- Translations (AI-drafted, admin-approved) ---
+
+export const adminTranslateSpeaker = async (id: string, lang: TranslationLang): Promise<AdminSpeaker> => {
+  const res = await api.post<{ success: true; data: AdminSpeaker }>(`/admin/speakers/${id}/translate`, { lang });
+  return res.data.data;
+};
+
+export const adminUpdateSpeakerTranslation = async (
+  id: string,
+  lang: TranslationLang,
+  input: { bio?: string; status?: TranslationStatus }
+): Promise<AdminSpeaker> => {
+  const res = await api.patch<{ success: true; data: AdminSpeaker }>(`/admin/speakers/${id}/translations/${lang}`, input);
   return res.data.data;
 };

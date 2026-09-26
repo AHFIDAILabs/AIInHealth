@@ -1,18 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, CalendarCheck, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { LightField } from './LightField';
 import { Button } from './Button';
 import { submitSessionRsvp } from '../../services/session.service';
 import { getApiErrorMessage } from '../../services/api';
 
-const schema = z.object({
-  email: z.string().trim().toLowerCase().email('Enter a valid email'),
-});
-type FormValues = z.infer<typeof schema>;
+type FormValues = { email: string };
 
 interface SessionRsvpModalProps {
   session: { _id: string; title: string } | null;
@@ -26,7 +24,14 @@ interface SessionRsvpModalProps {
 // room and the email belongs to a confirmed registrant, or reports why not
 // (full, or not a registered attendee) — see session.controller.ts's publicRsvp.
 export const SessionRsvpModal = ({ session, onClose }: SessionRsvpModalProps) => {
+  const { t } = useTranslation();
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  // Recreated per-render (cheap — a single-field schema) so its error
+  // message can go through t() — a module-scope schema can't call hooks.
+  const schema = useMemo(
+    () => z.object({ email: z.string().trim().toLowerCase().email(t('sessionRsvp.emailInvalid', 'Enter a valid email')) }),
+    [t]
+  );
   const {
     register,
     handleSubmit,
@@ -50,7 +55,7 @@ export const SessionRsvpModal = ({ session, onClose }: SessionRsvpModalProps) =>
       const { message } = await submitSessionRsvp(session._id, values.email);
       setResult({ ok: true, message });
     } catch (err) {
-      setResult({ ok: false, message: getApiErrorMessage(err, "That didn't work. Please try again.") });
+      setResult({ ok: false, message: getApiErrorMessage(err, t('sessionRsvp.genericError', "That didn't work. Please try again.")) });
     }
   };
 
@@ -74,7 +79,7 @@ export const SessionRsvpModal = ({ session, onClose }: SessionRsvpModalProps) =>
           >
             <button
               onClick={close}
-              aria-label="Close"
+              aria-label={t('common.close', 'Close')}
               className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
             >
               <X size={18} />
@@ -83,7 +88,7 @@ export const SessionRsvpModal = ({ session, onClose }: SessionRsvpModalProps) =>
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-orange/10 text-orange">
               <CalendarCheck size={20} />
             </span>
-            <h3 className="mt-3.5 font-display text-lg font-semibold text-navy">RSVP</h3>
+            <h3 className="mt-3.5 font-display text-lg font-semibold text-navy">{t('agenda.card.rsvp', 'RSVP')}</h3>
             <p className="mt-1 text-sm text-slate-500">{session.title}</p>
 
             {result ? (
@@ -97,24 +102,26 @@ export const SessionRsvpModal = ({ session, onClose }: SessionRsvpModalProps) =>
                   <p>{result.message}</p>
                 </div>
                 <Button type="button" variant="primary" onClick={close} className="!mt-5 !w-full">
-                  Done
+                  {t('common.done', 'Done')}
                 </Button>
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-5 space-y-4">
                 <p className="text-sm text-slate-500">
-                  This session has limited seating and is open to confirmed Summit registrants. Enter the email you
-                  registered with to check if you&rsquo;re on the list, or claim a spot if there&rsquo;s still room.
+                  {t(
+                    'sessionRsvp.intro',
+                    "This session has limited seating and is open to confirmed Summit registrants. Enter the email you registered with to check if you’re on the list, or claim a spot if there’s still room."
+                  )}
                 </p>
                 <LightField
-                  label="Email"
+                  label={t('sessionRsvp.emailLabel', 'Email')}
                   type="email"
-                  placeholder="The email you registered with"
+                  placeholder={t('sessionRsvp.emailPlaceholder', 'The email you registered with')}
                   error={errors.email?.message}
                   {...register('email')}
                 />
                 <Button type="submit" variant="primary" loading={isSubmitting} className="!w-full">
-                  Check / RSVP
+                  {t('sessionRsvp.submit', 'Check / RSVP')}
                 </Button>
               </form>
             )}

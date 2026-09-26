@@ -11,6 +11,10 @@ export interface AdminMessage {
   message: string;
   isRead: boolean;
   isResolved: boolean;
+  // AI-assisted triage (services/ai/triage.service.ts) — a sort hint, not a
+  // gate; defaults to 'standard' if classification hasn't run or failed.
+  priorityLabel?: 'standard' | 'high' | 'protocol_sensitive';
+  priorityReason?: string;
   createdAt: string;
 }
 

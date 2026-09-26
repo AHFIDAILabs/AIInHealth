@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Eye, Megaphone, Link2, TrendingUp, Award, Star, Gem, Send, X, Globe2, type LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Button, ButtonLink } from '../../components/ui/Button';
@@ -15,27 +16,52 @@ import { getApiErrorMessage } from '../../services/api';
 import { listPublicPartners, type AdminPartner } from '../../services/partner.service';
 import { listPublicPackages, type PublicSponsorshipPackage } from '../../services/sponsorshipPackage.service';
 
-const WHY_PARTNER = [
-  { icon: Eye, label: 'Visibility & Positioning', body: 'Brand presence in front of 500+ delegates from 45+ African nations.' },
-  { icon: Megaphone, label: 'Influence', body: 'A direct voice in shaping the national AI-in-health policy conversation.' },
-  { icon: Link2, label: 'Access', body: 'Warm introductions across government, donors, industry, and academia.' },
-  { icon: TrendingUp, label: 'Impact', body: 'Association with a summit built to deliver measurable health-system outcomes.' },
-];
-
 // Purely decorative — cycles across however many real packages come back,
 // so the card grid still reads well regardless of how many an admin defines.
 const TIER_ICONS: LucideIcon[] = [Gem, Star, Award];
 
-const inquirySchema = z.object({
-  organizationName: z.string().trim().min(2, "Enter your organization's name"),
-  contactName: z.string().trim().min(2, 'Enter a contact name'),
-  contactEmail: z.string().trim().toLowerCase().email('Enter a valid email'),
-  tierInterested: z.string().trim().optional(),
-  message: z.string().trim().max(2000).optional(),
-});
-type InquiryValues = z.infer<typeof inquirySchema>;
-
 export const Partners = () => {
+  const { t } = useTranslation();
+
+  // Built inside the component (not a module constant) so `label`/`body` can
+  // go through t() — `id` is the stable, untranslated identifier used for
+  // `key={w.id}` below, same reasoning as Navbar.tsx's NAV_ITEMS.
+  const WHY_PARTNER = [
+    {
+      id: 'visibility',
+      icon: Eye,
+      label: t('partners.whyPartner.visibility.label', 'Visibility & Positioning'),
+      body: t('partners.whyPartner.visibility.body', 'Brand presence in front of 500+ delegates from 45+ African nations.'),
+    },
+    {
+      id: 'influence',
+      icon: Megaphone,
+      label: t('partners.whyPartner.influence.label', 'Influence'),
+      body: t('partners.whyPartner.influence.body', 'A direct voice in shaping the national AI-in-health policy conversation.'),
+    },
+    {
+      id: 'access',
+      icon: Link2,
+      label: t('partners.whyPartner.access.label', 'Access'),
+      body: t('partners.whyPartner.access.body', 'Warm introductions across government, donors, industry, and academia.'),
+    },
+    {
+      id: 'impact',
+      icon: TrendingUp,
+      label: t('partners.whyPartner.impact.label', 'Impact'),
+      body: t('partners.whyPartner.impact.body', 'Association with a summit built to deliver measurable health-system outcomes.'),
+    },
+  ];
+
+  const inquirySchema = z.object({
+    organizationName: z.string().trim().min(2, t('partners.form.validation.organizationName', "Enter your organization's name")),
+    contactName: z.string().trim().min(2, t('partners.form.validation.contactName', 'Enter a contact name')),
+    contactEmail: z.string().trim().toLowerCase().email(t('partners.form.validation.contactEmail', 'Enter a valid email')),
+    tierInterested: z.string().trim().optional(),
+    message: z.string().trim().max(2000).optional(),
+  });
+  type InquiryValues = z.infer<typeof inquirySchema>;
+
   const [partners, setPartners] = useState<AdminPartner[]>([]);
   const [packages, setPackages] = useState<PublicSponsorshipPackage[]>([]);
   const [submitError, setSubmitError] = useState('');
@@ -78,9 +104,12 @@ export const Partners = () => {
   return (
   <>
     <PageHero
-      eyebrow="Partners"
-      title="Let&rsquo;s Build This Together"
-      subtitle="Government agencies, health institutions, industry, and donors are already backing the Summit, and there&rsquo;s room for more."
+      eyebrow={t('partners.hero.eyebrow', 'Partners')}
+      title={t('partners.hero.title', 'Let’s Build This Together')}
+      subtitle={t(
+        'partners.hero.subtitle',
+        'Government agencies, health institutions, industry, and donors are already backing the Summit, and there’s room for more.'
+      )}
     />
 
     {/* Current partner logos — backed by the real GET /partners (published-only);
@@ -91,18 +120,18 @@ export const Partners = () => {
       <section className="border-b border-slate-100 bg-white py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <Reveal className="text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-orange">Current Partners</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange">{t('partners.currentPartners.heading', 'Current Partners')}</p>
           </Reveal>
           <Reveal delay={0.08} className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-8">
             <div className="flex shrink-0 items-center gap-2.5 rounded-lg bg-ahfid/5 px-3 py-2">
               <img src={ahfidMark} alt="AHFID" className="h-7 w-7 rounded" />
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-ahfid">Convener</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-ahfid">{t('partners.currentPartners.convener', 'Convener')}</span>
             </div>
             {sortedPartners.map((partner) => {
               const img = partner.logoUrl ? (
                 <img
                   src={partner.logoUrl}
-                  alt={partner.name}
+                  alt={partner.logoAlt || partner.name}
                   title={partner.name}
                   className="h-9 shrink-0 object-contain"
                 />
@@ -139,11 +168,11 @@ export const Partners = () => {
     <section className="bg-offwhite py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <h2 className="text-center font-display text-2xl font-semibold text-navy sm:text-3xl">Why Partner With Us</h2>
+          <h2 className="text-center font-display text-2xl font-semibold text-navy sm:text-3xl">{t('partners.whyPartner.heading', 'Why Partner With Us')}</h2>
         </Reveal>
         <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {WHY_PARTNER.map((w, i) => (
-            <Reveal key={w.label} delay={i * 0.07} className="text-center">
+            <Reveal key={w.id} delay={i * 0.07} className="text-center">
               <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm shadow-navy/5">
                 <w.icon size={22} className="text-orange" />
               </span>
@@ -162,8 +191,8 @@ export const Partners = () => {
       <section className="bg-white py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <Reveal>
-            <p className="text-xs font-semibold uppercase tracking-widest text-orange">Partnership Packages</p>
-            <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">Choose Your Level of Involvement</h2>
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange">{t('partners.packages.eyebrow', 'Partnership Packages')}</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold text-navy sm:text-3xl">{t('partners.packages.heading', 'Choose Your Level of Involvement')}</h2>
           </Reveal>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-3">
@@ -200,13 +229,15 @@ export const Partners = () => {
       <div className="relative mx-auto grid max-w-5xl gap-10 px-4 sm:px-6 lg:grid-cols-12 lg:px-8">
         <Reveal className="lg:col-span-5">
           <AhfidBadge />
-          <h2 className="mt-6 font-display text-2xl font-semibold text-white sm:text-3xl">Become a Partner</h2>
+          <h2 className="mt-6 font-display text-2xl font-semibold text-white sm:text-3xl">{t('partners.becomePartner.heading', 'Become a Partner')}</h2>
           <p className="mt-3 max-w-xl text-slate-300">
-            Tell us about your organization and where you&rsquo;d like to plug in. We&rsquo;ll follow up with
-            partnership options that fit.
+            {t(
+              'partners.becomePartner.body',
+              'Tell us about your organization and where you’d like to plug in. We’ll follow up with partnership options that fit.'
+            )}
           </p>
           <ButtonLink to="/register" variant="secondary" className="mt-6 !border-white/40 !bg-white/10">
-            Register Interest Instead
+            {t('partners.becomePartner.registerInstead', 'Register Interest Instead')}
           </ButtonLink>
         </Reveal>
 
@@ -214,7 +245,7 @@ export const Partners = () => {
           <div className="rounded-2xl bg-white p-6 sm:p-8">
             {isSubmitSuccessful && (
               <p className="mb-5 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success">
-                Thanks for your interest. Our partnerships team will follow up shortly.
+                {t('partners.form.successMessage', 'Thanks for your interest. Our partnerships team will follow up shortly.')}
               </p>
             )}
             {submitError && (
@@ -224,13 +255,13 @@ export const Partners = () => {
             )}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
               <div className="grid gap-5 sm:grid-cols-2">
-                <LightField label="Organization Name" error={errors.organizationName?.message} {...register('organizationName')} />
-                <LightField label="Contact Name" error={errors.contactName?.message} {...register('contactName')} />
+                <LightField label={t('partners.form.organizationName', 'Organization Name')} error={errors.organizationName?.message} {...register('organizationName')} />
+                <LightField label={t('partners.form.contactName', 'Contact Name')} error={errors.contactName?.message} {...register('contactName')} />
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
-                <LightField label="Email" type="email" error={errors.contactEmail?.message} {...register('contactEmail')} />
-                <LightSelect label="Package Interested" error={errors.tierInterested?.message} {...register('tierInterested')}>
-                  <option value="">Not sure yet</option>
+                <LightField label={t('partners.form.email', 'Email')} type="email" error={errors.contactEmail?.message} {...register('contactEmail')} />
+                <LightSelect label={t('partners.form.packageInterested', 'Package Interested')} error={errors.tierInterested?.message} {...register('tierInterested')}>
+                  <option value="">{t('partners.form.notSureYet', 'Not sure yet')}</option>
                   {packages.map((pkg) => (
                     <option key={pkg._id} value={pkg.name}>
                       {pkg.name}
@@ -238,9 +269,14 @@ export const Partners = () => {
                   ))}
                 </LightSelect>
               </div>
-              <LightTextArea label="Message" placeholder="Tell us about your organization..." error={errors.message?.message} {...register('message')} />
+              <LightTextArea
+                label={t('partners.form.message', 'Message')}
+                placeholder={t('partners.form.messagePlaceholder', 'Tell us about your organization...')}
+                error={errors.message?.message}
+                {...register('message')}
+              />
               <Button type="submit" variant="primary" className="w-full sm:w-auto" loading={isSubmitting}>
-                Submit Inquiry <Send size={16} className="ml-1" />
+                {t('partners.form.submit', 'Submit Inquiry')} <Send size={16} className="ml-1" />
               </Button>
             </form>
           </div>
@@ -267,7 +303,7 @@ export const Partners = () => {
           >
             <button
               onClick={() => setActivePartner(null)}
-              aria-label="Close"
+              aria-label={t('common.close', 'Close')}
               className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-offwhite hover:text-navy"
             >
               <X size={18} />
@@ -292,7 +328,7 @@ export const Partners = () => {
                 rel="noopener noreferrer"
                 className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"
               >
-                <Globe2 size={15} /> Visit website
+                <Globe2 size={15} /> {t('common.visitWebsite', 'Visit website')}
               </a>
             )}
           </motion.div>

@@ -119,6 +119,15 @@ export const EventsTab = () => {
                     {e.email && <> &middot; {e.email}</>}
                     {e.user && <> &middot; {e.user.fullName}</>}
                   </p>
+                  {/* Only shown when it adds information — a single-hop chain that
+                      just repeats `ip` (the common, correctly-configured case) would
+                      be pure noise here. See TRUST_PROXY_HOPS' comment in backend
+                      config/env.ts for what this is diagnosing. */}
+                  {e.rawForwardedFor && e.rawForwardedFor !== e.ip && (
+                    <p className="mt-0.5 truncate text-[11px] text-slate-300" title="Raw X-Forwarded-For header">
+                      X-Forwarded-For: {e.rawForwardedFor}
+                    </p>
+                  )}
                 </div>
                 <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${SEVERITY_CLASS[e.severity]}`}>
                   {e.severity}

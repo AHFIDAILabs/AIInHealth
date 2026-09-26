@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { AttendeeForm } from '../../components/register/AttendeeForm';
@@ -10,22 +11,29 @@ import { RegisterFaq } from '../../components/register/RegisterFaq';
 
 type Tab = 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer';
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'attendee', label: 'Attendee' },
-  { key: 'exhibitor', label: 'Exhibitor' },
-  { key: 'sponsor', label: 'Sponsor Inquiry' },
-  { key: 'volunteer', label: 'Volunteer' },
-];
-
 export const Register = () => {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('attendee');
+
+  // `key` is the stable, untranslated identifier used for the React key,
+  // state, and conditional rendering below — `label` is the display-only
+  // translated text (same split as Navbar.tsx's NAV_ITEMS).
+  const TABS: { key: Tab; label: string }[] = [
+    { key: 'attendee', label: t('register.tabs.attendee', 'Attendee') },
+    { key: 'exhibitor', label: t('register.tabs.exhibitor', 'Exhibitor') },
+    { key: 'sponsor', label: t('register.tabs.sponsor', 'Sponsor Inquiry') },
+    { key: 'volunteer', label: t('register.tabs.volunteer', 'Volunteer') },
+  ];
 
   return (
     <>
       <PageHero
-        eyebrow="Register"
-        title="Register for the Summit"
-        subtitle="Secure your spot at the AI in Health Summit 2026. Multiple ticket categories are available for delegates, exhibitors, and sponsors."
+        eyebrow={t('register.eyebrow', 'Register')}
+        title={t('register.title', 'Register for the Summit')}
+        subtitle={t(
+          'register.subtitle',
+          'Secure your spot at the AI in Health Summit 2026. Multiple ticket categories are available for delegates, exhibitors, and sponsors.'
+        )}
       />
 
       <section className="bg-offwhite pb-16 pt-16 sm:pt-20">

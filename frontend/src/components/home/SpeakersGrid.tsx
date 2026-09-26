@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Reveal } from '../ui/Reveal';
 import { InitialsAvatar } from '../ui/InitialsAvatar';
 import { SpeakerModal } from '../ui/SpeakerModal';
@@ -21,18 +22,20 @@ const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () =>
         {/* Default photo — fades out on hover */}
         <div className="absolute inset-0 overflow-hidden transition-opacity duration-300 group-hover:opacity-0">
           {speaker.photoUrl ? (
-            <img src={speaker.photoUrl} alt={speaker.fullName} className="h-full w-full object-cover" />
+            <img src={speaker.photoUrl} alt={speaker.photoAlt || speaker.fullName} className="h-full w-full object-cover" />
           ) : (
             <InitialsAvatar name={speaker.fullName} className="h-full w-full rounded-none" />
           )}
         </div>
 
-        {/* Hover photo — cross-faded in, image only */}
+        {/* Hover photo — cross-faded in, image only. Decorative alt: it's the
+            same person as the default photo above, which already carries the
+            accessible name — a screen reader doesn't need it announced twice. */}
         <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
           {hoverPhotoUrl ? (
             <img
               src={hoverPhotoUrl}
-              alt={speaker.fullName}
+              alt=""
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
@@ -42,6 +45,7 @@ const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () =>
       </div>
       <p className="mt-3 font-display text-[15px] font-bold leading-snug text-navy">{speaker.fullName}</p>
       <p className="mt-0.5 text-xs leading-snug text-slate-500">{speaker.title}</p>
+      <p className="mt-0.5 text-xs leading-snug text-orange-50 font-bold">{speaker.organization}</p>
     </button>
   );
 };
@@ -49,6 +53,7 @@ const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () =>
 // Backed by the real GET /speakers, so this never drifts from /speakers or
 // from what admin has actually published.
 export const SpeakersGrid = () => {
+  const { t } = useTranslation();
   const [speakers, setSpeakers] = useState<AdminSpeaker[] | null>(null);
   const [active, setActive] = useState<AdminSpeaker | null>(null);
 
@@ -62,13 +67,13 @@ export const SpeakersGrid = () => {
     <section className="bg-white py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center">
-          <h2 className="font-display text-2xl font-bold text-navy sm:text-3xl">Speakers</h2>
+          <h2 className="font-display text-2xl font-bold text-navy sm:text-3xl">{t('nav.speakers', 'Speakers')}</h2>
           <span className="mx-auto mt-3 block h-1 w-14 rounded-full bg-orange" />
         </Reveal>
 
         {speakers === null ? null : speakers.length === 0 ? (
           <Reveal delay={0.1} className="mx-auto mt-10 max-w-sm rounded-2xl border border-dashed border-slate-300 py-8 text-center">
-            <p className="text-sm font-medium text-slate-500">Speakers to be announced.</p>
+            <p className="text-sm font-medium text-slate-500">{t('home.speakers.tba', 'Speakers to be announced.')}</p>
           </Reveal>
         ) : (
           <div className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
