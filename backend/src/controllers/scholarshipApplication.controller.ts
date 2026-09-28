@@ -10,7 +10,7 @@ import { generateCode } from './accessCode.controller.js';
 import { recordAudit } from '../services/audit.service.js';
 import { sendAccessCodeEmail, sendScholarshipReceivedEmail, sendScholarshipDeclinedEmail } from '../services/email.service.js';
 import { cloudinaryConfigured } from '../config/cloudinary.js';
-import { uploadRawToCloudinary, uploadImageToCloudinary } from '../services/cloudinary.service.js';
+import { uploadRawToCloudinary } from '../services/cloudinary.service.js';
 import { logger } from '../config/logger.js';
 import { emitAdminNotification } from '../services/notification.service.js';
 import type { SubmitScholarshipApplicationInput, DecideScholarshipApplicationInput, ListScholarshipApplicationsQuery } from '../validations/scholarshipApplication.validation.js';
@@ -31,7 +31,6 @@ export const submit = catchAsync(async (req: Request, res: Response) => {
     designation: input.designation,
     courseOfStudy: input.courseOfStudy,
     level: input.level,
-    photoUrl: input.photoUrl,
     reason: input.reason,
     supportingDocumentUrl: input.supportingDocumentUrl,
   });
@@ -48,22 +47,6 @@ export const submit = catchAsync(async (req: Request, res: Response) => {
   }).catch((err) => logger.error({ err }, 'Failed to emit scholarship application admin notification'));
 
   res.status(201).json(new ApiResponse({ id: application.id, message: SUBMISSION_MESSAGE }));
-});
-
-// POST /scholarship-applications/upload-photo — public. Reuses the same
-// image-upload pipeline as every profile/logo photo picker in the app
-// (uploadImageToCloudinary), just exposed under this public, rate-limited
-// route instead of an authenticated /admin or /delegate one.
-export const uploadPhoto = catchAsync(async (req: Request, res: Response) => {
-  if (!req.file) {
-    throw new ApiError(422, 'No image was uploaded.', 'NO_FILE');
-  }
-  if (!cloudinaryConfigured) {
-    throw new ApiError(503, 'Image uploads are not configured yet — set CLOUDINARY_* in .env.', 'UPLOADS_NOT_CONFIGURED');
-  }
-
-  const { secureUrl } = await uploadImageToCloudinary(req.file.buffer, req.file.mimetype);
-  res.status(201).json(new ApiResponse({ url: secureUrl }));
 });
 
 // POST /scholarship-applications/upload-document — public. Same "upload first,
@@ -118,7 +101,6 @@ const CSV_COLUMNS = [
   'reason',
   'status',
   'reviewNotes',
-  'photoUrl',
   'supportingDocumentUrl',
   'createdAt',
   'decidedAt',

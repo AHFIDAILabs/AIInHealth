@@ -18,7 +18,6 @@ export const submitScholarshipApplicationSchema = z.object({
       designation: z.string().trim().optional(),
       courseOfStudy: z.string().trim().optional(),
       level: z.enum(SCHOLARSHIP_STUDY_LEVELS).optional(),
-      photoUrl: z.string().trim().url('Upload a profile picture'),
       reason: z.string().trim().min(50, 'Tell us a bit more — at least 50 characters').max(2000),
       supportingDocumentUrl: z.string().trim().url().optional(),
       // honeypot — real applicants never see or fill this field

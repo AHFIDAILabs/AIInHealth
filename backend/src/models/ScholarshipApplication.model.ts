@@ -26,10 +26,6 @@ const scholarshipApplicationSchema = new Schema(
     // Required when applicantType is 'student'.
     courseOfStudy: { type: String, trim: true },
     level: { type: String, enum: SCHOLARSHIP_STUDY_LEVELS },
-    // Cloudinary URL from the public upload-photo endpoint — shown alongside
-    // the application in the admin review panel so reviewers can see who
-    // they're deciding on, same reasoning as the attendee ID-card photo.
-    photoUrl: { type: String, required: true, trim: true },
     reason: { type: String, required: true, trim: true, maxlength: 2000 },
     // Cloudinary URL (resource_type 'raw') from the optional upload-document
     // endpoint — proof of need/student status, a CV, a supporting letter.
