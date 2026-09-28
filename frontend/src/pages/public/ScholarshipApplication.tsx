@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Paperclip, X, Loader2, Camera, User } from 'lucide-react';
+import { Send, Paperclip, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
@@ -13,15 +13,12 @@ import { RegisterSuccess } from '../../components/register/RegisterSuccess';
 import {
   submitScholarshipApplication,
   uploadScholarshipDocument,
-  uploadScholarshipPhoto,
   SCHOLARSHIP_APPLICANT_TYPES,
   SCHOLARSHIP_STUDY_LEVELS,
   type ScholarshipApplicantType,
 } from '../../services/scholarshipApplication.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SEO } from '../../components/seo/SEO';
-
-const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const APPLICANT_TYPE_LABEL: Record<ScholarshipApplicantType, string> = {
   employee: 'Employee',
@@ -80,10 +77,6 @@ export const ScholarshipApplication = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [photoUploading, setPhotoUploading] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
-
   const {
     register,
     handleSubmit,
@@ -125,33 +118,7 @@ export const ScholarshipApplication = () => {
     setDocumentName(null);
   };
 
-  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-
-    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
-      setPhotoError(t('scholarship.form.invalidPhotoType', 'Only JPEG, PNG, WEBP, or GIF images are allowed.'));
-      return;
-    }
-
-    setPhotoError(null);
-    setPhotoUploading(true);
-    try {
-      const url = await uploadScholarshipPhoto(file);
-      setPhotoUrl(url);
-    } catch (err) {
-      setPhotoError(getApiErrorMessage(err));
-    } finally {
-      setPhotoUploading(false);
-    }
-  };
-
   const onSubmit = async (values: FormValues) => {
-    if (!photoUrl) {
-      setPhotoError(t('scholarship.form.photoRequired', 'Upload a profile picture to continue.'));
-      return;
-    }
     setServerError(null);
     try {
       const message = await submitScholarshipApplication({
@@ -163,7 +130,6 @@ export const ScholarshipApplication = () => {
         // validation with our own friendly message instead of Zod's generic one.
         applicantType: values.applicantType as ScholarshipApplicantType,
         level: values.level ? (values.level as (typeof SCHOLARSHIP_STUDY_LEVELS)[number]) : undefined,
-        photoUrl,
         supportingDocumentUrl: documentUrl ?? undefined,
       });
       setConfirmation(message);
@@ -175,8 +141,6 @@ export const ScholarshipApplication = () => {
   const resetAll = () => {
     reset();
     removeDocument();
-    setPhotoUrl(null);
-    setPhotoError(null);
     setConfirmation(null);
   };
 
@@ -204,32 +168,6 @@ export const ScholarshipApplication = () => {
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
                 {serverError && <Banner variant="error">{serverError}</Banner>}
-
-                <div className="flex flex-col items-center gap-2">
-                  <label className="group relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-slate-300 bg-offwhite hover:border-orange/40">
-                    {photoUrl ? (
-                      <img src={photoUrl} alt="" className="h-full w-full object-cover" />
-                    ) : photoUploading ? (
-                      <Loader2 size={22} className="animate-spin text-slate-400" />
-                    ) : (
-                      <User size={30} className="text-slate-300 group-hover:text-orange/60" />
-                    )}
-                    <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-orange text-white shadow-sm">
-                      <Camera size={13} />
-                    </span>
-                    <input
-                      type="file"
-                      accept={ALLOWED_PHOTO_TYPES.join(',')}
-                      onChange={handlePhotoSelect}
-                      disabled={photoUploading}
-                      className="hidden"
-                    />
-                  </label>
-                  <p className="text-xs font-medium text-slate-500">
-                    {t('scholarship.form.profilePicture', 'Profile Picture')}
-                  </p>
-                  {photoError && <p className="text-xs font-medium text-danger">{photoError}</p>}
-                </div>
 
                 <div className="grid gap-5 sm:grid-cols-2">
                   <LightField label={t('scholarship.form.fullName', 'Full Name')} error={errors.fullName?.message} {...register('fullName')} />
@@ -355,7 +293,7 @@ export const ScholarshipApplication = () => {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit" variant="primary" loading={isSubmitting} disabled={uploading || photoUploading}>
+                  <Button type="submit" variant="primary" loading={isSubmitting} disabled={uploading}>
                     {t('scholarship.form.submit', 'Submit Application')} <Send size={16} className="ml-1" />
                   </Button>
                 </div>

@@ -16,7 +16,6 @@ import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 import { AdminSelect, AdminTextarea } from '../../components/ui/AdminField';
-import { Avatar } from '../../components/ui/Avatar';
 import { useToast } from '../../contexts/ToastContext';
 
 const STATUS_STYLE: Record<ScholarshipApplicationStatus, string> = {
@@ -177,13 +176,8 @@ export const ScholarshipApplicationsPage = () => {
                 {items.map((a) => (
                   <tr key={a._id}>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <Avatar name={a.fullName} avatarUrl={a.photoUrl} size={32} />
-                        <div>
-                          <p className="font-medium text-navy">{a.fullName}</p>
-                          <p className="text-xs text-slate-400">{a.email}</p>
-                        </div>
-                      </div>
+                      <p className="font-medium text-navy">{a.fullName}</p>
+                      <p className="text-xs text-slate-400">{a.email}</p>
                     </td>
                     <td className="px-3 py-3 text-slate-500">{a.country}</td>
                     <td className="px-3 py-3">
@@ -249,10 +243,7 @@ export const ScholarshipApplicationsPage = () => {
               className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl"
             >
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                <div className="flex items-center gap-3">
-                  <Avatar name={active.fullName} avatarUrl={active.photoUrl} size={40} />
-                  <p className="font-display text-lg font-semibold text-navy">{active.fullName}</p>
-                </div>
+                <p className="font-display text-lg font-semibold text-navy">{active.fullName}</p>
                 <button onClick={() => setActive(null)} className="text-slate-400 hover:text-navy">
                   <X size={18} />
                 </button>

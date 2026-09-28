@@ -26,7 +26,6 @@ export interface SubmitScholarshipApplicationInput {
   designation?: string;
   courseOfStudy?: string;
   level?: ScholarshipStudyLevel;
-  photoUrl: string;
   reason: string;
   supportingDocumentUrl?: string;
 }
@@ -34,18 +33,6 @@ export interface SubmitScholarshipApplicationInput {
 export const submitScholarshipApplication = async (input: SubmitScholarshipApplicationInput): Promise<string> => {
   const res = await api.post<{ success: true; data: { id: string; message: string } }>('/scholarship-applications', input);
   return res.data.data.message;
-};
-
-// Field name must be 'image' — matches backend upload.middleware.ts's
-// uploadImage picker (.single('image')), same as every other profile-photo
-// upload in the app (upload.service.ts's uploadTo).
-export const uploadScholarshipPhoto = async (file: File): Promise<string> => {
-  const form = new FormData();
-  form.append('image', file);
-  const res = await api.post<{ success: true; data: { url: string } }>('/scholarship-applications/upload-photo', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return res.data.data.url;
 };
 
 // Field name must be 'file' — matches backend upload.middleware.ts's
