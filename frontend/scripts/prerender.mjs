@@ -78,9 +78,23 @@ const main = async () => {
         try {
           await page.goto(`${PREVIEW_URL}${route.path}`, { waitUntil: 'networkidle', timeout: 15000 });
           const html = await page.content();
-          const outDir = route.path === '/' ? distDir : path.join(distDir, route.path);
-          mkdirSync(outDir, { recursive: true });
-          writeFileSync(path.join(outDir, 'index.html'), html, 'utf-8');
+          if (route.path === '/') {
+            writeFileSync(path.join(distDir, 'index.html'), html, 'utf-8');
+          } else {
+            // Written both ways since which one a static host resolves for a
+            // trailing-slash-less request (e.g. "/agenda", how every real
+            // link/share/search-result points) varies: confirmed live that
+            // Render resolves "/agenda/" (trailing slash) to
+            // "agenda/index.html" automatically, but a bare "/agenda" falls
+            // through to the SPA rewrite instead unless a sibling
+            // "agenda.html" file also exists at that exact path — the other
+            // half of the same "clean URL" convention. Cheap to always write
+            // both; only one is ever actually needed per host.
+            const outDir = path.join(distDir, route.path);
+            mkdirSync(outDir, { recursive: true });
+            writeFileSync(path.join(outDir, 'index.html'), html, 'utf-8');
+            writeFileSync(`${path.join(distDir, route.path)}.html`, html, 'utf-8');
+          }
           console.log(`[prerender] ${route.path}`);
         } catch (err) {
           console.warn(`[prerender] skipped ${route.path}:`, err instanceof Error ? err.message : err);
