@@ -9,6 +9,7 @@ import { Banner } from '../../components/ui/Banner';
 import { InitialsAvatar } from '../../components/ui/InitialsAvatar';
 import { listConfirmedAbstracts, type ConfirmedAbstract } from '../../services/confirmedAbstract.service';
 import { getApiErrorMessage } from '../../services/api';
+import { SEO } from '../../components/seo/SEO';
 
 // Full-width banner — used both on the grid card (top ~45%, see the card
 // markup below, which fixes its own height via aspect-ratio so that
@@ -87,6 +88,7 @@ export const AbstractShowcase = () => {
 
   return (
     <>
+      <SEO title="Confirmed Abstracts" description="Browse the accepted research abstracts being presented at the AI in Health Summit 2026 in Abuja, Nigeria." path="/abstracts/confirmed" />
       <PageHero
         eyebrow={t('abstractShowcase.hero.eyebrow', 'Research & Abstracts')}
         title={t('abstractShowcase.hero.title', 'Confirmed Abstract Presentations')}

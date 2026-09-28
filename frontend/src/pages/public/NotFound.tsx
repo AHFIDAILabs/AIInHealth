@@ -1,14 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { AbujaSkyline } from '../../components/ui/AbujaSkyline';
 import { ButtonLink } from '../../components/ui/Button';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { SEO } from '../../components/seo/SEO';
 
 export const NotFound = () => {
   const { t } = useTranslation();
-  useDocumentTitle('Page Not Found');
 
   return (
   <div className="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden bg-white px-4 text-center">
+    <SEO title="Page Not Found" description="The page you're looking for doesn't exist or has moved." path="/404" noindex />
     <div
       className="pointer-events-none absolute inset-0 opacity-[0.5]"
       style={{

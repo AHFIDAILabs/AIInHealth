@@ -23,6 +23,7 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   'newsletter.new': 'New newsletter signup',
   'abstract.new': 'New abstract submission',
   'abstract.reviewer_declined': 'Reviewer declined an assignment',
+  'scholarship_application.new': 'New scholarship application',
 };
 
 const PASSWORD_RULES = [

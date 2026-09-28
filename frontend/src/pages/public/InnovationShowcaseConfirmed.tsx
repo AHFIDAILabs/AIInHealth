@@ -11,6 +11,7 @@ import {
   type InnovationShowcaseEntry,
 } from '../../services/innovationShowcaseEntry.service';
 import { getApiErrorMessage } from '../../services/api';
+import { SEO } from '../../components/seo/SEO';
 
 // Full-width banner — used both on the grid card (top ~45%, see the card
 // markup below, which fixes its own height via aspect-ratio so that
@@ -82,6 +83,7 @@ export const InnovationShowcaseConfirmed = () => {
 
   return (
     <>
+      <SEO title="Confirmed Innovators" description="The confirmed startups and innovators presenting at the AI in Health Summit 2026's Innovation Showcase in Abuja." path="/innovation-showcase/confirmed" />
       <PageHero
         eyebrow={t('innovationShowcaseConfirmed.hero.eyebrow', 'Innovation Showcase')}
         title={t('innovationShowcaseConfirmed.hero.title', 'Confirmed Showcase Startups')}

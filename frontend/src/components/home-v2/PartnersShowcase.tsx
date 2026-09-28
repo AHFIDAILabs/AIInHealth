@@ -22,7 +22,12 @@ const Swatch = ({ p, isTopTier, dense = false }: { p: AdminPartner; isTopTier: b
   // ("Government Partners") used to get a visibly larger h-28/h-32 treatment,
   // but that made its logos look mismatched against every other tier rather
   // than intentionally "bolder". isTopTier still controls the swatch card's
-  // own padding/border weight below, just no longer the logo's own size.
+  // own padding/border weight below, just no longer the logo's own size. The
+  // grid track width below is also now uniform across tiers for the same
+  // reason — with `w-full` on the <img> itself, a wider top-tier track let a
+  // landscape/wordmark logo scale up to fill that extra width even though its
+  // height cap matched every other tier, so government logos still read as
+  // "bigger" despite the height already being equal.
   //
   // `w-full` only resolves sensibly when this swatch sits in a CSS grid cell
   // with a defined track width (the non-dense case). In `dense` mode the
@@ -67,11 +72,7 @@ const Swatch = ({ p, isTopTier, dense = false }: { p: AdminPartner; isTopTier: b
 const LogoGrid = ({ group, dense = false }: { group: PackageGroup; dense?: boolean }) => (
   <div
     className={
-      dense
-        ? 'flex flex-row flex-wrap justify-center gap-3'
-        : `grid justify-center gap-6 ${
-            group.isTopTier ? 'grid-cols-[repeat(auto-fit,minmax(190px,230px))]' : 'grid-cols-[repeat(auto-fit,minmax(150px,190px))]'
-          }`
+      dense ? 'flex flex-row flex-wrap justify-center gap-3' : 'grid justify-center gap-6 grid-cols-[repeat(auto-fit,minmax(150px,190px))]'
     }
   >
     {group.items.map((p) => (
@@ -89,20 +90,31 @@ const LogoGrid = ({ group, dense = false }: { group: PackageGroup; dense?: boole
 //
 // Grouped by each partner's assigned sponsorship package (managed in the
 // admin Packages tab), highest tier first (lowest tierOrder). Every package
-// gets its own full-width row EXCEPT the three named in
-// COMBINED_ROW_PACKAGE_NAMES below, which share one row laid out side by
+// gets its own full-width row EXCEPT Title Partner and Anchor Partners, named
+// in COMBINED_ROW_PACKAGE_NAMES below, which share one row laid out side by
 // side (flex-row), each its own column with that package's own heading and
 // logos stacked underneath — an explicit, requested exception, not a rule
-// derived from tierOrder (two packages can share a tierOrder — e.g. Anchor
-// Partners/Session Partners both sit at 4 today — without being meant to
-// share a row; only this specific trio does). tierOrder 1 (currently
-// "Government Partners") still gets a slightly bolder swatch card (border/
-// padding, see Swatch above) — but the same logo size as every other tier. A partner with no
-// package assigned has nowhere to be shown here — the package IS the
-// heading — so it's simply excluded; the admin Sponsors tab is where that
-// gets fixed. Whole section stays hidden if there's nobody left to show,
-// same self-hiding rule as ConvenedWith.
-const COMBINED_ROW_PACKAGE_NAMES = new Set(['Host', 'Title Partners', 'Technical Collaborating Partner']);
+// derived from tierOrder. Every other package — Host Organisation/Convener,
+// Government Partner/Host, Technical Collaborating Partner, Session Partners,
+// etc. — keeps its own individual full-width row in its normal tierOrder
+// position; only Title Partner/Anchor Partners were asked to share a row.
+// tierOrder 1 (currently "Government Partner/Host") still gets a slightly
+// bolder swatch card (border/padding, see Swatch above) — but the same logo
+// size as every other tier. A partner with no package assigned has nowhere to
+// be shown here — the package IS the heading — so it's simply excluded; the
+// admin Sponsors tab is where that gets fixed. Whole section stays hidden if
+// there's nobody left to show, same self-hiding rule as ConvenedWith.
+//
+// Matched against the real admin-entered package names, normalized (trimmed,
+// internal whitespace collapsed) — verified live against the shared database
+// that "Anchor Partners" exists there as two near-duplicate packages, one
+// with a double space ("Anchor  Partners"), presumably a typo when it was
+// created. Comparing raw strings meant that one silently fell out of this
+// combined row and rendered as its own full-width section instead — matching
+// on normalized names makes the grouping resilient to that kind of accidental
+// whitespace regardless of which of the two the admin ends up keeping.
+const COMBINED_ROW_PACKAGE_NAMES = new Set(['Title Partner', 'Anchor Partners']);
+const normalizeLabel = (label: string): string => label.trim().replace(/\s+/g, ' ');
 export const PartnersShowcase = () => {
   const { t } = useTranslation();
   const [partners, setPartners] = useState<AdminPartner[]>([]);
@@ -129,22 +141,21 @@ export const PartnersShowcase = () => {
       tierOrder: pkg.tierOrder ?? 0,
     }));
 
-  // groups is already tierOrder-sorted. Pull out the named trio (if any of
+  // groups is already tierOrder-sorted. Pull out the named group (if any of
   // them actually have partners) into one combined row, positioned wherever
-  // the first of them would otherwise have sorted to; every other package —
-  // Anchor Partners and Session Partners included, even though they happen
-  // to share a tierOrder — keeps its own individual row.
+  // the first of them would otherwise have sorted to; every other package
+  // keeps its own individual row.
   const rows: PackageGroup[][] = [];
   const combinedRow: PackageGroup[] = [];
   for (const group of groups) {
-    if (COMBINED_ROW_PACKAGE_NAMES.has(group.label)) {
+    if (COMBINED_ROW_PACKAGE_NAMES.has(normalizeLabel(group.label))) {
       combinedRow.push(group);
     } else {
       rows.push([group]);
     }
   }
   if (combinedRow.length > 0) {
-    const firstIndex = groups.findIndex((g) => COMBINED_ROW_PACKAGE_NAMES.has(g.label));
+    const firstIndex = groups.findIndex((g) => COMBINED_ROW_PACKAGE_NAMES.has(normalizeLabel(g.label)));
     const insertAt = rows.findIndex((row) => groups.indexOf(row[0]) > firstIndex);
     rows.splice(insertAt === -1 ? rows.length : insertAt, 0, combinedRow);
   }
@@ -182,24 +193,27 @@ export const PartnersShowcase = () => {
               </div>
             ) : (
               <Reveal key={rowGroups.map((g) => g.label).join('|')} delay={ri * 0.06}>
-                {/* Content-sized columns, not flex-1 equal thirds — a package
-                    with one logo (Host, Title Partners) and one with three
-                    (Technical Collaborating Partner) don't need the same
-                    width. Equal thirds was stretching the single-logo columns
-                    into wide gaps of empty space while starving the
-                    three-logo column of the room its own logos actually
-                    needed, forcing the third one onto its own line.
-                    min-w-[180px] is just enough to keep each heading from
-                    wrapping, not to force equal-width columns. */}
-                <div className="flex flex-row flex-wrap justify-center gap-x-8 gap-y-5">
-                  {rowGroups.map((group) => (
-                    <div key={group.label} className="flex min-w-[180px] flex-col items-center">
-                      <h3 className="text-center font-display text-lg font-bold text-white sm:text-xl">{group.label}</h3>
-                      <div className="mt-6">
-                        <LogoGrid group={group} dense />
+                {/* A plain wrapper (no border/background — just layout) around
+                    the whole pair, so they share one row. flex-nowrap +
+                    overflow-x-auto keeps both columns on one line at any
+                    width instead of the previous flex-wrap, which let a
+                    narrower viewport drop the second column onto its own
+                    line; horizontal scroll is the fallback on very narrow
+                    screens instead of silently breaking the "same line"
+                    requirement. Content-sized columns, not flex-1 equal
+                    thirds — a package with one logo (Title Partner) and one
+                    with several (Anchor Partners) don't need the same width. */}
+                <div className="overflow-x-auto">
+                  <div className="flex flex-row flex-nowrap justify-center gap-x-10">
+                    {rowGroups.map((group) => (
+                      <div key={group.label} className="flex min-w-[180px] shrink-0 flex-col items-center">
+                        <h3 className="text-center font-display text-lg font-bold text-white sm:text-xl">{group.label}</h3>
+                        <div className="mt-6">
+                          <LogoGrid group={group} dense />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </Reveal>
             )

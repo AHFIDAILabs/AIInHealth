@@ -33,6 +33,7 @@ import {
   Sparkles,
   Globe2,
   Languages,
+  GraduationCap,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -73,6 +74,12 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Registrations', to: '/admin/registrations', icon: ClipboardList, roles: [...registrationRoles, 'viewer'] },
       { label: 'Access Codes', to: '/admin/access-codes', icon: KeyRound, roles: [...registrationRoles, 'content_editor'] },
+      {
+        label: 'Scholarship Applications',
+        to: '/admin/scholarship-applications',
+        icon: GraduationCap,
+        roles: [...registrationRoles, 'content_editor'],
+      },
       { label: 'Payments', to: '/admin/payments', icon: CreditCard, roles: [...registrationRoles, 'viewer'] },
       { label: 'Reconciliations', to: '/admin/reconciliations', icon: Scale, roles: registrationRoles },
       { label: 'Check-In', to: '/admin/check-in', icon: ScanLine, roles: registrationRoles },

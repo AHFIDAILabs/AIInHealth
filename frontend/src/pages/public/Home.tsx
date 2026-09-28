@@ -40,7 +40,7 @@ import { PressQuoteBand } from '../../components/home/PressQuoteBand';
 import { FindYourJourney } from '../../components/home/FindYourJourney';
 import { AbujaExperience } from '../../components/home/AbujaExperience';
 import { HeroCountdown } from '../../components/home/HeroCountdown';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { SEO } from '../../components/seo/SEO';
 
 const BARRIERS = [
   { label: 'Limited governance frameworks', icon: Shield },
@@ -116,10 +116,17 @@ const fadeUp: Variants = {
 };
 
 export const Home = () => {
-  useDocumentTitle('Abuja, Nigeria');
-
   return (
   <>
+    {/* Retired homepage variant, kept live at /classic — canonicalized to "/"
+        so Google consolidates ranking signal onto the real homepage instead
+        of splitting it across near-duplicate content. */}
+    <SEO
+      title="AI in Health Summit 2026 | Abuja, Nigeria"
+      titleIsFull
+      description="AI in Health Summit 2026: Abuja, Nigeria, 19-20 October 2026. Convened by AHFID, building Nigeria's national AI-in-health framework."
+      path="/"
+    />
     {/* Hero — full-bleed photo panel with all content centered on top.
         Capped to one viewport at lg+ so the whole thing is visible with no scroll —
         every size/gap below is deliberately tight to make that fit.

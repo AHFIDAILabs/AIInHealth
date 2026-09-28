@@ -9,6 +9,7 @@ import { ButtonLink } from '../../components/ui/Button';
 import { Banner } from '../../components/ui/Banner';
 import { listInnovations, type Innovation } from '../../services/innovation.service';
 import { getApiErrorMessage } from '../../services/api';
+import { SEO } from '../../components/seo/SEO';
 
 export const InnovationShowcase = () => {
   const { t } = useTranslation();
@@ -42,6 +43,7 @@ export const InnovationShowcase = () => {
 
   return (
     <>
+      <SEO title="Innovation Showcase" description="Apply to showcase your AI-in-health innovation, startup, or product at the AI in Health Summit 2026 in Abuja." path="/innovation-showcase" />
       <PageHero
         eyebrow={t('innovationShowcase.hero.eyebrow', 'Innovation Showcase')}
         title={t('innovationShowcase.hero.title', 'Health AI, Built in Africa')}

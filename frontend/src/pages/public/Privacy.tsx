@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../lib/siteInfo';
+import { SEO } from '../../components/seo/SEO';
 
 // `id` is the stable, untranslated identifier used for the React key —
 // `title`/`body` are translated inside the component (built as a function so
@@ -90,6 +91,7 @@ export const Privacy = () => {
 
   return (
     <>
+      <SEO title="Privacy Policy" description="Privacy policy for the AI in Health Summit 2026 website and registration platform." path="/privacy" />
       <PageHero
         eyebrow={t('privacy.eyebrow', 'Legal')}
         title={t('privacy.title', 'Privacy Policy')}

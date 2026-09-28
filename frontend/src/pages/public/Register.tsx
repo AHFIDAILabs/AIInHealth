@@ -8,6 +8,7 @@ import { ExhibitorForm } from '../../components/register/ExhibitorForm';
 import { SponsorForm } from '../../components/register/SponsorForm';
 import { VolunteerForm } from '../../components/register/VolunteerForm';
 import { RegisterFaq } from '../../components/register/RegisterFaq';
+import { SEO } from '../../components/seo/SEO';
 
 type Tab = 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer';
 
@@ -27,6 +28,7 @@ export const Register = () => {
 
   return (
     <>
+      <SEO title="Register" description="Register to attend the AI in Health Summit 2026 in Abuja, Nigeria, 19-20 October 2026." path="/register" />
       <PageHero
         eyebrow={t('register.eyebrow', 'Register')}
         title={t('register.title', 'Register for the Summit')}

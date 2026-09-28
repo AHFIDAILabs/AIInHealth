@@ -6,11 +6,10 @@ import { Reveal } from '../../components/ui/Reveal';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { GalleryModal } from '../../components/ui/GalleryModal';
 import { listPublicMedia, type AdminMedia, type MediaType, type MediaDay } from '../../services/media.service';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { SEO } from '../../components/seo/SEO';
 
 export const Gallery = () => {
   const { t } = useTranslation();
-  useDocumentTitle('Gallery');
 
   // Built inside the component (not a module constant) so `label` can go
   // through t() — `value` is the stable, untranslated identifier the
@@ -63,6 +62,7 @@ export const Gallery = () => {
 
   return (
     <>
+      <SEO title="Gallery" description="Photos from the AI in Health Summit series — Nigeria's national convening on AI in healthcare." path="/gallery" />
       <PageHero
         eyebrow={t('gallery.hero.eyebrow', 'Media')}
         title={t('gallery.hero.title', 'Moments From the Summit')}

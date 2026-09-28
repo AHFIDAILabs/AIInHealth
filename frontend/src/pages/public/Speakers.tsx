@@ -8,6 +8,7 @@ import { InitialsAvatar } from '../../components/ui/InitialsAvatar';
 import { SpeakerModal } from '../../components/ui/SpeakerModal';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
+import { SEO } from '../../components/seo/SEO';
 
 export const Speakers = () => {
   const { t } = useTranslation();
@@ -99,6 +100,7 @@ export const Speakers = () => {
 
   return (
     <>
+      <SEO title="Speakers" description="Meet the confirmed speakers, panelists, and presenters for the AI in Health Summit 2026 in Abuja, Nigeria." path="/speakers" />
       <PageHero
         eyebrow={t('speakers.hero.eyebrow', 'Speakers')}
         title={t('speakers.hero.title', 'Voices Shaping AI in African Healthcare')}

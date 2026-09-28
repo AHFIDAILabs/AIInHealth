@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../lib/siteInfo';
+import { SEO } from '../../components/seo/SEO';
 
 export const Terms = () => {
   const { t } = useTranslation();
@@ -91,6 +92,7 @@ export const Terms = () => {
 
   return (
     <>
+      <SEO title="Terms of Service" description="Terms of service for the AI in Health Summit 2026 website and registration platform." path="/terms" />
       <PageHero
         eyebrow={t('terms.eyebrow', 'Legal')}
         title={t('terms.title', 'Terms of Service')}

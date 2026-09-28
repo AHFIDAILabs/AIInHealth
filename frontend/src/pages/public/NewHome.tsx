@@ -8,7 +8,7 @@ import { ConfirmedVoices } from '../../components/home/ConfirmedVoices';
 import { CountdownCard } from '../../components/home-v2/CountdownCard.tsx';
 import { ProgrammeTimeline } from '../../components/home-v2/ProgrammeTimeline.tsx';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase.tsx';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { SEO } from '../../components/seo/SEO';
 
 // TODO(design assets): confirm this is the same Abuja "You Are Welcome"
 // monument photo used in the approved mockup — reusing the existing import
@@ -44,10 +44,17 @@ const fadeUp: Variants = {
 };
 
 export const NewHome = () => {
-  useDocumentTitle('Abuja, Nigeria');
-
   return (
     <>
+      {/* Retired homepage variant, kept live at /home-v2 — canonicalized to
+          "/" so Google consolidates ranking signal onto the real homepage
+          instead of splitting it across near-duplicate content. */}
+      <SEO
+        title="AI in Health Summit 2026 | Abuja, Nigeria"
+        titleIsFull
+        description="AI in Health Summit 2026: Abuja, Nigeria, 19-20 October 2026. Convened by AHFID, building Nigeria's national AI-in-health framework."
+        path="/"
+      />
       {/* Hero — two-panel split matching the approved mockup. Sits directly
           under the shared fixed/overlay Navbar (unchanged), so this stays
           full-bleed at the top rather than floating with a visible gap the

@@ -7,6 +7,7 @@ import { ButtonLink } from '../../components/ui/Button';
 import { InitialsAvatar } from '../../components/ui/InitialsAvatar';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { listPublicVolunteers, type PublicVolunteer } from '../../services/volunteer.service';
+import { SEO } from '../../components/seo/SEO';
 
 // Backed by the real GET /volunteers (confirmed + photo-completed only) — a
 // volunteer who finishes their portal profile shows up here without a code
@@ -27,6 +28,7 @@ export const Volunteers = () => {
 
   return (
     <>
+      <SEO title="Volunteer With Us" description="Join the volunteer team for the AI in Health Summit 2026 in Abuja and help power Nigeria's national AI-in-health event." path="/volunteers" />
       <PageHero
         eyebrow={t('volunteers.hero.eyebrow', 'Volunteers')}
         title={t('volunteers.hero.title', 'The Team Making It Happen')}

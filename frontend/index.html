@@ -3,11 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Fallback title only — every route's real title/description/OG/Twitter
+         tags are owned by src/components/seo/SEO.tsx (react-helmet-async) and
+         baked in per-route by scripts/prerender.mjs at build time. This
+         index.html source template is only ever served as-is when
+         prerendering was skipped for a deploy (see prerender.mjs's own
+         comment on why it degrades gracefully instead of failing the build) —
+         no static description/OG/Twitter meta tags here on purpose: Helmet
+         only ever replaces <title> (a real DOM API call), it can't remove a
+         hardcoded <meta> tag it didn't create, so keeping duplicates here
+         previously left the STALE homepage description/OG tags first in the
+         document — the one crawlers/social bots read — on every other route. -->
     <title>AI in Health Summit 2026 | Abuja, Nigeria</title>
-    <meta
-      name="description"
-      content="AI in Health Summit 2026: Abuja, Nigeria, 19–20 October 2026. Convened by AHFID, building Nigeria's national AI-in-health framework."
-    />
     <link rel="icon" type="image/png" href="/summit-icon.png" />
     <link rel="apple-touch-icon" href="/pwa-icon-192.png" />
 
@@ -19,26 +26,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="AIHS 2026" />
-
-    <!-- Open Graph / Twitter Card — /og-image.png and the URLs below are root-relative;
-         once a production domain exists, either keep them root-relative (most crawlers
-         resolve fine against the page's own origin) or swap in absolute https:// URLs. -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="AI in Health Summit 2026" />
-    <meta property="og:title" content="AI in Health Summit 2026 | Abuja, Nigeria" />
-    <meta
-      property="og:description"
-      content="Nigeria's national summit on AI in healthcare, 19–20 October 2026 in Abuja. Convened by AHFID."
-    />
-    <meta property="og:image" content="/og-image.png" />
-    <meta property="og:url" content="/" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="AI in Health Summit 2026 | Abuja, Nigeria" />
-    <meta
-      name="twitter:description"
-      content="Nigeria's national summit on AI in healthcare, 19–20 October 2026 in Abuja. Convened by AHFID."
-    />
-    <meta name="twitter:image" content="/og-image.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

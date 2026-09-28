@@ -4,6 +4,7 @@ import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { AhfidLockup } from '../../components/ui/AhfidBadge';
 import { ButtonLink } from '../../components/ui/Button';
+import { SEO } from '../../components/seo/SEO';
 
 export const AboutAhfid = () => {
   const { t } = useTranslation();
@@ -40,6 +41,7 @@ export const AboutAhfid = () => {
 
   return (
   <>
+    <SEO title="About AHFID" description="AHFID (Africa Hub For Innovation & Development), the organization convening the AI in Health Summit 2026." path="/about-ahfid" />
     {/* "Africa Hub for Innovation & Development" is AHFID's own proper name — a
         brand lockup, left untranslated (same treatment as "AHFID" in Navbar.tsx). */}
     <PageHero eyebrow={t('aboutAhfid.hero.eyebrow', 'About the Convener')} title="Africa Hub for Innovation & Development">

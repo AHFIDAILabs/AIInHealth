@@ -15,6 +15,7 @@ import { submitPartnershipInquiry } from '../../services/inquiry.service';
 import { getApiErrorMessage } from '../../services/api';
 import { listPublicPartners, type AdminPartner } from '../../services/partner.service';
 import { listPublicPackages, type PublicSponsorshipPackage } from '../../services/sponsorshipPackage.service';
+import { SEO } from '../../components/seo/SEO';
 
 // Purely decorative — cycles across however many real packages come back,
 // so the card grid still reads well regardless of how many an admin defines.
@@ -103,6 +104,7 @@ export const Partners = () => {
 
   return (
   <>
+    <SEO title="Partners & Sponsors" description="Become a partner or sponsor of the AI in Health Summit 2026 in Abuja — packages, benefits, and current partners." path="/partners" />
     <PageHero
       eyebrow={t('partners.hero.eyebrow', 'Partners')}
       title={t('partners.hero.title', 'Let’s Build This Together')}

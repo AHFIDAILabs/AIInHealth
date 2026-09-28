@@ -10,6 +10,7 @@ export const NOTIFICATION_EVENTS = [
   'newsletter.new',
   'abstract.new',
   'abstract.reviewer_declined',
+  'scholarship_application.new',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 

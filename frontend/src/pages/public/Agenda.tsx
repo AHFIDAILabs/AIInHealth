@@ -15,6 +15,7 @@ import {
 } from '../../services/session.service';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 import { useLanguage, type SiteLanguage } from '../../contexts/LanguageContext';
+import { SEO } from '../../components/seo/SEO';
 
 interface DisplaySpeaker {
   _id: string;
@@ -440,6 +441,7 @@ export const Agenda = () => {
 
   return (
     <>
+      <SEO title="Agenda" description="Two-day schedule for the AI in Health Summit 2026 in Abuja: tracks, sessions, speakers, and formats across 19-20 October 2026." path="/agenda" />
       <PageHero
         eyebrow={t('agenda.hero.eyebrow', 'Programme')}
         title={t('agenda.hero.title', 'Two Days, One National Agenda')}

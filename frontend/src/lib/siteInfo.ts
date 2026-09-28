@@ -21,3 +21,8 @@ export const VENUE_MAPS_LINK = `https://www.google.com/maps/search/?api=1&query=
 
 export const SUPPORT_EMAIL = 'AIinhealthsummit@ahfid.org';
 export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
+
+// The production origin — used to build absolute canonical/OG URLs (src/components/seo/SEO.tsx)
+// and the build-time sitemap/prerender scripts. Root-relative URLs work for most
+// crawlers, but canonical links and JSON-LD are expected to be absolute.
+export const SITE_URL = 'https://aiinhealthsummit.org';

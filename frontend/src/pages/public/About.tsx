@@ -5,6 +5,7 @@ import { Reveal } from '../../components/ui/Reveal';
 import { RevealText } from '../../components/ui/RevealText';
 import { ButtonLink } from '../../components/ui/Button';
 import { VENUE_SHORT } from '../../lib/siteInfo';
+import { SEO } from '../../components/seo/SEO';
 
 export const About = () => {
   const { t } = useTranslation();
@@ -62,6 +63,7 @@ export const About = () => {
 
   return (
   <>
+    <SEO title="About the Summit" description="Why the AI in Health Summit 2026 exists: Nigeria's national push to build an AI-in-health framework, convened by AHFID in Abuja, 19-20 Oct 2026." path="/about" />
     <PageHero
       eyebrow={t('about.hero.eyebrow', 'About the Summit')}
       title={t('about.hero.title', 'Nigeria’s Premier Platform for AI-Enabled Healthcare')}

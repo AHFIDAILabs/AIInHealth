@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
+import { SEO } from '../../components/seo/SEO';
 import { verifyPayment, type VerifyPaymentResult } from '../../services/payment.service';
 import { getApiErrorMessage } from '../../services/api';
 import { formatNaira } from '../../lib/pricing';
@@ -31,6 +32,12 @@ export const PaymentCallback = () => {
 
   return (
     <>
+      <SEO
+        title="Confirming Registration"
+        description="Confirming your AI in Health Summit 2026 registration payment."
+        path="/register/payment-callback"
+        noindex
+      />
       <PageHero
         eyebrow={t('paymentCallback.eyebrow', 'Payment')}
         title={t('paymentCallback.title', 'Confirming Your Registration')}

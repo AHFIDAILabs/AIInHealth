@@ -12,6 +12,7 @@ import { LightField } from '../../components/ui/LightField';
 import { RegisterSuccess } from '../../components/register/RegisterSuccess';
 import { submitRegistration } from '../../services/registration.service';
 import { getApiErrorMessage } from '../../services/api';
+import { SEO } from '../../components/seo/SEO';
 
 const schema = z.object({
   fullName: z.string().trim().min(2, 'Enter your full name'),
@@ -62,6 +63,7 @@ export const TeamRegistration = () => {
 
   return (
     <>
+      <SEO title="Team Registration" description="Register a delegation or team to attend the AI in Health Summit 2026 in Abuja, Nigeria." path="/team/register" />
       <PageHero
         eyebrow={t('teamRegistration.eyebrow', 'Event Staff')}
         title={t('teamRegistration.title', 'Team Registration')}

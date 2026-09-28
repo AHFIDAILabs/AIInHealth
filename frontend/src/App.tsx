@@ -32,6 +32,7 @@ import { AboutAhfid } from './pages/public/AboutAhfid';
 import { Register } from './pages/public/Register';
 import { PaymentCallback } from './pages/public/PaymentCallback';
 import { AbstractSubmission } from './pages/public/AbstractSubmission';
+import { ScholarshipApplication } from './pages/public/ScholarshipApplication';
 import { TeamRegistration } from './pages/public/TeamRegistration';
 import { Contact } from './pages/public/Contact';
 import { Privacy } from './pages/public/Privacy';
@@ -68,6 +69,7 @@ import { TranslationsQueuePage } from './pages/admin/TranslationsQueuePage';
 import { EventTeamPage } from './pages/admin/EventTeamPage';
 import { SecurityPage } from './pages/admin/SecurityPage';
 import { PortalTokensPage } from './pages/admin/PortalTokensPage';
+import { ScholarshipApplicationsPage } from './pages/admin/ScholarshipApplicationsPage';
 import { AnalyticsPage } from './pages/admin/AnalyticsPage';
 import { IntegrationsPage } from './pages/admin/IntegrationsPage';
 import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage';
@@ -109,6 +111,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/register/payment-callback" element={<PaymentCallback />} />
             <Route path="/abstracts/submit" element={<AbstractSubmission />} />
+            <Route path="/scholarship" element={<ScholarshipApplication />} />
             <Route path="/team/register" element={<TeamRegistration />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />
@@ -134,6 +137,7 @@ function App() {
 
               <Route element={<RequireRole roles={[...REGISTRATION_ROLES, 'content_editor']} />}>
                 <Route path="/admin/access-codes" element={<AccessCodesPage />} />
+                <Route path="/admin/scholarship-applications" element={<ScholarshipApplicationsPage />} />
               </Route>
 
               <Route element={<RequireRole roles={[...REGISTRATION_ROLES]} />}>

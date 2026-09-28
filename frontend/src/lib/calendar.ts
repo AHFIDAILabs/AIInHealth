@@ -5,8 +5,10 @@ import { VENUE_FULL_ADDRESS, VENUE_MAPS_LINK } from './siteInfo';
 // Date comparison; this only needs the same two instants rendered as UTC for
 // ICS/Google/Outlook links). Update both if the Summit's dates ever change.
 // 09:00-18:00 WAT (UTC+1) each day, so the block is expressed directly in UTC.
-const SUMMIT_START_UTC = new Date('2026-10-19T08:00:00Z');
-const SUMMIT_END_UTC = new Date('2026-10-20T17:00:00Z');
+// Exported so src/lib/seo.ts's Event JSON-LD can reuse the exact same instants
+// instead of a third hardcoded copy of these dates.
+export const SUMMIT_START_UTC = new Date('2026-10-19T08:00:00Z');
+export const SUMMIT_END_UTC = new Date('2026-10-20T17:00:00Z');
 
 const EVENT_TITLE = 'AI in Health Summit 2026';
 const EVENT_DESCRIPTION =

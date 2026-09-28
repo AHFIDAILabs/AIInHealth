@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
+import { SEO } from '../../components/seo/SEO';
 
 export const ParticipantsOutcomes = () => {
   const { t } = useTranslation();
@@ -134,6 +135,7 @@ export const ParticipantsOutcomes = () => {
 
   return (
   <>
+    <SEO title="Participants & Outcomes" description="Who attends the AI in Health Summit 2026 and what it delivers: delegates, policy commitments, and national AI-in-health outcomes." path="/participants-outcomes" />
     <PageHero
       eyebrow={t('participantsOutcomes.hero.eyebrow', 'Participants & Outcomes')}
       title={t('participantsOutcomes.hero.title', 'Who Attends, and What the Summit Delivers')}

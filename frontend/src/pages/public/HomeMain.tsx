@@ -3,7 +3,8 @@ import { CalendarDays, MapPin } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
 import { ButtonLink } from '../../components/ui/Button';
 import { Reveal } from '../../components/ui/Reveal';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { SEO } from '../../components/seo/SEO';
+import { buildEventJsonLd, buildOrganizationJsonLd } from '../../lib/seo';
 import { SpeakersGrid } from '../../components/home/SpeakersGrid';
 import { SummitProgramme } from '../../components/home/SummitProgramme';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase';
@@ -30,10 +31,16 @@ const fadeUp: Variants = {
 // now that the countdown lives in the hero itself.
 export const HomeMain = () => {
   const { t } = useTranslation();
-  useDocumentTitle('Home');
 
   return (
     <>
+      <SEO
+        title="AI in Health Summit 2026 | Abuja, Nigeria"
+        titleIsFull
+        description="AI in Health Summit 2026: Abuja, Nigeria, 19-20 October 2026. Convened by AHFID, building Nigeria's national AI-in-health framework."
+        path="/"
+        structuredData={[buildEventJsonLd(), buildOrganizationJsonLd()]}
+      />
       {/* Cancels PublicLayout's <main> padding-top (there so plain content
           pages clear the fixed nav) — this hero wants the photo to run
           full-bleed behind that transparent nav instead, all the way to the

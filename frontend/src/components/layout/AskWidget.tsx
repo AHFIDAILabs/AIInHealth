@@ -90,11 +90,6 @@ export const AskWidget = () => {
                 <div key={i} className="space-y-1.5">
                   <p className="rounded-lg bg-offwhite px-3 py-2 text-[13px] font-medium text-navy">{turn.question}</p>
                   <p className="text-[13px] leading-relaxed text-slate-600">{turn.answer}</p>
-                  {turn.sources.length > 0 && (
-                    <p className="text-[11px] text-slate-400">
-                      {t('askWidget.source', 'Source')}: {turn.sources.join(', ')}
-                    </p>
-                  )}
                 </div>
               ))}
               {error && <p className="text-[12px] text-danger">{error}</p>}

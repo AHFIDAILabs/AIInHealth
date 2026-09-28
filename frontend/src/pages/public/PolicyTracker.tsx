@@ -9,6 +9,7 @@ import {
   type PolicyTrackerEntry,
   type PolicyFrameworkStatus,
 } from '../../services/policyTracker.service';
+import { SEO } from '../../components/seo/SEO';
 
 const FRAMEWORK_COLOR: Record<PolicyFrameworkStatus, string> = {
   none_identified: 'bg-slate-100 text-slate-500',
@@ -43,6 +44,7 @@ export const PolicyTracker = () => {
 
   return (
     <div>
+      <SEO title="Policy Tracker" description="Track AI-in-health policy developments across Nigeria and Africa, curated for the AI in Health Summit 2026." path="/policy-tracker" />
       <PageHero
         eyebrow={t('policyTracker.hero.eyebrow', 'Summit Objective 1')}
         title={t('policyTracker.hero.title', 'Global AI-in-Health Policy Tracker')}

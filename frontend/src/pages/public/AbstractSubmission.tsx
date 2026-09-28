@@ -14,6 +14,7 @@ import { RegisterSuccess } from '../../components/register/RegisterSuccess';
 import { submitAbstract } from '../../services/abstract.service';
 import { listTracks, type PublicTrack } from '../../services/track.service';
 import { getApiErrorMessage } from '../../services/api';
+import { SEO } from '../../components/seo/SEO';
 
 const schema = z.object({
   title: z.string().trim().min(4, 'Enter a title').max(250),
@@ -72,6 +73,7 @@ export const AbstractSubmission = () => {
 
   return (
     <>
+      <SEO title="Submit an Abstract" description="Submit your research abstract for consideration at the AI in Health Summit 2026 in Abuja, Nigeria." path="/abstracts/submit" />
       <PageHero
         eyebrow={t('abstractSubmission.eyebrow', 'Research & Abstracts')}
         title={t('abstractSubmission.title', 'Submit Your Abstract')}

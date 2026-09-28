@@ -1,0 +1,110 @@
+import { api } from './api';
+
+// Workflow state — see backend/src/types/enums.ts's SCHOLARSHIP_APPLICATION_STATUSES.
+export const SCHOLARSHIP_APPLICATION_STATUSES = ['pending', 'approved', 'rejected'] as const;
+export type ScholarshipApplicationStatus = (typeof SCHOLARSHIP_APPLICATION_STATUSES)[number];
+
+// Same tiers as a manually-issued scholarship AccessCode — see
+// accessCode.service.ts's ACCESS_CODE_DISCOUNTS.
+export const SCHOLARSHIP_DISCOUNTS = [10, 25, 50, 100] as const;
+export type ScholarshipDiscount = (typeof SCHOLARSHIP_DISCOUNTS)[number];
+
+// See backend/src/types/enums.ts's SCHOLARSHIP_APPLICANT_TYPES/SCHOLARSHIP_STUDY_LEVELS.
+export const SCHOLARSHIP_APPLICANT_TYPES = ['employee', 'student', 'other'] as const;
+export type ScholarshipApplicantType = (typeof SCHOLARSHIP_APPLICANT_TYPES)[number];
+
+export const SCHOLARSHIP_STUDY_LEVELS = ['undergraduate', 'postgraduate_masters', 'postgraduate_phd', 'diploma_certificate', 'other'] as const;
+export type ScholarshipStudyLevel = (typeof SCHOLARSHIP_STUDY_LEVELS)[number];
+
+export interface SubmitScholarshipApplicationInput {
+  fullName: string;
+  email: string;
+  phone: string;
+  organization: string;
+  country: string;
+  applicantType: ScholarshipApplicantType;
+  designation?: string;
+  courseOfStudy?: string;
+  level?: ScholarshipStudyLevel;
+  photoUrl: string;
+  reason: string;
+  supportingDocumentUrl?: string;
+}
+
+export const submitScholarshipApplication = async (input: SubmitScholarshipApplicationInput): Promise<string> => {
+  const res = await api.post<{ success: true; data: { id: string; message: string } }>('/scholarship-applications', input);
+  return res.data.data.message;
+};
+
+// Field name must be 'image' — matches backend upload.middleware.ts's
+// uploadImage picker (.single('image')), same as every other profile-photo
+// upload in the app (upload.service.ts's uploadTo).
+export const uploadScholarshipPhoto = async (file: File): Promise<string> => {
+  const form = new FormData();
+  form.append('image', file);
+  const res = await api.post<{ success: true; data: { url: string } }>('/scholarship-applications/upload-photo', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data.data.url;
+};
+
+// Field name must be 'file' — matches backend upload.middleware.ts's
+// uploadDocument picker (.single('file')), not the 'image' field name above.
+export const uploadScholarshipDocument = async (file: File): Promise<string> => {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await api.post<{ success: true; data: { url: string } }>('/scholarship-applications/upload-document', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data.data.url;
+};
+
+export interface AdminScholarshipApplication extends SubmitScholarshipApplicationInput {
+  _id: string;
+  status: ScholarshipApplicationStatus;
+  reviewNotes?: string;
+  decidedAt?: string;
+  issuedAccessCode?: string;
+  createdAt: string;
+}
+
+export interface Paginated<T> {
+  items: T[];
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export const fetchScholarshipApplications = async (params: {
+  status?: ScholarshipApplicationStatus;
+  q?: string;
+  page?: number;
+  limit?: number;
+}): Promise<Paginated<AdminScholarshipApplication>> => {
+  const res = await api.get<{ success: true; data: AdminScholarshipApplication[]; meta: Omit<Paginated<never>, 'items'> }>(
+    '/admin/scholarship-applications',
+    { params }
+  );
+  return { items: res.data.data, ...res.data.meta };
+};
+
+export const exportScholarshipApplicationsUrl = (params: { status?: ScholarshipApplicationStatus; q?: string }): string => {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') search.set(key, String(value));
+  });
+  const base = (import.meta.env.VITE_API_URL as string) ?? '/api/v1';
+  return `${base}/admin/scholarship-applications/export?${search.toString()}`;
+};
+
+export const decideScholarshipApplication = async (
+  id: string,
+  input: { status: 'approved' | 'rejected'; reviewNotes?: string; discountPercent?: ScholarshipDiscount }
+): Promise<AdminScholarshipApplication> => {
+  const res = await api.patch<{ success: true; data: AdminScholarshipApplication }>(
+    `/admin/scholarship-applications/${id}/decide`,
+    input
+  );
+  return res.data.data;
+};

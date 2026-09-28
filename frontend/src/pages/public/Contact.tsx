@@ -12,6 +12,7 @@ import { LightField, LightTextArea, LightSelect } from '../../components/ui/Ligh
 import { submitContactMessage, CONTACT_CATEGORIES } from '../../services/contact.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SUPPORT_EMAIL, SUPPORT_MAILTO, VENUE_FULL_ADDRESS } from '../../lib/siteInfo';
+import { SEO } from '../../components/seo/SEO';
 
 const schema = z.object({
   name: z.string().trim().min(2, 'Enter your name'),
@@ -52,6 +53,7 @@ export const Contact = () => {
 
   return (
     <>
+      <SEO title="Contact Us" description="Get in touch with the AI in Health Summit 2026 team — questions about registration, partnership, or the event." path="/contact" />
       <PageHero
         eyebrow={t('contact.eyebrow', 'Contact')}
         title={t('contact.title', 'Get in Touch')}
