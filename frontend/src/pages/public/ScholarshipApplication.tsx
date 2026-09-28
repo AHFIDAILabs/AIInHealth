@@ -206,10 +206,11 @@ export const ScholarshipApplication = () => {
                 </div>
 
                 <LightField
-                  label={t(
-                    'scholarship.form.organization',
-                    applicantType === 'student' ? 'School / Institution Name' : 'Organization / Institution Name'
-                  )}
+                  label={
+                    applicantType === 'student'
+                      ? t('scholarship.form.organizationStudent', 'School / Institution Name')
+                      : t('scholarship.form.organizationOther', 'Organization / Institution Name')
+                  }
                   error={errors.organization?.message}
                   {...register('organization')}
                 />
@@ -233,7 +234,11 @@ export const ScholarshipApplication = () => {
                 ) : (
                   (applicantType === 'employee' || applicantType === 'other') && (
                     <LightField
-                      label={t('scholarship.form.designation', applicantType === 'employee' ? 'Designation / Job Title' : 'Occupation')}
+                      label={
+                        applicantType === 'employee'
+                          ? t('scholarship.form.designationEmployee', 'Designation / Job Title')
+                          : t('scholarship.form.designationOther', 'Occupation')
+                      }
                       error={errors.designation?.message}
                       {...register('designation')}
                     />
