@@ -21,6 +21,7 @@ const TICKET_OPTIONS: { value: TicketCategory; label: string; icon: typeof Globe
   { value: 'vip', label: 'VIP', icon: Crown },
   { value: 'government_official', label: 'Government Official', icon: Landmark },
   { value: 'accredited_media', label: 'Accredited Media', icon: Newspaper },
+  { value: 'staff', label: 'Team / Staff', icon: Users },
 ];
 const TICKET_VALUES = TICKET_OPTIONS.map((t) => t.value) as [TicketCategory, ...TicketCategory[]];
 
@@ -52,6 +53,11 @@ const schema = z
   .superRefine((data, ctx) => {
     if (ID_VERIFICATION_TICKET_CATEGORIES.includes(data.ticketCategory) && !data.idCardUrl) {
       ctx.addIssue({ code: 'custom', path: ['idCardUrl'], message: 'Upload a photo of your official ID to continue.' });
+    }
+    // Shape-only check, mirrors registration.validation.ts — the real
+    // enforcement (the code must actually be type 'staff') happens server-side.
+    if (data.ticketCategory === 'staff' && !data.accessCode) {
+      ctx.addIssue({ code: 'custom', path: ['accessCode'], message: 'Enter the staff access code you were sent.' });
     }
   });
 type FormValues = z.infer<typeof schema>;
@@ -244,15 +250,18 @@ export const AttendeeForm = () => {
 
             <div>
               <LightField
-                label="Access Code (optional)"
-                placeholder="e.g. SCH-XXXXXX (leave blank if you don't have one)"
+                label={ticketCategory === 'staff' ? 'Access Code' : 'Access Code (optional)'}
+                placeholder={
+                  ticketCategory === 'staff' ? 'e.g. STAFF-XXXXXX' : "e.g. SCH-XXXXXX (leave blank if you don't have one)"
+                }
                 error={errors.accessCode?.message}
                 {...register('accessCode')}
                 className="uppercase tracking-wider"
               />
               <p className="mt-1.5 text-xs text-slate-400">
-                Have a scholarship, keynote speaker, or complimentary code? Enter it here. It's checked and applied
-                automatically before you're sent to payment.
+                {ticketCategory === 'staff'
+                  ? "Enter the staff code the organizing team sent you — it's tied to this exact email address."
+                  : "Have a scholarship, keynote speaker, or complimentary code? Enter it here. It's checked and applied automatically before you're sent to payment."}
               </p>
             </div>
 

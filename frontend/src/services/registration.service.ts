@@ -8,7 +8,8 @@ export type TicketCategory =
   | 'student_researcher'
   | 'vip'
   | 'government_official'
-  | 'accredited_media';
+  | 'accredited_media'
+  | 'staff';
 
 export type BoothSize = 'small' | 'medium' | 'large';
 

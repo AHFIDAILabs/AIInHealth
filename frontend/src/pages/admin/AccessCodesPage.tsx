@@ -27,6 +27,7 @@ const TYPE_LABEL: Record<AccessCodeType, string> = {
   keynote_speaker: 'Keynote Speaker',
   complimentary: 'Complimentary',
   scholarship: 'Scholarship (Discount)',
+  staff: 'Team / Staff',
 };
 
 const STATUS_STYLE: Record<AccessCodeStatus, string> = {
