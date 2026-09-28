@@ -114,6 +114,16 @@ const registrationUnion = z
         message: 'Upload a photo of your official ID to register with this ticket category.',
       });
     }
+    // Shape-only check — real enforcement (the code must actually be type
+    // 'staff', not just present) happens in registration.controller.ts,
+    // which is the only place with DB access to look it up.
+    if (data.type === 'attendee' && data.ticketCategory === 'staff' && !data.accessCode) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['accessCode'],
+        message: 'Enter the staff access code you were sent to register with this ticket category.',
+      });
+    }
   });
 
 export const createRegistrationSchema = z.object({

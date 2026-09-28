@@ -319,6 +319,20 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     redeemedCode = code;
   }
 
+  // 'staff' is priced at 0 (pricing.ts) but deliberately NOT in
+  // isFreeTicketCategory's self-service sense — without this check, anyone
+  // could pick "Team / Staff" with no code at all and register free. Must be
+  // paired with an actually-redeemed 'staff'-type code, not just any valid
+  // attendee code (a scholarship/keynote_speaker code shouldn't unlock this
+  // category, and vice versa).
+  if (!recentDuplicate && input.type === 'attendee' && input.ticketCategory === 'staff' && redeemedCode?.type !== 'staff') {
+    throw new ApiError(
+      422,
+      'The Team / Staff ticket category requires a valid staff access code. Contact the organizing team if you don\'t have one.',
+      'STAFF_ACCESS_CODE_REQUIRED'
+    );
+  }
+
   // Paid ticket categories start life unpaid — payment.controller.ts's initialize
   // flips this to 'paid'/'confirmed' once Paystack verifies the charge. Free
   // categories (government_official, accredited_media), and any fully-comped

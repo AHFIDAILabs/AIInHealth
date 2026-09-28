@@ -15,7 +15,14 @@ export type RegistrationStatus = (typeof REGISTRATION_STATUSES)[number];
 export const REGISTRATION_MODES = ['individual', 'group'] as const;
 export type RegistrationMode = (typeof REGISTRATION_MODES)[number];
 
-// Mirrors the pricing tiers published on the Register page's FAQ.
+// Mirrors the pricing tiers published on the Register page's FAQ. 'staff' is
+// the odd one out — not a real public pricing tier, it's how an internal
+// event team member (see ACCESS_CODE_TYPES' 'staff') registers on the same
+// Attendee form instead of a separate flow. Priced at 0 (pricing.ts) like
+// government_official/accredited_media, but unlike those, it's not a
+// self-selectable free category — registration.controller.ts's create()
+// requires it be paired with an actual redeemed 'staff'-type AccessCode, so
+// picking "Team / Staff" with no code (or someone else's code) still fails.
 export const TICKET_CATEGORIES = [
   'international_delegate',
   'nigerian_professional',
@@ -23,6 +30,7 @@ export const TICKET_CATEGORIES = [
   'vip',
   'government_official',
   'accredited_media',
+  'staff',
 ] as const;
 export type TicketCategory = (typeof TICKET_CATEGORIES)[number];
 
@@ -126,20 +134,28 @@ export const NOTIFICATION_EVENTS = [
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
 // Access codes gate self-service paths that skip payment entirely. A volunteer
-// redeems one on the Volunteer form to register for free. The other three are
+// redeems one on the Volunteer form to register for free. The other four are
 // all redeemed on the ATTENDEE form (registration.controller.ts's create()) —
-// 'keynote_speaker' and 'complimentary' always force a full (100%) comp, since
-// neither carries its own discountPercent; 'scholarship' carries a discountPercent
-// (see ACCESS_CODE_DISCOUNTS) and only fully bypasses Paystack at the 100% tier,
-// otherwise payment.controller.ts charges the discounted remainder. They're kept
-// as distinct types purely for admin-side reporting (e.g. "5 keynote speakers"
-// vs "12 scholarships"), not because redemption behaves differently.
-export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship'] as const;
+// 'keynote_speaker', 'complimentary', and 'staff' always force a full (100%)
+// comp, since none of them carries its own discountPercent; 'scholarship'
+// carries a discountPercent (see ACCESS_CODE_DISCOUNTS) and only fully
+// bypasses Paystack at the 100% tier, otherwise payment.controller.ts charges
+// the discounted remainder. They're kept as distinct types purely for
+// admin-side reporting (e.g. "5 keynote speakers" vs "12 scholarships" vs "40
+// staff"), not because redemption behaves differently.
+//
+// 'staff' is for internal/event team members management wants registered on
+// the site — deliberately a distinct value from REGISTRATION_TYPES' own
+// 'team' (a different, older, roster-gated self-serve path with no code
+// involved at all — see EventTeamMember.model.ts). Naming them both "team"
+// would conflate two unrelated mechanisms; an admin generates one of these
+// per staff member and sends it to them, same as a scholarship code.
+export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship', 'staff'] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
 
 // The subset of ACCESS_CODE_TYPES redeemable on the attendee registration form —
 // see registration.controller.ts's create().
-export const ATTENDEE_ACCESS_CODE_TYPES = ['keynote_speaker', 'complimentary', 'scholarship'] as const;
+export const ATTENDEE_ACCESS_CODE_TYPES = ['keynote_speaker', 'complimentary', 'scholarship', 'staff'] as const;
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;
 export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];

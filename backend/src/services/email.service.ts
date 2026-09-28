@@ -158,6 +158,7 @@ const ACCESS_CODE_LABEL: Record<string, string> = {
   keynote_speaker: 'keynote speaker',
   complimentary: 'complimentary',
   scholarship: 'scholarship',
+  staff: 'staff member',
 };
 
 export const sendAccessCodeEmail = async (to: string, type: string, code: string, discountPercent?: number): Promise<void> => {
