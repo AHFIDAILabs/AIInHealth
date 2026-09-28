@@ -121,6 +121,7 @@ export const NOTIFICATION_EVENTS = [
   'newsletter.new',
   'abstract.new',
   'abstract.reviewer_declined',
+  'scholarship_application.new',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
@@ -177,6 +178,27 @@ export type AbstractStatus = (typeof ABSTRACT_STATUSES)[number];
 // The committee's final call on an abstract, including presentation format —
 // null/unset until decided. Set via abstractController.adminUpdate.
 export const ABSTRACT_DECISIONS = ['accepted_oral', 'accepted_poster', 'rejected', 'waitlisted'] as const;
+
+// A public application requesting a scholarship (not to be confused with
+// ACCESS_CODE_TYPES' 'scholarship' — that's the admin-issued redemption code
+// this application generates ON approval, via the same mechanism an admin
+// would use to hand-issue one manually today). See
+// scholarshipApplication.controller.ts's adminDecide.
+export const SCHOLARSHIP_APPLICATION_STATUSES = ['pending', 'approved', 'rejected'] as const;
+export type ScholarshipApplicationStatus = (typeof SCHOLARSHIP_APPLICATION_STATUSES)[number];
+
+// Which branch of the scholarship form an applicant filled in — determines
+// which of designation/courseOfStudy/level are required (enforced in
+// scholarshipApplication.validation.ts's superRefine, not here). 'other'
+// covers anyone who isn't currently employed or enrolled (self-employed,
+// freelance, between roles, retired, etc.) — without it, those applicants
+// would have to misrepresent themselves as one of the other two just to
+// submit the form.
+export const SCHOLARSHIP_APPLICANT_TYPES = ['employee', 'student', 'other'] as const;
+export type ScholarshipApplicantType = (typeof SCHOLARSHIP_APPLICANT_TYPES)[number];
+
+export const SCHOLARSHIP_STUDY_LEVELS = ['undergraduate', 'postgraduate_masters', 'postgraduate_phd', 'diploma_certificate', 'other'] as const;
+export type ScholarshipStudyLevel = (typeof SCHOLARSHIP_STUDY_LEVELS)[number];
 export type AbstractDecision = (typeof ABSTRACT_DECISIONS)[number];
 
 // Fixed thresholds a consensus (or individual reviewer) score is bucketed

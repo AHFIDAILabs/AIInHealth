@@ -201,6 +201,37 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
   });
 };
 
+// scholarshipApplication.controller.ts's submit() — a short receipt, not a
+// decision (that's sendAccessCodeEmail on approval, or the decline email
+// below on rejection).
+export const sendScholarshipReceivedEmail = async (to: string, fullName: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'We received your scholarship application — AI in Health Summit 2026',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Thanks for applying for a scholarship to attend the AI in Health Summit 2026. We've received your application and our team will review it shortly.</p>
+      <p>We'll email you as soon as a decision has been made.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
+// scholarshipApplication.controller.ts's adminDecide() rejection branch — the
+// approval branch reuses sendAccessCodeEmail above instead of a new template.
+export const sendScholarshipDeclinedEmail = async (to: string, fullName: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Your scholarship application — AI in Health Summit 2026',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Thank you for applying for a scholarship to attend the AI in Health Summit 2026. After review, we're unable to offer you a scholarship at this time.</p>
+      <p>You're still very welcome to register for the Summit directly — visit <a href="${env.FRONTEND_ORIGIN}/register">the registration page</a> to secure your spot.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 export const sendPasswordResetEmail = async (to: string, resetUrl: string): Promise<void> => {
   await sendEmail({
     to,

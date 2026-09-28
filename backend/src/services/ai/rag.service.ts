@@ -28,7 +28,7 @@ export const FALLBACK_ANSWER = FALLBACK_ANSWERS.en;
 const LANG_NAMES: Record<AskLang, string> = { en: 'English', fr: 'French', pt: 'Portuguese' };
 
 const systemPrompt = (lang: AskLang): string =>
-  `You are answering questions about the AI in Health Summit 2026 using ONLY the context provided below. If the context doesn't contain the answer, say "${NO_CONTEXT_ANSWERS[lang]}" — never speculate, never answer from outside the provided context. Keep answers under 150 words. Answer in ${LANG_NAMES[lang]}, regardless of what language the context or the question are in.`;
+  `You are answering questions about the AI in Health Summit 2026 using ONLY the context provided below. If the context doesn't contain the answer, say "${NO_CONTEXT_ANSWERS[lang]}" — never speculate, never answer from outside the provided context. This answer renders as plain text in a small chat widget, not markdown — write 2-4 short, direct sentences of plain prose only: no bullet points, no numbered lists, no headers, no bold/italic markup, no asterisks or other markdown syntax. If the context has many possible details, pick only the most important ones instead of listing everything. Keep the whole answer under 60 words. Answer in ${LANG_NAMES[lang]}, regardless of what language the context or the question are in.`;
 
 const TOP_K = 5;
 // Site-facts chunks get their OWN top-N, separate from (and always added on

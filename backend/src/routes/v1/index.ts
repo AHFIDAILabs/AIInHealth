@@ -24,6 +24,7 @@ import confirmedAbstractRoutes from './confirmedAbstract.routes.js';
 import innovationShowcaseEntryRoutes from './innovationShowcaseEntry.routes.js';
 import aiRoutes from './ai.routes.js';
 import policyTrackerRoutes from './policyTracker.routes.js';
+import scholarshipApplicationRoutes from './scholarshipApplication.routes.js';
 
 const router = Router();
 
@@ -52,5 +53,6 @@ router.use('/confirmed-abstracts', confirmedAbstractRoutes);
 router.use('/innovation-showcase-entries', innovationShowcaseEntryRoutes);
 router.use('/ai', aiRoutes);
 router.use('/policy-tracker', policyTrackerRoutes);
+router.use('/scholarship-applications', scholarshipApplicationRoutes);
 
 export default router;

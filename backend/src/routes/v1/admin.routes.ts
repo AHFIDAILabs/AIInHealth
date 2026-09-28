@@ -13,6 +13,7 @@ import * as notificationController from '../../controllers/notification.controll
 import * as pushController from '../../controllers/push.controller.js';
 import * as jobController from '../../controllers/job.controller.js';
 import * as accessCodeController from '../../controllers/accessCode.controller.js';
+import * as scholarshipApplicationController from '../../controllers/scholarshipApplication.controller.js';
 import * as innovationController from '../../controllers/innovation.controller.js';
 import * as checkinController from '../../controllers/checkin.controller.js';
 import * as delegateAnnouncementController from '../../controllers/delegateAnnouncement.controller.js';
@@ -62,6 +63,7 @@ import { createDeliverableSchema, updateDeliverableSchema } from '../../validati
 import { createPartnerInteractionSchema } from '../../validations/partnerInteraction.validation.js';
 import { blockIpSchema, setLockdownSchema } from '../../validations/security.validation.js';
 import { setVolunteerSettingsSchema } from '../../validations/volunteerSettings.validation.js';
+import { decideScholarshipApplicationSchema } from '../../validations/scholarshipApplication.validation.js';
 
 const router = Router();
 
@@ -139,6 +141,15 @@ router.get('/access-codes', requireRole('super_admin', 'registrations_officer', 
 router.post('/access-codes', requireRole('super_admin', 'registrations_officer', 'content_editor'), accessCodeController.adminGenerate);
 router.patch('/access-codes/:id/revoke', requireRole('super_admin', 'registrations_officer', 'content_editor'), accessCodeController.adminRevoke);
 router.post('/access-codes/:id/send', requireRole('super_admin', 'registrations_officer', 'content_editor'), accessCodeController.adminSend);
+
+router.get('/scholarship-applications', requireRole('super_admin', 'registrations_officer', 'content_editor'), scholarshipApplicationController.adminList);
+router.get('/scholarship-applications/export', requireRole('super_admin', 'registrations_officer', 'content_editor'), scholarshipApplicationController.adminExport);
+router.patch(
+  '/scholarship-applications/:id/decide',
+  requireRole('super_admin', 'registrations_officer', 'content_editor'),
+  validate(decideScholarshipApplicationSchema),
+  scholarshipApplicationController.adminDecide
+);
 
 router.get('/payments-stats', requireRole('super_admin', 'registrations_officer', 'viewer'), paymentController.adminStats);
 router.get('/payments/reconciliations', requireRole('super_admin', 'registrations_officer'), reconciliationController.list);

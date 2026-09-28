@@ -35,6 +35,30 @@ export const deleteImageFromCloudinary = async (publicId: string): Promise<void>
   await cloudinary.uploader.destroy(publicId);
 };
 
+// Scholarship applications' optional supporting document (a PDF/DOCX/TXT/MD —
+// see upload.middleware.ts's uploadDocument, 15MB cap) — resource_type 'raw'
+// since these aren't images Cloudinary can transform/preview. Same data-URI
+// approach as uploadImageToCloudinary above (small enough file, no need for
+// upload_stream's extra plumbing); original_filename preserved so the
+// delivered URL still ends in something recognizable rather than a bare hash.
+const SCHOLARSHIP_DOCUMENT_FOLDER = 'ai-health-summit-2026/scholarship-documents';
+
+export const uploadRawToCloudinary = async (
+  buffer: Buffer,
+  mimetype: string,
+  originalName: string
+): Promise<CloudinaryUploadResult> => {
+  const dataUri = `data:${mimetype};base64,${buffer.toString('base64')}`;
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder: SCHOLARSHIP_DOCUMENT_FOLDER,
+    resource_type: 'raw',
+    use_filename: true,
+    unique_filename: true,
+    filename_override: originalName,
+  });
+  return { secureUrl: result.secure_url, publicId: result.public_id };
+};
+
 export interface CloudinaryMediaUploadResult {
   secureUrl: string;
   thumbnailUrl: string;

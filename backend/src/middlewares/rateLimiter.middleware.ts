@@ -173,6 +173,33 @@ export const idCardUploadLimiter = rateLimit({
   handler: onLimitExceeded('idCardUploadLimiter', 'medium'),
 });
 
+// scholarshipApplication.routes.ts's public submit — same email+IP keying and
+// window as abstractLimiter/registrationLimiter.
+export const scholarshipLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    const email = typeof req.body?.email === 'string' ? req.body.email.toLowerCase() : '';
+    return `${req.ip}:${email}`;
+  },
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many submissions. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('scholarshipLimiter', 'low'),
+});
+
+// The optional supporting-document upload on the scholarship application form
+// — same reasoning as idCardUploadLimiter: hit before any application record
+// exists, so IP-only.
+export const scholarshipUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many uploads. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('scholarshipUploadLimiter', 'medium'),
+});
+
 // Ask the Concept Note (rag.service.ts) — the one fully public, uncapped-by-
 // design AI endpoint, and the highest-risk one on the shared Groq daily
 // budget (see aiBudget.service.ts). IP-only, tight window: a single visitor
