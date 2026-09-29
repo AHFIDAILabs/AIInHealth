@@ -96,7 +96,7 @@ export const ScholarshipApplication = () => {
 
     const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
     if (!ALLOWED_DOCUMENT_EXTENSIONS.includes(ext)) {
-      setUploadError(t('scholarship.form.invalidFileType', 'Only PDF, DOCX, TXT, or MD files are allowed.'));
+      setUploadError(t('sponsorship.form.invalidFileType', 'Only PDF, DOCX, TXT, or MD files are allowed.'));
       return;
     }
 
@@ -147,16 +147,16 @@ export const ScholarshipApplication = () => {
   return (
     <>
       <SEO
-        title="Apply for a Scholarship"
-        description="Apply for a scholarship covering your registration fee for the AI in Health Summit 2026 in Abuja, Nigeria."
-        path="/scholarship"
+        title="Apply for a Sponsorship | AI in Health Summit 2026"
+        description="Apply for a sponsorship covering your registration fee for the AI in Health Summit 2026 in Abuja, Nigeria."
+        path="/sponsored-delegates"
       />
       <PageHero
-        eyebrow={t('scholarship.eyebrow', 'Scholarships')}
-        title={t('scholarship.title', 'Apply for a Scholarship')}
+        eyebrow={t('sponsorship.eyebrow', 'Sponsorships')}
+        title={t('sponsorship.title', 'Apply for a Sponsorship')}
         subtitle={t(
-          'scholarship.subtitle',
-          "Request a scholarship covering your registration fee for the AI in Health Summit 2026. Tell us a bit about yourself and why you'd like to attend."
+          'sponsorship.subtitle',
+          "Request a sponsorship covering your registration fee for the AI in Health Summit 2026. Tell us a bit about yourself and why you'd like to attend."
         )}
       />
 
@@ -170,9 +170,9 @@ export const ScholarshipApplication = () => {
                 {serverError && <Banner variant="error">{serverError}</Banner>}
 
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <LightField label={t('scholarship.form.fullName', 'Full Name')} error={errors.fullName?.message} {...register('fullName')} />
+                  <LightField label={t('sponsorship.form.fullName', 'Full Name')} error={errors.fullName?.message} {...register('fullName')} />
                   <LightField
-                    label={t('scholarship.form.email', 'Email')}
+                    label={t('sponsorship.form.email', 'Email')}
                     type="email"
                     error={errors.email?.message}
                     {...register('email')}
@@ -180,12 +180,12 @@ export const ScholarshipApplication = () => {
                 </div>
 
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <LightField label={t('scholarship.form.phone', 'Phone Number')} error={errors.phone?.message} {...register('phone')} />
-                  <LightField label={t('scholarship.form.country', 'Country')} error={errors.country?.message} {...register('country')} />
+                  <LightField label={t('sponsorship.form.phone', 'Phone Number')} error={errors.phone?.message} {...register('phone')} />
+                  <LightField label={t('sponsorship.form.country', 'Country')} error={errors.country?.message} {...register('country')} />
                 </div>
 
                 <div>
-                  <p className="mb-1.5 block text-sm font-semibold text-navy">{t('scholarship.form.applicantType', 'I am a(n)')}</p>
+                  <p className="mb-1.5 block text-sm font-semibold text-navy">{t('sponsorship.form.applicantType', 'I am a(n)')}</p>
                   <div className="grid grid-cols-3 gap-2">
                     {SCHOLARSHIP_APPLICANT_TYPES.map((type) => (
                       <button
@@ -198,7 +198,7 @@ export const ScholarshipApplication = () => {
                             : 'border-slate-200 bg-white text-slate-500 hover:border-orange/40'
                         }`}
                       >
-                        {t(`scholarship.form.applicantType.${type}`, APPLICANT_TYPE_LABEL[type])}
+                        {t(`sponsorship.form.applicantType.${type}`, APPLICANT_TYPE_LABEL[type])}
                       </button>
                     ))}
                   </div>
@@ -208,8 +208,8 @@ export const ScholarshipApplication = () => {
                 <LightField
                   label={
                     applicantType === 'student'
-                      ? t('scholarship.form.organizationStudent', 'School / Institution Name')
-                      : t('scholarship.form.organizationOther', 'Organization / Institution Name')
+                      ? t('sponsorship.form.organizationStudent', 'School / Institution Name')
+                      : t('sponsorship.form.organizationOther', 'Organization / Institution Name')
                   }
                   error={errors.organization?.message}
                   {...register('organization')}
@@ -218,12 +218,12 @@ export const ScholarshipApplication = () => {
                 {applicantType === 'student' ? (
                   <div className="grid gap-5 sm:grid-cols-2">
                     <LightField
-                      label={t('scholarship.form.courseOfStudy', 'Course of Study')}
+                      label={t('sponsorship.form.courseOfStudy', 'Course of Study')}
                       error={errors.courseOfStudy?.message}
                       {...register('courseOfStudy')}
                     />
-                    <LightSelect label={t('scholarship.form.level', 'Level')} error={errors.level?.message} {...register('level')}>
-                      <option value="">{t('scholarship.form.chooseLevel', 'Choose…')}</option>
+                    <LightSelect label={t('sponsorship.form.level', 'Level')} error={errors.level?.message} {...register('level')}>
+                      <option value="">{t('sponsorship.form.chooseLevel', 'Choose…')}</option>
                       {SCHOLARSHIP_STUDY_LEVELS.map((level) => (
                         <option key={level} value={level}>
                           {STUDY_LEVEL_LABEL[level]}
@@ -236,8 +236,8 @@ export const ScholarshipApplication = () => {
                     <LightField
                       label={
                         applicantType === 'employee'
-                          ? t('scholarship.form.designationEmployee', 'Designation / Job Title')
-                          : t('scholarship.form.designationOther', 'Occupation')
+                          ? t('sponsorship.form.designationEmployee', 'Designation / Job Title')
+                          : t('sponsorship.form.designationOther', 'Occupation')
                       }
                       error={errors.designation?.message}
                       {...register('designation')}
@@ -247,10 +247,10 @@ export const ScholarshipApplication = () => {
 
                 <div>
                   <LightTextArea
-                    label={t('scholarship.form.reason', 'Why would you like to attend?')}
+                    label={t('sponsorship.form.reason', 'Why would you like to attend?')}
                     placeholder={t(
-                      'scholarship.form.reasonPlaceholder',
-                      'Tell us about your background and why a scholarship would help you attend (min. 50 characters)...'
+                      'sponsorship.form.reasonPlaceholder',
+                      'Tell us about your background and why a sponsorship would help you attend (min. 50 characters)...'
                     )}
                     error={errors.reason?.message}
                     {...register('reason')}
@@ -260,10 +260,10 @@ export const ScholarshipApplication = () => {
 
                 <div>
                   <p className="mb-1.5 block text-sm font-semibold text-navy">
-                    {t('scholarship.form.supportingDocument', 'Supporting Document (optional)')}
+                    {t('sponsorship.form.supportingDocument', 'Supporting Document (optional)')}
                   </p>
                   <p className="mb-2 text-xs text-slate-500">
-                    {t('scholarship.form.supportingDocumentHint', 'PDF, DOCX, TXT, or MD — e.g. proof of student status or a letter of support.')}
+                    {t('sponsorship.form.supportingDocumentHint', 'PDF, DOCX, TXT, or MD — e.g. proof of student status or a letter of support.')}
                   </p>
                   {documentName ? (
                     <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-offwhite px-4 py-3 text-sm">
@@ -278,11 +278,11 @@ export const ScholarshipApplication = () => {
                     <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-500 hover:border-orange/40 hover:text-orange">
                       {uploading ? (
                         <>
-                          <Loader2 size={15} className="animate-spin" /> {t('scholarship.form.uploading', 'Uploading…')}
+                          <Loader2 size={15} className="animate-spin" /> {t('sponsorship.form.uploading', 'Uploading…')}
                         </>
                       ) : (
                         <>
-                          <Paperclip size={15} /> {t('scholarship.form.attachFile', 'Attach a file')}
+                          <Paperclip size={15} /> {t('sponsorship.form.attachFile', 'Attach a file')}
                         </>
                       )}
                       <input
@@ -299,7 +299,7 @@ export const ScholarshipApplication = () => {
 
                 <div className="flex justify-end">
                   <Button type="submit" variant="primary" loading={isSubmitting} disabled={uploading}>
-                    {t('scholarship.form.submit', 'Submit Application')} <Send size={16} className="ml-1" />
+                    {t('sponsorship.form.submit', 'Submit Application')} <Send size={16} className="ml-1" />
                   </Button>
                 </div>
               </form>

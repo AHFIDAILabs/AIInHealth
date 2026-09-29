@@ -20,7 +20,7 @@ export const PUBLIC_ROUTES = [
   { path: '/gallery', priority: '0.6', changefreq: 'monthly' },
   { path: '/about-ahfid', priority: '0.5', changefreq: 'monthly' },
   { path: '/register', priority: '0.8', changefreq: 'monthly' },
-  { path: '/scholarship', priority: '0.7', changefreq: 'monthly' },
+  { path: '/sponsored-delegates', priority: '0.7', changefreq: 'monthly' },
   { path: '/abstracts/submit', priority: '0.6', changefreq: 'monthly' },
   { path: '/team/register', priority: '0.5', changefreq: 'monthly' },
   { path: '/contact', priority: '0.5', changefreq: 'monthly' },

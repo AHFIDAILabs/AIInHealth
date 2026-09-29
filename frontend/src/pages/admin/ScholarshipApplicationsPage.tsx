@@ -86,7 +86,7 @@ export const ScholarshipApplicationsPage = () => {
         discountPercent: status === 'approved' ? discountPercent : undefined,
       });
       setItems((prev) => prev.map((a) => (a._id === updated._id ? updated : a)));
-      toast('success', status === 'approved' ? `Approved — a scholarship code was emailed to ${updated.email}` : 'Application declined');
+      toast('success', status === 'approved' ? `Approved — a sponsorship code was emailed to ${updated.email}` : 'Application declined');
       setActive(null);
     } catch (err) {
       setDecideError(getApiErrorMessage(err));
@@ -99,7 +99,7 @@ export const ScholarshipApplicationsPage = () => {
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-navy">Scholarship Applications</h1>
+          <h1 className="font-display text-2xl font-semibold text-navy">Sponsorship Applications</h1>
           <p className="text-sm text-slate-500">
             {total} application{total === 1 ? '' : 's'}
           </p>
@@ -315,7 +315,7 @@ export const ScholarshipApplicationsPage = () => {
                 {active.status === 'pending' ? (
                   <>
                     <AdminSelect
-                      label="Scholarship discount (if approved)"
+                      label="Sponsorship discount (if approved)"
                       value={discountPercent}
                       onChange={(e) => setDiscountPercent(Number(e.target.value) as ScholarshipDiscount)}
                     >

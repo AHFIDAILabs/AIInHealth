@@ -111,7 +111,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/register/payment-callback" element={<PaymentCallback />} />
             <Route path="/abstracts/submit" element={<AbstractSubmission />} />
-            <Route path="/scholarship" element={<ScholarshipApplication />} />
+            <Route path="/sponsored-delegates" element={<ScholarshipApplication />} />
             <Route path="/team/register" element={<TeamRegistration />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />

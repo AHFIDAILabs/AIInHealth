@@ -75,7 +75,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Registrations', to: '/admin/registrations', icon: ClipboardList, roles: [...registrationRoles, 'viewer'] },
       { label: 'Access Codes', to: '/admin/access-codes', icon: KeyRound, roles: [...registrationRoles, 'content_editor'] },
       {
-        label: 'Scholarship Applications',
+        label: 'Sponsorship Applications',
         to: '/admin/scholarship-applications',
         icon: GraduationCap,
         roles: [...registrationRoles, 'content_editor'],
