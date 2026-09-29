@@ -8,7 +8,7 @@ import { ScholarshipApplication, type ScholarshipApplicationDoc } from '../model
 import { AccessCode } from '../models/AccessCode.model.js';
 import { generateCode } from './accessCode.controller.js';
 import { recordAudit } from '../services/audit.service.js';
-import { sendAccessCodeEmail, sendScholarshipReceivedEmail, sendScholarshipDeclinedEmail } from '../services/email.service.js';
+import { sendSponsorshipApprovedEmail, sendSponsorshipReceivedEmail, sendSponsorshipDeclinedEmail } from '../services/email.service.js';
 import { cloudinaryConfigured } from '../config/cloudinary.js';
 import { uploadRawToCloudinary } from '../services/cloudinary.service.js';
 import { logger } from '../config/logger.js';
@@ -35,16 +35,16 @@ export const submit = catchAsync(async (req: Request, res: Response) => {
     supportingDocumentUrl: input.supportingDocumentUrl,
   });
 
-  sendScholarshipReceivedEmail(application.email, application.fullName).catch((err) =>
-    logger.error({ err }, 'Failed to send scholarship application received email')
+  sendSponsorshipReceivedEmail(application.email, application.fullName).catch((err) =>
+    logger.error({ err }, 'Failed to send sponsorship application received email')
   );
   emitAdminNotification({
     type: 'scholarship_application.new',
-    title: 'New scholarship application',
+    title: 'New sponsorship application',
     body: application.fullName,
     resourceType: 'ScholarshipApplication',
     resourceId: application.id,
-  }).catch((err) => logger.error({ err }, 'Failed to emit scholarship application admin notification'));
+  }).catch((err) => logger.error({ err }, 'Failed to emit sponsorship application admin notification'));
 
   res.status(201).json(new ApiResponse({ id: application.id, message: SUBMISSION_MESSAGE }));
 });
@@ -113,7 +113,7 @@ export const adminExport = catchAsync(async (req: Request, res: Response) => {
 
   const csv = toCsv(items as unknown as Record<string, unknown>[], CSV_COLUMNS);
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="scholarship-applications-${Date.now()}.csv"`);
+  res.setHeader('Content-Disposition', `attachment; filename="sponsorship-applications-${Date.now()}.csv"`);
   res.send(csv);
 });
 
@@ -148,9 +148,9 @@ export const adminDecide = catchAsync(async (req: Request, res: Response) => {
     application.decidedAt = new Date();
     await application.save();
 
-    sendAccessCodeEmail(application.email, 'scholarship', accessCode.code, discountPercent)
+    sendSponsorshipApprovedEmail(application.email, application.fullName, accessCode.code, discountPercent)
       .then(() => AccessCode.updateOne({ _id: accessCode._id }, { $set: { sentAt: new Date() } }))
-      .catch((err) => logger.error({ err }, 'Failed to send scholarship access code email'));
+      .catch((err) => logger.error({ err }, 'Failed to send sponsorship approved email'));
   } else {
     application.status = 'rejected';
     application.reviewNotes = input.reviewNotes;
@@ -158,8 +158,8 @@ export const adminDecide = catchAsync(async (req: Request, res: Response) => {
     application.decidedAt = new Date();
     await application.save();
 
-    sendScholarshipDeclinedEmail(application.email, application.fullName).catch((err) =>
-      logger.error({ err }, 'Failed to send scholarship declined email')
+    sendSponsorshipDeclinedEmail(application.email, application.fullName).catch((err) =>
+      logger.error({ err }, 'Failed to send sponsorship declined email')
     );
   }
 

@@ -158,7 +158,6 @@ const ACCESS_CODE_LABEL: Record<string, string> = {
   keynote_speaker: 'keynote speaker',
   complimentary: 'complimentary',
   scholarship: 'scholarship',
-  staff: 'staff member',
 };
 
 export const sendAccessCodeEmail = async (to: string, type: string, code: string, discountPercent?: number): Promise<void> => {
@@ -174,7 +173,11 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
     ? `Your organization has been offered a <strong>10% group discount</strong> on attendee registration fees for the AI in Health Summit 2026 — available for group registrations of 5 or more attendees.`
     : isScholarship
       ? `You've been awarded a scholarship covering <strong>${discountPercent}%</strong> of your attendee registration fee for the AI in Health Summit 2026.`
-      : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
+      : type === 'staff'
+        // "Selected as a staff member" was redundant — being staff already
+        // implies that. A plain, direct line reads better here.
+        ? `You've been added to the AI in Health Summit 2026 event team.`
+        : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
 
   // 'volunteer' redeems on the Volunteer tab; the other three (scholarship,
   // keynote_speaker, complimentary) all redeem on the Attendee tab — see
@@ -203,30 +206,59 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
 };
 
 // scholarshipApplication.controller.ts's submit() — a short receipt, not a
-// decision (that's sendAccessCodeEmail on approval, or the decline email
-// below on rejection).
-export const sendScholarshipReceivedEmail = async (to: string, fullName: string): Promise<void> => {
+// decision (that's sendSponsorshipApprovedEmail on approval, or the decline
+// email below on rejection). Named for the public-facing "Sponsorship
+// Application" / "Sponsored Delegates" feature — deliberately distinct
+// wording from the separate, unrelated AccessCode 'scholarship' type
+// (sendAccessCodeEmail below), which keeps its own original copy unchanged.
+export const sendSponsorshipReceivedEmail = async (to: string, fullName: string): Promise<void> => {
   await sendEmail({
     to,
-    subject: 'We received your scholarship application — AI in Health Summit 2026',
+    subject: 'We received your sponsorship application — AI in Health Summit 2026',
     html: `
       <p>Hi ${fullName},</p>
-      <p>Thanks for applying for a scholarship to attend the AI in Health Summit 2026. We've received your application and our team will review it shortly.</p>
+      <p>Thanks for applying for a sponsorship to attend the AI in Health Summit 2026. We've received your application and our team will review it shortly.</p>
       <p>We'll email you as soon as a decision has been made.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });
 };
 
-// scholarshipApplication.controller.ts's adminDecide() rejection branch — the
-// approval branch reuses sendAccessCodeEmail above instead of a new template.
-export const sendScholarshipDeclinedEmail = async (to: string, fullName: string): Promise<void> => {
+// scholarshipApplication.controller.ts's adminDecide() approval branch — its
+// own copy (rather than reusing sendAccessCodeEmail's generic wording) so the
+// applicant's whole journey (received → approved) consistently says
+// "sponsorship," even though the code generated under the hood is still the
+// same AccessCode 'scholarship' type/mechanism as every other such code.
+export const sendSponsorshipApprovedEmail = async (
+  to: string,
+  fullName: string,
+  code: string,
+  discountPercent: number
+): Promise<void> => {
+  const registerUrl = `${env.FRONTEND_ORIGIN}/register`;
   await sendEmail({
     to,
-    subject: 'Your scholarship application — AI in Health Summit 2026',
+    subject: "You're invited — AI in Health Summit 2026",
     html: `
       <p>Hi ${fullName},</p>
-      <p>Thank you for applying for a scholarship to attend the AI in Health Summit 2026. After review, we're unable to offer you a scholarship at this time.</p>
+      <p>Good news — your sponsorship application has been approved, covering <strong>${discountPercent}%</strong> of your attendee registration fee for the AI in Health Summit 2026.</p>
+      <p>Your access code is: <strong style="font-size: 18px; letter-spacing: 1px;">${code}</strong></p>
+      <p>Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, and enter this code${
+        discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'
+      } — it's tied to this email address, so please register using ${to}.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
+// scholarshipApplication.controller.ts's adminDecide() rejection branch.
+export const sendSponsorshipDeclinedEmail = async (to: string, fullName: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Your sponsorship application — AI in Health Summit 2026',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Thank you for applying for a sponsorship to attend the AI in Health Summit 2026. After review, we're unable to offer you a sponsorship at this time.</p>
       <p>You're still very welcome to register for the Summit directly — visit <a href="${env.FRONTEND_ORIGIN}/register">the registration page</a> to secure your spot.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
