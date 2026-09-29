@@ -46,6 +46,7 @@ const EMPTY_FORM: SessionInput = {
   room: '',
   description: '',
   speakers: [],
+  moderator: null,
   partners: [],
   cardStyle: 'standard',
   isPublished: false,
@@ -208,6 +209,7 @@ export const SessionsListTab = () => {
       room: session.room,
       description: session.description ?? '',
       speakers: session.speakers.map((s) => s._id),
+      moderator: session.moderator?._id ?? null,
       partners: session.partners.map((p) => p._id),
       cardStyle: session.cardStyle,
       isPublished: session.isPublished,
@@ -722,6 +724,25 @@ export const SessionsListTab = () => {
                     onChange={(e) => setForm({ ...form, maxAttendees: e.target.value ? Number(e.target.value) : undefined })}
                   />
                   <p className="mt-1.5 text-xs text-slate-400">Leave blank for unlimited. Setting a number opens self-service RSVP for this session.</p>
+                </div>
+
+                <div>
+                  <AdminSelect
+                    label="Moderator"
+                    value={form.moderator ?? ''}
+                    onChange={(e) => setForm({ ...form, moderator: e.target.value || null })}
+                  >
+                    <option value="">No moderator</option>
+                    {speakers.map((sp) => (
+                      <option key={sp._id} value={sp._id}>
+                        {sp.fullName}
+                        {sp.title ? ` — ${sp.title}` : ''}
+                      </option>
+                    ))}
+                  </AdminSelect>
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    Shown separately from Speakers below on the public Agenda's session detail panel.
+                  </p>
                 </div>
 
                 <div>

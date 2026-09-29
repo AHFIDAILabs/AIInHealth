@@ -69,6 +69,10 @@ export interface AdminSession {
   room: string;
   description?: string;
   speakers: SessionSpeakerRef[];
+  // Distinct from speakers[] — the person chairing/facilitating the session
+  // rather than presenting content. Populated the same way as speakers, just
+  // a single optional ref instead of an array.
+  moderator?: SessionSpeakerRef | null;
   partners: SessionPartnerRef[];
   cardStyle: SessionCardStyle;
   isPublished: boolean;
@@ -95,6 +99,8 @@ export interface SessionInput {
   room: string;
   description?: string;
   speakers?: string[];
+  // A Speaker id, or null for "No moderator".
+  moderator?: string | null;
   partners?: string[];
   cardStyle?: SessionCardStyle;
   isPublished?: boolean;
