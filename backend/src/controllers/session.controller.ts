@@ -57,6 +57,7 @@ export const list = catchAsync(async (req: Request, res: Response) => {
     .select('-rsvpList')
     .sort({ day: 1, startTime: 1 })
     .populate({ path: 'speakers', select: SPEAKER_FIELDS, match: { isPublished: true } })
+    .populate({ path: 'moderator', select: SPEAKER_FIELDS, match: { isPublished: true } })
     .populate({ path: 'partners', select: PARTNER_FIELDS, match: { isPublished: true } })
     .populate('track', 'name color');
   const sanitized = sessions.map((s) => ({ ...s.toObject(), translations: publicTranslations(s.translations) }));
@@ -105,6 +106,7 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
       .skip(skip)
       .limit(query.limit)
       .populate('speakers', SPEAKER_FIELDS)
+      .populate('moderator', SPEAKER_FIELDS)
       .populate('partners', PARTNER_FIELDS)
       .populate('track', 'name color'),
     Session.countDocuments(filter),
@@ -139,6 +141,7 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
   const conflicts = await findConflicts(input.day, input.room, input.startTime, input.endTime);
   const session = await Session.create(input);
   await session.populate('speakers', SPEAKER_FIELDS);
+  await session.populate('moderator', SPEAKER_FIELDS);
   await session.populate('partners', PARTNER_FIELDS);
   const populated = await session.populate('track', 'name color');
   await recordAudit({ req, action: 'session.created', resourceType: 'Session', resourceId: session.id, after: session.toObject() });
@@ -170,6 +173,7 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
 
   const session = await Session.findByIdAndUpdate(req.params.id, input, { new: true })
     .populate('speakers', SPEAKER_FIELDS)
+    .populate('moderator', SPEAKER_FIELDS)
     .populate('partners', PARTNER_FIELDS)
     .populate('track', 'name color');
   if (!session) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
@@ -217,6 +221,7 @@ export const adminAddRsvp = catchAsync(async (req: Request, res: Response) => {
   }
 
   await before.populate('speakers', SPEAKER_FIELDS);
+  await before.populate('moderator', SPEAKER_FIELDS);
   await before.populate('partners', PARTNER_FIELDS);
   const session = await before.populate('track', 'name color');
   res.status(201).json(new ApiResponse(session));
@@ -231,6 +236,7 @@ export const adminRemoveRsvp = catchAsync(async (req: Request, res: Response) =>
     { new: true }
   )
     .populate('speakers', SPEAKER_FIELDS)
+    .populate('moderator', SPEAKER_FIELDS)
     .populate('partners', PARTNER_FIELDS)
     .populate('track', 'name color');
   if (!session) throw new ApiError(404, 'Session not found', 'NOT_FOUND');

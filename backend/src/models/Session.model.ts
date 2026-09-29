@@ -31,6 +31,10 @@ const sessionSchema = new Schema(
     room: { type: String, required: true, trim: true },
     description: { type: String, trim: true, maxlength: 3000 },
     speakers: [{ type: Schema.Types.ObjectId, ref: 'Speaker' }],
+    // Distinct from speakers[] — the person chairing/facilitating the
+    // session rather than presenting content. Optional and independent of
+    // the speakers list (a moderator doesn't need to also be added there).
+    moderator: { type: Schema.Types.ObjectId, ref: 'Speaker' },
     // Which sponsor/partner logos show on this session's public card (e.g. the
     // opening ceremony crediting its host + co-hosts) — independent of
     // Partner.package/status, which drive the Partners page's CRM/tiering.

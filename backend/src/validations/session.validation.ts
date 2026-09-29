@@ -17,6 +17,9 @@ const baseSessionShape = {
   room: z.string().trim().min(1, 'Enter a room'),
   description: z.string().trim().max(3000).optional(),
   speakers: z.array(objectId).max(20).optional(),
+  // Nullable, same reasoning as track above — a PATCH must be able to
+  // explicitly clear an existing moderator, not just omit the field.
+  moderator: objectId.nullable().optional(),
   partners: z.array(objectId).max(20).optional(),
   cardStyle: z.enum(SESSION_CARD_STYLES).optional(),
   isPublished: z.boolean().optional(),
