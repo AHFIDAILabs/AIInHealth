@@ -263,7 +263,14 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker, onCardClick }:
       }`}
       style={s.cardStyle === 'standard' ? { borderLeftColor: s.track?.color ?? '#E8792C' } : undefined}
     >
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* flex-col by default — min-w-0 on the content column lets it shrink
+          arbitrarily, so a plain flex-wrap row never actually wraps (both
+          columns keep fitting side by side); at mobile widths that squeezed
+          the title/badges down to one word per line while the partner logos
+          held their ground, and the track badge's rounded-full pill ballooned
+          into visual overlap with the logos next to it. Only sm+ and up
+          reverts to sitting the partner logos beside the content. */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <span
@@ -366,7 +373,7 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker, onCardClick }:
         </div>
 
         {s.partners.length > 0 && (
-          <div className="flex shrink-0 flex-wrap justify-end gap-3">
+          <div className="flex flex-wrap gap-3 sm:shrink-0 sm:justify-end">
             {s.partners.map((p) => (
               <div key={p._id} className="flex w-20 flex-col items-center gap-1.5 text-center">
                 <span className="flex h-12 w-20 items-center justify-center rounded-lg bg-white p-2 shadow-sm">

@@ -20,7 +20,11 @@ export const FloatingCTA = () => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 16, scale: 0.9 }}
           transition={{ duration: 0.3, delay: 1.2 }}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-1 rounded-full bg-navy py-1.5 pl-4 pr-1.5 shadow-xl shadow-navy/25 ring-1 ring-white/10"
+          // bottom-20 on mobile clears AskWidget's own bottom-5 pill (it sits
+          // in the opposite corner, but at narrow widths — under ~400px —
+          // the two pills' widths overlap horizontally, so vertical
+          // clearance is needed too); sm+ has room for both side by side.
+          className="fixed bottom-20 right-5 z-40 flex items-center gap-1 rounded-full bg-navy py-1.5 pl-4 pr-1.5 shadow-xl shadow-navy/25 ring-1 ring-white/10 sm:bottom-5"
         >
           <Link
             to="/register"

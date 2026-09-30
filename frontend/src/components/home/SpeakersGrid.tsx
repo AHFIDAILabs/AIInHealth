@@ -45,7 +45,7 @@ const SpeakerCard = ({ speaker, onOpen }: { speaker: AdminSpeaker; onOpen: () =>
       </div>
       <p className="mt-3 font-display text-[15px] font-bold leading-snug text-navy">{speaker.fullName}</p>
       <p className="mt-0.5 text-xs leading-snug text-slate-500">{speaker.title}</p>
-      <p className="mt-0.5 text-xs leading-snug text-orange-50 font-bold">{speaker.organization}</p>
+      <p className="mt-0.5 text-xs leading-snug text-orange-500 font-bold">{speaker.organization}</p>
     </button>
   );
 };
