@@ -31,7 +31,7 @@ const TICKET_LABEL: Record<TicketCategory, string> = {
   vip: 'VIP',
   government_official: 'Government Official',
   accredited_media: 'Accredited Media',
-  staff: 'Team / Staff',
+  staff: 'Organizer',
 };
 const SCHOLARSHIP_OPTIONS = [10, 25, 50, 100] as const;
 const STATUS_OPTIONS: RegistrationStatus[] = ['pending', 'reviewed', 'confirmed', 'declined'];
