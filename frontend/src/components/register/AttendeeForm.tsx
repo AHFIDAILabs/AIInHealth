@@ -261,8 +261,13 @@ export const AttendeeForm = () => {
               <p className="mt-1.5 text-xs text-slate-400">
                 {ticketCategory === 'staff'
                   ? "Enter the staff code the organizing team sent you — it's tied to this exact email address."
-                  : "Have a scholarship, keynote speaker, or complimentary code? Enter it here. It's checked and applied automatically before you're sent to payment."}
+                  : "Have a scholarship, keynote speaker, complimentary, or promo code? Enter it here. It's checked and applied automatically before you're sent to payment."}
               </p>
+              {ticketCategory === 'vip' && (
+                <p className="mt-1 text-xs text-slate-400">
+                  Note: a promo (QR-banner) code can't be used for the VIP category — it works for every other category.
+                </p>
+              )}
             </div>
 
             <div>

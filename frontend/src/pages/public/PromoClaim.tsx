@@ -85,6 +85,12 @@ export const PromoClaim = () => {
                 <p className="mt-3 text-xs text-slate-400">
                   {t('promoClaim.success.oneTime', "This code is single-use and tied to this email — you'll need it to register.")}
                 </p>
+                <p className="mt-1.5 text-xs text-slate-400">
+                  {t(
+                    'promoClaim.success.vipExcluded',
+                    'Works for any ticket category except VIP (e.g. Nigerian Professional, Student/Researcher, International Delegate are all fine).'
+                  )}
+                </p>
                 <ButtonLink to="/register" variant="primary" className="!mt-6">
                   {t('promoClaim.success.register', 'Register Now')}
                 </ButtonLink>
@@ -97,6 +103,12 @@ export const PromoClaim = () => {
                 </p>
                 <p className="mt-2 text-sm text-slate-500">
                   {t('promoClaim.form.detail', "Enter the email you'll register with — your code will be tied to it.")}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {t(
+                    'promoClaim.form.vipExcluded',
+                    'Works for any ticket category except VIP (e.g. Nigerian Professional, Student/Researcher, International Delegate are all fine).'
+                  )}
                 </p>
                 {error && (
                   <div className="mt-4 text-left">
