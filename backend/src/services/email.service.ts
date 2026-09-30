@@ -160,6 +160,31 @@ const ACCESS_CODE_LABEL: Record<string, string> = {
   scholarship: 'scholarship',
 };
 
+// Real TICKET_CATEGORIES labels (mirrors frontend TICKET_LABEL maps) — named
+// here so every access-code email tells the recipient exactly which ticket
+// category to click on the registration form instead of leaving them to
+// guess, per management's explicit request. 'staff' (displayed as
+// "Organizer") is deliberately excluded from this general list — it's named
+// on its own below, since it's the one type actually bound to a single
+// required category (registration.controller.ts's STAFF_ACCESS_CODE_REQUIRED).
+const OPEN_CATEGORY_LABELS = [
+  'International Delegate',
+  'Nigerian Professional',
+  'Student / Researcher',
+  'VIP',
+  'Government Official',
+  'Accredited Media',
+];
+
+// Shared by every email below that hands someone a code NOT bound to one
+// specific ticket category (scholarship/keynote_speaker/complimentary/
+// abstract_presenter/promo) — 'staff' is bound to exactly one category
+// ("Organizer") and is worded separately at each call site instead.
+const openCategoryGuidance = (excludeVip: boolean): string =>
+  excludeVip
+    ? `select any ticket category except <strong>VIP</strong> (${OPEN_CATEGORY_LABELS.filter((l) => l !== 'VIP').join(', ')})`
+    : `select whichever ticket category matches you (${OPEN_CATEGORY_LABELS.join(', ')})`;
+
 export const sendAccessCodeEmail = async (to: string, type: string, code: string, discountPercent?: number): Promise<void> => {
   const registerUrl = `${env.FRONTEND_ORIGIN}/register`;
   const isScholarship = type === 'scholarship' && discountPercent !== undefined;
@@ -180,17 +205,26 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
         // even though the underlying AccessCode/TicketCategory value stays
         // 'staff' internally — see enums.ts's comment on that choice.
         ? `You've been added to the AI in Health Summit 2026 as an Organizer.`
-        : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
+        : type === 'abstract_presenter'
+          ? `Congratulations — your abstract has been confirmed for presentation at the AI in Health Summit 2026! This code registers you to attend, free of charge.`
+          : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
 
-  // 'volunteer' redeems on the Volunteer tab; the other three (scholarship,
-  // keynote_speaker, complimentary) all redeem on the Attendee tab — see
-  // registration.controller.ts's create() / ATTENDEE_ACCESS_CODE_TYPES.
+  // 'volunteer' redeems on the Volunteer tab (no ticket category involved at
+  // all); every other type redeems on the Attendee tab, where the recipient
+  // must additionally pick the right ticket category — 'staff' is bound to
+  // exactly one ("Organizer"), 'promo' allows any except VIP, everything else
+  // is open — see registration.controller.ts's create() / ATTENDEE_ACCESS_CODE_TYPES.
+  const categoryGuidance =
+    type === 'staff'
+      ? `select the <strong>Organizer</strong> ticket category`
+      : openCategoryGuidance(type === 'promo');
+
   const instructionLine =
     type === 'volunteer'
       ? `Visit <a href="${registerUrl}">the registration page</a> and use this code to confirm your spot — it's tied to this email address, so please register using ${to}.`
       : `Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab${
           isGroupRate ? ' choosing <strong>Group Registration</strong> with 5 or more attendees' : ''
-        }, and enter this code${
+        }, ${categoryGuidance}, and enter this code${
           isScholarship
             ? ` to apply your discount${discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'}`
             : ' — it covers your registration fee in full, no payment needed'
@@ -198,7 +232,10 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
 
   await sendEmail({
     to,
-    subject: "You're invited — AI in Health Summit 2026",
+    subject:
+      type === 'abstract_presenter'
+        ? 'Your abstract is confirmed — register free for AI in Health Summit 2026'
+        : "You're invited — AI in Health Summit 2026",
     html: `
       <p>${introLine}</p>
       <p>Your access code is: <strong style="font-size: 18px; letter-spacing: 1px;">${code}</strong></p>
@@ -246,7 +283,7 @@ export const sendSponsorshipApprovedEmail = async (
       <p>Hi ${fullName},</p>
       <p>Good news — your sponsorship application has been approved, covering <strong>${discountPercent}%</strong> of your attendee registration fee for the AI in Health Summit 2026.</p>
       <p>Your access code is: <strong style="font-size: 18px; letter-spacing: 1px;">${code}</strong></p>
-      <p>Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, and enter this code${
+      <p>Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, ${openCategoryGuidance(false)}, and enter this code${
         discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'
       } — it's tied to this email address, so please register using ${to}.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
@@ -280,8 +317,7 @@ export const sendPromoCodeEmail = async (to: string, code: string): Promise<void
     html: `
       <p>Nice catch — you scanned the QR banner in time, and you've won a free registration to the AI in Health Summit 2026 (100% off).</p>
       <p>Your access code is: <strong style="font-size: 18px; letter-spacing: 1px;">${code}</strong></p>
-      <p>Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, and enter this code — it covers your registration fee in full, no payment needed. It's tied to this email address, so please register using ${to}.</p>
-      <p>Works for any ticket category except <strong>VIP</strong> (e.g. Nigerian Professional, Student/Researcher, International Delegate are all fine).</p>
+      <p>Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, ${openCategoryGuidance(true)}, and enter this code — it covers your registration fee in full, no payment needed. It's tied to this email address, so please register using ${to}.</p>
       <p>This code is single-use — once redeemed, it can't be used again.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,

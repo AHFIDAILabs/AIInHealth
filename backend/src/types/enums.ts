@@ -155,12 +155,18 @@ export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 // always 100% off, and — unlike 'staff' — NOT bound to any specific ticket
 // category, so it behaves like keynote_speaker/complimentary: redeemable
 // against whichever category the winner actually picks.
-export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo'] as const;
+// 'abstract_presenter' is for authors whose abstract was already confirmed for
+// presentation (the curated public list — see ConfirmedAbstract.model.ts) —
+// admin-generated in bulk via the same Generate Access Codes flow as
+// volunteer/keynote_speaker/staff, then self-redeemed on the Attendee form
+// against whichever ticket category actually describes them (not bound to
+// one category, same as keynote_speaker/complimentary/promo).
+export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo', 'abstract_presenter'] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
 
 // The subset of ACCESS_CODE_TYPES redeemable on the attendee registration form —
 // see registration.controller.ts's create().
-export const ATTENDEE_ACCESS_CODE_TYPES = ['keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo'] as const;
+export const ATTENDEE_ACCESS_CODE_TYPES = ['keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo', 'abstract_presenter'] as const;
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;
 export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];
@@ -183,6 +189,15 @@ export const GROUP_DISCOUNT_MIN_ATTENDEES = 5;
 // Paystack, so "unpaid" would misleadingly imply a payment is still owed.
 export const PAYMENT_STATUSES = ['not_required', 'unpaid', 'paid', 'failed'] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+// Set only when paymentStatus is 'paid' — distinguishes a real Paystack-verified
+// charge from an admin manually marking a registration paid (bank transfer, cash,
+// etc., outside Paystack entirely). 'manual' registrations get a synthetic
+// paymentReference ("MANUAL-...") that can never collide with — or be mistaken
+// for — a real Paystack reference (always "AIHS-..."), so reconciliation.controller.ts's
+// Paystack cross-check naturally never touches them.
+export const PAYMENT_METHODS = ['paystack', 'manual'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const MEETING_REQUEST_STATUSES = ['pending', 'accepted', 'declined', 'cancelled'] as const;
 export type MeetingRequestStatus = (typeof MEETING_REQUEST_STATUSES)[number];

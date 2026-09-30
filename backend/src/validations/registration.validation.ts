@@ -5,9 +5,12 @@ import {
   REGISTRATION_TYPES,
   REGISTRATION_STATUSES,
   PAYMENT_STATUSES,
+  PAYMENT_METHODS,
   ID_VERIFICATION_TICKET_CATEGORIES,
 } from '../types/enums.js';
 import { optionalUrlField } from './common.js';
+
+const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
 
 const groupAttendeeSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter a name'),
@@ -202,6 +205,14 @@ const adminAttendeeSchema = z.object({
   // someone is already a trusted action, same reasoning as every other
   // public-only friction this schema already skips per the comment above.
   idCardUrl: z.string().trim().url().optional(),
+  // 'manual' — already paid outside Paystack (bank transfer, cash, etc.) —
+  // skips the Paystack link entirely and confirms immediately, same as a
+  // 100%-scholarship, but tracked as a real 'paid' payment (not a comp) so
+  // revenue reporting stays accurate. Omitted/'paystack' is today's default
+  // behavior. Real enforcement (mutually exclusive with scholarshipDiscount)
+  // happens in registration.controller.ts, not here.
+  paymentMethod: z.enum(PAYMENT_METHODS).optional(),
+  paymentNote: z.string().trim().max(500).optional(),
 });
 
 const adminVolunteerSchema = z.object({
@@ -229,3 +240,12 @@ export const adminCreateRegistrationSchema = z.object({
   body: z.discriminatedUnion('type', [adminAttendeeSchema, exhibitorSchema, sponsorSchema, adminVolunteerSchema, adminTeamSchema]),
 });
 export type AdminCreateRegistrationInput = z.infer<typeof adminCreateRegistrationSchema>['body'];
+
+// PATCH .../mark-paid — an admin confirms an EXISTING pending/unpaid attendee
+// registration was paid outside Paystack. paymentNote is optional (the admin
+// may not always have a bank reference on hand).
+export const markRegistrationPaidSchema = z.object({
+  params: z.object({ id: objectId }),
+  body: z.object({ paymentNote: z.string().trim().max(500).optional() }),
+});
+export type MarkRegistrationPaidInput = z.infer<typeof markRegistrationPaidSchema>['body'];

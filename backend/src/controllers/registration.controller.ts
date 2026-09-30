@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import crypto from 'node:crypto';
 import { isValidObjectId, type FilterQuery } from 'mongoose';
 import { parse } from 'csv-parse/sync';
 import { catchAsync } from '../utils/catchAsync.js';
@@ -11,11 +12,12 @@ import { EventTeamMember } from '../models/EventTeamMember.model.js';
 import { AccessCode, type AccessCodeDoc } from '../models/AccessCode.model.js';
 import { CustomFormField } from '../models/CustomFormField.model.js';
 import { Lead } from '../models/Lead.model.js';
-import type { CreateRegistrationInput, ListRegistrationsQuery, AdminCreateRegistrationInput } from '../validations/registration.validation.js';
+import type { CreateRegistrationInput, ListRegistrationsQuery, AdminCreateRegistrationInput, MarkRegistrationPaidInput } from '../validations/registration.validation.js';
 import {
   listRegistrationsQuerySchema,
   updateRegistrationStatusSchema,
   adminCreateRegistrationSchema,
+  markRegistrationPaidSchema,
 } from '../validations/registration.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
@@ -466,18 +468,45 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
   }
 
   if (input.type === 'attendee') {
-    const { scholarshipDiscount, ...rest } = input;
-    const isFullyComped = scholarshipDiscount === 100;
-    const willRequirePayment = !isFreeTicketCategory(rest.ticketCategory as TicketCategory) && !isFullyComped;
+    const { scholarshipDiscount, paymentMethod, paymentNote, ...rest } = input;
+    // Mutually exclusive — a comp (free seat) and a manual payment (a real,
+    // already-collected fee) are different things and shouldn't both apply;
+    // manual wins if somehow both are sent, since it implies money actually
+    // changed hands.
+    const isManuallyPaid = paymentMethod === 'manual';
+    const isFullyComped = !isManuallyPaid && scholarshipDiscount === 100;
+    const willRequirePayment = !isFreeTicketCategory(rest.ticketCategory as TicketCategory) && !isFullyComped && !isManuallyPaid;
+
+    // A manual payment is a REAL fee already collected outside Paystack (bank
+    // transfer, cash) — tracked as 'paid' with the real amount, never
+    // 'not_required' (that would misreport genuine revenue as a free comp in
+    // Payments/Reconciliation/analytics, which all key off paymentStatus/amountKobo).
+    const manualPaymentAmountKobo = isManuallyPaid
+      ? Math.round(priceForRegistration(rest.ticketCategory as TicketCategory, 1, scholarshipDiscount) * 100)
+      : undefined;
 
     let registration: HydratedDocument<RegistrationDoc>;
     try {
       registration = await Registration.create({
         ...rest,
         ...(scholarshipDiscount !== undefined && { discountPercent: scholarshipDiscount }),
-        ...(willRequirePayment
-          ? { paymentStatus: 'unpaid' }
-          : { status: 'confirmed', paymentStatus: 'not_required', qrToken: generateQrToken() }),
+        ...(isManuallyPaid
+          ? {
+              status: 'confirmed',
+              paymentStatus: 'paid',
+              paymentMethod: 'manual',
+              paymentNote,
+              // Never collides with (or is mistaken for) a real Paystack
+              // reference, which always starts "AIHS-" — see PAYMENT_METHODS'
+              // comment in enums.ts.
+              paymentReference: `MANUAL-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+              amountKobo: manualPaymentAmountKobo,
+              paidAt: new Date(),
+              qrToken: generateQrToken(),
+            }
+          : willRequirePayment
+            ? { paymentStatus: 'unpaid' }
+            : { status: 'confirmed', paymentStatus: 'not_required', qrToken: generateQrToken() }),
       });
     } catch (err) {
       if ((err as { code?: number }).code !== 11000) throw err;
@@ -491,6 +520,12 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
       resourceType: 'Registration',
       resourceId: registration.id,
     });
+
+    if (isManuallyPaid) {
+      void sendConfirmationAndTicketEmails(registration, { amountNaira: Math.round((registration.amountKobo ?? 0) / 100) });
+      res.status(201).json(new ApiResponse({ id: registration.id, status: registration.status, requiresPayment: false }));
+      return;
+    }
 
     if (!willRequirePayment) {
       void sendConfirmationAndTicketEmails(registration);
@@ -665,6 +700,59 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
     // them otherwise.
     void sendConfirmationAndTicketEmails(registration);
   }
+
+  res.json(new ApiResponse(registration));
+});
+
+// POST /admin/registrations/:id/mark-paid — same "already paid outside
+// Paystack" concept as adminCreate's isManuallyPaid branch above, applied to
+// an EXISTING pending/unpaid attendee registration (someone submitted the
+// public form, then paid by bank transfer/cash afterward) rather than one
+// created fresh. Route-gated to super_admin/registrations_officer only
+// (admin.routes.ts) — a financial action, not a content_editor concern.
+export const adminMarkPaid = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) {
+    throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
+  }
+  const { paymentNote } = markRegistrationPaidSchema.parse({ params: req.params, body: req.body }).body as MarkRegistrationPaidInput;
+  const registration = await Registration.findById(req.params.id);
+  if (!registration) {
+    throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
+  }
+  if (registration.type !== 'attendee') {
+    throw new ApiError(400, 'Only attendee registrations have a payment to mark.', 'NOT_PAYABLE');
+  }
+  if (registration.paymentStatus === 'paid') {
+    throw new ApiError(400, 'This registration is already marked paid.', 'ALREADY_PAID');
+  }
+  if (registration.paymentStatus === 'not_required') {
+    throw new ApiError(400, 'This registration never required payment.', 'PAYMENT_NOT_REQUIRED');
+  }
+
+  const before = { status: registration.status, paymentStatus: registration.paymentStatus };
+  const attendeeCount = 1 + (registration.groupAttendees?.length ?? 0);
+  const amountNaira = priceForRegistration(registration.ticketCategory as TicketCategory, attendeeCount, registration.discountPercent ?? undefined);
+
+  registration.status = 'confirmed';
+  registration.paymentStatus = 'paid';
+  registration.paymentMethod = 'manual';
+  registration.paymentNote = paymentNote;
+  registration.paymentReference = `MANUAL-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  registration.amountKobo = Math.round(amountNaira * 100);
+  registration.paidAt = new Date();
+  if (!registration.qrToken) registration.qrToken = generateQrToken();
+  await registration.save();
+
+  await recordAudit({
+    req,
+    action: 'registration.marked_paid_manual',
+    resourceType: 'Registration',
+    resourceId: registration.id,
+    before,
+    after: { status: registration.status, paymentStatus: registration.paymentStatus, paymentNote },
+  });
+
+  void sendConfirmationAndTicketEmails(registration, { amountNaira: Math.round((registration.amountKobo ?? 0) / 100) });
 
   res.json(new ApiResponse(registration));
 });

@@ -6,6 +6,7 @@ import {
   TICKET_CATEGORIES,
   BOOTH_SIZES,
   PAYMENT_STATUSES,
+  PAYMENT_METHODS,
   ACCESS_CODE_DISCOUNTS,
 } from '../types/enums.js';
 
@@ -113,6 +114,13 @@ const registrationSchema = new Schema(
     paymentInitializedAt: { type: Date },
     amountKobo: { type: Number },
     paidAt: { type: Date },
+    // Set only when paymentStatus is 'paid' — see PAYMENT_METHODS' comment in
+    // enums.ts. Undefined for every free/comped/non-attendee registration,
+    // same as paymentReference/amountKobo/paidAt above.
+    paymentMethod: { type: String, enum: PAYMENT_METHODS },
+    // Admin's freeform note for a 'manual' payment (e.g. a bank transfer
+    // reference) — optional, since the admin may not always have one on hand.
+    paymentNote: { type: String, trim: true, maxlength: 500 },
 
     // Check-in — QR token is generated once a registration first becomes eligible
     // for entry (paid, or confirmed free/volunteer) and printed on the delegate's

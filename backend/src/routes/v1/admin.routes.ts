@@ -125,6 +125,13 @@ router.post(
   requireRole('super_admin', 'registrations_officer'),
   registrationController.adminBulkSendPaymentReminders
 );
+// A financial action (marks a real payment collected outside Paystack), same
+// role scope as bulk-payment-reminder above — not content_editor territory.
+router.post(
+  '/registrations/:id/mark-paid',
+  requireRole('super_admin', 'registrations_officer'),
+  registrationController.adminMarkPaid
+);
 // Same role scope as PATCH /registrations/:id above (content_editor's own
 // access is volunteer-only either way, since this endpoint only ever touches
 // type: 'volunteer' records) — a bulk version of the exact same "confirm this

@@ -23,7 +23,7 @@ const SAFE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 // already-issued STAFF-XXXXXX codes keep working unchanged, since this is
 // just cosmetic prefix text baked in at generation time, not the stored
 // AccessCodeType value itself.
-const PREFIX: Record<AccessCodeType, string> = { volunteer: 'VOL', keynote_speaker: 'SPK', complimentary: 'COMP', scholarship: 'SCH', staff: 'ORG', promo: 'PROMO' };
+const PREFIX: Record<AccessCodeType, string> = { volunteer: 'VOL', keynote_speaker: 'SPK', complimentary: 'COMP', scholarship: 'SCH', staff: 'ORG', promo: 'PROMO', abstract_presenter: 'PRES' };
 
 export const generateCode = (type: AccessCodeType): string => {
   const random = Array.from({ length: 6 }, () => SAFE_ALPHABET[crypto.randomInt(SAFE_ALPHABET.length)]).join('');
