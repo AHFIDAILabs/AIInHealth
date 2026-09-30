@@ -25,6 +25,7 @@ import innovationShowcaseEntryRoutes from './innovationShowcaseEntry.routes.js';
 import aiRoutes from './ai.routes.js';
 import policyTrackerRoutes from './policyTracker.routes.js';
 import scholarshipApplicationRoutes from './scholarshipApplication.routes.js';
+import promoRoutes from './promo.routes.js';
 
 const router = Router();
 
@@ -54,5 +55,6 @@ router.use('/innovation-showcase-entries', innovationShowcaseEntryRoutes);
 router.use('/ai', aiRoutes);
 router.use('/policy-tracker', policyTrackerRoutes);
 router.use('/scholarship-applications', scholarshipApplicationRoutes);
+router.use('/promo', promoRoutes);
 
 export default router;

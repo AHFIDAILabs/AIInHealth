@@ -206,6 +206,33 @@ export const scholarshipUploadLimiter = rateLimit({
 // asking 5 real questions in 15 minutes is generous; a bot loop hitting this
 // unbounded could exhaust the whole day's budget for every other AI feature
 // in minutes.
+// promo.controller.ts's public issueToken — hit automatically by the landing
+// page's banner widget once per "pass" (every ~45-100s per visitor), no email
+// in the request yet to key on. IP-only; the real abuse guard is the token's
+// own short TTL + single-use, not this ceiling — this just blunts a scripted
+// harvesting loop.
+export const promoTokenLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many requests. Try again shortly.' } },
+  handler: onLimitExceeded('promoTokenLimiter', 'medium'),
+});
+
+// promo.controller.ts's public claim — this one actually mints a 100%-off
+// access code, so it's the highest-value public endpoint in the app to leave
+// unbounded. Email+IP keyed like the other claim/registration limiters.
+export const promoClaimLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: emailKey,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many attempts. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('promoClaimLimiter', 'high'),
+});
+
 export const askAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

@@ -8,6 +8,12 @@ export const generateQrToken = (): string => crypto.randomBytes(24).toString('ba
 export const qrDataUrlForToken = (token: string): Promise<string> =>
   QRCode.toDataURL(token, { margin: 1, width: 320, errorCorrectionLevel: 'M' });
 
+// Same rendering, but for encoding a full claimable URL (promo.controller.ts's
+// banner QR) rather than a bare check-in token — a stock phone camera app
+// opens a URL directly, but has no idea what to do with an opaque token string.
+export const qrDataUrlForUrl = (url: string): Promise<string> =>
+  QRCode.toDataURL(url, { margin: 1, width: 320, errorCorrectionLevel: 'M' });
+
 // Raw PNG bytes for the SAME QR image, for email.service.ts's sendTicketQrEmail —
 // a data: URI `<img src>` (what qrDataUrlForToken above is for) renders fine in a
 // live web page, but several major email clients (Outlook's Win32/Word-engine

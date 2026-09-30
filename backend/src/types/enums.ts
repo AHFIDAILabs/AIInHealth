@@ -150,12 +150,17 @@ export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 // involved at all — see EventTeamMember.model.ts). Naming them both "team"
 // would conflate two unrelated mechanisms; an admin generates one of these
 // per staff member and sends it to them, same as a scholarship code.
-export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship', 'staff'] as const;
+// 'promo' is the QR-banner giveaway campaign (promo.controller.ts) — a public,
+// unauthenticated visitor claims one directly (no admin ever generates these),
+// always 100% off, and — unlike 'staff' — NOT bound to any specific ticket
+// category, so it behaves like keynote_speaker/complimentary: redeemable
+// against whichever category the winner actually picks.
+export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo'] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
 
 // The subset of ACCESS_CODE_TYPES redeemable on the attendee registration form —
 // see registration.controller.ts's create().
-export const ATTENDEE_ACCESS_CODE_TYPES = ['keynote_speaker', 'complimentary', 'scholarship', 'staff'] as const;
+export const ATTENDEE_ACCESS_CODE_TYPES = ['keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo'] as const;
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;
 export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];

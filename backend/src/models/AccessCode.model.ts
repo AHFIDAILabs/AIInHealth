@@ -13,7 +13,10 @@ const accessCodeSchema = new Schema(
     sentAt: { type: Date }, // last time the code was emailed to issuedTo
     usedByRegistration: { type: Schema.Types.ObjectId, ref: 'Registration' },
     usedAt: { type: Date },
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    // Optional — every admin-generated code has one (accessCode.controller.ts's
+    // adminGenerate), but a 'promo' code is self-issued by an anonymous public
+    // claim (promo.controller.ts) with no admin/user behind it at all.
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     expiresAt: { type: Date },
     // scholarship-type only — the % knocked off the attendee's ticket price when
     // this code is redeemed (registration.controller.ts). Required-when-scholarship

@@ -14,6 +14,7 @@ import * as pushController from '../../controllers/push.controller.js';
 import * as jobController from '../../controllers/job.controller.js';
 import * as accessCodeController from '../../controllers/accessCode.controller.js';
 import * as scholarshipApplicationController from '../../controllers/scholarshipApplication.controller.js';
+import * as promoController from '../../controllers/promo.controller.js';
 import * as innovationController from '../../controllers/innovation.controller.js';
 import * as checkinController from '../../controllers/checkin.controller.js';
 import * as delegateAnnouncementController from '../../controllers/delegateAnnouncement.controller.js';
@@ -201,6 +202,12 @@ router.delete('/volunteer-tracks/:id', requireRole('super_admin', 'registrations
 
 router.get('/volunteer-settings', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerSettingsController.adminGet);
 router.put('/volunteer-settings', requireRole('super_admin', 'registrations_officer', 'content_editor'), validate(setVolunteerSettingsSchema), volunteerSettingsController.adminSet);
+
+// super_admin only — launching this starts a real, uncapped-quantity 100%-off
+// giveaway running for a fixed 10 days, a financial decision distinct from
+// every other role's normal content/registrations scope.
+router.get('/promo/status', requireRole('super_admin'), promoController.adminStatus);
+router.post('/promo/launch', requireRole('super_admin'), promoController.adminLaunch);
 
 router.get('/exhibitors-stats', requireRole('super_admin', 'registrations_officer', 'viewer'), exhibitorController.adminStats);
 router.get('/exhibitors-analytics', requireRole('super_admin', 'registrations_officer', 'viewer'), exhibitorController.adminAnalytics);

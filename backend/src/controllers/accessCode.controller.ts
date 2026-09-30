@@ -18,7 +18,7 @@ import type { AccessCodeType } from '../types/enums.js';
 // Excludes visually ambiguous characters (0/O, 1/I/L) since these get read aloud,
 // hand-copied, and typed on a phone keyboard by volunteers at a registration desk.
 const SAFE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-const PREFIX: Record<AccessCodeType, string> = { volunteer: 'VOL', keynote_speaker: 'SPK', complimentary: 'COMP', scholarship: 'SCH', staff: 'STAFF' };
+const PREFIX: Record<AccessCodeType, string> = { volunteer: 'VOL', keynote_speaker: 'SPK', complimentary: 'COMP', scholarship: 'SCH', staff: 'STAFF', promo: 'PROMO' };
 
 export const generateCode = (type: AccessCodeType): string => {
   const random = Array.from({ length: 6 }, () => SAFE_ALPHABET[crypto.randomInt(SAFE_ALPHABET.length)]).join('');

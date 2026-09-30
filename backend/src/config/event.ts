@@ -18,3 +18,10 @@ export const REVIEWER_ACCESS_CODE_EXPIRES_AT = new Date(EVENT_END_DATE.getTime()
 // reused from the reviewer one above) so the two policies can diverge later
 // without one silently dragging the other along.
 export const DELEGATE_ACCESS_CODE_EXPIRES_AT = new Date(EVENT_END_DATE.getTime() + ONE_WEEK_MS);
+
+// QR-banner promo campaign (promo.controller.ts) — fixed 10-day duration once
+// launched. Deliberately NOT a fixed calendar date here: an admin starts the
+// clock explicitly via POST /admin/promo/launch (PromoSettings.model.ts),
+// same "management decides when" reasoning as VolunteerSettings' open/closed
+// toggle, rather than this baking in a guessed launch date at deploy time.
+export const PROMO_CAMPAIGN_DURATION_MS = 10 * 24 * 60 * 60 * 1000;

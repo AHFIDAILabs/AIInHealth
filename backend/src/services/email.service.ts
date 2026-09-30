@@ -265,6 +265,25 @@ export const sendSponsorshipDeclinedEmail = async (to: string, fullName: string)
   });
 };
 
+// promo.controller.ts's public claim — deliberately its own copy (not
+// sendAccessCodeEmail's generic "you've been selected as a..." wording,
+// which doesn't fit an instant-win giveaway) and always 100%, so unlike that
+// function this never takes a discountPercent argument.
+export const sendPromoCodeEmail = async (to: string, code: string): Promise<void> => {
+  const registerUrl = `${env.FRONTEND_ORIGIN}/register`;
+  await sendEmail({
+    to,
+    subject: "You caught it! Your free AI in Health Summit 2026 registration",
+    html: `
+      <p>Nice catch — you scanned the QR banner in time, and you've won a free registration to the AI in Health Summit 2026 (100% off).</p>
+      <p>Your access code is: <strong style="font-size: 18px; letter-spacing: 1px;">${code}</strong></p>
+      <p>Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, and enter this code — it covers your registration fee in full, no payment needed. It's tied to this email address, so please register using ${to}.</p>
+      <p>This code is single-use — once redeemed, it can't be used again.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 export const sendPasswordResetEmail = async (to: string, resetUrl: string): Promise<void> => {
   await sendEmail({
     to,
