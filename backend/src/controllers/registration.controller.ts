@@ -333,6 +333,21 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
+  // The QR-banner promo giveaway is deliberately excluded from VIP —
+  // management's premium tier shouldn't be handed out via an anonymous
+  // public scan-and-claim mechanic the way an ordinary paid category can be.
+  // Every other category (nigerian_professional, student_researcher,
+  // international_delegate, government_official, accredited_media) is
+  // unaffected — a promo code still comps those in full, same as any other
+  // non-scholarship attendee code.
+  if (!recentDuplicate && input.type === 'attendee' && input.ticketCategory === 'vip' && redeemedCode?.type === 'promo') {
+    throw new ApiError(
+      422,
+      'The promo code cannot be used for the VIP ticket category. It works for every other category (e.g. Nigerian Professional, Student/Researcher, International Delegate).',
+      'PROMO_NOT_VALID_FOR_VIP'
+    );
+  }
+
   // Paid ticket categories start life unpaid — payment.controller.ts's initialize
   // flips this to 'paid'/'confirmed' once Paystack verifies the charge. Free
   // categories (government_official, accredited_media), and any fully-comped
