@@ -31,6 +31,7 @@ import { Gallery } from './pages/public/Gallery';
 import { AboutAhfid } from './pages/public/AboutAhfid';
 import { Register } from './pages/public/Register';
 import { PaymentCallback } from './pages/public/PaymentCallback';
+import { PromoClaim } from './pages/public/PromoClaim';
 import { AbstractSubmission } from './pages/public/AbstractSubmission';
 import { ScholarshipApplication } from './pages/public/ScholarshipApplication';
 import { TeamRegistration } from './pages/public/TeamRegistration';
@@ -110,6 +111,7 @@ function App() {
             <Route path="/about-ahfid" element={<AboutAhfid />} />
             <Route path="/register" element={<Register />} />
             <Route path="/register/payment-callback" element={<PaymentCallback />} />
+            <Route path="/promo/claim" element={<PromoClaim />} />
             <Route path="/abstracts/submit" element={<AbstractSubmission />} />
             <Route path="/sponsored-delegates" element={<ScholarshipApplication />} />
             <Route path="/team/register" element={<TeamRegistration />} />

@@ -6,10 +6,12 @@ import { getApiErrorMessage } from '../../services/api';
 import { AdminInput, AdminToggle } from '../../components/ui/AdminField';
 import { Banner } from '../../components/ui/Banner';
 import { ImagePicker } from '../../components/ui/ImagePicker';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadAdminImage } from '../../services/upload.service';
 import { fetchAdminVolunteerSettings, setVolunteerApplicationsOpen } from '../../services/volunteerSettings.service';
+import { adminFetchPromoStatus, adminLaunchPromoCampaign, type PromoStatus } from '../../services/promo.service';
 
 // Same roles that manage Volunteers elsewhere (Registrations' Volunteers
 // filter, Volunteer Tracks) — not the personal-account roles above, this is
@@ -136,6 +138,14 @@ export const SettingsPage = () => {
   const [volunteerOpen, setVolunteerOpenState] = useState<boolean | null>(null);
   const [volunteerBusy, setVolunteerBusy] = useState(false);
 
+  // A real, uncapped-quantity 100%-off giveaway running for a fixed 10 days
+  // once launched — restricted to super_admin, distinct from the broader
+  // registrations_officer/content_editor scope every other card above allows.
+  const canManagePromo = user?.role === 'super_admin';
+  const [promoStatus, setPromoStatus] = useState<PromoStatus | null>(null);
+  const [promoLaunching, setPromoLaunching] = useState(false);
+  const [confirmLaunchOpen, setConfirmLaunchOpen] = useState(false);
+
   useEffect(() => {
     if (!canManageVolunteerSettings) return;
     fetchAdminVolunteerSettings()
@@ -155,6 +165,29 @@ export const SettingsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setVolunteerBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!canManagePromo) return;
+    adminFetchPromoStatus()
+      .then(setPromoStatus)
+      .catch((err) => toast('error', getApiErrorMessage(err)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManagePromo]);
+
+  const launchPromo = async () => {
+    setPromoLaunching(true);
+    try {
+      await adminLaunchPromoCampaign();
+      const refreshed = await adminFetchPromoStatus();
+      setPromoStatus(refreshed);
+      setConfirmLaunchOpen(false);
+      toast('success', 'QR promo campaign launched — live for the next 10 days');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setPromoLaunching(false);
     }
   };
 
@@ -280,6 +313,53 @@ export const SettingsPage = () => {
           </div>
         </div>
       )}
+
+      {/* super_admin only — a real, uncapped-quantity 100%-off giveaway
+          running for a fixed 10 days once launched, distinct from every
+          other content/registrations-scoped setting above. */}
+      {canManagePromo && (
+        <div className="mt-6 rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">QR Promo Campaign</p>
+          <div className="mt-4">
+            {promoStatus === null ? (
+              <p className="text-sm text-slate-400">Loading…</p>
+            ) : promoStatus.startedAt ? (
+              <>
+                <p className="text-[13px] font-semibold text-navy">
+                  {promoStatus.active ? (
+                    <span className="text-success">Live — {promoStatus.daysRemaining} day(s) remaining</span>
+                  ) : (
+                    <span className="text-slate-400">Ended</span>
+                  )}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">{promoStatus.claimedCount} code(s) claimed so far.</p>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setConfirmLaunchOpen(true)}
+                  className="rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-orange-hover"
+                >
+                  Launch QR Promo Campaign
+                </button>
+                <p className="mt-2 text-xs text-slate-400">
+                  Starts the landing page's drifting QR banner and its fixed 10-day claim window immediately. This can't be
+                  undone or paused once started.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmLaunchOpen}
+        title="Launch the QR promo campaign?"
+        description="This immediately starts a 10-day window where anyone who scans the landing page's QR banner gets a free (100% off) registration code. This can't be undone or paused once started."
+        loading={promoLaunching}
+        onConfirm={launchPromo}
+        onCancel={() => setConfirmLaunchOpen(false)}
+      />
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { Reveal } from '../../components/ui/Reveal';
 import { SEO } from '../../components/seo/SEO';
 import { buildEventJsonLd, buildOrganizationJsonLd } from '../../lib/seo';
 import { SpeakersGrid } from '../../components/home/SpeakersGrid';
+import { PromoBanner } from '../../components/home/PromoBanner';
 import { SummitProgramme } from '../../components/home/SummitProgramme';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase';
 import { CountdownCard } from '../../components/home-v2/CountdownCard';
@@ -41,6 +42,7 @@ export const HomeMain = () => {
         path="/"
         structuredData={[buildEventJsonLd(), buildOrganizationJsonLd()]}
       />
+      <PromoBanner />
       {/* Cancels PublicLayout's <main> padding-top (there so plain content
           pages clear the fixed nav) — this hero wants the photo to run
           full-bleed behind that transparent nav instead, all the way to the

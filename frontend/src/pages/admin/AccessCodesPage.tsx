@@ -28,6 +28,11 @@ const TYPE_LABEL: Record<AccessCodeType, string> = {
   complimentary: 'Complimentary',
   scholarship: 'Scholarship (Discount)',
   staff: 'Team / Staff',
+  // Never actually generated here in practice (see promo.controller.ts's
+  // public claim), but included so this list still renders a real label
+  // instead of a blank cell for the codes that claim mints, and so an admin
+  // *could* hand-mint a one-off if they ever needed to.
+  promo: 'Promo Banner',
 };
 
 const STATUS_STYLE: Record<AccessCodeStatus, string> = {
