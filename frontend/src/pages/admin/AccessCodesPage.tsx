@@ -33,6 +33,7 @@ const TYPE_LABEL: Record<AccessCodeType, string> = {
   // instead of a blank cell for the codes that claim mints, and so an admin
   // *could* hand-mint a one-off if they ever needed to.
   promo: 'Promo Banner',
+  abstract_presenter: 'Abstract Presenter',
 };
 
 const STATUS_STYLE: Record<AccessCodeStatus, string> = {

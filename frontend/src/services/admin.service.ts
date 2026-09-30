@@ -37,6 +37,11 @@ export interface AdminRegistration {
   paymentReference?: string;
   amountKobo?: number;
   paidAt?: string;
+  // Set only when paymentStatus is 'paid' — distinguishes a real
+  // Paystack-verified charge from an admin manually marking it paid (bank
+  // transfer, cash, etc.). See backend enums.ts's PAYMENT_METHODS comment.
+  paymentMethod?: 'paystack' | 'manual';
+  paymentNote?: string;
   checkedIn?: boolean;
   checkedInAt?: string;
   // Self-uploaded via the delegate portal — primarily for volunteer/staff
@@ -224,6 +229,13 @@ export interface AdminCreateAttendeePayload {
   jobTitle?: string;
   country: string;
   scholarshipDiscount?: 10 | 25 | 50 | 100;
+  // 'manual' — already paid outside Paystack (bank transfer, cash, etc.):
+  // skips the payment-link email, confirms immediately, and is tracked as a
+  // real 'paid' payment (not a comp) for accurate revenue reporting. Mutually
+  // exclusive with scholarshipDiscount — the admin UI only shows one or the
+  // other. Omitted/'paystack' is today's default behavior.
+  paymentMethod?: 'paystack' | 'manual';
+  paymentNote?: string;
 }
 
 export interface AdminCreateExhibitorPayload {
@@ -288,6 +300,15 @@ export const adminCreateRegistration = async (
   input: AdminCreateRegistrationPayload
 ): Promise<AdminCreateRegistrationResult> => {
   const res = await api.post<{ success: true; data: AdminCreateRegistrationResult }>('/admin/registrations', input);
+  return res.data.data;
+};
+
+// Marks an EXISTING pending/unpaid attendee registration as paid outside
+// Paystack (bank transfer, cash, etc.) — same end state as adminCreateRegistration's
+// paymentMethod: 'manual' path, just applied to a registration that already
+// exists. paymentNote is optional.
+export const adminMarkRegistrationPaid = async (id: string, paymentNote?: string): Promise<AdminRegistration> => {
+  const res = await api.post<{ success: true; data: AdminRegistration }>(`/admin/registrations/${id}/mark-paid`, { paymentNote });
   return res.data.data;
 };
 

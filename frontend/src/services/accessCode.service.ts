@@ -1,6 +1,6 @@
 import { api } from './api';
 
-export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo'] as const;
+export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo', 'abstract_presenter'] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;

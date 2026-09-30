@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CreditCard, Send, Search, Download, Wallet, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { CreditCard, Send, Search, Download, Wallet, CheckCircle2, Clock, XCircle, BadgeCheck } from 'lucide-react';
 import {
   listRegistrations,
   bulkSendPaymentReminders,
   exportRegistrationsUrl,
   fetchPaymentStats,
+  adminMarkRegistrationPaid,
   type AdminRegistration,
   type PaymentStats,
 } from '../../services/admin.service';
@@ -14,6 +16,7 @@ import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { AdminInput } from '../../components/ui/AdminField';
 import { AnalyticsStatCard } from './analytics/AnalyticsStatCard';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -53,6 +56,9 @@ export const PaymentsPage = () => {
   const [stats, setStats] = useState<PaymentStats | null>(null);
   const [confirmRemind, setConfirmRemind] = useState(false);
   const [sendingReminders, setSendingReminders] = useState(false);
+  const [markPaidTarget, setMarkPaidTarget] = useState<AdminRegistration | null>(null);
+  const [markPaidNote, setMarkPaidNote] = useState('');
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -103,6 +109,23 @@ export const PaymentsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setSendingReminders(false);
+    }
+  };
+
+  const markPaid = async () => {
+    if (!markPaidTarget) return;
+    setMarkingPaid(true);
+    try {
+      await adminMarkRegistrationPaid(markPaidTarget._id, markPaidNote.trim() || undefined);
+      toast('success', `${markPaidTarget.fullName || 'Registration'} marked paid — confirmation and ticket emails sent.`);
+      setMarkPaidTarget(null);
+      setMarkPaidNote('');
+      load();
+      refreshStats();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setMarkingPaid(false);
     }
   };
 
@@ -216,6 +239,7 @@ export const PaymentsPage = () => {
                   <th className="px-3 py-3 font-semibold">Status</th>
                   <th className="px-3 py-3 font-semibold">Reference</th>
                   <th className="px-3 py-3 font-semibold">Paid At</th>
+                  <th className="px-3 py-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -231,9 +255,27 @@ export const PaymentsPage = () => {
                       <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${STATUS_BADGE[r.paymentStatus ?? 'not_required']}`}>
                         {r.paymentStatus ?? 'not_required'}
                       </span>
+                      {r.paymentMethod === 'manual' && (
+                        <span className="ml-1.5 rounded-full bg-info/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-info">
+                          Manual
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-3 font-mono text-xs text-slate-400">{r.paymentReference ?? '—'}</td>
                     <td className="px-3 py-3 text-slate-500">{r.paidAt ? new Date(r.paidAt).toLocaleString() : '—'}</td>
+                    <td className="px-3 py-3">
+                      {(r.paymentStatus === 'unpaid' || r.paymentStatus === 'failed') && (
+                        <button
+                          onClick={() => {
+                            setMarkPaidTarget(r);
+                            setMarkPaidNote('');
+                          }}
+                          className="flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12px] font-semibold text-navy hover:border-orange/40"
+                        >
+                          <BadgeCheck size={13} /> Mark Paid
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -276,6 +318,64 @@ export const PaymentsPage = () => {
         onConfirm={sendReminders}
         onCancel={() => setConfirmRemind(false)}
       />
+
+      {/* Custom (not ConfirmDialog) — needs an editable note field alongside
+          the confirmation, which ConfirmDialog's plain-text description
+          can't offer. Same overlay/card visual treatment for consistency. */}
+      <AnimatePresence>
+        {markPaidTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-navy/50 p-4"
+            onClick={() => setMarkPaidTarget(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-success/10 text-success">
+                <BadgeCheck size={20} />
+              </span>
+              <h2 className="mt-4 font-display text-lg font-semibold text-navy">
+                Mark {markPaidTarget.fullName || 'this registration'} as paid?
+              </h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
+                Confirms the registration and sends the same confirmation + QR ticket email a Paystack payment would — no
+                payment link is sent. This can't be undone from here.
+              </p>
+              <div className="mt-4">
+                <AdminInput
+                  label="Payment Note (optional)"
+                  placeholder="e.g. Bank transfer, ref #123 — leave blank if you don't have one"
+                  value={markPaidNote}
+                  onChange={(e) => setMarkPaidNote(e.target.value)}
+                />
+              </div>
+              <div className="mt-6 flex justify-end gap-2.5">
+                <button
+                  onClick={() => setMarkPaidTarget(null)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-[13px] font-semibold text-navy hover:bg-offwhite"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={markPaid}
+                  disabled={markingPaid}
+                  className="rounded-lg bg-orange px-4 py-2 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
+                >
+                  {markingPaid ? 'Please wait…' : 'Mark Paid'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

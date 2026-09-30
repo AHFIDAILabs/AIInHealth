@@ -261,7 +261,7 @@ export const AttendeeForm = () => {
               <p className="mt-1.5 text-xs text-slate-400">
                 {ticketCategory === 'staff'
                   ? "Enter the organizer code the organizing team sent you — it's tied to this exact email address."
-                  : "Have a scholarship, keynote speaker, complimentary, or promo code? Enter it here. It's checked and applied automatically before you're sent to payment."}
+                  : "Have a scholarship, keynote speaker, complimentary, abstract presenter, or promo code? Enter it here. It's checked and applied automatically before you're sent to payment."}
               </p>
               {ticketCategory === 'vip' && (
                 <p className="mt-1 text-xs text-slate-400">

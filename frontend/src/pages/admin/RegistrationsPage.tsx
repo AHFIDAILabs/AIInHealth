@@ -48,6 +48,8 @@ interface AddFormState {
   // attendee
   ticketCategory: TicketCategory;
   scholarshipDiscount: '' | 10 | 25 | 50 | 100;
+  paymentMethod: 'paystack' | 'manual';
+  paymentNote: string;
   fullName: string;
   email: string;
   phone: string;
@@ -73,6 +75,8 @@ const EMPTY_ADD_FORM: AddFormState = {
   type: 'attendee',
   ticketCategory: 'nigerian_professional',
   scholarshipDiscount: '',
+  paymentMethod: 'paystack',
+  paymentNote: '',
   fullName: '',
   email: '',
   phone: '',
@@ -359,7 +363,9 @@ export const RegistrationsPage = () => {
         organization: addForm.organization.trim() || undefined,
         jobTitle: addForm.jobTitle.trim() || undefined,
         country: addForm.country.trim(),
-        scholarshipDiscount: addForm.scholarshipDiscount || undefined,
+        scholarshipDiscount: addForm.paymentMethod === 'manual' ? undefined : addForm.scholarshipDiscount || undefined,
+        paymentMethod: addForm.paymentMethod === 'manual' ? 'manual' : undefined,
+        paymentNote: addForm.paymentMethod === 'manual' ? addForm.paymentNote.trim() || undefined : undefined,
       };
     } else if (addForm.type === 'volunteer') {
       if (!addForm.fullName.trim() || !addForm.email.trim() || !addForm.phone.trim()) {
@@ -961,6 +967,30 @@ export const RegistrationsPage = () => {
 
                     {!isFreeTicketCategory(addForm.ticketCategory) && (
                       <div>
+                        <p className="mb-1.5 text-[13px] font-semibold text-navy">Payment</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setAddForm({ ...addForm, paymentMethod: 'paystack', paymentNote: '' })}
+                            className={`flex-1 rounded-lg border px-3 py-2 text-[13px] font-semibold transition-colors ${
+                              addForm.paymentMethod === 'paystack' ? 'border-orange bg-orange/10 text-orange' : 'border-slate-200 text-slate-500'
+                            }`}
+                          >
+                            Paystack Link
+                          </button>
+                          <button
+                            onClick={() => setAddForm({ ...addForm, paymentMethod: 'manual', scholarshipDiscount: '' })}
+                            className={`flex-1 rounded-lg border px-3 py-2 text-[13px] font-semibold transition-colors ${
+                              addForm.paymentMethod === 'manual' ? 'border-orange bg-orange/10 text-orange' : 'border-slate-200 text-slate-500'
+                            }`}
+                          >
+                            Already Paid
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!isFreeTicketCategory(addForm.ticketCategory) && addForm.paymentMethod === 'paystack' && (
+                      <div>
                         <p className="mb-1.5 text-[13px] font-semibold text-navy">Scholarship</p>
                         <div className="flex gap-2">
                           <button
@@ -987,6 +1017,21 @@ export const RegistrationsPage = () => {
                           {addForm.scholarshipDiscount === 100
                             ? 'Fully covered — confirmed immediately, no payment needed.'
                             : 'Anything less than 100% still needs payment — a Paystack link is emailed automatically.'}
+                        </p>
+                      </div>
+                    )}
+
+                    {!isFreeTicketCategory(addForm.ticketCategory) && addForm.paymentMethod === 'manual' && (
+                      <div>
+                        <AdminInput
+                          label="Payment Note (optional)"
+                          placeholder="e.g. Bank transfer, ref #123 — leave blank if you don't have one"
+                          value={addForm.paymentNote}
+                          onChange={(e) => setAddForm({ ...addForm, paymentNote: e.target.value })}
+                        />
+                        <p className="mt-1.5 text-xs text-slate-400">
+                          Confirmed immediately at full price ({formatNaira(TICKET_PRICE_NGN[addForm.ticketCategory])}) — no Paystack link is
+                          sent. They'll get the same confirmation + QR ticket email as any other confirmed attendee.
                         </p>
                       </div>
                     )}
