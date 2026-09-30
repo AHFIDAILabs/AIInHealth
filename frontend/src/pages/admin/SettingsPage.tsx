@@ -356,6 +356,8 @@ export const SettingsPage = () => {
         open={confirmLaunchOpen}
         title="Launch the QR promo campaign?"
         description="This immediately starts a 10-day window where anyone who scans the landing page's QR banner gets a free (100% off) registration code. This can't be undone or paused once started."
+        confirmLabel="Launch"
+        danger={false}
         loading={promoLaunching}
         onConfirm={launchPromo}
         onCancel={() => setConfirmLaunchOpen(false)}
