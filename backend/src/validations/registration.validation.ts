@@ -121,7 +121,7 @@ const registrationUnion = z
       ctx.addIssue({
         code: 'custom',
         path: ['accessCode'],
-        message: 'Enter the staff access code you were sent to register with this ticket category.',
+        message: 'Enter the organizer access code you were sent to register with this ticket category.',
       });
     }
   });

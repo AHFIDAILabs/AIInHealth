@@ -175,8 +175,11 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
       ? `You've been awarded a scholarship covering <strong>${discountPercent}%</strong> of your attendee registration fee for the AI in Health Summit 2026.`
       : type === 'staff'
         // "Selected as a staff member" was redundant — being staff already
-        // implies that. A plain, direct line reads better here.
-        ? `You've been added to the AI in Health Summit 2026 event team.`
+        // implies that. A plain, direct line reads better here. User-facing
+        // wording says "Organizer" (management's preferred badge/tag term)
+        // even though the underlying AccessCode/TicketCategory value stays
+        // 'staff' internally — see enums.ts's comment on that choice.
+        ? `You've been added to the AI in Health Summit 2026 as an Organizer.`
         : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
 
   // 'volunteer' redeems on the Volunteer tab; the other three (scholarship,

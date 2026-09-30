@@ -328,7 +328,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   if (!recentDuplicate && input.type === 'attendee' && input.ticketCategory === 'staff' && redeemedCode?.type !== 'staff') {
     throw new ApiError(
       422,
-      'The Team / Staff ticket category requires a valid staff access code. Contact the organizing team if you don\'t have one.',
+      'The Organizer ticket category requires a valid organizer access code. Contact the organizing team if you don\'t have one.',
       'STAFF_ACCESS_CODE_REQUIRED'
     );
   }
