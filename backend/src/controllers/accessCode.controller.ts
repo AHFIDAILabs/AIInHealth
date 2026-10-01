@@ -23,7 +23,16 @@ const SAFE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 // already-issued STAFF-XXXXXX codes keep working unchanged, since this is
 // just cosmetic prefix text baked in at generation time, not the stored
 // AccessCodeType value itself.
-const PREFIX: Record<AccessCodeType, string> = { volunteer: 'VOL', keynote_speaker: 'SPK', complimentary: 'COMP', scholarship: 'SCH', staff: 'ORG', promo: 'PROMO', abstract_presenter: 'PRES' };
+const PREFIX: Record<AccessCodeType, string> = {
+  volunteer: 'VOL',
+  keynote_speaker: 'SPK',
+  complimentary: 'COMP',
+  scholarship: 'SCH',
+  staff: 'ORG',
+  promo: 'PROMO',
+  abstract_presenter: 'PRES',
+  abstract_reviewer: 'REV',
+};
 
 export const generateCode = (type: AccessCodeType): string => {
   const random = Array.from({ length: 6 }, () => SAFE_ALPHABET[crypto.randomInt(SAFE_ALPHABET.length)]).join('');
@@ -86,6 +95,7 @@ export const adminGenerate = catchAsync(async (req: Request, res: Response) => {
     issuedTo: { $in: input.emails },
     status: 'unused',
     ...(input.type === 'scholarship' && { discountPercent: input.discountPercent }),
+    ...(input.type === 'abstract_presenter' && { presentationType: input.presentationType }),
   });
   const existingByEmail = new Map(existing.map((c) => [c.issuedTo, c]));
   const newEmails = input.emails.filter((email) => !existingByEmail.has(email));
@@ -103,6 +113,7 @@ export const adminGenerate = catchAsync(async (req: Request, res: Response) => {
       expiresAt: input.expiresAt,
       createdBy: req.user!.sub,
       ...(input.type === 'scholarship' && { discountPercent: input.discountPercent }),
+      ...(input.type === 'abstract_presenter' && { presentationType: input.presentationType }),
     });
   }
 
@@ -122,6 +133,7 @@ export const adminGenerate = catchAsync(async (req: Request, res: Response) => {
         issuedTo: { $in: newEmails },
         status: 'unused',
         ...(input.type === 'scholarship' && { discountPercent: input.discountPercent }),
+        ...(input.type === 'abstract_presenter' && { presentationType: input.presentationType }),
       });
     }
   }
@@ -133,7 +145,7 @@ export const adminGenerate = catchAsync(async (req: Request, res: Response) => {
       action: 'access_code.generated',
       resourceType: 'AccessCode',
       resourceId: created[0]?.id ?? 'batch',
-      after: { type: input.type, emails: newEmails, discountPercent: input.discountPercent },
+      after: { type: input.type, emails: newEmails, discountPercent: input.discountPercent, presentationType: input.presentationType },
     });
   }
 
@@ -143,7 +155,14 @@ export const adminGenerate = catchAsync(async (req: Request, res: Response) => {
   // admin retrying "Generate" for them is a reasonable signal they still want it
   // delivered; the per-row "Resend" button covers one-off follow-ups.
   sendBatch(
-    result.map((c) => ({ _id: c._id, issuedTo: c.issuedTo, type: c.type, code: c.code, discountPercent: c.discountPercent ?? undefined }))
+    result.map((c) => ({
+      _id: c._id,
+      issuedTo: c.issuedTo,
+      type: c.type,
+      code: c.code,
+      discountPercent: c.discountPercent ?? undefined,
+      presentationType: c.presentationType ?? undefined,
+    }))
   ).catch((err) => logger.error({ err }, 'Batch access code send failed'));
 
   res.status(created.length > 0 ? 201 : 200).json(new ApiResponse(result));
@@ -173,7 +192,7 @@ export const adminSend = catchAsync(async (req: Request, res: Response) => {
   if (isContentEditor(req) && code.type !== 'volunteer') throw new ApiError(403, 'You can only manage volunteer access codes.', 'FORBIDDEN');
   if (code.status !== 'unused') throw new ApiError(400, 'This code has already been used or revoked.', 'NOT_UNUSED');
 
-  await sendAccessCodeEmail(code.issuedTo, code.type, code.code, code.discountPercent ?? undefined);
+  await sendAccessCodeEmail(code.issuedTo, code.type, code.code, code.discountPercent ?? undefined, code.presentationType ?? undefined);
   code.sentAt = new Date();
   await code.save();
 
@@ -185,11 +204,11 @@ export const adminSend = catchAsync(async (req: Request, res: Response) => {
 // Fire off the email for every just-generated code, best-effort — a send failure
 // here shouldn't roll back codes that were already successfully created.
 export const sendBatch = async (
-  codes: { _id: unknown; issuedTo: string; type: string; code: string; discountPercent?: number }[]
+  codes: { _id: unknown; issuedTo: string; type: string; code: string; discountPercent?: number; presentationType?: string }[]
 ): Promise<void> => {
   await Promise.all(
     codes.map((c) =>
-      sendAccessCodeEmail(c.issuedTo, c.type, c.code, c.discountPercent)
+      sendAccessCodeEmail(c.issuedTo, c.type, c.code, c.discountPercent, c.presentationType)
         .then(() => AccessCode.updateOne({ _id: c._id }, { $set: { sentAt: new Date() } }))
         .catch((err) => logger.error({ err, codeId: c._id }, 'Failed to send access code email'))
     )

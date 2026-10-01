@@ -160,13 +160,15 @@ const ACCESS_CODE_LABEL: Record<string, string> = {
   scholarship: 'scholarship',
 };
 
+const PRESENTATION_TYPE_LABEL: Record<string, string> = { oral: 'Oral Presenter', poster: 'Poster Presenter' };
+
 // Real TICKET_CATEGORIES labels (mirrors frontend TICKET_LABEL maps) — named
 // here so every access-code email tells the recipient exactly which ticket
 // category to click on the registration form instead of leaving them to
-// guess, per management's explicit request. 'staff' (displayed as
-// "Organizer") is deliberately excluded from this general list — it's named
-// on its own below, since it's the one type actually bound to a single
-// required category (registration.controller.ts's STAFF_ACCESS_CODE_REQUIRED).
+// guess, per management's explicit request. 'staff'/'abstract_presenter'/
+// 'abstract_reviewer' (each bound to its own single required category) are
+// deliberately excluded from this general list — each is named on its own
+// below instead.
 const OPEN_CATEGORY_LABELS = [
   'International Delegate',
   'Nigerian Professional',
@@ -177,15 +179,30 @@ const OPEN_CATEGORY_LABELS = [
 ];
 
 // Shared by every email below that hands someone a code NOT bound to one
-// specific ticket category (scholarship/keynote_speaker/complimentary/
-// abstract_presenter/promo) — 'staff' is bound to exactly one category
-// ("Organizer") and is worded separately at each call site instead.
+// specific ticket category (scholarship/keynote_speaker/complimentary/promo)
+// — 'staff'/'abstract_presenter'/'abstract_reviewer' are each bound to their
+// own single category and are worded separately at each call site instead.
 const openCategoryGuidance = (excludeVip: boolean): string =>
   excludeVip
     ? `select any ticket category except <strong>VIP</strong> (${OPEN_CATEGORY_LABELS.filter((l) => l !== 'VIP').join(', ')})`
     : `select whichever ticket category matches you (${OPEN_CATEGORY_LABELS.join(', ')})`;
 
-export const sendAccessCodeEmail = async (to: string, type: string, code: string, discountPercent?: number): Promise<void> => {
+// A category bound one-to-one with an AccessCodeType (registration.controller.ts
+// enforces both directions) — 'staff'→Organizer, 'abstract_presenter'→Abstract
+// Presenter, 'abstract_reviewer'→Abstract Reviewer.
+const BOUND_CATEGORY_LABEL: Record<string, string> = {
+  staff: 'Organizer',
+  abstract_presenter: 'Abstract Presenter',
+  abstract_reviewer: 'Abstract Reviewer',
+};
+
+export const sendAccessCodeEmail = async (
+  to: string,
+  type: string,
+  code: string,
+  discountPercent?: number,
+  presentationType?: string
+): Promise<void> => {
   const registerUrl = `${env.FRONTEND_ORIGIN}/register`;
   const isScholarship = type === 'scholarship' && discountPercent !== undefined;
   // The 10% tier is management's group rate, not an individual scholarship —
@@ -193,6 +210,10 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
   // Group of 5+ for the code to actually work (see registration.controller.ts's
   // group-size check), which this email needs to tell them up front.
   const isGroupRate = isScholarship && discountPercent === 10;
+  // Set only for type === 'abstract_presenter' (AccessCode.model.ts) — tells
+  // the presenter which of the two distinct roles (named so tag/badge
+  // printing can tell them apart later) they've been confirmed for.
+  const presenterRoleLabel = presentationType ? PRESENTATION_TYPE_LABEL[presentationType] : undefined;
 
   const introLine = isGroupRate
     ? `Your organization has been offered a <strong>10% group discount</strong> on attendee registration fees for the AI in Health Summit 2026 — available for group registrations of 5 or more attendees.`
@@ -206,18 +227,22 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
         // 'staff' internally — see enums.ts's comment on that choice.
         ? `You've been added to the AI in Health Summit 2026 as an Organizer.`
         : type === 'abstract_presenter'
-          ? `Congratulations — your abstract has been confirmed for presentation at the AI in Health Summit 2026! This code registers you to attend, free of charge.`
-          : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
+          ? `Congratulations — your abstract has been confirmed for presentation at the AI in Health Summit 2026${
+              presenterRoleLabel ? ` as an <strong>${presenterRoleLabel}</strong>` : ''
+            }! This code registers you to attend, free of charge.`
+          : type === 'abstract_reviewer'
+            ? `Thank you for reviewing abstracts for the AI in Health Summit 2026 — this code registers you to attend in person, free of charge.`
+            : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
 
   // 'volunteer' redeems on the Volunteer tab (no ticket category involved at
   // all); every other type redeems on the Attendee tab, where the recipient
-  // must additionally pick the right ticket category — 'staff' is bound to
-  // exactly one ("Organizer"), 'promo' allows any except VIP, everything else
-  // is open — see registration.controller.ts's create() / ATTENDEE_ACCESS_CODE_TYPES.
-  const categoryGuidance =
-    type === 'staff'
-      ? `select the <strong>Organizer</strong> ticket category`
-      : openCategoryGuidance(type === 'promo');
+  // must additionally pick the right ticket category — 'staff'/
+  // 'abstract_presenter'/'abstract_reviewer' are each bound to exactly one
+  // required category, 'promo' allows any except VIP, everything else is
+  // open — see registration.controller.ts's create() / ATTENDEE_ACCESS_CODE_TYPES.
+  const categoryGuidance = BOUND_CATEGORY_LABEL[type]
+    ? `select the <strong>${BOUND_CATEGORY_LABEL[type]}</strong> ticket category`
+    : openCategoryGuidance(type === 'promo');
 
   const instructionLine =
     type === 'volunteer'
@@ -235,7 +260,9 @@ export const sendAccessCodeEmail = async (to: string, type: string, code: string
     subject:
       type === 'abstract_presenter'
         ? 'Your abstract is confirmed — register free for AI in Health Summit 2026'
-        : "You're invited — AI in Health Summit 2026",
+        : type === 'abstract_reviewer'
+          ? 'Thank you for reviewing — register free for AI in Health Summit 2026'
+          : "You're invited — AI in Health Summit 2026",
     html: `
       <p>${introLine}</p>
       <p>Your access code is: <strong style="font-size: 18px; letter-spacing: 1px;">${code}</strong></p>

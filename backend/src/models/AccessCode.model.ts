@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { ACCESS_CODE_TYPES, ACCESS_CODE_STATUSES, ACCESS_CODE_DISCOUNTS } from '../types/enums.js';
+import { ACCESS_CODE_TYPES, ACCESS_CODE_STATUSES, ACCESS_CODE_DISCOUNTS, PRESENTATION_TYPES } from '../types/enums.js';
 
 const accessCodeSchema = new Schema(
   {
@@ -22,6 +22,12 @@ const accessCodeSchema = new Schema(
     // this code is redeemed (registration.controller.ts). Required-when-scholarship
     // is enforced at the zod layer (accessCode.validation.ts), not here.
     discountPercent: { type: Number, enum: ACCESS_CODE_DISCOUNTS },
+    // abstract_presenter-type only — oral vs poster, set by the admin at
+    // generation time (from the committee's own confirmed-presenter tracker,
+    // not self-reported) and copied onto the Registration on redemption so
+    // badge/tag printing can tell the two apart. Required-when-abstract_presenter
+    // is enforced at the zod layer (accessCode.validation.ts), not here.
+    presentationType: { type: String, enum: PRESENTATION_TYPES },
   },
   { timestamps: true }
 );

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ACCESS_CODE_TYPES, ACCESS_CODE_STATUSES, ACCESS_CODE_DISCOUNTS } from '../types/enums.js';
+import { ACCESS_CODE_TYPES, ACCESS_CODE_STATUSES, ACCESS_CODE_DISCOUNTS, PRESENTATION_TYPES } from '../types/enums.js';
 
 // One code per email, not "quantity" against a single shared email — issuedTo is
 // now the enforced identity anchor a redemption is checked against (see
@@ -19,6 +19,10 @@ export const generateAccessCodesSchema = z.object({
           message: 'Choose a discount of 10, 25, 50, or 100.',
         })
         .optional(),
+      // Required only for 'abstract_presenter' (see superRefine below) — the
+      // whole batch shares one value, so generate Oral and Poster presenters
+      // as two separate batches.
+      presentationType: z.enum(PRESENTATION_TYPES).optional(),
     })
     .superRefine((body, ctx) => {
       if (body.type === 'scholarship' && body.discountPercent === undefined) {
@@ -26,6 +30,12 @@ export const generateAccessCodesSchema = z.object({
       }
       if (body.type !== 'scholarship' && body.discountPercent !== undefined) {
         ctx.addIssue({ code: 'custom', path: ['discountPercent'], message: 'discountPercent only applies to scholarship codes.' });
+      }
+      if (body.type === 'abstract_presenter' && body.presentationType === undefined) {
+        ctx.addIssue({ code: 'custom', path: ['presentationType'], message: 'Choose Oral or Poster for an abstract presenter code.' });
+      }
+      if (body.type !== 'abstract_presenter' && body.presentationType !== undefined) {
+        ctx.addIssue({ code: 'custom', path: ['presentationType'], message: 'presentationType only applies to abstract presenter codes.' });
       }
     }),
 });

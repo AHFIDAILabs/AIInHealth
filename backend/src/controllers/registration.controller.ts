@@ -335,6 +335,39 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
+  // 'abstract_presenter'/'abstract_reviewer' are bound to their own category
+  // BOTH directions — unlike 'staff' above (checked one-way only): each code
+  // must not work under any OTHER category either, per the explicit
+  // requirement that these codes "only work for" their matching category.
+  // Wrapped in one `input.type === 'attendee'` guard (rather than repeating it
+  // per condition) so TypeScript can actually narrow `input.ticketCategory` —
+  // it's a discriminated union, not accessible outside this narrowing.
+  if (!recentDuplicate && input.type === 'attendee') {
+    const pickedAbstractPresenter = input.ticketCategory === 'abstract_presenter';
+    const usingAbstractPresenterCode = redeemedCode?.type === 'abstract_presenter';
+    if (pickedAbstractPresenter !== usingAbstractPresenterCode) {
+      throw new ApiError(
+        422,
+        pickedAbstractPresenter
+          ? "The Abstract Presenter ticket category requires a valid abstract presenter access code. Contact the organizing team if you don't have one."
+          : 'This access code only works for the Abstract Presenter ticket category.',
+        'ABSTRACT_PRESENTER_ACCESS_CODE_REQUIRED'
+      );
+    }
+
+    const pickedAbstractReviewer = input.ticketCategory === 'abstract_reviewer';
+    const usingAbstractReviewerCode = redeemedCode?.type === 'abstract_reviewer';
+    if (pickedAbstractReviewer !== usingAbstractReviewerCode) {
+      throw new ApiError(
+        422,
+        pickedAbstractReviewer
+          ? "The Abstract Reviewer ticket category requires a valid abstract reviewer access code. Contact the organizing team if you don't have one."
+          : 'This access code only works for the Abstract Reviewer ticket category.',
+        'ABSTRACT_REVIEWER_ACCESS_CODE_REQUIRED'
+      );
+    }
+  }
+
   // The QR-banner promo giveaway is deliberately excluded from VIP —
   // management's premium tier shouldn't be handed out via an anonymous
   // public scan-and-claim mechanic the way an ordinary paid category can be.
@@ -371,6 +404,9 @@ export const create = catchAsync(async (req: Request, res: Response) => {
         ...(requiresPayment && { paymentStatus: 'unpaid' }),
         ...(discountPercent !== undefined && { discountPercent }),
         ...(isFullyComped && { status: 'confirmed', paymentStatus: 'not_required', qrToken: generateQrToken() }),
+        // Oral vs Poster — copied straight from the redeemed AccessCode so
+        // badge/tag printing can tell the two apart (see that model's comment).
+        ...(redeemedCode?.type === 'abstract_presenter' && redeemedCode.presentationType && { presentationType: redeemedCode.presentationType }),
       });
       isNewRegistration = true;
     } catch (err) {
@@ -1103,7 +1139,7 @@ const CSV_COLUMNS = [
   '_id', 'type', 'status', 'isActive', 'createdAt', 'registrationMode', 'ticketCategory', 'fullName', 'email', 'phone',
   'organization', 'jobTitle', 'country', 'groupAttendees', 'companyName', 'contactName', 'contactEmail', 'contactPhone',
   'website', 'boothSize', 'productsDescription', 'customFieldAnswers', 'message', 'accessCode', 'discountPercent',
-  'paymentStatus', 'amountNaira', 'paidAt', 'paymentReference', 'checkedIn', 'checkedInAt', 'directoryOptIn',
+  'presentationType', 'paymentStatus', 'amountNaira', 'paidAt', 'paymentReference', 'checkedIn', 'checkedInAt', 'directoryOptIn',
   'tshirtSize', 'trackSelected', 'trackAssigned', 'avatarUrl',
 ];
 

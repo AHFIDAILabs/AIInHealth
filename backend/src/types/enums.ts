@@ -23,6 +23,11 @@ export type RegistrationMode = (typeof REGISTRATION_MODES)[number];
 // self-selectable free category — registration.controller.ts's create()
 // requires it be paired with an actual redeemed 'staff'-type AccessCode, so
 // picking "Team / Staff" with no code (or someone else's code) still fails.
+// 'abstract_presenter'/'abstract_reviewer' are the same shape as 'staff' —
+// priced 0, not self-selectable (registration.controller.ts requires the
+// matching AccessCode type, both directions: that category needs that code,
+// and that code only works for that category — see
+// ABSTRACT_PRESENTER_ACCESS_CODE_REQUIRED / ABSTRACT_REVIEWER_ACCESS_CODE_REQUIRED).
 export const TICKET_CATEGORIES = [
   'international_delegate',
   'nigerian_professional',
@@ -31,6 +36,8 @@ export const TICKET_CATEGORIES = [
   'government_official',
   'accredited_media',
   'staff',
+  'abstract_presenter',
+  'abstract_reviewer',
 ] as const;
 export type TicketCategory = (typeof TICKET_CATEGORIES)[number];
 
@@ -158,15 +165,41 @@ export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 // 'abstract_presenter' is for authors whose abstract was already confirmed for
 // presentation (the curated public list — see ConfirmedAbstract.model.ts) —
 // admin-generated in bulk via the same Generate Access Codes flow as
-// volunteer/keynote_speaker/staff, then self-redeemed on the Attendee form
-// against whichever ticket category actually describes them (not bound to
-// one category, same as keynote_speaker/complimentary/promo).
-export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo', 'abstract_presenter'] as const;
+// volunteer/keynote_speaker/staff. Bound to its own TICKET_CATEGORIES value
+// both directions, same as 'staff': only redeemable against the "Abstract
+// Presenter" category, and that category requires this specific code type
+// (registration.controller.ts). Additionally carries a `presentationType`
+// ('oral'/'poster' — see AccessCode.model.ts), set by the admin at generation
+// time from the committee's own tracker and copied onto the Registration on
+// redemption, so badge/tag printing can tell the two apart.
+// 'abstract_reviewer' is the same shape as 'abstract_presenter' (own bound
+// category, both directions) for the separate group of people who scored
+// abstracts (see Reviewer.model.ts — that's the *review-portal* account;
+// this is how the same person ALSO registers to physically attend). No
+// presentationType — that distinction is presenter-only.
+export const ACCESS_CODE_TYPES = [
+  'volunteer',
+  'keynote_speaker',
+  'complimentary',
+  'scholarship',
+  'staff',
+  'promo',
+  'abstract_presenter',
+  'abstract_reviewer',
+] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
 
 // The subset of ACCESS_CODE_TYPES redeemable on the attendee registration form —
 // see registration.controller.ts's create().
-export const ATTENDEE_ACCESS_CODE_TYPES = ['keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo', 'abstract_presenter'] as const;
+export const ATTENDEE_ACCESS_CODE_TYPES = [
+  'keynote_speaker',
+  'complimentary',
+  'scholarship',
+  'staff',
+  'promo',
+  'abstract_presenter',
+  'abstract_reviewer',
+] as const;
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;
 export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];

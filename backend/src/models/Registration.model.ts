@@ -8,6 +8,7 @@ import {
   PAYMENT_STATUSES,
   PAYMENT_METHODS,
   ACCESS_CODE_DISCOUNTS,
+  PRESENTATION_TYPES,
 } from '../types/enums.js';
 
 // One flat collection for all four Register-page flows (attendee/exhibitor/sponsor/
@@ -92,6 +93,12 @@ const registrationSchema = new Schema(
     // percentage; 100 means the seat is fully comped and never touches Paystack
     // at all (see registration.controller.ts's isFullyComped branch).
     discountPercent: { type: Number, enum: ACCESS_CODE_DISCOUNTS },
+
+    // Attendee only — set when accessCode above redeemed an 'abstract_presenter'-
+    // type code, copied straight from that AccessCode's own presentationType
+    // (AccessCode.model.ts) at redemption time. Lets badge/tag printing (and
+    // the admin Attendees list/export) tell Oral and Poster presenters apart.
+    presentationType: { type: String, enum: PRESENTATION_TYPES },
 
     // Payment — paid attendee ticket categories only. 'not_required' covers free
     // categories and every non-attendee type; those never touch this beyond the default.
