@@ -9,10 +9,12 @@ import {
   ACCESS_CODE_TYPES,
   ACCESS_CODE_STATUSES,
   ACCESS_CODE_DISCOUNTS,
+  PRESENTATION_TYPES,
   type AdminAccessCode,
   type AccessCodeType,
   type AccessCodeStatus,
   type AccessCodeDiscount,
+  type PresentationType,
 } from '../../services/accessCode.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
@@ -34,7 +36,10 @@ const TYPE_LABEL: Record<AccessCodeType, string> = {
   // *could* hand-mint a one-off if they ever needed to.
   promo: 'Promo Banner',
   abstract_presenter: 'Abstract Presenter',
+  abstract_reviewer: 'Abstract Reviewer',
 };
+
+const PRESENTATION_TYPE_LABEL: Record<PresentationType, string> = { oral: 'Oral Presenter', poster: 'Poster Presenter' };
 
 const STATUS_STYLE: Record<AccessCodeStatus, string> = {
   unused: 'bg-info/10 text-info',
@@ -47,8 +52,15 @@ interface FormState {
   emailsText: string;
   expiresAt: string;
   discountPercent: AccessCodeDiscount | '';
+  presentationType: PresentationType | '';
 }
-const EMPTY_FORM: FormState = { type: ACCESS_CODE_TYPES[0], emailsText: '', expiresAt: '', discountPercent: '' };
+const EMPTY_FORM: FormState = {
+  type: ACCESS_CODE_TYPES[0],
+  emailsText: '',
+  expiresAt: '',
+  discountPercent: '',
+  presentationType: '',
+};
 
 export const AccessCodesPage = () => {
   const toast = useToast();
@@ -117,6 +129,10 @@ export const AccessCodesPage = () => {
       setFormError('Choose a discount tier for a scholarship code.');
       return;
     }
+    if (form.type === 'abstract_presenter' && !form.presentationType) {
+      setFormError('Choose Oral or Poster for an abstract presenter code.');
+      return;
+    }
     setSaving(true);
     setFormError('');
     try {
@@ -125,6 +141,7 @@ export const AccessCodesPage = () => {
         emails: parsedEmails,
         expiresAt: form.expiresAt || undefined,
         discountPercent: form.type === 'scholarship' ? (form.discountPercent as AccessCodeDiscount) : undefined,
+        presentationType: form.type === 'abstract_presenter' ? (form.presentationType as PresentationType) : undefined,
       });
       toast('success', `${created.length} code${created.length === 1 ? '' : 's'} generated and emailed`);
       setFormOpen(false);
@@ -294,6 +311,11 @@ export const AccessCodesPage = () => {
                             {c.discountPercent}%
                           </span>
                         )}
+                        {c.type === 'abstract_presenter' && c.presentationType && (
+                          <span className="ml-1.5 rounded-full bg-info/10 px-2 py-0.5 text-[11px] font-semibold text-info">
+                            {PRESENTATION_TYPE_LABEL[c.presentationType]}
+                          </span>
+                        )}
                       </td>
                     )}
                     <td className="px-3 py-3 text-slate-500">
@@ -389,7 +411,7 @@ export const AccessCodesPage = () => {
                   <AdminSelect
                     label="Type"
                     value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value as AccessCodeType, discountPercent: '' })}
+                    onChange={(e) => setForm({ ...form, type: e.target.value as AccessCodeType, discountPercent: '', presentationType: '' })}
                   >
                     {ACCESS_CODE_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -416,6 +438,26 @@ export const AccessCodesPage = () => {
                       {form.discountPercent === 10
                         ? 'Group rate — the recipient must register as a Group with 5 or more attendees for this code to work. It will be rejected on an individual registration or a smaller group.'
                         : 'Applied automatically when the recipient enters this code on the Attendee registration form.'}
+                    </p>
+                  </div>
+                )}
+                {form.type === 'abstract_presenter' && (
+                  <div>
+                    <AdminSelect
+                      label="Presentation Type"
+                      value={form.presentationType}
+                      onChange={(e) => setForm({ ...form, presentationType: e.target.value as PresentationType | '' })}
+                    >
+                      <option value="">Choose Oral or Poster…</option>
+                      {PRESENTATION_TYPES.map((p) => (
+                        <option key={p} value={p}>
+                          {PRESENTATION_TYPE_LABEL[p]}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      The whole batch below shares this value — generate Oral and Poster presenters as two separate
+                      batches. Carried onto their registration once redeemed, for badge/tag printing.
                     </p>
                   </div>
                 )}

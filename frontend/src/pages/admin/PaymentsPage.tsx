@@ -38,6 +38,8 @@ const TICKET_LABEL: Record<TicketCategory, string> = {
   government_official: 'Government Official',
   accredited_media: 'Accredited Media',
   staff: 'Organizer',
+  abstract_presenter: 'Abstract Presenter',
+  abstract_reviewer: 'Abstract Reviewer',
 };
 
 const naira = (kobo?: number) => (kobo ? `₦${Math.round(kobo / 100).toLocaleString('en-NG')}` : '—');

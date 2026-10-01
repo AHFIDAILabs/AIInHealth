@@ -10,6 +10,8 @@ export const TICKET_PRICE_NGN: Record<TicketCategory, number> = {
   government_official: 0,
   accredited_media: 0,
   staff: 0,
+  abstract_presenter: 0,
+  abstract_reviewer: 0,
 };
 
 export const isFreeTicketCategory = (category: TicketCategory): boolean => TICKET_PRICE_NGN[category] === 0;

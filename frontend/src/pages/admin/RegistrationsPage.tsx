@@ -39,6 +39,8 @@ const TICKET_LABEL: Record<TicketCategory, string> = {
   government_official: 'Government Official',
   accredited_media: 'Accredited Media',
   staff: 'Organizer',
+  abstract_presenter: 'Abstract Presenter',
+  abstract_reviewer: 'Abstract Reviewer',
 };
 const BOOTH_SIZES: BoothSize[] = ['small', 'medium', 'large'];
 const SCHOLARSHIP_OPTIONS = [10, 25, 50, 100] as const;

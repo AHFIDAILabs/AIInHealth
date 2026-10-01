@@ -3,7 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AnimatePresence, motion } from 'framer-motion';
-import { User, Users, Globe2, Briefcase, GraduationCap, Crown, Landmark, Newspaper, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { User, Users, Globe2, Briefcase, GraduationCap, Crown, Landmark, Newspaper, Mic, ClipboardCheck, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Banner } from '../ui/Banner';
 import { LightField } from '../ui/LightField';
@@ -22,8 +22,24 @@ const TICKET_OPTIONS: { value: TicketCategory; label: string; icon: typeof Globe
   { value: 'government_official', label: 'Government Official', icon: Landmark },
   { value: 'accredited_media', label: 'Accredited Media', icon: Newspaper },
   { value: 'staff', label: 'Organizer', icon: Users },
+  { value: 'abstract_presenter', label: 'Abstract Presenter', icon: Mic },
+  { value: 'abstract_reviewer', label: 'Abstract Reviewer', icon: ClipboardCheck },
 ];
 const TICKET_VALUES = TICKET_OPTIONS.map((t) => t.value) as [TicketCategory, ...TicketCategory[]];
+
+// Categories bound one-to-one with an access code type, both directions
+// (registration.controller.ts) — an access code is required (not optional)
+// and the field's copy names exactly which code to enter.
+const REQUIRED_CODE_CATEGORY: Partial<Record<TicketCategory, string>> = {
+  staff: 'organizer',
+  abstract_presenter: 'abstract presenter',
+  abstract_reviewer: 'abstract reviewer',
+};
+const REQUIRED_CODE_PLACEHOLDER: Partial<Record<TicketCategory, string>> = {
+  staff: 'e.g. ORG-XXXXXX',
+  abstract_presenter: 'e.g. PRES-XXXXXX',
+  abstract_reviewer: 'e.g. REV-XXXXXX',
+};
 
 const groupAttendeeSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter a name'),
@@ -55,9 +71,17 @@ const schema = z
       ctx.addIssue({ code: 'custom', path: ['idCardUrl'], message: 'Upload a photo of your official ID to continue.' });
     }
     // Shape-only check, mirrors registration.validation.ts — the real
-    // enforcement (the code must actually be type 'staff') happens server-side.
+    // enforcement (the code must actually be the matching type) happens
+    // server-side, both directions (that category needs that code, and that
+    // code only works for that category).
     if (data.ticketCategory === 'staff' && !data.accessCode) {
       ctx.addIssue({ code: 'custom', path: ['accessCode'], message: 'Enter the organizer access code you were sent.' });
+    }
+    if (data.ticketCategory === 'abstract_presenter' && !data.accessCode) {
+      ctx.addIssue({ code: 'custom', path: ['accessCode'], message: 'Enter the abstract presenter access code you were sent.' });
+    }
+    if (data.ticketCategory === 'abstract_reviewer' && !data.accessCode) {
+      ctx.addIssue({ code: 'custom', path: ['accessCode'], message: 'Enter the abstract reviewer access code you were sent.' });
     }
   });
 type FormValues = z.infer<typeof schema>;
@@ -250,17 +274,17 @@ export const AttendeeForm = () => {
 
             <div>
               <LightField
-                label={ticketCategory === 'staff' ? 'Access Code' : 'Access Code (optional)'}
+                label={REQUIRED_CODE_CATEGORY[ticketCategory] ? 'Access Code' : 'Access Code (optional)'}
                 placeholder={
-                  ticketCategory === 'staff' ? 'e.g. ORG-XXXXXX' : "e.g. SCH-XXXXXX (leave blank if you don't have one)"
+                  REQUIRED_CODE_PLACEHOLDER[ticketCategory] ?? "e.g. SCH-XXXXXX (leave blank if you don't have one)"
                 }
                 error={errors.accessCode?.message}
                 {...register('accessCode')}
                 className="uppercase tracking-wider"
               />
               <p className="mt-1.5 text-xs text-slate-400">
-                {ticketCategory === 'staff'
-                  ? "Enter the organizer code the organizing team sent you — it's tied to this exact email address."
+                {REQUIRED_CODE_CATEGORY[ticketCategory]
+                  ? `Enter the ${REQUIRED_CODE_CATEGORY[ticketCategory]} code the organizing team sent you — it's tied to this exact email address.`
                   : "Have a scholarship, keynote speaker, complimentary, abstract presenter, or promo code? Enter it here. It's checked and applied automatically before you're sent to payment."}
               </p>
               {ticketCategory === 'vip' && (

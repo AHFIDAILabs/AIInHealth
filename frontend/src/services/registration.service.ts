@@ -9,7 +9,9 @@ export type TicketCategory =
   | 'vip'
   | 'government_official'
   | 'accredited_media'
-  | 'staff';
+  | 'staff'
+  | 'abstract_presenter'
+  | 'abstract_reviewer';
 
 export type BoothSize = 'small' | 'medium' | 'large';
 

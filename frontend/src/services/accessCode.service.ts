@@ -1,6 +1,15 @@
 import { api } from './api';
 
-export const ACCESS_CODE_TYPES = ['volunteer', 'keynote_speaker', 'complimentary', 'scholarship', 'staff', 'promo', 'abstract_presenter'] as const;
+export const ACCESS_CODE_TYPES = [
+  'volunteer',
+  'keynote_speaker',
+  'complimentary',
+  'scholarship',
+  'staff',
+  'promo',
+  'abstract_presenter',
+  'abstract_reviewer',
+] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;
@@ -13,6 +22,12 @@ export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];
 // enforced here, just the set of valid percentages an admin can pick.
 export const ACCESS_CODE_DISCOUNTS = [10, 25, 50, 100] as const;
 export type AccessCodeDiscount = (typeof ACCESS_CODE_DISCOUNTS)[number];
+
+// Mirrors backend/src/types/enums.ts's PRESENTATION_TYPES — required when
+// type is 'abstract_presenter', rejected otherwise (same validation pattern
+// as discountPercent/scholarship above).
+export const PRESENTATION_TYPES = ['oral', 'poster'] as const;
+export type PresentationType = (typeof PRESENTATION_TYPES)[number];
 
 export interface AdminAccessCode {
   _id: string;
@@ -27,6 +42,8 @@ export interface AdminAccessCode {
   createdAt: string;
   // scholarship-type only
   discountPercent?: AccessCodeDiscount;
+  // abstract_presenter-type only
+  presentationType?: PresentationType;
 }
 
 // One code per email — see backend/src/validations/accessCode.validation.ts for
@@ -37,6 +54,10 @@ export interface GenerateAccessCodesInput {
   expiresAt?: string;
   // Required by the backend when type is 'scholarship', rejected otherwise.
   discountPercent?: AccessCodeDiscount;
+  // Required by the backend when type is 'abstract_presenter', rejected
+  // otherwise — the whole batch shares one value, so generate Oral and
+  // Poster presenters as two separate batches.
+  presentationType?: PresentationType;
 }
 
 export interface Paginated<T> {
