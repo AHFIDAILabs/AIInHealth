@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   User,
   Building2,
@@ -11,15 +13,27 @@ import {
   Lightbulb,
   Network,
   Target,
+  ArrowUpRight,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
 import { SEO } from '../../components/seo/SEO';
+import { fetchKnowledgeProductSummaries, type KnowledgeProductType } from '../../services/knowledgeProduct.service';
 
 export const ParticipantsOutcomes = () => {
   const { t } = useTranslation();
+
+  // Which of the 5 AI-drafted Knowledge Products are published yet — lets
+  // each card below become a real link once there's something to show,
+  // while staying exactly as static/title-only as it is today until then.
+  const [publishedTypes, setPublishedTypes] = useState<Set<KnowledgeProductType>>(new Set());
+  useEffect(() => {
+    fetchKnowledgeProductSummaries()
+      .then((rows) => setPublishedTypes(new Set(rows.filter((r) => r.status === 'approved').map((r) => r.type))))
+      .catch(() => {});
+  }, []);
 
   // Built inside the component (not module constants) so `label`/`note`/`title`/
   // `text` can go through t() — `id` fields are the stable, untranslated
@@ -124,13 +138,44 @@ export const ParticipantsOutcomes = () => {
 
   // Verbatim from the Concept Note's "Knowledge Products" — documented outputs that
   // carry Summit outcomes forward into national policy and practice.
-  const KNOWLEDGE_PRODUCTS = [
-    { id: 'communique', icon: ScrollText, title: t('participantsOutcomes.knowledgeProducts.communique', 'Summit Communiqué') },
-    { id: 'proceedings', icon: BookOpen, title: t('participantsOutcomes.knowledgeProducts.proceedings', 'AI in Health Summit Proceedings') },
-    { id: 'policyBrief', icon: FileCheck2, title: t('participantsOutcomes.knowledgeProducts.policyBrief', 'National Policy Brief') },
-    { id: 'technicalReport', icon: FileText, title: t('participantsOutcomes.knowledgeProducts.technicalReport', 'Technical Report') },
-    { id: 'partnershipDirectory', icon: Users2, title: t('participantsOutcomes.knowledgeProducts.partnershipDirectory', 'Strategic Partnership Directory') },
-    { id: 'actionPlan', icon: Target, title: t('participantsOutcomes.knowledgeProducts.actionPlan', 'Action Plan for AI in Health Implementation') },
+  // `type` matches KnowledgeProductType exactly for the 5 AI-drafted products
+  // (undefined for the Partnership Directory, which isn't one — see
+  // knowledgeProduct.service.ts's plan: it's real Partner data that already
+  // has its own page, not an AI narrative). `href` is where the card links
+  // once it has somewhere to go: always-on for the Partnership Directory,
+  // conditional on `publishedTypes` for the other 5 (handled below).
+  const KNOWLEDGE_PRODUCTS: { id: string; icon: typeof ScrollText; title: string; type?: KnowledgeProductType; href?: string }[] = [
+    { id: 'communique', icon: ScrollText, title: t('participantsOutcomes.knowledgeProducts.communique', 'Summit Communiqué'), type: 'communique' },
+    {
+      id: 'proceedings',
+      icon: BookOpen,
+      title: t('participantsOutcomes.knowledgeProducts.proceedings', 'AI in Health Summit Proceedings'),
+      type: 'proceedings',
+    },
+    {
+      id: 'policyBrief',
+      icon: FileCheck2,
+      title: t('participantsOutcomes.knowledgeProducts.policyBrief', 'National Policy Brief'),
+      type: 'policyBrief',
+    },
+    {
+      id: 'technicalReport',
+      icon: FileText,
+      title: t('participantsOutcomes.knowledgeProducts.technicalReport', 'Technical Report'),
+      type: 'technicalReport',
+    },
+    {
+      id: 'partnershipDirectory',
+      icon: Users2,
+      title: t('participantsOutcomes.knowledgeProducts.partnershipDirectory', 'Strategic Partnership Directory'),
+      href: '/partners',
+    },
+    {
+      id: 'actionPlan',
+      icon: Target,
+      title: t('participantsOutcomes.knowledgeProducts.actionPlan', 'Action Plan for AI in Health Implementation'),
+      type: 'actionPlan',
+    },
   ];
 
   return (
@@ -232,16 +277,33 @@ export const ParticipantsOutcomes = () => {
         </Reveal>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {KNOWLEDGE_PRODUCTS.map((product, i) => (
-            <Reveal key={product.id} delay={i * 0.06}>
-              <div className="flex h-full items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
+          {KNOWLEDGE_PRODUCTS.map((product, i) => {
+            const href = product.href ?? (product.type && publishedTypes.has(product.type) ? `/knowledge-products/${product.type}` : undefined);
+            const Card = (
+              <div
+                className={`flex h-full items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 ${
+                  href ? 'transition-colors hover:border-orange/40 hover:bg-white/10' : ''
+                }`}
+              >
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange/15 text-orange">
                   <product.icon size={19} />
                 </span>
-                <p className="font-display text-[15px] font-semibold leading-snug text-white">{product.title}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-[15px] font-semibold leading-snug text-white">{product.title}</p>
+                  {href && (
+                    <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-orange">
+                      Read the full document <ArrowUpRight size={12} />
+                    </p>
+                  )}
+                </div>
               </div>
-            </Reveal>
-          ))}
+            );
+            return (
+              <Reveal key={product.id} delay={i * 0.06}>
+                {href ? <Link to={href}>{Card}</Link> : Card}
+              </Reveal>
+            );
+          })}
         </div>
       </div>
     </section>

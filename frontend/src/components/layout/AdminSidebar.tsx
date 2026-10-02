@@ -34,6 +34,7 @@ import {
   Globe2,
   Languages,
   GraduationCap,
+  Mic,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -98,6 +99,8 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Knowledge Base', to: '/admin/knowledge-base', icon: Sparkles, roles: contentRoles },
       { label: 'Policy Tracker', to: '/admin/policy-tracker', icon: Globe2, roles: contentRoles },
       { label: 'Translations', to: '/admin/translations', icon: Languages, roles: contentRoles },
+      { label: 'Rapporteurs', to: '/admin/rapporteur', icon: Mic, roles: contentRoles },
+      { label: 'Knowledge Products', to: '/admin/knowledge-products', icon: ScrollText, roles: contentRoles },
     ],
   },
   {
@@ -105,6 +108,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Attendees', to: '/admin/attendees', icon: UserPlus, roles: [...registrationRoles, 'viewer'] },
       { label: 'Exhibitors', to: '/admin/exhibitors', icon: Building2, roles: [...registrationRoles, 'viewer'] },
+      { label: 'Innovators', to: '/admin/innovators', icon: Lightbulb, roles: [...registrationRoles, 'viewer'] },
       { label: 'Volunteers', to: '/admin/registrations?type=volunteer', icon: HeartHandshake, roles: [...registrationRoles, 'viewer', 'content_editor'] },
       { label: 'Team Registrations', to: '/admin/registrations?type=team', icon: UsersRound, roles: [...registrationRoles, 'viewer'] },
       { label: 'Sponsors & Partners', to: '/admin/partners', icon: Handshake, roles: contentRoles },

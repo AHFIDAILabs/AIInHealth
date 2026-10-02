@@ -99,7 +99,7 @@ const EMPTY_ADD_FORM: AddFormState = {
 };
 
 const STATUS_OPTIONS: RegistrationStatus[] = ['pending', 'reviewed', 'confirmed', 'declined'];
-const TYPE_OPTIONS: RegistrationType[] = ['attendee', 'exhibitor', 'sponsor', 'volunteer', 'team'];
+const TYPE_OPTIONS: RegistrationType[] = ['attendee', 'exhibitor', 'sponsor', 'volunteer', 'team', 'innovator'];
 
 const STATUS_BADGE: Record<RegistrationStatus, string> = {
   pending: 'text-warning bg-warning/10',
@@ -118,6 +118,7 @@ const TYPE_LABEL: Record<RegistrationType, string> = {
   sponsor: 'Sponsors',
   volunteer: 'Volunteers',
   team: 'Team',
+  innovator: 'Innovators',
 };
 
 export const RegistrationsPage = () => {

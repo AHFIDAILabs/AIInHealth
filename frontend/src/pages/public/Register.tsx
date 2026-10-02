@@ -5,12 +5,13 @@ import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { AttendeeForm } from '../../components/register/AttendeeForm';
 import { ExhibitorForm } from '../../components/register/ExhibitorForm';
+import { InnovatorForm } from '../../components/register/InnovatorForm';
 import { SponsorForm } from '../../components/register/SponsorForm';
 import { VolunteerForm } from '../../components/register/VolunteerForm';
 import { RegisterFaq } from '../../components/register/RegisterFaq';
 import { SEO } from '../../components/seo/SEO';
 
-type Tab = 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer';
+type Tab = 'attendee' | 'exhibitor' | 'innovator' | 'sponsor' | 'volunteer';
 
 export const Register = () => {
   const { t } = useTranslation();
@@ -22,6 +23,7 @@ export const Register = () => {
   const TABS: { key: Tab; label: string }[] = [
     { key: 'attendee', label: t('register.tabs.attendee', 'Attendee') },
     { key: 'exhibitor', label: t('register.tabs.exhibitor', 'Exhibitor') },
+    { key: 'innovator', label: t('register.tabs.innovator', 'Innovator') },
     { key: 'sponsor', label: t('register.tabs.sponsor', 'Sponsor Inquiry') },
     { key: 'volunteer', label: t('register.tabs.volunteer', 'Volunteer') },
   ];
@@ -71,6 +73,7 @@ export const Register = () => {
               >
                 {tab === 'attendee' && <AttendeeForm />}
                 {tab === 'exhibitor' && <ExhibitorForm />}
+                {tab === 'innovator' && <InnovatorForm />}
                 {tab === 'sponsor' && <SponsorForm />}
                 {tab === 'volunteer' && <VolunteerForm />}
               </motion.div>

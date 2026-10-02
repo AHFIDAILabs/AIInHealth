@@ -1,7 +1,7 @@
 import { api } from './api';
 import type { TicketCategory, BoothSize } from './registration.service';
 
-export type RegistrationType = 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer' | 'team';
+export type RegistrationType = 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer' | 'team' | 'innovator';
 export type RegistrationStatus = 'pending' | 'reviewed' | 'confirmed' | 'declined';
 
 export interface AdminRegistration {
@@ -29,6 +29,8 @@ export interface AdminRegistration {
   productsDescription?: string;
   // Exhibitor only — answers to admin-defined custom fields, keyed by field _id.
   customFieldAnswers?: Record<string, string>;
+  // Innovator only.
+  solutionDescription?: string;
   message?: string;
   accessCode?: string;
   // Attendee only — set when accessCode above redeemed a 'scholarship'-type code.
@@ -198,6 +200,8 @@ export interface UpdateRegistrationDetailsInput {
   boothSize?: BoothSize;
   productsDescription?: string;
   customFieldAnswers?: Record<string, string>;
+  // Innovator only.
+  solutionDescription?: string;
   // Volunteer-only — lets staff (re)assign a track, or fix a t-shirt size/
   // stated preference, after the registration already exists.
   tshirtSize?: string;
@@ -260,6 +264,16 @@ export interface AdminCreateSponsorPayload {
   message?: string;
 }
 
+export interface AdminCreateInnovatorPayload {
+  type: 'innovator';
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  website?: string;
+  solutionDescription?: string;
+}
+
 export interface AdminCreateVolunteerPayload {
   type: 'volunteer';
   fullName: string;
@@ -284,7 +298,8 @@ export type AdminCreateRegistrationPayload =
   | AdminCreateExhibitorPayload
   | AdminCreateSponsorPayload
   | AdminCreateVolunteerPayload
-  | AdminCreateTeamPayload;
+  | AdminCreateTeamPayload
+  | AdminCreateInnovatorPayload;
 
 export interface AdminCreateRegistrationResult {
   id: string;

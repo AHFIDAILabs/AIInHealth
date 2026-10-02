@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Plus, X, Users, Pencil, Trash2, GripVertical, Sparkles } from 'lucide-react';
+import { Search, Plus, X, Users, Pencil, Trash2, GripVertical, Sparkles, QrCode, Mail } from 'lucide-react';
 import {
   adminListSpeakers,
   adminCreateSpeaker,
@@ -10,6 +10,8 @@ import {
   adminReorderSpeakers,
   adminTranslateSpeaker,
   adminUpdateSpeakerTranslation,
+  adminRegisterSpeaker,
+  adminSendSpeakerAccessEmail,
   SUPPORTED_TRANSLATION_LANGS,
   type AdminSpeaker,
   type SpeakerInput,
@@ -36,6 +38,7 @@ const emptyForm = (defaultTrack: string): SpeakerInput => ({
   photoAlt: '',
   hoverPhotoUrl: '',
   isPublished: false,
+  email: '',
 });
 
 const LANG_LABEL: Record<TranslationLang, string> = { fr: 'French', pt: 'Portuguese' };
@@ -76,6 +79,9 @@ export const SpeakersPage = () => {
   const [translationDrafts, setTranslationDrafts] = useState<Record<TranslationLang, string>>({ fr: '', pt: '' });
   const [translating, setTranslating] = useState<Record<TranslationLang, boolean>>({ fr: false, pt: false });
   const [translationSaving, setTranslationSaving] = useState<Record<TranslationLang, boolean>>({ fr: false, pt: false });
+
+  const [registering, setRegistering] = useState(false);
+  const [sendingAccessEmail, setSendingAccessEmail] = useState(false);
 
   // Reordering only makes sense against the one true full-list order — with a
   // search/track/status filter active, "position 3 of 4 filtered rows" doesn't
@@ -140,6 +146,7 @@ export const SpeakersPage = () => {
       photoAlt: speaker.photoAlt ?? '',
       hoverPhotoUrl: speaker.hoverPhotoUrl ?? '',
       isPublished: speaker.isPublished,
+      email: speaker.email ?? '',
     });
     setTranslationDrafts({ fr: speaker.translations?.fr?.bio ?? '', pt: speaker.translations?.pt?.bio ?? '' });
     setFormError('');
@@ -174,6 +181,34 @@ export const SpeakersPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setTranslationSaving((prev) => ({ ...prev, [lang]: false }));
+    }
+  };
+
+  const registerSpeaker = async () => {
+    if (!editing) return;
+    setRegistering(true);
+    try {
+      const updated = await adminRegisterSpeaker(editing._id);
+      setEditing(updated);
+      setItems((prev) => prev.map((s) => (s._id === updated._id ? updated : s)));
+      toast('success', 'Speaker registered — send their access email when ready.');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const sendAccessEmail = async () => {
+    if (!editing) return;
+    setSendingAccessEmail(true);
+    try {
+      await adminSendSpeakerAccessEmail(editing._id);
+      toast('success', `Access email sent to ${editing.email}`);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingAccessEmail(false);
     }
   };
 
@@ -482,6 +517,18 @@ export const SpeakersPage = () => {
                 <AdminInput label="Full Name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="Dr. Jane Doe" />
                 <AdminInput label="Title / Role" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Minister of Health" />
                 <AdminInput label="Organization" value={form.organization} onChange={(e) => setForm({ ...form, organization: e.target.value })} placeholder="Federal Ministry of Health" />
+                <div>
+                  <AdminInput
+                    label="Email (admin-only)"
+                    type="email"
+                    value={form.email ?? ''}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="speaker@example.com"
+                  />
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    Never shown publicly — used only to register this speaker for event check-in and email their access code.
+                  </p>
+                </div>
                 <AdminSelect label="Track" value={form.track} onChange={(e) => setForm({ ...form, track: e.target.value })} disabled={!tracks}>
                   {!tracks ? (
                     <option value="">Loading tracks…</option>
@@ -534,6 +581,37 @@ export const SpeakersPage = () => {
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
                   placeholder="Short professional biography..."
                 />
+                {editing && (
+                  <div className="rounded-lg border border-slate-200 p-3">
+                    <p className="text-[13px] font-semibold text-navy">Event Check-In</p>
+                    {editing.registration ? (
+                      <>
+                        <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-success">
+                          <QrCode size={13} /> Registered — has a check-in QR code
+                        </p>
+                        <button
+                          onClick={sendAccessEmail}
+                          disabled={sendingAccessEmail || !form.email?.trim()}
+                          className="mt-2 flex items-center gap-1.5 rounded-lg border border-orange/30 px-3 py-1.5 text-xs font-semibold text-orange hover:bg-orange/5 disabled:opacity-60"
+                        >
+                          <Mail size={13} /> {sendingAccessEmail ? 'Sending…' : 'Resend Access Email'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="mt-1 text-xs text-slate-400">Not yet registered for event check-in.</p>
+                        <button
+                          onClick={registerSpeaker}
+                          disabled={registering || !form.email?.trim()}
+                          title={!form.email?.trim() ? 'Add an email above first' : undefined}
+                          className="mt-2 flex items-center gap-1.5 rounded-lg bg-orange px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
+                        >
+                          <QrCode size={13} /> {registering ? 'Registering…' : 'Register This Speaker'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
                 {editing && (
                   <div>
                     <p className="mb-1.5 text-[13px] font-semibold text-navy">Bio Translations (AI Draft)</p>

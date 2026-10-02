@@ -72,12 +72,15 @@ export const CheckInPage = () => {
       .finally(() => setSearching(false));
   }, []);
 
+  const rowKey = (r: CheckInSearchResult) => (r.memberIndex !== undefined ? `${r.id}-${r.memberIndex}` : r.id);
+
   const doManualCheckIn = async (result: CheckInSearchResult) => {
-    setManualBusy(result.id);
+    const key = rowKey(result);
+    setManualBusy(key);
     try {
-      const summary = await manualCheckIn(result.id);
+      const summary = await manualCheckIn(result.id, result.memberIndex);
       toast('success', `${summary.name} checked in`);
-      setResults((prev) => prev.map((r) => (r.id === result.id ? { ...r, checkedIn: true } : r)));
+      setResults((prev) => prev.map((r) => (rowKey(r) === key ? { ...r, checkedIn: true } : r)));
       setRecent((prev) => [summary, ...prev].slice(0, 20));
       loadStats();
     } catch (err) {
@@ -153,11 +156,18 @@ export const CheckInPage = () => {
             )}
             {results.map((r) => (
               <div
-                key={r.id}
+                key={rowKey(r)}
                 className={`flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 ${r.isActive === false ? 'opacity-60' : ''}`}
               >
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] font-medium text-navy">{r.name}</p>
+                  <p className="truncate text-[13px] font-medium text-navy">
+                    {r.name}
+                    {r.memberIndex !== undefined && (
+                      <span className="ml-1.5 rounded-full bg-info/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-info">
+                        Group member
+                      </span>
+                    )}
+                  </p>
                   <p className="truncate text-xs text-slate-400">{r.organization || r.ticketCategory || r.type}</p>
                 </div>
                 {r.isActive === false ? (
@@ -171,7 +181,7 @@ export const CheckInPage = () => {
                 ) : (
                   <button
                     onClick={() => doManualCheckIn(r)}
-                    disabled={manualBusy === r.id}
+                    disabled={manualBusy === rowKey(r)}
                     className="flex shrink-0 items-center gap-1.5 rounded-lg bg-orange px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
                   >
                     <UserCheck size={13} /> Check In

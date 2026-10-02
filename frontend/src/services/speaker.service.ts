@@ -34,6 +34,12 @@ export interface AdminSpeaker {
   order: number;
   createdAt: string;
   updatedAt: string;
+  // Admin-only — never returned by the public /speakers route. `registration`
+  // being set is what "this speaker is registered for check-in" means; its
+  // absence is the only signal the admin UI needs to show a Register button
+  // instead of a Resend one.
+  email?: string;
+  registration?: string | null;
 }
 
 export interface SpeakerInput {
@@ -47,6 +53,7 @@ export interface SpeakerInput {
   hoverPhotoUrl?: string;
   isPublished?: boolean;
   order?: number;
+  email?: string;
 }
 
 export interface ListSpeakersParams {
@@ -97,6 +104,18 @@ export const adminDeleteSpeaker = async (id: string): Promise<void> => {
 // connection or an early tab close can't leave the list half-reordered.
 export const adminReorderSpeakers = async (order: { id: string; order: number }[]): Promise<AdminSpeaker[]> => {
   const res = await api.patch<{ success: true; data: AdminSpeaker[] }>('/admin/speakers/reorder', { order });
+  return res.data.data;
+};
+
+// --- Event check-in registration (admin-only, no public self-service) ---
+
+export const adminRegisterSpeaker = async (id: string): Promise<AdminSpeaker> => {
+  const res = await api.post<{ success: true; data: AdminSpeaker }>(`/admin/speakers/${id}/register`);
+  return res.data.data;
+};
+
+export const adminSendSpeakerAccessEmail = async (id: string): Promise<{ sentAt: string }> => {
+  const res = await api.post<{ success: true; data: { sentAt: string } }>(`/admin/speakers/${id}/send-access-email`);
   return res.data.data;
 };
 

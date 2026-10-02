@@ -96,7 +96,19 @@ export interface TeamPayload {
   organization?: string;
 }
 
-export type RegistrationPayload = AttendeePayload | ExhibitorPayload | SponsorPayload | VolunteerPayload | TeamPayload;
+// Innovator — architected like ExhibitorPayload (own self-service tab), not a
+// sub-case of attendee. See backend's innovatorSchema comment.
+export interface InnovatorPayload {
+  type: 'innovator';
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  website?: string;
+  solutionDescription?: string;
+}
+
+export type RegistrationPayload = AttendeePayload | ExhibitorPayload | SponsorPayload | VolunteerPayload | TeamPayload | InnovatorPayload;
 
 export interface SubmitRegistrationResult {
   id: string;

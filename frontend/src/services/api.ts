@@ -16,10 +16,18 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config;
     const url = typeof original?.url === 'string' ? original.url : '';
-    // Delegate-portal and reviewer-portal requests use their own cookie/session
-    // and must never trigger the admin refresh-token dance or bounce the visitor
-    // to /admin/login.
-    const isAuthRoute = url.includes('/auth/') || url.includes('/delegate/') || url.includes('/reviewer/');
+    // Delegate-portal, reviewer-portal, and rapporteur-portal requests use
+    // their own cookie/session (or, for rapporteur, no session at all — just
+    // the bearer token in the URL) and must never trigger the admin
+    // refresh-token dance or bounce the visitor to /admin/login. The
+    // rapporteur check excludes `/admin/rapporteur/...` (the admin-side
+    // assignment/review endpoints, a real admin session) — only the public
+    // `/rapporteur/:token` routes are auth-exempt here.
+    const isAuthRoute =
+      url.includes('/auth/') ||
+      url.includes('/delegate/') ||
+      url.includes('/reviewer/') ||
+      (url.includes('/rapporteur/') && !url.startsWith('/admin'));
 
     if (error.response?.status === 401 && !original._retry && !isAuthRoute) {
       original._retry = true;

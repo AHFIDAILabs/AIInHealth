@@ -35,6 +35,8 @@ import { PromoClaim } from './pages/public/PromoClaim';
 import { AbstractSubmission } from './pages/public/AbstractSubmission';
 import { ScholarshipApplication } from './pages/public/ScholarshipApplication';
 import { TeamRegistration } from './pages/public/TeamRegistration';
+import { RapporteurForm } from './pages/public/RapporteurForm';
+import { KnowledgeProductView } from './pages/public/KnowledgeProductView';
 import { Contact } from './pages/public/Contact';
 import { Privacy } from './pages/public/Privacy';
 import { Terms } from './pages/public/Terms';
@@ -45,6 +47,7 @@ import { ResetPasswordPage } from './pages/admin/ResetPasswordPage';
 import { DashboardPage } from './pages/admin/DashboardPage';
 import { RegistrationsPage } from './pages/admin/RegistrationsPage';
 import { ExhibitorsPage } from './pages/admin/ExhibitorsPage';
+import { InnovatorsPage } from './pages/admin/InnovatorsPage';
 import { AttendeesPage } from './pages/admin/AttendeesPage';
 import { SpeakersPage } from './pages/admin/SpeakersPage';
 import { SessionsPage } from './pages/admin/SessionsPage';
@@ -74,6 +77,8 @@ import { ScholarshipApplicationsPage } from './pages/admin/ScholarshipApplicatio
 import { AnalyticsPage } from './pages/admin/AnalyticsPage';
 import { IntegrationsPage } from './pages/admin/IntegrationsPage';
 import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage';
+import { RapporteurPage } from './pages/admin/RapporteurPage';
+import { KnowledgeProductsPage } from './pages/admin/KnowledgeProductsPage';
 import { PortalLogin } from './pages/portal/PortalLogin';
 import { PortalHome } from './pages/portal/PortalHome';
 import { PortalDirectory } from './pages/portal/PortalDirectory';
@@ -115,6 +120,8 @@ function App() {
             <Route path="/abstracts/submit" element={<AbstractSubmission />} />
             <Route path="/sponsored-delegates" element={<ScholarshipApplication />} />
             <Route path="/team/register" element={<TeamRegistration />} />
+            <Route path="/rapporteur/:token" element={<RapporteurForm />} />
+            <Route path="/knowledge-products/:type" element={<KnowledgeProductView />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
@@ -151,6 +158,7 @@ function App() {
               <Route element={<RequireRole roles={[...REGISTRATION_ROLES, 'viewer']} />}>
                 <Route path="/admin/payments" element={<PaymentsPage />} />
                 <Route path="/admin/exhibitors" element={<ExhibitorsPage />} />
+                <Route path="/admin/innovators" element={<InnovatorsPage />} />
                 <Route path="/admin/attendees" element={<AttendeesPage />} />
               </Route>
 
@@ -169,6 +177,8 @@ function App() {
                 <Route path="/admin/knowledge-base" element={<KnowledgeBasePage />} />
                 <Route path="/admin/policy-tracker" element={<PolicyTrackerPage />} />
                 <Route path="/admin/translations" element={<TranslationsQueuePage />} />
+                <Route path="/admin/rapporteur" element={<RapporteurPage />} />
+                <Route path="/admin/knowledge-products" element={<KnowledgeProductsPage />} />
               </Route>
 
               <Route element={<RequireRole roles={['super_admin', 'content_editor', 'registrations_officer', 'viewer']} />}>
