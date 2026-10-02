@@ -67,6 +67,8 @@ interface AddFormState {
   boothSize: '' | BoothSize;
   productsDescription: string;
   message: string;
+  // innovator
+  solutionDescription: string;
   // volunteer
   tshirtSize: string;
   trackSelected: string;
@@ -93,6 +95,7 @@ const EMPTY_ADD_FORM: AddFormState = {
   boothSize: '',
   productsDescription: '',
   message: '',
+  solutionDescription: '',
   tshirtSize: '',
   trackSelected: '',
   trackAssigned: '',
@@ -399,7 +402,11 @@ export const RegistrationsPage = () => {
       };
     } else {
       if (!addForm.companyName.trim() || !addForm.contactName.trim() || !addForm.contactEmail.trim()) {
-        setAddError('Company name, contact name, and contact email are required.');
+        setAddError(
+          addForm.type === 'innovator'
+            ? 'Startup/project name, contact name, and contact email are required.'
+            : 'Company name, contact name, and contact email are required.'
+        );
         return;
       }
       const shared = {
@@ -412,7 +419,9 @@ export const RegistrationsPage = () => {
       payload =
         addForm.type === 'exhibitor'
           ? { type: 'exhibitor', ...shared, boothSize: addForm.boothSize || undefined, productsDescription: addForm.productsDescription.trim() || undefined }
-          : { type: 'sponsor', ...shared, message: addForm.message.trim() || undefined };
+          : addForm.type === 'innovator'
+            ? { type: 'innovator', ...shared, solutionDescription: addForm.solutionDescription.trim() || undefined }
+            : { type: 'sponsor', ...shared, message: addForm.message.trim() || undefined };
     }
 
     setAddSaving(true);
@@ -939,12 +948,12 @@ export const RegistrationsPage = () => {
                 {addError && <Banner variant="error">{addError}</Banner>}
 
                 {!contentEditorOnly && (
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {TYPE_OPTIONS.map((t) => (
                       <button
                         key={t}
                         onClick={() => setAddForm({ ...EMPTY_ADD_FORM, type: t })}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-[13px] font-semibold transition-colors ${
+                        className={`rounded-lg border px-3 py-2 text-[13px] font-semibold transition-colors ${
                           addForm.type === t ? 'border-orange bg-orange/10 text-orange' : 'border-slate-200 text-slate-500'
                         }`}
                       >
@@ -1094,10 +1103,14 @@ export const RegistrationsPage = () => {
                   </div>
                 )}
 
-                {(addForm.type === 'exhibitor' || addForm.type === 'sponsor') && (
+                {(addForm.type === 'exhibitor' || addForm.type === 'sponsor' || addForm.type === 'innovator') && (
                   <>
                     <div className="grid grid-cols-2 gap-3">
-                      <AdminInput label="Company Name" value={addForm.companyName} onChange={(e) => setAddForm({ ...addForm, companyName: e.target.value })} />
+                      <AdminInput
+                        label={addForm.type === 'innovator' ? 'Startup / Project Name' : 'Company Name'}
+                        value={addForm.companyName}
+                        onChange={(e) => setAddForm({ ...addForm, companyName: e.target.value })}
+                      />
                       <AdminInput label="Contact Name" value={addForm.contactName} onChange={(e) => setAddForm({ ...addForm, contactName: e.target.value })} />
                       <AdminInput label="Contact Email" type="email" value={addForm.contactEmail} onChange={(e) => setAddForm({ ...addForm, contactEmail: e.target.value })} />
                       <AdminInput label="Contact Phone" type="tel" value={addForm.contactPhone} onChange={(e) => setAddForm({ ...addForm, contactPhone: e.target.value })} />
@@ -1115,6 +1128,12 @@ export const RegistrationsPage = () => {
                         </AdminSelect>
                         <AdminTextarea label="Products" value={addForm.productsDescription} onChange={(e) => setAddForm({ ...addForm, productsDescription: e.target.value })} />
                       </>
+                    ) : addForm.type === 'innovator' ? (
+                      <AdminTextarea
+                        label="What does their solution do?"
+                        value={addForm.solutionDescription}
+                        onChange={(e) => setAddForm({ ...addForm, solutionDescription: e.target.value })}
+                      />
                     ) : (
                       <AdminTextarea label="Message" value={addForm.message} onChange={(e) => setAddForm({ ...addForm, message: e.target.value })} />
                     )}

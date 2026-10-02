@@ -9,6 +9,10 @@ export const ACCESS_CODE_TYPES = [
   'promo',
   'abstract_presenter',
   'abstract_reviewer',
+  // Pre-approve a specific company/startup to skip the normal pending-review
+  // queue on the Exhibitor/Innovator tab — see backend enums.ts's comment.
+  'exhibitor',
+  'innovator',
 ] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
 

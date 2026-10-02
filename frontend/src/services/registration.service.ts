@@ -61,6 +61,9 @@ export interface ExhibitorPayload {
   // Answers to admin-defined CustomFormField questions, keyed by field _id —
   // see customFormField.service.ts.
   customFieldAnswers?: Record<string, string>;
+  // Optional — a pre-approved company can skip the normal pending-review
+  // queue with a code staff already sent them (confirms immediately).
+  accessCode?: string;
 }
 
 export interface SponsorPayload {
@@ -106,6 +109,9 @@ export interface InnovatorPayload {
   contactPhone?: string;
   website?: string;
   solutionDescription?: string;
+  // Optional — a pre-approved startup can skip the normal pending-review
+  // queue with a code staff already sent them (confirms immediately).
+  accessCode?: string;
 }
 
 export type RegistrationPayload = AttendeePayload | ExhibitorPayload | SponsorPayload | VolunteerPayload | TeamPayload | InnovatorPayload;

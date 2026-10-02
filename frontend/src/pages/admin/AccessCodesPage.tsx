@@ -37,6 +37,8 @@ const TYPE_LABEL: Record<AccessCodeType, string> = {
   promo: 'Promo Banner',
   abstract_presenter: 'Abstract Presenter',
   abstract_reviewer: 'Abstract Reviewer',
+  exhibitor: 'Exhibitor (Pre-Approved)',
+  innovator: 'Innovator (Pre-Approved)',
 };
 
 const PRESENTATION_TYPE_LABEL: Record<PresentationType, string> = { oral: 'Oral Presenter', poster: 'Poster Presenter' };

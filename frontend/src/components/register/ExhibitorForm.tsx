@@ -19,6 +19,7 @@ const schema = z.object({
   website: optionalUrlField,
   boothSize: z.enum(['small', 'medium', 'large']).optional(),
   productsDescription: z.string().trim().max(2000).optional(),
+  accessCode: z.string().trim().max(32).optional().or(z.literal('')),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -51,9 +52,11 @@ export const ExhibitorForm = () => {
       return;
     }
     try {
+      const accessCode = values.accessCode?.trim();
       const { message } = await submitRegistration({
         type: 'exhibitor',
         ...values,
+        accessCode: accessCode ? accessCode.toUpperCase() : undefined,
         customFieldAnswers: Object.keys(customAnswers).length ? customAnswers : undefined,
       });
       setConfirmation(message);
@@ -113,6 +116,19 @@ export const ExhibitorForm = () => {
           onChange={(v) => setCustomAnswers((prev) => ({ ...prev, [field._id]: v }))}
         />
       ))}
+
+      <div>
+        <LightField
+          label="Access Code (optional)"
+          placeholder="e.g. EXH-XXXXXX"
+          error={errors.accessCode?.message}
+          {...register('accessCode')}
+          className="uppercase tracking-wider"
+        />
+        <p className="mt-1.5 text-xs text-slate-400">
+          Already pre-approved by our team? Enter the code you were sent to skip review and confirm immediately.
+        </p>
+      </div>
 
       <div className="flex justify-end">
         <Button type="submit" variant="primary" loading={isSubmitting}>

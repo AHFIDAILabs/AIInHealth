@@ -17,6 +17,7 @@ const schema = z.object({
   contactPhone: z.string().trim().optional(),
   website: optionalUrlField,
   solutionDescription: z.string().trim().max(2000).optional(),
+  accessCode: z.string().trim().max(32).optional().or(z.literal('')),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -34,7 +35,12 @@ export const InnovatorForm = () => {
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
     try {
-      const { message } = await submitRegistration({ type: 'innovator', ...values });
+      const accessCode = values.accessCode?.trim();
+      const { message } = await submitRegistration({
+        type: 'innovator',
+        ...values,
+        accessCode: accessCode ? accessCode.toUpperCase() : undefined,
+      });
       setConfirmation(message);
     } catch (err) {
       setServerError(getApiErrorMessage(err));
@@ -75,6 +81,19 @@ export const InnovatorForm = () => {
         error={errors.solutionDescription?.message}
         {...register('solutionDescription')}
       />
+
+      <div>
+        <LightField
+          label="Access Code (optional)"
+          placeholder="e.g. INNO-XXXXXX"
+          error={errors.accessCode?.message}
+          {...register('accessCode')}
+          className="uppercase tracking-wider"
+        />
+        <p className="mt-1.5 text-xs text-slate-400">
+          Already pre-approved by our team? Enter the code you were sent to skip review and confirm immediately.
+        </p>
+      </div>
 
       <div className="flex justify-end">
         <Button type="submit" variant="primary" loading={isSubmitting}>
