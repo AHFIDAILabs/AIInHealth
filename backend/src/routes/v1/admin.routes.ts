@@ -21,6 +21,9 @@ import * as delegateAnnouncementController from '../../controllers/delegateAnnou
 import * as abstractController from '../../controllers/abstract.controller.js';
 import * as rubricController from '../../controllers/rubric.controller.js';
 import * as reviewerController from '../../controllers/reviewer.controller.js';
+import * as rapporteurController from '../../controllers/rapporteur.controller.js';
+import * as liveTranscriptController from '../../controllers/liveTranscript.controller.js';
+import * as knowledgeProductController from '../../controllers/knowledgeProduct.controller.js';
 import * as communicationController from '../../controllers/communication.controller.js';
 import * as eventTeamController from '../../controllers/eventTeam.controller.js';
 import * as portalTokenController from '../../controllers/portalToken.controller.js';
@@ -53,11 +56,14 @@ import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { requireRole } from '../../middlewares/rbac.middleware.js';
 import { requireRootAdmin } from '../../middlewares/requireRootAdmin.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { uploadImage, uploadMedia, uploadCsv, uploadDocument } from '../../middlewares/upload.middleware.js';
+import { uploadImage, uploadMedia, uploadCsv, uploadDocument, uploadAudio } from '../../middlewares/upload.middleware.js';
+import { liveTranscriptChunkLimiter } from '../../middlewares/rateLimiter.middleware.js';
 import { subscribePushSchema, unsubscribePushSchema } from '../../validations/push.validation.js';
 import { sendAnnouncementSchema } from '../../validations/delegateAnnouncement.validation.js';
 import { replaceRubricSchema } from '../../validations/rubric.validation.js';
 import { adminCreateReviewerSchema, adminAssignReviewerSchema } from '../../validations/reviewer.validation.js';
+import { adminAssignRapporteurSchema, adminUpdateReportSchema } from '../../validations/rapporteur.validation.js';
+import { knowledgeProductTypeParamSchema, adminUpdateKnowledgeProductSchema } from '../../validations/knowledgeProduct.validation.js';
 import { adminUpdateCommunicationSchema } from '../../validations/communication.validation.js';
 import { createSponsorshipPackageSchema, updateSponsorshipPackageSchema } from '../../validations/sponsorshipPackage.validation.js';
 import { createDeliverableSchema, updateDeliverableSchema } from '../../validations/deliverable.validation.js';
@@ -178,6 +184,8 @@ router.patch('/speakers/:id', requireRole(...contentRoles), speakerController.ad
 router.delete('/speakers/:id', requireRole(...contentRoles), speakerController.adminDelete);
 router.post('/speakers/:id/translate', requireRole(...contentRoles), speakerController.translate);
 router.patch('/speakers/:id/translations/:lang', requireRole(...contentRoles), speakerController.updateTranslation);
+router.post('/speakers/:id/register', requireRole(...contentRoles), speakerController.adminRegister);
+router.post('/speakers/:id/send-access-email', requireRole(...contentRoles), speakerController.adminSendAccessEmail);
 
 router.get('/sessions', requireRole(...contentRoles), sessionController.adminList);
 router.post('/sessions/check-conflict', requireRole(...contentRoles), sessionController.checkConflict);
@@ -321,6 +329,48 @@ router.post('/rubric/restore-standard', requireRole(...contentRoles), rubricCont
 
 router.get('/reviewers', requireRole(...contentRoles), reviewerController.adminList);
 router.post('/reviewers', requireRole(...contentRoles), validate(adminCreateReviewerSchema), reviewerController.adminCreate);
+
+// AI-Assisted Rapporteur System (Stage 1) — content-team work, same roles as
+// Sessions/Agenda management, since assigning a rapporteur to a session is
+// scoped alongside that content.
+router.get('/rapporteur/sessions', requireRole(...contentRoles), rapporteurController.adminListAssignableSessions);
+router.post('/rapporteur/assign', requireRole(...contentRoles), validate(adminAssignRapporteurSchema), rapporteurController.adminAssign);
+router.get('/rapporteur/reports', requireRole(...contentRoles), rapporteurController.adminListReports);
+router.patch('/rapporteur/reports/:id', requireRole(...contentRoles), validate(adminUpdateReportSchema), rapporteurController.adminUpdateReport);
+router.post('/rapporteur/reports/:id/retry-polish', requireRole(...contentRoles), rapporteurController.adminRetryPolish);
+router.get('/rapporteur/live-status', requireRole(...contentRoles), rapporteurController.adminLiveStatus);
+router.post('/rapporteur/tokens/:id/revoke', requireRole(...contentRoles), rapporteurController.adminRevokeToken);
+router.post('/rapporteur/tokens/:id/resend', requireRole(...contentRoles), rapporteurController.adminResendLink);
+
+// AI-Assisted Rapporteur System Stage 2, Layer 3 — admin-only internal live
+// transcript monitoring, same content roles as the rest of the rapporteur block.
+router.get('/live-transcript/sessions', requireRole(...contentRoles), liveTranscriptController.adminListSessions);
+router.get('/live-transcript/sessions/:id', requireRole(...contentRoles), liveTranscriptController.adminGet);
+router.post('/live-transcript/sessions/:id/start', requireRole(...contentRoles), liveTranscriptController.adminStart);
+router.post('/live-transcript/sessions/:id/stop', requireRole(...contentRoles), liveTranscriptController.adminStop);
+router.post(
+  '/live-transcript/sessions/:id/chunk',
+  requireRole(...contentRoles),
+  liveTranscriptChunkLimiter,
+  uploadAudio,
+  liveTranscriptController.adminChunk
+);
+
+// AI Feature Suite 2.9 / Rapporteur spec Section 7 — Knowledge Product
+// Drafting, same content roles as the rest of this content-drafting block.
+router.get('/knowledge-products', requireRole(...contentRoles), knowledgeProductController.adminList);
+router.post(
+  '/knowledge-products/:type/generate',
+  requireRole(...contentRoles),
+  validate(knowledgeProductTypeParamSchema),
+  knowledgeProductController.adminGenerate
+);
+router.patch(
+  '/knowledge-products/:type',
+  requireRole(...contentRoles),
+  validate(adminUpdateKnowledgeProductSchema),
+  knowledgeProductController.adminUpdate
+);
 
 router.get('/abstracts-analytics', requireRole(...contentRoles), abstractController.analytics);
 

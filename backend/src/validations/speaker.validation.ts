@@ -16,6 +16,10 @@ export const createSpeakerSchema = z.object({
     hoverPhotoUrl: optionalUrl,
     isPublished: z.boolean().optional(),
     order: z.coerce.number().int().optional(),
+    // Admin-only — never shown publicly. Needed to register this speaker for
+    // event check-in (speaker.controller.ts's adminRegister) and send them
+    // their access/QR email.
+    email: z.string().trim().toLowerCase().email('Enter a valid email').optional().or(z.literal('')),
   }),
 });
 

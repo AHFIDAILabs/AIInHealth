@@ -11,8 +11,8 @@ import {
   PRESENTATION_TYPES,
 } from '../types/enums.js';
 
-// One flat collection for all four Register-page flows (attendee/exhibitor/sponsor/
-// volunteer) rather than a Mongoose discriminator per type — the field sets barely
+// One flat collection for every Register-page flow (attendee/exhibitor/sponsor/
+// volunteer/team/innovator) rather than a Mongoose discriminator per type — the field sets barely
 // overlap, but admins reviewing submissions want a single list/status pipeline
 // across all of them.
 const registrationSchema = new Schema(
@@ -35,11 +35,19 @@ const registrationSchema = new Schema(
     // credential), for the admin to check before confirming. Same
     // Cloudinary-URL-string pattern as avatarUrl below.
     idCardUrl: { type: String, trim: true },
+    // Each member gets their OWN qrToken/checkedIn/checkedInAt — independent of
+    // the primary contact's own top-level fields below — so every person in a
+    // group registration can check in/out of the venue on their own instead of
+    // the whole group sharing one QR code (checkin.controller.ts's scan/
+    // manualCheckIn match against either the top-level qrToken or a member's).
     groupAttendees: [
       {
         _id: false,
         fullName: { type: String, trim: true },
         email: { type: String, trim: true, lowercase: true },
+        qrToken: { type: String },
+        checkedIn: { type: Boolean, default: false },
+        checkedInAt: { type: Date },
       },
     ],
 
@@ -56,6 +64,11 @@ const registrationSchema = new Schema(
 
     // Sponsor only
     message: { type: String, trim: true },
+
+    // Innovator only — their analog of Exhibitor's productsDescription above,
+    // kept as its own field rather than reusing that one so the two don't
+    // carry cross-type meaning (an Innovator isn't exhibiting a booth).
+    solutionDescription: { type: String, trim: true, maxlength: 2000 },
 
     // Exhibitor only — answers to admin-defined CustomFormField questions
     // (see that model), keyed by the field's own _id string. A plain Mixed
@@ -211,6 +224,10 @@ registrationSchema.index({ paymentReference: 1 }, { unique: true, sparse: true }
 // reference retired here can never collide with a NEW live paymentReference
 // anyway, since that one's already enforced unique above).
 registrationSchema.index({ previousPaymentReferences: 1 });
+// unique (not just sparse) — a multikey index on an array field enforces
+// uniqueness per ELEMENT across the whole collection, same guarantee the
+// top-level qrToken's own unique index gives the primary contact.
+registrationSchema.index({ 'groupAttendees.qrToken': 1 }, { unique: true, sparse: true });
 
 // At most one registration per (type, email/contactEmail) — closes the gap that
 // let delegate.controller.ts's requestAccessCode silently pick the *most recent*

@@ -1,6 +1,6 @@
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
-import { REVIEWER_ACCESS_CODE_EXPIRES_AT, DELEGATE_ACCESS_CODE_EXPIRES_AT } from '../config/event.js';
+import { REVIEWER_ACCESS_CODE_EXPIRES_AT, DELEGATE_ACCESS_CODE_EXPIRES_AT, RAPPORTEUR_TOKEN_EXPIRES_AT } from '../config/event.js';
 import { VENUE_SHORT, VENUE_FULL_ADDRESS, VENUE_MAPS_LINK } from '../config/venue.js';
 
 const graphConfigured = Boolean(env.MS_TENANT_ID && env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.MS_SENDER_EMAIL);
@@ -436,6 +436,36 @@ export const sendReviewerAssignmentEmail = async (
   });
 };
 
+// A rapporteur is assigned ONE session with a single bearer link — unlike the
+// reviewer's reusable email+code (a reviewer logs in repeatedly across many
+// assignments), this link IS the whole credential for that one assignment, so
+// it's sent once at assignment time (adminAssign) and again verbatim on an
+// explicit admin "Resend" (adminResendLink) — never regenerated.
+export const sendRapporteurAssignmentEmail = async (
+  to: string,
+  rapporteurName: string,
+  data: { sessionTitle: string; day: string; startTime: string; room: string; portalUrl: string }
+): Promise<void> => {
+  const expiresLabel = RAPPORTEUR_TOKEN_EXPIRES_AT.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  await sendEmail({
+    to,
+    subject: `You're the rapporteur for "${data.sessionTitle}" — AI in Health Summit 2026`,
+    html: `
+      <p>Hi ${rapporteurName},</p>
+      <p>You've been assigned as rapporteur for:</p>
+      <p style="font-size:16px;font-weight:700;">${data.sessionTitle}</p>
+      <p>${data.day}, ${data.startTime} &middot; ${data.room}</p>
+      <p><a href="${data.portalUrl}">Click here to open your rapporteur notes page</a> — no sign-in needed, this link is your access. Jot down key points, decisions, action items, and notable quotes during the session; your notes save automatically as you type, even if your connection drops. When the session ends, submit your notes and we'll polish them into a clean session report for you.</p>
+      <p>This link works through ${expiresLabel}. Keep it to yourself — anyone with the link can edit this session's notes.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 export const sendPaymentConfirmationEmail = async (
   to: string,
   fullName: string,
@@ -502,6 +532,62 @@ export const sendRegistrationConfirmedEmail = async (
   });
 };
 
+// Exhibitor/Innovator-tailored counterparts to sendRegistrationConfirmedEmail
+// above — neither mentions the delegate portal/access code (exhibitors and
+// innovators don't use it meaningfully the way an attendee does), and each
+// speaks to their own next steps instead. registrationNotification.service.ts's
+// sendConfirmationAndTicketEmails picks between these and the generic one by
+// registration.type; the check-in QR itself still goes out separately via the
+// same sendTicketQrEmail every type already shares.
+export const sendExhibitorConfirmedEmail = async (to: string, companyName: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "You're confirmed — AI in Health Summit 2026 Exhibition",
+    html: `
+      <p>Hi ${companyName} team,</p>
+      <p>Your exhibitor registration for the AI in Health Summit 2026 is confirmed. Our team will be in touch with booth assignment and setup logistics ahead of the event.</p>
+      <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
+    `,
+  });
+};
+
+export const sendInnovatorConfirmedEmail = async (to: string, companyName: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "You're confirmed — AI in Health Summit 2026 Innovation Showcase",
+    html: `
+      <p>Hi ${companyName} team,</p>
+      <p>Your registration to showcase at the AI in Health Summit 2026 is confirmed. Our team will be in touch with demo table assignment and setup logistics ahead of the event.</p>
+      <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
+    `,
+  });
+};
+
+// Speaker's access email — a single combined send (not the usual two-email
+// confirmation-then-QR flow), since an admin directly registering a speaker
+// already IS the confirmation; no portal/payment language at all. Same
+// inline-cid: attachment technique as sendTicketQrEmail, for the same
+// Outlook-strips-data:-URIs reason.
+export const sendSpeakerAccessEmail = async (
+  to: string,
+  fullName: string,
+  data: { qrPngBuffer: Buffer }
+): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "Your speaker access — AI in Health Summit 2026",
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Thank you for speaking at the AI in Health Summit 2026 — we're looking forward to having you.</p>
+      <p>Attached is your personal check-in QR code. Show it at the registration desk to access the venue on either day (19&ndash;20 October 2026) — it's yours for both days.</p>
+      <p><img src="cid:qrcode" alt="Check-in QR code" width="220" height="220" /></p>
+      <p><strong>Venue:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+    inlineImages: [{ contentId: 'qrcode', contentBytes: data.qrPngBuffer, contentType: 'image/png' }],
+  });
+};
+
 // Sent right after a registration is confirmed (paid, comped, or an admin
 // confirming directly) — every attendee's actual check-in credential, not just
 // a link to go fetch it from the portal. Sent as a real inline attachment
@@ -509,7 +595,15 @@ export const sendRegistrationConfirmedEmail = async (
 // (Outlook's Win32/Word-engine client especially) strip data: URIs from an
 // HTML email body, so the QR code would silently never render for those
 // recipients even though the send itself "succeeded".
-export const sendTicketQrEmail = async (to: string, fullName: string, qrPngBuffer: Buffer): Promise<void> => {
+export const sendTicketQrEmail = async (
+  to: string,
+  fullName: string,
+  qrPngBuffer: Buffer,
+  // Group members (sendGroupMemberConfirmedEmail below) have no delegate
+  // portal account of their own — the portal login is tied to the one
+  // registration/primary contact — so that closing line doesn't apply to them.
+  options: { skipPortalMention?: boolean } = {}
+): Promise<void> => {
   await sendEmail({
     to,
     subject: 'Your check-in QR code — AI in Health Summit 2026',
@@ -518,9 +612,36 @@ export const sendTicketQrEmail = async (to: string, fullName: string, qrPngBuffe
       <p>Here's your e-ticket for the AI in Health Summit 2026. Show this QR code at the registration desk to check in on either day (19&ndash;20 October 2026) — it's yours for both days, no need to re-download.</p>
       <p><img src="cid:qrcode" alt="Check-in QR code" width="220" height="220" /></p>
       <p><strong>Venue:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
-      <p>Keep this email handy, or sign in to the delegate portal any time to view it again.</p>
+      <p>${options.skipPortalMention ? 'Keep this email handy for check-in.' : 'Keep this email handy, or sign in to the delegate portal any time to view it again.'}</p>
     `,
     inlineImages: [{ contentId: 'qrcode', contentBytes: qrPngBuffer, contentType: 'image/png' }],
+  });
+};
+
+// Sent to each individual group member (Registration.groupAttendees) once the
+// GROUP registration they're part of is confirmed — their own confirmation,
+// separate from the primary contact's. Their own QR ticket follows right
+// after via sendTicketQrEmail (same function every other confirmed attendee
+// gets, just addressed to them individually) — see
+// registrationNotification.service.ts's sendGroupMemberTickets. No delegate
+// portal access code here: portal login is tied to the one registration's
+// primary contact, not meaningfully usable per group member.
+export const sendGroupMemberConfirmedEmail = async (
+  to: string,
+  fullName: string,
+  data: { primaryContactName: string; ticketCategory?: string }
+): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "You're confirmed — AI in Health Summit 2026",
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>You're confirmed to attend the AI in Health Summit 2026${
+        data.ticketCategory ? ` (${data.ticketCategory.replace(/_/g, ' ')})` : ''
+      }, as part of the group registration ${data.primaryContactName} completed on your behalf.</p>
+      <p>Your own personal check-in QR code is on its way in a separate email — it's yours alone, so you can arrive and leave the venue independently of the rest of your group.</p>
+      <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
+    `,
   });
 };
 

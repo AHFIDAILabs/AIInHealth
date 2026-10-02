@@ -19,6 +19,14 @@ export const REVIEWER_ACCESS_CODE_EXPIRES_AT = new Date(EVENT_END_DATE.getTime()
 // without one silently dragging the other along.
 export const DELEGATE_ACCESS_CODE_EXPIRES_AT = new Date(EVENT_END_DATE.getTime() + ONE_WEEK_MS);
 
+// Rapporteur assignment tokens (rapporteurToken.service.ts) — a much shorter
+// fixed cutoff than the week-long reviewer/delegate codes above, since a
+// rapporteur's whole job (write up one session, submit) happens within the
+// event itself; 72 hours past the close covers someone finishing a writeup
+// the day after without leaving stale long-lived bearer tokens active for a
+// week like the other two.
+export const RAPPORTEUR_TOKEN_EXPIRES_AT = new Date(EVENT_END_DATE.getTime() + 72 * 60 * 60 * 1000);
+
 // QR-banner promo campaign (promo.controller.ts) — fixed 10-day duration once
 // launched. Deliberately NOT a fixed calendar date here: an admin starts the
 // clock explicitly via POST /admin/promo/launch (PromoSettings.model.ts),

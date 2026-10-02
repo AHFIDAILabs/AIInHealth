@@ -39,6 +39,17 @@ const speakerSchema = new Schema(
     },
     isPublished: { type: Boolean, default: false },
     order: { type: Number, default: 0 },
+
+    // Admin-only — never returned by the public list() projection, never
+    // shown on the public Speakers page. Exists purely so an admin can
+    // register this speaker for event check-in (see registration below) and
+    // send them their access/QR email.
+    email: { type: String, trim: true, lowercase: true },
+    // Set once an admin registers this speaker (speaker.controller.ts's
+    // adminRegister) — its presence IS the "is this speaker registered" state,
+    // no separate boolean needed. The Registration it points to carries
+    // ticketCategory 'speaker' and the actual qrToken used at check-in.
+    registration: { type: Schema.Types.ObjectId, ref: 'Registration' },
   },
   { timestamps: true }
 );

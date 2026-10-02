@@ -6,7 +6,12 @@ export type Role = (typeof ROLES)[number];
 // the EventTeamMember roster rather than open self-serve. See
 // registration.controller.ts's create() 'team' branch and
 // analytics.controller.ts's exclusion of this type from attendee-facing totals.
-export const REGISTRATION_TYPES = ['attendee', 'exhibitor', 'sponsor', 'volunteer', 'team'] as const;
+// 'innovator' mirrors 'exhibitor' architecturally (own public self-service
+// tab/form, own admin review page) — a parallel, separate concern from the
+// Innovation Showcase judging system (InnovationShowcaseEntry.model.ts),
+// which collects no contact info and was never meant to double as event
+// check-in identity.
+export const REGISTRATION_TYPES = ['attendee', 'exhibitor', 'sponsor', 'volunteer', 'team', 'innovator'] as const;
 export type RegistrationType = (typeof REGISTRATION_TYPES)[number];
 
 export const REGISTRATION_STATUSES = ['pending', 'reviewed', 'confirmed', 'declined'] as const;
@@ -38,6 +43,12 @@ export const TICKET_CATEGORIES = [
   'staff',
   'abstract_presenter',
   'abstract_reviewer',
+  // Admin-only, like 'staff' — never self-selectable on the public Attendee
+  // form (registration.controller.ts's create() rejects it outright; the
+  // only path that ever sets this is speaker.controller.ts's adminRegister,
+  // which creates the Registration directly). Free (pricing.ts), lets
+  // badge/tag printing tell Speakers apart from other attendees later.
+  'speaker',
 ] as const;
 export type TicketCategory = (typeof TICKET_CATEGORIES)[number];
 
@@ -284,6 +295,39 @@ export type ScoreBand = (typeof SCORE_BANDS)[number];
 // wired to a public page.
 export const PLAIN_SUMMARY_STATUSES = ['none', 'draft', 'approved'] as const;
 export type PlainSummaryStatus = (typeof PLAIN_SUMMARY_STATUSES)[number];
+
+// AI-Assisted Rapporteur System (Layer 1) — SessionReport.model.ts. A report
+// starts 'draft' the moment it's created at assignment time and flips to
+// 'submitted' once the rapporteur submits it; there's no further state after
+// that (editing a submitted report is an admin-only action on the already-
+// submitted document, not a status transition).
+export const RAPPORTEUR_REPORT_STATUSES = ['draft', 'submitted'] as const;
+export type RapporteurReportStatus = (typeof RAPPORTEUR_REPORT_STATUSES)[number];
+
+// The Groq-drafted session summary's own review gate — same admin-approval-
+// gate shape as PLAIN_SUMMARY_STATUSES, but no 'none': a SessionReport simply
+// has no aiPolishedSummary at all until submission triggers the AI call, so
+// there's nothing for a third state to describe.
+export const AI_POLISH_STATUSES = ['draft', 'approved'] as const;
+export type AiPolishStatus = (typeof AI_POLISH_STATUSES)[number];
+
+// AI-Assisted Rapporteur System Stage 2, Layer 3 (Session.model.ts's
+// liveTranscriptStatus) — 'idle' until an admin starts a capture, 'recording'
+// while chunks are actively being transcribed and appended, 'ended' once
+// stopped. Starting again from 'ended' goes back to 'recording' and clears
+// the previous segments — restarting a plenary's live transcript is treated
+// as a fresh capture, not a resume.
+export const LIVE_TRANSCRIPT_STATUSES = ['idle', 'recording', 'ended'] as const;
+export type LiveTranscriptStatus = (typeof LIVE_TRANSCRIPT_STATUSES)[number];
+
+// AI Feature Suite 2.9 / Rapporteur spec Section 7 — Knowledge Product
+// Drafting. Fixed roster of the five AI-drafted documents (the public site's
+// ParticipantsOutcomes.tsx lists a sixth, the Strategic Partnership
+// Directory, but that one links straight to the existing /partners page
+// instead — it's real structured Partner data already, not a narrative that
+// benefits from an AI draft). See KnowledgeProduct.model.ts.
+export const KNOWLEDGE_PRODUCT_TYPES = ['communique', 'proceedings', 'policyBrief', 'technicalReport', 'actionPlan'] as const;
+export type KnowledgeProductType = (typeof KNOWLEDGE_PRODUCT_TYPES)[number];
 
 // AI Feature Suite 2.4 (Multilingual). Scoped to the content models that
 // actually have translatable body text and a real public page rendering it —

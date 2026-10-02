@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
-import { SESSION_DAYS, SESSION_CARD_STYLES, TRANSLATION_STATUSES } from '../types/enums.js';
+import { SESSION_DAYS, SESSION_CARD_STYLES, TRANSLATION_STATUSES, LIVE_TRANSCRIPT_STATUSES } from '../types/enums.js';
 
 // AI-drafted (services/ai/translate.service.ts), admin-triggered, admin-
 // reviewed — see TRANSLATION_STATUSES' comment in types/enums.ts. The public
@@ -45,6 +45,19 @@ const sessionSchema = new Schema(
     // Set by the session-reminder cron job once it's fired for this session, so a
     // 5-minute polling loop never sends the same reminder twice.
     reminderSent: { type: Boolean, default: false },
+    // AI-Assisted Rapporteur System Stage 2, Layer 3 — continuous plenary live
+    // transcript, admin-only internal monitoring (liveTranscript.controller.ts).
+    // isLiveTranscribed flips true the first time an admin starts a capture for
+    // this session (not a separate manual toggle) and stays true afterward as a
+    // simple "this session has a transcript" marker; liveTranscriptStatus is the
+    // actual current/last run state. Restarting a capture (status 'ended' ->
+    // 'recording' again) clears liveTranscriptSegments — a fresh capture, not a
+    // resume (see LIVE_TRANSCRIPT_STATUSES' comment in types/enums.ts).
+    isLiveTranscribed: { type: Boolean, default: false },
+    liveTranscriptStatus: { type: String, enum: LIVE_TRANSCRIPT_STATUSES, default: 'idle' },
+    liveTranscriptSegments: { type: [{ _id: false, text: String, capturedAt: Date }], default: [] },
+    liveTranscriptStartedAt: { type: Date },
+    liveTranscriptEndedAt: { type: Date },
 
     // Limited-capacity ("special") session support — see session.controller.ts's
     // publicRsvp/adminAddRsvp/adminRemoveRsvp. requiresRsvp just flags the session

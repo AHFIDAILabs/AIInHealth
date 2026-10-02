@@ -82,3 +82,31 @@ export const uploadDocument = multer({
     cb(null, true);
   },
 }).single('file');
+
+const ALLOWED_AUDIO_MIMES = new Set([
+  'audio/webm',
+  'audio/ogg',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/wav',
+  'audio/x-m4a',
+]);
+
+// AI-Assisted Rapporteur System Stage 2 — both Layer 2's "Capture This Quote"
+// (rapporteur.controller.ts's transcribeQuote) and Layer 3's live-transcript
+// chunks (liveTranscript.controller.ts's adminChunk) share this one picker:
+// both are short (<1 minute) clips headed straight to Groq Whisper, never to
+// disk or Cloudinary (whisper.service.ts discards the buffer right after
+// transcribing it), so one size cap/mime set covers both. The mime set covers
+// what MediaRecorder actually produces across Chrome/Firefox/Safari.
+export const uploadAudio = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8MB — generous for a <1min clip at any reasonable bitrate
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_AUDIO_MIMES.has(file.mimetype)) {
+      cb(new ApiError(422, 'Only WEBM, OGG, MP4, MP3, WAV, or M4A audio is allowed.', 'INVALID_FILE_TYPE'));
+      return;
+    }
+    cb(null, true);
+  },
+}).single('audio');

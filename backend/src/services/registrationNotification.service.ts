@@ -2,12 +2,15 @@ import type { HydratedDocument } from 'mongoose';
 import { logger } from '../config/logger.js';
 import type { RegistrationDoc } from '../models/Registration.model.js';
 import { ensureDelegateAccessCode } from './delegateToken.service.js';
-import { qrPngBufferForToken } from './qr.service.js';
+import { qrPngBufferForToken, generateQrToken } from './qr.service.js';
 import {
   sendPaymentConfirmationEmail,
   sendRegistrationConfirmedEmail,
+  sendExhibitorConfirmedEmail,
+  sendInnovatorConfirmedEmail,
   sendTicketQrEmail,
   sendDelegateAccessCodeEmail,
+  sendGroupMemberConfirmedEmail,
 } from './email.service.js';
 
 interface ConfirmationEmailOptions {
@@ -25,6 +28,48 @@ const recipientEmail = (r: { email?: string | null; contactEmail?: string | null
   r.email || r.contactEmail || null;
 const recipientName = (r: { fullName?: string | null; contactName?: string | null; companyName?: string | null }): string =>
   r.fullName || r.contactName || r.companyName || 'there';
+
+// Attendee-only (groupAttendees doesn't exist on any other type). Generates a
+// missing qrToken for any member who doesn't have one yet (first confirmation),
+// persists it, then emails each one their own confirmation + personal QR
+// ticket — independent of the primary contact's own email/QR above, so every
+// person in the group can check in/out of the venue on their own rather than
+// the whole group sharing one code. Shared by sendConfirmationAndTicketEmails
+// (first confirmation) and resendAccessCodeAndTicket (an explicit resend) so
+// the two stay in sync. Best-effort per member — one member's send failing
+// (e.g. a bad email) must not stop the rest of the group or the primary
+// contact's own emails above/below this call.
+const sendGroupMemberTickets = async (registration: HydratedDocument<RegistrationDoc>, primaryContactName: string): Promise<void> => {
+  const members = registration.groupAttendees ?? [];
+  if (members.length === 0) return;
+
+  let tokensChanged = false;
+  for (const member of members) {
+    if (member.email && !member.qrToken) {
+      member.qrToken = generateQrToken();
+      tokensChanged = true;
+    }
+  }
+  if (tokensChanged) await registration.save();
+
+  await Promise.all(
+    members
+      .filter((m) => m.email && m.qrToken)
+      .map(async (member) => {
+        try {
+          const memberName = member.fullName || 'there';
+          await sendGroupMemberConfirmedEmail(member.email!, memberName, {
+            primaryContactName,
+            ticketCategory: registration.ticketCategory ?? undefined,
+          });
+          const qrPngBuffer = await qrPngBufferForToken(member.qrToken!);
+          await sendTicketQrEmail(member.email!, memberName, qrPngBuffer, { skipPortalMention: true });
+        } catch (err) {
+          logger.error({ err, registrationId: registration.id, memberEmail: member.email }, 'Failed to send group member ticket email');
+        }
+      })
+  );
+};
 
 // The two emails ANY newly-confirmed registration should get, whichever path
 // got it there (payment, a 100%-scholarship/free comp, a volunteer's redeemed
@@ -53,6 +98,10 @@ export const sendConfirmationAndTicketEmails = async (
         ticketCategory: registration.ticketCategory ?? '',
         accessCode,
       });
+    } else if (registration.type === 'exhibitor') {
+      await sendExhibitorConfirmedEmail(to, fullName);
+    } else if (registration.type === 'innovator') {
+      await sendInnovatorConfirmedEmail(to, fullName);
     } else {
       await sendRegistrationConfirmedEmail(to, fullName, {
         ticketCategory: registration.ticketCategory ?? undefined,
@@ -66,6 +115,8 @@ export const sendConfirmationAndTicketEmails = async (
       const qrPngBuffer = await qrPngBufferForToken(registration.qrToken);
       await sendTicketQrEmail(to, fullName, qrPngBuffer);
     }
+
+    await sendGroupMemberTickets(registration, fullName);
 
     registration.portalLastLinkSentAt = new Date();
     await registration.save();
@@ -99,6 +150,8 @@ export const resendAccessCodeAndTicket = async (
     const qrPngBuffer = await qrPngBufferForToken(registration.qrToken);
     await sendTicketQrEmail(to, fullName, qrPngBuffer);
   }
+
+  await sendGroupMemberTickets(registration, fullName);
 
   registration.portalLastLinkSentAt = new Date();
   await registration.save();

@@ -233,6 +233,64 @@ export const promoClaimLimiter = rateLimit({
   handler: onLimitExceeded('promoClaimLimiter', 'high'),
 });
 
+// Rapporteur portal — keyed on the bearer token itself (there's no login/email
+// here, the token in the URL IS the identity), not IP, since several rapporteurs
+// on the same venue WiFi must never share one ceiling.
+const tokenKey = (req: Request): string => (typeof req.params?.token === 'string' ? req.params.token : req.ip ?? 'unknown');
+
+// Generous — this gates both the rapporteur's own polling/autosave PATCHes and
+// the admin Live Status tab's indirect read load, so it needs headroom for a
+// rapporteur typing continuously through a long session.
+export const rapporteurReadLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: tokenKey,
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please try again shortly.' } },
+  handler: onLimitExceeded('rapporteurReadLimiter', 'low'),
+});
+
+// Tighter — this is the one endpoint that triggers a Groq call per assignment
+// (rapporteurPolish.service.ts), so it also protects the daily AI budget from
+// a retry loop.
+export const rapporteurSubmitLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: tokenKey,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many attempts. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('rapporteurSubmitLimiter', 'medium'),
+});
+
+// Layer 2 "Capture This Quote" — reuses the same token-keying as
+// rapporteurReadLimiter/rapporteurSubmitLimiter above. A handful of quote
+// captures per session is the expected usage; this also backstops the shared
+// Whisper budget against a runaway client-side retry loop.
+export const rapporteurTranscribeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: tokenKey,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many attempts. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('rapporteurTranscribeLimiter', 'medium'),
+});
+
+// Layer 3 live transcript — cookie-authenticated (admin), keyed by user id
+// rather than token/IP. 200/15min comfortably covers continuous ~25s chunking
+// for the whole window (~36 chunks) with headroom for a retry here and there.
+export const liveTranscriptChunkLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => req.user?.sub ?? req.ip ?? 'unknown',
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please try again shortly.' } },
+  handler: onLimitExceeded('liveTranscriptChunkLimiter', 'low'),
+});
+
 export const askAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

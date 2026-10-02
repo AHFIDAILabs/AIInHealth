@@ -68,6 +68,20 @@ const sponsorSchema = z.object({
   message: z.string().trim().max(2000).optional(),
 });
 
+// Innovator — architected like exhibitorSchema above (own self-service tab,
+// own admin review), not a sub-case of attendee. No boothSize/customFieldAnswers
+// (those stay Exhibitor-only); solutionDescription is Innovator's own analog
+// of productsDescription.
+const innovatorSchema = z.object({
+  type: z.literal('innovator'),
+  companyName: z.string().trim().min(2, 'Enter your startup or project name'),
+  contactName: z.string().trim().min(2, 'Enter a contact name'),
+  contactEmail: z.string().trim().toLowerCase().email('Enter a valid email'),
+  contactPhone: z.string().trim().optional(),
+  website: optionalUrlField,
+  solutionDescription: z.string().trim().max(2000).optional(),
+});
+
 // accessCode is optional — most people submitting this form are applying for the
 // first time and don't have one yet (staff picks volunteers and emails codes to
 // the chosen few afterward). When it IS present, it's verified (not just shape-
@@ -104,7 +118,7 @@ const teamSchema = z.object({
 // every member to be a plain ZodObject (a .superRefine() on attendeeSchema
 // directly would turn it into a ZodEffects and break the union).
 const registrationUnion = z
-  .discriminatedUnion('type', [attendeeSchema, exhibitorSchema, sponsorSchema, volunteerSchema, teamSchema])
+  .discriminatedUnion('type', [attendeeSchema, exhibitorSchema, sponsorSchema, volunteerSchema, teamSchema, innovatorSchema])
   .superRefine((data, ctx) => {
     if (
       data.type === 'attendee' &&
@@ -125,6 +139,17 @@ const registrationUnion = z
         code: 'custom',
         path: ['accessCode'],
         message: 'Enter the organizer access code you were sent to register with this ticket category.',
+      });
+    }
+    // 'speaker' is never self-selectable — admins register speakers directly
+    // (speaker.controller.ts's adminRegister), with no access-code redemption
+    // step at all. Rejected here (shape-level) rather than only in the
+    // controller, so this never even reaches a DB lookup.
+    if (data.type === 'attendee' && data.ticketCategory === 'speaker') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ticketCategory'],
+        message: 'This ticket category is assigned directly by the organizing team.',
       });
     }
   });
@@ -168,6 +193,7 @@ export const updateRegistrationStatusSchema = z.object({
       website: optionalUrlField,
       boothSize: z.enum(BOOTH_SIZES).optional(),
       productsDescription: z.string().trim().max(2000).optional(),
+      solutionDescription: z.string().trim().max(2000).optional(),
       customFieldAnswers: z.record(z.string(), z.string()).optional(),
       // Volunteer-only — lets staff (re)assign a track, or fix a t-shirt size/
       // stated preference, after the registration already exists. Previously
@@ -237,7 +263,14 @@ const adminTeamSchema = z.object({
 });
 
 export const adminCreateRegistrationSchema = z.object({
-  body: z.discriminatedUnion('type', [adminAttendeeSchema, exhibitorSchema, sponsorSchema, adminVolunteerSchema, adminTeamSchema]),
+  body: z.discriminatedUnion('type', [
+    adminAttendeeSchema,
+    exhibitorSchema,
+    sponsorSchema,
+    adminVolunteerSchema,
+    adminTeamSchema,
+    innovatorSchema,
+  ]),
 });
 export type AdminCreateRegistrationInput = z.infer<typeof adminCreateRegistrationSchema>['body'];
 

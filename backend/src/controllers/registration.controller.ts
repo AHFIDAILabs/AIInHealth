@@ -38,6 +38,7 @@ const CONFIRMATION_MESSAGE: Record<CreateRegistrationInput['type'], string> = {
   attendee: "You're registered. We'll be in touch with next steps shortly.",
   exhibitor: "Thanks for applying to exhibit. Our team will follow up with booth options and pricing.",
   sponsor: "Thanks for your interest in partnering with us. Our team will follow up with sponsorship packages.",
+  innovator: "Thanks for applying to showcase your solution. Our team will follow up with demo logistics and next steps.",
   // Unreachable in practice — the volunteer/team branches below always return
   // their own application/confirmation message instead. Kept only because
   // every type needs an entry for this Record's type to check out.

@@ -4,6 +4,7 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Speaker, type SpeakerDoc } from '../models/Speaker.model.js';
+import { Registration } from '../models/Registration.model.js';
 import { Track } from '../models/Track.model.js';
 import {
   createSpeakerSchema,
@@ -17,6 +18,8 @@ import {
 import { recordAudit } from '../services/audit.service.js';
 import { translateText } from '../services/ai/translate.service.js';
 import { publicTranslations } from '../utils/translations.js';
+import { generateQrToken, qrPngBufferForToken } from '../services/qr.service.js';
+import { sendSpeakerAccessEmail } from '../services/email.service.js';
 
 // Shared by adminCreate/adminUpdate — track is free text now (see
 // Speaker.model.ts), so validity is checked here against the live Track
@@ -31,7 +34,8 @@ const assertValidTrack = async (track: string | undefined): Promise<void> => {
 export const list = catchAsync(async (req: Request, res: Response) => {
   const track = typeof req.query.track === 'string' ? req.query.track : undefined;
   const filter: FilterQuery<SpeakerDoc> = { isPublished: true, ...(track ? { track } : {}) };
-  const speakers = await Speaker.find(filter).sort({ order: 1, createdAt: -1 });
+  // Admin-only field — never exposed on this public route.
+  const speakers = await Speaker.find(filter).select('-email').sort({ order: 1, createdAt: -1 });
   const sanitized = speakers.map((s) => ({ ...s.toObject(), translations: publicTranslations(s.translations) }));
   res.json(new ApiResponse(sanitized));
 });
@@ -132,6 +136,68 @@ export const translate = catchAsync(async (req: Request, res: Response) => {
   await speaker.save();
 
   res.json(new ApiResponse(speaker));
+});
+
+// POST /admin/speakers/:id/register — creates this speaker's Registration
+// directly (no access code, no public form) — admin is vouching, same as any
+// other admin-confirmed registration. 409 if already registered; the presence
+// of `speaker.registration` IS the registered state, so this is the only
+// place that ever sets it.
+export const adminRegister = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Speaker not found', 'NOT_FOUND');
+  const speaker = await Speaker.findById(req.params.id);
+  if (!speaker) throw new ApiError(404, 'Speaker not found', 'NOT_FOUND');
+  if (speaker.registration) throw new ApiError(409, 'This speaker is already registered.', 'ALREADY_REGISTERED');
+  if (!speaker.email) throw new ApiError(422, 'Add an email address for this speaker before registering them.', 'VALIDATION_ERROR');
+
+  let registration;
+  try {
+    registration = await Registration.create({
+      type: 'attendee',
+      ticketCategory: 'speaker',
+      fullName: speaker.fullName,
+      email: speaker.email,
+      status: 'confirmed',
+      paymentStatus: 'not_required',
+      qrToken: generateQrToken(),
+    });
+  } catch (err) {
+    if ((err as { code?: number }).code !== 11000) throw err;
+    throw new ApiError(409, 'A registration with this email already exists.', 'DUPLICATE_REGISTRATION');
+  }
+
+  speaker.registration = registration.id;
+  await speaker.save();
+  await recordAudit({
+    req,
+    action: 'speaker.registered',
+    resourceType: 'Speaker',
+    resourceId: speaker.id,
+    after: { registrationId: registration.id },
+  });
+
+  res.status(201).json(new ApiResponse(speaker));
+});
+
+// POST /admin/speakers/:id/send-access-email — works identically for the
+// first send and a resend; both just re-fetch the linked Registration's
+// current qrToken and mail it again.
+export const adminSendAccessEmail = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Speaker not found', 'NOT_FOUND');
+  const speaker = await Speaker.findById(req.params.id);
+  if (!speaker) throw new ApiError(404, 'Speaker not found', 'NOT_FOUND');
+  if (!speaker.registration) throw new ApiError(400, 'Register this speaker before sending their access email.', 'NOT_REGISTERED');
+
+  const registration = await Registration.findById(speaker.registration);
+  if (!registration || !registration.qrToken) throw new ApiError(404, 'This speaker’s registration no longer exists.', 'NOT_FOUND');
+
+  const qrPngBuffer = await qrPngBufferForToken(registration.qrToken);
+  await sendSpeakerAccessEmail(speaker.email!, speaker.fullName, { qrPngBuffer });
+
+  registration.portalLastLinkSentAt = new Date();
+  await registration.save();
+
+  res.json(new ApiResponse({ sentAt: registration.portalLastLinkSentAt }));
 });
 
 // PATCH /admin/speakers/:id/translations/:lang — an admin editing and/or

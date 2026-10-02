@@ -124,6 +124,21 @@ const envSchema = z.object({
   AI_DAILY_BUDGET_ADVANCED: z.coerce.number().int().positive().optional().default(1000),
   AI_DAILY_BUDGET_STANDARD: z.coerce.number().int().positive().optional().default(1000),
 
+  // Whisper (audio transcription) — AI-Assisted Rapporteur System Stage 2.
+  // whisper.service.ts is the one place this calls Groq's audio/transcriptions
+  // endpoint, a separate SDK resource from the chat-completions path above, so
+  // it gets its own model + budget rather than reusing GROQ_MODEL_STANDARD/
+  // AI_DAILY_BUDGET_STANDARD. whisper-large-v3-turbo confirmed live on this
+  // account the same way the chat models were (console.groq.com/v1/models).
+  // Hourly cap exists alongside the daily one (whisperBudget.service.ts) because
+  // Layer 3's continuous plenary transcript can burn through a meaningful
+  // fraction of a whole day's budget in a single hour-long session — the daily
+  // cap alone wouldn't stop one long plenary from starving every other feature
+  // for the rest of the day.
+  WHISPER_MODEL: z.string().optional().default('whisper-large-v3-turbo'),
+  WHISPER_HOURLY_BUDGET: z.coerce.number().int().positive().optional().default(150),
+  WHISPER_DAILY_BUDGET: z.coerce.number().int().positive().optional().default(600),
+
   // Cloudinary — every profile/logo photo upload (admin settings, delegate portal,
   // speakers, partners, innovations) goes here; there's no local-disk fallback.
   // Empty in dev returns a clear 503 from the upload endpoint rather than silently
