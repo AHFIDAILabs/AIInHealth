@@ -41,6 +41,11 @@ const attendeeSchema = z.object({
   idCardUrl: z.string().trim().url().optional(),
 });
 
+// accessCode is optional — most exhibitors are a first-time self-service
+// application (reviewed by staff afterward); a pre-approved company staff
+// already vetted can be sent a code that confirms them immediately instead
+// (registration.controller.ts), same optional-code-upgrades-an-application
+// shape as volunteerSchema's own accessCode below.
 const exhibitorSchema = z.object({
   type: z.literal('exhibitor'),
   companyName: z.string().trim().min(2, "Enter your organization's name"),
@@ -56,6 +61,7 @@ const exhibitorSchema = z.object({
   // set, same "don't block a submission over an admin-side edit race" reasoning
   // as free-text fields elsewhere in this app.
   customFieldAnswers: z.record(z.string(), z.string()).optional(),
+  accessCode: z.string().trim().max(32).optional().or(z.literal('')),
 });
 
 const sponsorSchema = z.object({
@@ -80,6 +86,7 @@ const innovatorSchema = z.object({
   contactPhone: z.string().trim().optional(),
   website: optionalUrlField,
   solutionDescription: z.string().trim().max(2000).optional(),
+  accessCode: z.string().trim().max(32).optional().or(z.literal('')),
 });
 
 // accessCode is optional — most people submitting this form are applying for the

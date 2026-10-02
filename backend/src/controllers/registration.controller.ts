@@ -59,6 +59,10 @@ const TEAM_CONFIRMED_MESSAGE = "You're confirmed! We'll be in touch with event-d
 const TEAM_PENDING_MESSAGE = "Thanks for registering — we're verifying your details against the team roster. You'll get a confirmation email shortly.";
 const TEAM_ALREADY_REGISTERED_MESSAGE = "You've already registered — check your email for your confirmation.";
 
+// Exhibitor/Innovator — a pre-approved company/startup staff already vetted
+// redeems a code to skip the normal pending-review queue entirely.
+const EXHIBITOR_OR_INNOVATOR_CODE_CONFIRMED_MESSAGE = "You're confirmed — no further review needed. Check your email for your confirmation and check-in QR code.";
+
 // Idempotency window for the non-volunteer create() branch below — see its comment.
 const DUPLICATE_SUBMIT_WINDOW_MS = 2 * 60 * 1000;
 
@@ -253,6 +257,69 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     }
 
     res.status(201).json(new ApiResponse({ id: registration.id, message: isRosterMatch ? TEAM_CONFIRMED_MESSAGE : TEAM_PENDING_MESSAGE }));
+    return;
+  }
+
+  // Exhibitor/Innovator with an access code — same "optional code upgrades an
+  // application straight to confirmed" shape as volunteer's own branch above,
+  // just keyed on contactEmail/companyName instead of email/fullName. No code
+  // at all falls through to the generic pending-review create() below,
+  // unchanged from today.
+  if ((input.type === 'exhibitor' || input.type === 'innovator') && input.accessCode?.trim()) {
+    const trimmedCode = input.accessCode.trim().toUpperCase();
+    const code = await AccessCode.findOne({ code: trimmedCode });
+    if (!code || code.type !== input.type) {
+      throw new ApiError(422, 'That access code is not valid.', 'INVALID_ACCESS_CODE');
+    }
+    if (code.status === 'used') {
+      throw new ApiError(422, 'That access code has already been used.', 'ACCESS_CODE_USED');
+    }
+    if (code.status === 'revoked') {
+      throw new ApiError(422, 'That access code has been revoked. Contact the organizing team.', 'ACCESS_CODE_REVOKED');
+    }
+    if (code.expiresAt && code.expiresAt < new Date()) {
+      throw new ApiError(422, 'That access code has expired. Contact the organizing team.', 'ACCESS_CODE_EXPIRED');
+    }
+    if (code.issuedTo !== input.contactEmail.trim().toLowerCase()) {
+      throw new ApiError(422, 'This access code was issued to a different email address. Please use the email it was sent to.', 'ACCESS_CODE_EMAIL_MISMATCH');
+    }
+
+    const existingApplication = await Registration.findOne({
+      type: input.type,
+      contactEmail: input.contactEmail,
+      status: { $in: ['pending', 'reviewed'] },
+    });
+    let registration: HydratedDocument<RegistrationDoc>;
+    if (existingApplication) {
+      existingApplication.set({ ...input, accessCode: trimmedCode, status: 'confirmed', qrToken: generateQrToken() });
+      registration = await existingApplication.save();
+    } else {
+      try {
+        registration = await Registration.create({ ...input, accessCode: trimmedCode, status: 'confirmed', qrToken: generateQrToken() });
+      } catch (err) {
+        if ((err as { code?: number }).code !== 11000) throw err;
+        throw new ApiError(409, 'A registration with this email already exists.', 'DUPLICATE_REGISTRATION');
+      }
+    }
+
+    code.status = 'used';
+    code.usedByRegistration = registration.id;
+    code.usedAt = new Date();
+    await code.save();
+
+    void sendConfirmationAndTicketEmails(registration);
+
+    await emitAdminNotification({
+      type: 'registration.new',
+      title: `${input.type === 'exhibitor' ? 'Exhibitor' : 'Innovator'} registration confirmed (access code)`,
+      body: input.companyName,
+      resourceType: 'Registration',
+      resourceId: registration.id,
+    });
+
+    res
+      .status(existingApplication ? 200 : 201)
+      .json(new ApiResponse({ id: registration.id, requiresPayment: false, message: EXHIBITOR_OR_INNOVATOR_CODE_CONFIRMED_MESSAGE }));
     return;
   }
 

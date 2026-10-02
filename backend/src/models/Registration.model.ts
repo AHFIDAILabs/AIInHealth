@@ -95,10 +95,10 @@ const registrationSchema = new Schema(
     // from trackSelected (their own preference at apply time).
     trackAssigned: { type: String, trim: true },
 
-    // Volunteer and scholarship-attendee only — the redeemed AccessCode's
-    // human-readable code, kept here too (not just on the AccessCode doc) so a
-    // registration record is self-explanatory on its own in exports/audits without
-    // a join.
+    // Volunteer, scholarship-attendee, and (optionally) exhibitor/innovator —
+    // the redeemed AccessCode's human-readable code, kept here too (not just
+    // on the AccessCode doc) so a registration record is self-explanatory on
+    // its own in exports/audits without a join.
     accessCode: { type: String, trim: true, uppercase: true },
 
     // Attendee only — set when accessCode above redeemed a 'scholarship'-type

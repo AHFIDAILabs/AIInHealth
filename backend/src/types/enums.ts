@@ -197,6 +197,15 @@ export const ACCESS_CODE_TYPES = [
   'promo',
   'abstract_presenter',
   'abstract_reviewer',
+  // 'exhibitor'/'innovator' are a different shape from every type above —
+  // those all bind to an ATTENDEE ticketCategory; these two instead upgrade
+  // an Exhibitor/Innovator *application* straight to 'confirmed' on
+  // redemption (registration.controller.ts), skipping the normal
+  // pending-admin-review step, for a company/startup staff already vetted
+  // before generating the code. issuedTo is checked against contactEmail,
+  // not email, matching those two types' own field shape.
+  'exhibitor',
+  'innovator',
 ] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
 

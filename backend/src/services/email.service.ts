@@ -232,7 +232,9 @@ export const sendAccessCodeEmail = async (
             }! This code registers you to attend, free of charge.`
           : type === 'abstract_reviewer'
             ? `Thank you for reviewing abstracts for the AI in Health Summit 2026 — this code registers you to attend in person, free of charge.`
-            : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
+            : type === 'exhibitor' || type === 'innovator'
+              ? `Your ${type === 'exhibitor' ? 'exhibitor' : 'innovator'} registration for the AI in Health Summit 2026 has been pre-approved.`
+              : `You've been selected as a ${ACCESS_CODE_LABEL[type] ?? type} for the AI in Health Summit 2026.`;
 
   // 'volunteer' redeems on the Volunteer tab (no ticket category involved at
   // all); every other type redeems on the Attendee tab, where the recipient
@@ -247,13 +249,17 @@ export const sendAccessCodeEmail = async (
   const instructionLine =
     type === 'volunteer'
       ? `Visit <a href="${registerUrl}">the registration page</a> and use this code to confirm your spot — it's tied to this email address, so please register using ${to}.`
-      : `Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab${
-          isGroupRate ? ' choosing <strong>Group Registration</strong> with 5 or more attendees' : ''
-        }, ${categoryGuidance}, and enter this code${
-          isScholarship
-            ? ` to apply your discount${discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'}`
-            : ' — it covers your registration fee in full, no payment needed'
-        } — it's tied to this email address, so please register using ${to}.`;
+      : type === 'exhibitor' || type === 'innovator'
+        ? `Visit <a href="${registerUrl}">the registration page</a>, register under the ${
+            type === 'exhibitor' ? 'Exhibitor' : 'Innovator'
+          } tab, and enter this code — your registration confirms immediately, no review wait. It's tied to this email address, so please register using ${to}.`
+        : `Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab${
+            isGroupRate ? ' choosing <strong>Group Registration</strong> with 5 or more attendees' : ''
+          }, ${categoryGuidance}, and enter this code${
+            isScholarship
+              ? ` to apply your discount${discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'}`
+              : ' — it covers your registration fee in full, no payment needed'
+          } — it's tied to this email address, so please register using ${to}.`;
 
   await sendEmail({
     to,
@@ -262,7 +268,9 @@ export const sendAccessCodeEmail = async (
         ? 'Your abstract is confirmed — register free for AI in Health Summit 2026'
         : type === 'abstract_reviewer'
           ? 'Thank you for reviewing — register free for AI in Health Summit 2026'
-          : "You're invited — AI in Health Summit 2026",
+          : type === 'exhibitor' || type === 'innovator'
+            ? `Your ${type === 'exhibitor' ? 'exhibitor' : 'innovator'} registration is pre-approved — AI in Health Summit 2026`
+            : "You're invited — AI in Health Summit 2026",
     html: `
       <p>${introLine}</p>
       <p>Your access code is: <strong style="font-size: 18px; letter-spacing: 1px;">${code}</strong></p>
