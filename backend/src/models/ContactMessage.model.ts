@@ -16,12 +16,32 @@ const contactMessageSchema = new Schema(
     // either way, this only affects default list ordering.
     priorityLabel: { type: String, enum: AI_PRIORITY_LABELS, default: 'standard' },
     priorityReason: { type: String, trim: true, maxlength: 200 },
+
+    // Public form spam hardening — see spamHeuristics.ts / contact.controller.ts's
+    // create(). A quarantined message skips AI triage, admin notification,
+    // and is hidden from the default inbox (every "not spam" query must use
+    // `{ isSpam: { $ne: true } }`, never `{ isSpam: false }` — existing
+    // documents have neither field set).
+    isSpam: { type: Boolean, default: false },
+    spamScore: { type: Number, default: 0 },
+    spamReasons: { type: [String], default: [] },
+    // Gmail-dot/plus-collapsed form of `email` (canonicalizeEmail) — powers
+    // both the velocity check at submission time and grouping repeat
+    // offenders together in the admin view/backfill.
+    emailCanonical: { type: String, trim: true, lowercase: true },
   },
   { timestamps: true }
 );
 
-contactMessageSchema.index({ isRead: 1, createdAt: -1 });
+contactMessageSchema.index({ isSpam: 1, isRead: 1, createdAt: -1 });
 contactMessageSchema.index({ priorityLabel: 1, createdAt: -1 });
+contactMessageSchema.index({ emailCanonical: 1, createdAt: -1 });
+// Auto-purge quarantined messages after 30 days — legitimate messages (isSpam
+// false/unset) are never touched by this index at all, per the partial filter.
+contactMessageSchema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: 60 * 60 * 24 * 30, partialFilterExpression: { isSpam: true } }
+);
 
 export type ContactMessageDoc = InferSchemaType<typeof contactMessageSchema>;
 export const ContactMessage = model('ContactMessage', contactMessageSchema);

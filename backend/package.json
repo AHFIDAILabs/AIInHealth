@@ -12,6 +12,7 @@
     "start": "node dist/index.js",
     "seed": "tsx src/scripts/seedSuperAdmin.ts",
     "sync:floot": "tsx src/scripts/syncFlootRegistrations.ts",
+    "migrate:roles": "tsx src/scripts/migrateContentEditorRole.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

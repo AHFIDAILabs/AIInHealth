@@ -160,6 +160,18 @@ const registrationSchema = new Schema(
     // scan/manualCheckIn; same shape/intent as User.model.ts's isActive.
     isActive: { type: Boolean, default: true },
 
+    // Public form spam hardening — see spamHeuristics.ts. Deliberately NEVER
+    // hides a registration (unlike ContactMessage/PartnershipInquiry's
+    // isSpam) — a false positive here costs a real delegate and possibly a
+    // real payment, so a flagged registration stays fully visible in every
+    // list/queue, just with a badge for admin review. Only its automatic
+    // free/comped-path confirmation email is skipped (registration.controller.ts);
+    // the Paystack payment flow is never gated by this flag.
+    flaggedSuspicious: { type: Boolean, default: false },
+    spamScore: { type: Number, default: 0 },
+    spamReasons: { type: [String], default: [] },
+    emailCanonical: { type: String, trim: true, lowercase: true },
+
     // Portal Tokens (admin) — last time a portal sign-in email went out, whether
     // self-requested or triggered by staff. Purely informational, not a session record.
     portalLastLinkSentAt: { type: Date },
@@ -250,6 +262,10 @@ registrationSchema.index(
   { type: 1, contactEmail: 1 },
   { unique: true, partialFilterExpression: { contactEmail: { $type: 'string' } } }
 );
+// Public form spam hardening's velocity check (registration.controller.ts) —
+// no TTL here, unlike ContactMessage/PartnershipInquiry's quarantine indexes;
+// flagged registrations are never auto-deleted.
+registrationSchema.index({ emailCanonical: 1, createdAt: -1 });
 
 export type RegistrationDoc = InferSchemaType<typeof registrationSchema>;
 export const Registration = model('Registration', registrationSchema);

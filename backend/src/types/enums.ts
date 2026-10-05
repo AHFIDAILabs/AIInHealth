@@ -1,4 +1,23 @@
-export const ROLES = ['super_admin', 'content_editor', 'registrations_officer', 'viewer'] as const;
+// Per-area staff roles — each of the 4 "lead" roles is scoped to exactly one
+// functional area (see registration.controller.ts's ROLE_REGISTRATION_TYPES
+// and admin.routes.ts's per-route requireRole() calls). 'admin' has full
+// operational access everywhere except Users/Event Team/Integrations
+// (super_admin-only) and the Security Command Center (gated separately on the
+// isRootAdmin identity flag, not a role at all — see User.model.ts). Named
+// '*_lead' rather than bare 'innovator'/'exhibitor'/etc. to avoid colliding
+// with the unrelated existing uses of those words: RegistrationType's
+// 'innovator'/'exhibitor' values, EventTeamMember's free-text role field, and
+// ACCESS_CODE_TYPES' 'staff'.
+export const ROLES = [
+  'super_admin',
+  'admin',
+  'registrations_officer',
+  'innovator_lead',
+  'exhibitor_lead',
+  'abstract_lead',
+  'rapporteur_lead',
+  'viewer',
+] as const;
 export type Role = (typeof ROLES)[number];
 
 // 'team' is event staff — a deliberately separate registration path from
@@ -393,6 +412,12 @@ export const SECURITY_EVENT_TYPES = [
   'rate_limit.exceeded',
   'injection.mongo_operator_stripped',
   'blocked_ip.request_denied',
+  // Public form spam hardening — see spamHeuristics.ts. 'spam.quarantined' is
+  // contact/inquiry (hidden from the default inbox); 'registration.flagged'
+  // is registration (stays visible, never hidden — see Registration.model.ts's
+  // flaggedSuspicious comment for why these two are treated differently).
+  'spam.quarantined',
+  'registration.flagged',
 ] as const;
 export type SecurityEventType = (typeof SECURITY_EVENT_TYPES)[number];
 

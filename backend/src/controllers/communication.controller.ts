@@ -45,7 +45,7 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   // dangerouslySetInnerHTML in another admin's dashboard. Sanitize on write so
   // neither consumer ever sees a stored copy of a <script>/onerror=/iframe
   // payload, whether typed by a legitimately confused admin or an attacker
-  // controlling a lower-privileged content_editor account.
+  // controlling a lower-privileged admin account.
   if (input.body !== undefined) comm.body = xss(input.body);
   await comm.save();
 

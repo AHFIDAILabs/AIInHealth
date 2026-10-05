@@ -291,6 +291,19 @@ export const liveTranscriptChunkLimiter = rateLimit({
   handler: onLimitExceeded('liveTranscriptChunkLimiter', 'low'),
 });
 
+// Public form spam hardening — forms.controller.ts's GET /forms/token. IP-only
+// like apiLimiter (no email to key on yet, the form hasn't been filled out),
+// generous since a form could reasonably re-fetch a fresh token if a visitor
+// leaves a tab open past MAX_AGE_MS (formToken.service.ts).
+export const formTokenLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please try again shortly.' } },
+  handler: onLimitExceeded('formTokenLimiter', 'low'),
+});
+
 export const askAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

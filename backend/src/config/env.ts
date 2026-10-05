@@ -147,6 +147,14 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().optional().default(''),
   CLOUDINARY_API_SECRET: z.string().optional().default(''),
 
+  // Public form spam hardening — formToken.service.ts's time-trap token (an
+  // HMAC-signed issue timestamp every public form fetches on mount and sends
+  // back on submit; rejects a submission that's suspiciously instant or
+  // suspiciously stale). Same optional/graceful-degrade convention as Groq
+  // above: if unset, the check silently no-ops (always valid) rather than
+  // locking out real submitters over a missing env var the moment this ships.
+  FORM_TOKEN_SECRET: z.string().optional().default(''),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   SEED_SUPER_ADMIN_NAME: z.string().optional().default('Super Admin'),

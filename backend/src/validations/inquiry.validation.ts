@@ -10,17 +10,26 @@ export const createInquirySchema = z.object({
     message: z.string().trim().max(2000).optional(),
     // honeypot — real visitors never see or fill this field
     website: z.string().max(0).optional(),
+    // Spam hardening's time-trap — see formToken.service.ts.
+    formToken: z.string().optional(),
   }),
 });
 
 export const updateInquiryStatusSchema = z.object({
   body: z.object({
-    status: z.enum(INQUIRY_STATUSES),
+    status: z.enum(INQUIRY_STATUSES).optional(),
+    // Admin marks something spam, or restores a quarantined item (false) —
+    // see inquiry.controller.ts's adminUpdateStatus. Optional alongside
+    // status (not a replacement for it) since either can be sent alone.
+    isSpam: z.boolean().optional(),
   }),
 });
 
 export const listInquiriesQuerySchema = z.object({
   status: z.enum(INQUIRY_STATUSES).optional(),
+  // Present -> list ONLY quarantined inquiries; absent (the default)
+  // excludes them — see inquiry.controller.ts's buildFilter.
+  spam: z.enum(['true']).optional(),
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

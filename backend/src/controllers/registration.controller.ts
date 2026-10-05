@@ -24,6 +24,7 @@ import { emitAdminNotification } from '../services/notification.service.js';
 import { isFreeTicketCategory, priceForRegistration } from '../config/pricing.js';
 import { runInBatches } from '../utils/batch.js';
 import { ATTENDEE_ACCESS_CODE_TYPES, GROUP_DISCOUNT_MIN_ATTENDEES } from '../types/enums.js';
+import type { Role, RegistrationType } from '../types/enums.js';
 import { generateQrToken } from '../services/qr.service.js';
 import { generateCode } from './accessCode.controller.js';
 import { initializePaymentForRegistration } from './payment.controller.js';
@@ -33,6 +34,10 @@ import { getOrCreateVolunteerSettings } from '../models/VolunteerSettings.model.
 import { logger } from '../config/logger.js';
 import type { TicketCategory, RegistrationStatus } from '../types/enums.js';
 import type { HydratedDocument } from 'mongoose';
+import { verifyFormToken } from '../services/formToken.service.js';
+import { canonicalizeEmail, scoreSubmission, applyVelocityBump, type SpamScoreResult } from '../utils/spamHeuristics.js';
+import { recordSecurityEvent } from '../services/securityEvent.service.js';
+import { getRawForwardedFor } from '../utils/clientIp.js';
 
 const CONFIRMATION_MESSAGE: Record<CreateRegistrationInput['type'], string> = {
   attendee: "You're registered. We'll be in touch with next steps shortly.",
@@ -121,8 +126,70 @@ const assertValidVolunteerTrack = async (track: string | undefined): Promise<voi
   if (!exists) throw new ApiError(422, 'Select a valid track.', 'INVALID_VOLUNTEER_TRACK');
 };
 
+// Public form spam hardening — maps each of the 6 discriminated-union
+// variants onto the plain {name, email, message?} shape scoreSubmission
+// expects. Written as explicit `if` narrowing (not a ternary chain) per this
+// codebase's own discriminated-union gotcha: a standalone ternary computed
+// outside a narrowing `if` fails to compile against `input.ticketCategory`-
+// style union-only fields the same way it would here for fullName/contactName.
+const extractForScoring = (input: CreateRegistrationInput): { name: string; email: string; message?: string } => {
+  if (input.type === 'attendee' || input.type === 'volunteer' || input.type === 'team') {
+    return { name: input.fullName, email: input.email };
+  }
+  if (input.type === 'exhibitor') {
+    return { name: input.contactName, email: input.contactEmail, message: input.productsDescription };
+  }
+  if (input.type === 'sponsor') {
+    return { name: input.contactName, email: input.contactEmail, message: input.message };
+  }
+  return { name: input.contactName, email: input.contactEmail, message: input.solutionDescription }; // innovator
+};
+
+const RECENT_WINDOW_MS = 60 * 60 * 1000;
+
 export const create = catchAsync(async (req: Request, res: Response) => {
   const input = req.body as CreateRegistrationInput;
+
+  if (!verifyFormToken(input.formToken)) {
+    throw new ApiError(400, 'Verification failed, please try again.', 'FORM_VERIFICATION_FAILED');
+  }
+
+  const scoringFields = extractForScoring(input);
+  const emailCanonical = canonicalizeEmail(scoringFields.email);
+  const recentCount = await Registration.countDocuments({
+    emailCanonical,
+    createdAt: { $gte: new Date(Date.now() - RECENT_WINDOW_MS) },
+  });
+  const scored: SpamScoreResult = applyVelocityBump(scoreSubmission(scoringFields), recentCount);
+  // Spread into every Registration.create()/.set() call below, whichever
+  // branch this submission takes — see Registration.model.ts's
+  // flaggedSuspicious comment for why this NEVER gates/hides the
+  // registration itself, only the automatic confirmation email further down.
+  const spamFields = { emailCanonical, flaggedSuspicious: scored.isSpam, spamScore: scored.score, spamReasons: scored.reasons };
+
+  if (scored.isSpam) {
+    void recordSecurityEvent({
+      type: 'registration.flagged',
+      severity: 'low',
+      ip: req.ip,
+      rawForwardedFor: getRawForwardedFor(req),
+      userAgent: req.headers['user-agent'],
+      path: req.originalUrl,
+      detail: { endpoint: 'registration', type: input.type, score: scored.score, reasons: scored.reasons },
+    });
+  }
+
+  // Skips the automatic confirmation+QR email for a flagged registration's
+  // auto-confirm path (never the Paystack payment flow — see the plan's own
+  // explicit scoping note) — logged rather than silently dropped, so nothing
+  // about a flagged submission is invisible to staff.
+  const sendConfirmationUnlessFlagged = (registration: HydratedDocument<RegistrationDoc>): void => {
+    if (scored.isSpam) {
+      logger.info({ registrationId: registration.id }, 'Skipped automatic confirmation email for a flagged registration');
+      return;
+    }
+    void sendConfirmationAndTicketEmails(registration);
+  };
 
   if (input.type === 'volunteer') {
     await assertValidVolunteerTrack(input.trackSelected);
@@ -154,7 +221,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
         );
       }
 
-      const registration = await Registration.create(input);
+      const registration = await Registration.create({ ...input, ...spamFields });
       await emitAdminNotification({
         type: 'registration.new',
         title: 'New volunteer application',
@@ -198,10 +265,16 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     });
     let registration;
     if (existingApplication) {
-      existingApplication.set({ ...input, accessCode: trimmedCode, status: 'confirmed', qrToken: generateQrToken() });
+      existingApplication.set({ ...input, ...spamFields, accessCode: trimmedCode, status: 'confirmed', qrToken: generateQrToken() });
       registration = await existingApplication.save();
     } else {
-      registration = await Registration.create({ ...input, accessCode: trimmedCode, status: 'confirmed', qrToken: generateQrToken() });
+      registration = await Registration.create({
+        ...input,
+        ...spamFields,
+        accessCode: trimmedCode,
+        status: 'confirmed',
+        qrToken: generateQrToken(),
+      });
     }
 
     code.status = 'used';
@@ -211,8 +284,15 @@ export const create = catchAsync(async (req: Request, res: Response) => {
 
     // Fire-and-forget — the browser confirmation message already told them they're
     // in; this email is the durable follow-up (in case the tab is closed) prompting
-    // them to add a profile photo.
-    void notifyVolunteerConfirmed(registration);
+    // them to add a profile photo. Still gated by the flag like every other
+    // auto-confirm path — an admin-issued code means staff already vetted them
+    // once, but the heuristic runs on whatever was typed into THIS submission
+    // regardless.
+    if (scored.isSpam) {
+      logger.info({ registrationId: registration.id }, 'Skipped automatic confirmation email for a flagged registration');
+    } else {
+      void notifyVolunteerConfirmed(registration);
+    }
 
     await emitAdminNotification({
       type: 'registration.new',
@@ -241,6 +321,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
 
     const registration = await Registration.create({
       ...input,
+      ...spamFields,
       ...(isRosterMatch && { status: 'confirmed', qrToken: generateQrToken() }),
     });
 
@@ -253,7 +334,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     });
 
     if (isRosterMatch) {
-      void sendConfirmationAndTicketEmails(registration);
+      sendConfirmationUnlessFlagged(registration);
     }
 
     res.status(201).json(new ApiResponse({ id: registration.id, message: isRosterMatch ? TEAM_CONFIRMED_MESSAGE : TEAM_PENDING_MESSAGE }));
@@ -291,11 +372,17 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     });
     let registration: HydratedDocument<RegistrationDoc>;
     if (existingApplication) {
-      existingApplication.set({ ...input, accessCode: trimmedCode, status: 'confirmed', qrToken: generateQrToken() });
+      existingApplication.set({ ...input, ...spamFields, accessCode: trimmedCode, status: 'confirmed', qrToken: generateQrToken() });
       registration = await existingApplication.save();
     } else {
       try {
-        registration = await Registration.create({ ...input, accessCode: trimmedCode, status: 'confirmed', qrToken: generateQrToken() });
+        registration = await Registration.create({
+          ...input,
+          ...spamFields,
+          accessCode: trimmedCode,
+          status: 'confirmed',
+          qrToken: generateQrToken(),
+        });
       } catch (err) {
         if ((err as { code?: number }).code !== 11000) throw err;
         throw new ApiError(409, 'A registration with this email already exists.', 'DUPLICATE_REGISTRATION');
@@ -307,7 +394,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     code.usedAt = new Date();
     await code.save();
 
-    void sendConfirmationAndTicketEmails(registration);
+    sendConfirmationUnlessFlagged(registration);
 
     await emitAdminNotification({
       type: 'registration.new',
@@ -469,6 +556,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     try {
       registration = await Registration.create({
         ...input,
+        ...spamFields,
         ...(requiresPayment && { paymentStatus: 'unpaid' }),
         ...(discountPercent !== undefined && { discountPercent }),
         ...(isFullyComped && { status: 'confirmed', paymentStatus: 'not_required', qrToken: generateQrToken() }),
@@ -516,7 +604,7 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     // ticket category still goes through manual admin review (see the comment
     // above), so this fires only for a fully-comped code redemption.
     if (isFullyComped) {
-      void sendConfirmationAndTicketEmails(registration);
+      sendConfirmationUnlessFlagged(registration);
     }
   }
 
@@ -552,10 +640,34 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
-// content_editor's "Volunteers" access is scoped to volunteer-type registrations
-// only — everything else (attendee payment data, exhibitor/sponsor contacts) stays
-// out of their lane, same enforcement pattern as accessCode.controller.ts.
-const isContentEditor = (req: Request) => req.user!.role === 'content_editor';
+// Per-area staff roles (see types/enums.ts's ROLES comment) — innovator_lead/
+// exhibitor_lead are scoped to exactly their own registration type, both for
+// reads (buildAdminFilter below) and writes (adminCreate/adminUpdate). Not an
+// exclude-list like registrations_officer's below, since these two roles have
+// nothing else to fall back to if the type doesn't match.
+const ROLE_REGISTRATION_TYPES: Partial<Record<Role, RegistrationType[]>> = {
+  innovator_lead: ['innovator'],
+  exhibitor_lead: ['exhibitor'],
+};
+
+// registrations_officer keeps everything it already had EXCEPT exhibitor/
+// innovator — those moved to their own leads above. An exclude-list rather
+// than an entry in ROLE_REGISTRATION_TYPES since 'everything but these two'
+// isn't expressible as a fixed allow-list of types. Applies to reads
+// (buildAdminFilter) AND writes (adminCreate/adminUpdate) — not just the list
+// view — so a registrations_officer can't create an exhibitor/innovator record
+// through the admin-trusted path either, only to have it vanish from their own
+// list afterward.
+const REGISTRATIONS_OFFICER_EXCLUDED_TYPES: RegistrationType[] = ['exhibitor', 'innovator'];
+
+const allowedTypesForRole = (role: Role): RegistrationType[] | undefined => ROLE_REGISTRATION_TYPES[role];
+
+const isTypeAllowedForRole = (role: Role, type: RegistrationType): boolean => {
+  const allowed = allowedTypesForRole(role);
+  if (allowed) return allowed.includes(type);
+  if (role === 'registrations_officer') return !REGISTRATIONS_OFFICER_EXCLUDED_TYPES.includes(type);
+  return true;
+};
 
 // POST /admin/registrations — admin registers someone directly (a walk-in, a
 // phone registration, a manual comp) rather than them filling the public form.
@@ -567,8 +679,8 @@ const isContentEditor = (req: Request) => req.user!.role === 'content_editor';
 export const adminCreate = catchAsync(async (req: Request, res: Response) => {
   const input = adminCreateRegistrationSchema.parse({ body: req.body }).body as AdminCreateRegistrationInput;
 
-  if (isContentEditor(req) && input.type !== 'volunteer') {
-    throw new ApiError(403, 'You can only register volunteers.', 'FORBIDDEN');
+  if (!isTypeAllowedForRole(req.user!.role, input.type)) {
+    throw new ApiError(403, `You do not have permission to register a ${input.type}.`, 'FORBIDDEN');
   }
 
   if (input.type === 'attendee') {
@@ -714,14 +826,27 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
 
 const buildAdminFilter = (query: ListRegistrationsQuery, req: Request): FilterQuery<RegistrationDoc> => {
   const filter: FilterQuery<RegistrationDoc> = {};
-  if (isContentEditor(req)) {
-    filter.type = 'volunteer';
+  const allowedTypes = allowedTypesForRole(req.user!.role);
+  if (allowedTypes) {
+    filter.type = allowedTypes.length === 1 ? allowedTypes[0] : { $in: allowedTypes };
+  } else if (req.user!.role === 'registrations_officer') {
+    // Exhibitor/innovator rows moved to their own leads — still honor an
+    // explicit ?type= for whatever this role IS still allowed to see, rather
+    // than silently overriding it the way the allow-list roles above do.
+    if (query.type && !REGISTRATIONS_OFFICER_EXCLUDED_TYPES.includes(query.type)) {
+      filter.type = query.type;
+    } else if (!query.type) {
+      filter.type = { $nin: REGISTRATIONS_OFFICER_EXCLUDED_TYPES };
+    } else {
+      filter.type = { $in: [] }; // explicitly asked for an excluded type — return nothing, not everything
+    }
   } else if (query.type) {
     filter.type = query.type;
   }
   if (query.status) filter.status = query.status;
   if (query.paymentStatus) filter.paymentStatus = query.paymentStatus;
   if (query.ticketCategory) filter.ticketCategory = query.ticketCategory;
+  if (query.flagged === 'true') filter.flaggedSuspicious = true;
   if (query.q) {
     const rx = new RegExp(query.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     filter.$or = [
@@ -761,8 +886,8 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
   if (!before) {
     throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
   }
-  if (isContentEditor(req) && before.type !== 'volunteer') {
-    throw new ApiError(403, 'You can only manage volunteer registrations.', 'FORBIDDEN');
+  if (!isTypeAllowedForRole(req.user!.role, before.type)) {
+    throw new ApiError(403, `You do not have permission to manage this registration.`, 'FORBIDDEN');
   }
   if (before.type === 'volunteer') {
     await assertValidVolunteerTrack(detailFields.trackSelected);
@@ -813,7 +938,7 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
 // an EXISTING pending/unpaid attendee registration (someone submitted the
 // public form, then paid by bank transfer/cash afterward) rather than one
 // created fresh. Route-gated to super_admin/registrations_officer only
-// (admin.routes.ts) — a financial action, not a content_editor concern.
+// (admin.routes.ts) — a financial action, not innovator_lead/exhibitor_lead territory.
 export const adminMarkPaid = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) {
     throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
@@ -861,9 +986,10 @@ export const adminMarkPaid = catchAsync(async (req: Request, res: Response) => {
   res.json(new ApiResponse(registration));
 });
 
-// Route-gated to super_admin/registrations_officer only (admin.routes.ts) — a
-// step above what content_editor can touch elsewhere in this controller, so no
-// in-handler role check is needed here the way the others above have one.
+// Route-gated to super_admin/admin/registrations_officer only (admin.routes.ts)
+// — a step above what innovator_lead/exhibitor_lead can touch elsewhere in this
+// controller, so no in-handler role check is needed here the way the others
+// above have one.
 export const adminDelete = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) {
     throw new ApiError(404, 'Registration not found', 'NOT_FOUND');

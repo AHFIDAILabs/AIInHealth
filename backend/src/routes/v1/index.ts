@@ -28,6 +28,7 @@ import scholarshipApplicationRoutes from './scholarshipApplication.routes.js';
 import promoRoutes from './promo.routes.js';
 import rapporteurRoutes from './rapporteur.routes.js';
 import knowledgeProductRoutes from './knowledgeProduct.routes.js';
+import formsRoutes from './forms.routes.js';
 
 const router = Router();
 
@@ -60,5 +61,6 @@ router.use('/scholarship-applications', scholarshipApplicationRoutes);
 router.use('/promo', promoRoutes);
 router.use('/rapporteur', rapporteurRoutes);
 router.use('/knowledge-products', knowledgeProductRoutes);
+router.use('/forms', formsRoutes);
 
 export default router;

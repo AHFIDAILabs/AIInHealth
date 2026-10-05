@@ -37,6 +37,8 @@ export const dashboardStats = catchAsync(async (_req: Request, res: Response) =>
     pendingReview,
     unpaidRegistrations,
     activeTeamMembers,
+    quarantinedMessages,
+    quarantinedInquiries,
   ] = await Promise.all([
     Registration.aggregate<{ _id: string; count: number }>([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
     Registration.aggregate<{ _id: string; count: number }>([{ $group: { _id: '$type', count: { $sum: 1 } } }]),
@@ -55,11 +57,17 @@ export const dashboardStats = catchAsync(async (_req: Request, res: Response) =>
     Innovation.countDocuments({ isPublished: true }),
     Abstract.countDocuments(),
     Abstract.countDocuments({ status: 'pending' }),
-    PartnershipInquiry.countDocuments({ status: 'New' }),
-    ContactMessage.countDocuments({ isRead: false }),
+    // Spam hardening — excludes quarantined items from both counts (see
+    // contact.controller.ts/inquiry.controller.ts's own buildFilter comment:
+    // `{ isSpam: { $ne: true } }`, never `{ isSpam: false }`, since existing
+    // documents have neither field set).
+    PartnershipInquiry.countDocuments({ status: 'New', isSpam: { $ne: true } }),
+    ContactMessage.countDocuments({ isRead: false, isSpam: { $ne: true } }),
     Registration.countDocuments({ status: 'pending' }),
     Registration.countDocuments({ paymentStatus: 'unpaid' }),
     EventTeamMember.countDocuments({ isActive: true }),
+    ContactMessage.countDocuments({ isSpam: true, createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }),
+    PartnershipInquiry.countDocuments({ isSpam: true, createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }),
   ]);
 
   const byStatus = Object.fromEntries(REGISTRATION_STATUSES.map((s) => [s, 0])) as Record<string, number>;
@@ -90,7 +98,7 @@ export const dashboardStats = catchAsync(async (_req: Request, res: Response) =>
         innovations: { total: innovationTotal, published: innovationPublished },
         abstracts: { total: abstractTotal, pending: abstractPending },
       },
-      communication: { pendingInquiries, unreadMessages },
+      communication: { pendingInquiries, unreadMessages, quarantined: quarantinedMessages + quarantinedInquiries },
       registrationsQueue: { pendingReview, unpaid: unpaidRegistrations },
       team: { activeMembers: activeTeamMembers },
       recentActivity,

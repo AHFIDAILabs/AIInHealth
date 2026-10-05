@@ -30,9 +30,15 @@ describe('Admin auth + RBAC', () => {
     expect(res.status).toBe(403);
   });
 
-  it('a content_editor CAN reach volunteer registrations (the App.tsx route-guard fix)', async () => {
-    const editor = await seedAndLoginAdmin('content_editor');
-    const res = await editor.get('/api/v1/admin/registrations');
+  it('an innovator_lead CAN reach the registrations list, scoped to their own type', async () => {
+    const lead = await seedAndLoginAdmin('innovator_lead');
+    const res = await lead.get('/api/v1/admin/registrations');
     expect(res.status).toBe(200);
+  });
+
+  it('an innovator_lead is blocked from an abstract_lead-only route', async () => {
+    const lead = await seedAndLoginAdmin('innovator_lead');
+    const res = await lead.get('/api/v1/admin/abstracts');
+    expect(res.status).toBe(403);
   });
 });

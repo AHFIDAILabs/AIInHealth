@@ -41,16 +41,9 @@ export const generateCode = (type: AccessCodeType): string => {
   return `${PREFIX[type]}-${random}`;
 };
 
-// content_editor's "Volunteers" access is scoped to volunteer-type codes only —
-// everything else (keynote_speaker, complimentary) stays registrations-officer/
-// super_admin territory. Every handler below enforces this the same way: force the
-// type for content_editor, and 403 if they somehow try to touch a non-volunteer code.
-const isContentEditor = (req: Request) => req.user!.role === 'content_editor';
-
-const buildFilter = (query: ListAccessCodesQuery, req: Request): FilterQuery<AccessCodeDoc> => {
+const buildFilter = (query: ListAccessCodesQuery): FilterQuery<AccessCodeDoc> => {
   const filter: FilterQuery<AccessCodeDoc> = {};
-  filter.type = isContentEditor(req) ? 'volunteer' : query.type;
-  if (!filter.type) delete filter.type;
+  if (query.type) filter.type = query.type;
   if (query.status) filter.status = query.status;
   if (query.q) {
     const rx = new RegExp(query.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -61,7 +54,7 @@ const buildFilter = (query: ListAccessCodesQuery, req: Request): FilterQuery<Acc
 
 export const adminList = catchAsync(async (req: Request, res: Response) => {
   const query = listAccessCodesQuerySchema.parse(req.query);
-  const filter = buildFilter(query, req);
+  const filter = buildFilter(query);
   const skip = (query.page - 1) * query.limit;
 
   const [items, total] = await Promise.all([
@@ -79,10 +72,6 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
 // anonymous codes for one address.
 export const adminGenerate = catchAsync(async (req: Request, res: Response) => {
   const input = generateAccessCodesSchema.parse({ body: req.body }).body;
-
-  if (isContentEditor(req) && input.type !== 'volunteer') {
-    throw new ApiError(403, 'You can only generate volunteer access codes.', 'FORBIDDEN');
-  }
 
   // Idempotency: retrying "Generate" for someone who already has a live, unused
   // code of this type (a double-click, or re-running the same email list) must not
@@ -174,7 +163,6 @@ export const adminRevoke = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Access code not found', 'NOT_FOUND');
   const code = await AccessCode.findById(req.params.id);
   if (!code) throw new ApiError(404, 'Access code not found', 'NOT_FOUND');
-  if (isContentEditor(req) && code.type !== 'volunteer') throw new ApiError(403, 'You can only manage volunteer access codes.', 'FORBIDDEN');
   if (code.status === 'used') throw new ApiError(400, 'Cannot revoke a code that has already been used', 'ALREADY_USED');
 
   code.status = 'revoked';
@@ -191,7 +179,6 @@ export const adminSend = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Access code not found', 'NOT_FOUND');
   const code = await AccessCode.findById(req.params.id);
   if (!code) throw new ApiError(404, 'Access code not found', 'NOT_FOUND');
-  if (isContentEditor(req) && code.type !== 'volunteer') throw new ApiError(403, 'You can only manage volunteer access codes.', 'FORBIDDEN');
   if (code.status !== 'unused') throw new ApiError(400, 'This code has already been used or revoked.', 'NOT_UNUSED');
 
   await sendAccessCodeEmail(code.issuedTo, code.type, code.code, code.discountPercent ?? undefined, code.presentationType ?? undefined);

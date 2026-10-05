@@ -40,7 +40,7 @@ const RESOURCES: SearchResource[] = [
   {
     key: 'registrations',
     label: 'Registrations',
-    roles: ['super_admin', 'registrations_officer', 'viewer', 'content_editor'],
+    roles: ['super_admin', 'admin', 'registrations_officer', 'viewer', 'innovator_lead', 'exhibitor_lead'],
     search: async (rx, q) => {
       const docs = await Registration.find({
         $or: [
@@ -66,7 +66,7 @@ const RESOURCES: SearchResource[] = [
   {
     key: 'speakers',
     label: 'Speakers',
-    roles: ['super_admin', 'content_editor'],
+    roles: ['super_admin', 'admin'],
     search: async (rx, q) => {
       const docs = await Speaker.find({ $or: [{ fullName: rx }, { title: rx }, { organization: rx }] })
         .sort({ fullName: 1 })
@@ -83,7 +83,7 @@ const RESOURCES: SearchResource[] = [
   {
     key: 'sessions',
     label: 'Sessions',
-    roles: ['super_admin', 'content_editor'],
+    roles: ['super_admin', 'admin'],
     search: async (rx) => {
       const docs = await Session.find({ $or: [{ title: rx }, { room: rx }] })
         .sort({ day: 1, startTime: 1 })
@@ -100,7 +100,7 @@ const RESOURCES: SearchResource[] = [
   {
     key: 'partners',
     label: 'Partners',
-    roles: ['super_admin', 'content_editor'],
+    roles: ['super_admin', 'admin'],
     search: async (rx, q) => {
       const docs = await Partner.find({ name: rx })
         .sort({ name: 1 })
@@ -118,7 +118,7 @@ const RESOURCES: SearchResource[] = [
   {
     key: 'innovations',
     label: 'Innovations',
-    roles: ['super_admin', 'content_editor'],
+    roles: ['super_admin', 'admin'],
     search: async (rx, q) => {
       const docs = await Innovation.find({
         $or: [{ name: rx }, { organization: rx }, { founderName: rx }, { tagline: rx }],
@@ -137,7 +137,7 @@ const RESOURCES: SearchResource[] = [
   {
     key: 'abstracts',
     label: 'Abstracts',
-    roles: ['super_admin', 'content_editor'],
+    roles: ['super_admin', 'admin', 'abstract_lead'],
     search: async (rx, q) => {
       const docs = await Abstract.find({
         $or: [{ title: rx }, { authorName: rx }, { authorEmail: rx }, { organization: rx }],
@@ -156,7 +156,7 @@ const RESOURCES: SearchResource[] = [
   {
     key: 'inquiries',
     label: 'Partnership Inquiries',
-    roles: ['super_admin', 'content_editor'],
+    roles: ['super_admin', 'admin'],
     search: async (rx) => {
       const docs = await PartnershipInquiry.find({ $or: [{ organizationName: rx }, { contactName: rx }, { contactEmail: rx }] })
         .sort({ createdAt: -1 })
@@ -173,7 +173,7 @@ const RESOURCES: SearchResource[] = [
   {
     key: 'messages',
     label: 'Contact Messages',
-    roles: ['super_admin', 'content_editor'],
+    roles: ['super_admin', 'admin'],
     search: async (rx) => {
       const docs = await ContactMessage.find({ $or: [{ name: rx }, { email: rx }] })
         .sort({ createdAt: -1 })
@@ -209,7 +209,7 @@ const RESOURCES: SearchResource[] = [
   {
     key: 'media',
     label: 'Gallery',
-    roles: ['super_admin', 'content_editor'],
+    roles: ['super_admin', 'admin'],
     search: async (rx, q) => {
       const docs = await Media.find({ caption: rx })
         .sort({ createdAt: -1 })

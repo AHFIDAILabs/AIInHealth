@@ -17,6 +17,16 @@ const groupAttendeeSchema = z.object({
   email: z.string().trim().toLowerCase().email('Enter a valid email'),
 });
 
+// Public form spam hardening — spread into every PUBLIC registration schema
+// below (not the admin-only create variants, which are a trusted/authenticated
+// action with nothing to trap). `website` is already a real field on
+// exhibitor/sponsor/innovator, so this honeypot uses a different, non-colliding
+// name — `middleName`, never asked for or rendered by any real form here.
+const honeypotAndTimeTrap = {
+  middleName: z.string().max(0).optional(), // honeypot
+  formToken: z.string().optional(), // see formToken.service.ts
+};
+
 const attendeeSchema = z.object({
   type: z.literal('attendee'),
   registrationMode: z.enum(['individual', 'group']),
@@ -39,6 +49,7 @@ const attendeeSchema = z.object({
   // Already a hosted Cloudinary URL by the time this reaches here — the
   // public upload endpoint (POST /registrations/upload-id) runs first.
   idCardUrl: z.string().trim().url().optional(),
+  ...honeypotAndTimeTrap,
 });
 
 // accessCode is optional — most exhibitors are a first-time self-service
@@ -62,6 +73,7 @@ const exhibitorSchema = z.object({
   // as free-text fields elsewhere in this app.
   customFieldAnswers: z.record(z.string(), z.string()).optional(),
   accessCode: z.string().trim().max(32).optional().or(z.literal('')),
+  ...honeypotAndTimeTrap,
 });
 
 const sponsorSchema = z.object({
@@ -72,6 +84,7 @@ const sponsorSchema = z.object({
   contactPhone: z.string().trim().optional(),
   website: optionalUrlField,
   message: z.string().trim().max(2000).optional(),
+  ...honeypotAndTimeTrap,
 });
 
 // Innovator — architected like exhibitorSchema above (own self-service tab,
@@ -87,6 +100,7 @@ const innovatorSchema = z.object({
   website: optionalUrlField,
   solutionDescription: z.string().trim().max(2000).optional(),
   accessCode: z.string().trim().max(32).optional().or(z.literal('')),
+  ...honeypotAndTimeTrap,
 });
 
 // accessCode is optional — most people submitting this form are applying for the
@@ -101,6 +115,7 @@ const volunteerSchema = z.object({
   accessCode: z.string().trim().max(32).optional().or(z.literal('')),
   tshirtSize: z.string().trim().max(20).optional(),
   trackSelected: z.string().trim().max(200).optional(),
+  ...honeypotAndTimeTrap,
 });
 
 // Event staff — deliberately its own type/branch rather than a volunteer/
@@ -116,6 +131,7 @@ const teamSchema = z.object({
   // generic jobTitle field rather than adding a new one.
   jobTitle: z.string().trim().max(200).optional(),
   organization: z.string().trim().optional(),
+  ...honeypotAndTimeTrap,
 });
 
 // Superseding the plain discriminatedUnion below with a conditional check
@@ -175,6 +191,10 @@ export const listRegistrationsQuerySchema = z.object({
   type: z.enum(REGISTRATION_TYPES).optional(),
   paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
   ticketCategory: z.enum(TICKET_CATEGORIES).optional(),
+  // Present -> list ONLY flagged registrations — see registration.controller.ts's
+  // buildAdminFilter. Unlike spam's `spam=true` filter, this is additive to
+  // whatever else is filtered, never hides anything by default.
+  flagged: z.enum(['true']).optional(),
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -193,6 +213,10 @@ export const updateRegistrationStatusSchema = z.object({
       status: z.enum(REGISTRATION_STATUSES).optional(),
       // Independent of status — see Registration.model.ts's isActive comment.
       isActive: z.boolean().optional(),
+      // Admin's "Clear Flag" action — see Registration.model.ts's
+      // flaggedSuspicious comment. Only ever sent as `false` (there's no
+      // "flag this" admin action, only clearing one the scoring already set).
+      flaggedSuspicious: z.boolean().optional(),
       companyName: z.string().trim().min(2).optional(),
       contactName: z.string().trim().min(2).optional(),
       contactEmail: z.string().trim().toLowerCase().email('Enter a valid email').optional(),

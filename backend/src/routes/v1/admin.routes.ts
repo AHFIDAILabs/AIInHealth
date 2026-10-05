@@ -77,146 +77,153 @@ const router = Router();
 // Every /admin/* route requires a valid session — role checks then narrow further.
 router.use(requireAuth);
 
-router.get('/dashboard', requireRole('super_admin', 'content_editor', 'registrations_officer', 'viewer'), adminController.dashboardStats);
+// Every /admin/* role, listed once since several cross-cutting routes (dashboard,
+// search, analytics, notifications, push) are open to all of them.
+const allRoles = ['super_admin', 'admin', 'registrations_officer', 'innovator_lead', 'exhibitor_lead', 'abstract_lead', 'rapporteur_lead', 'viewer'] as const;
+
+router.get('/dashboard', requireRole(...allRoles), adminController.dashboardStats);
 
 // Global search (topbar ⌘K) — every role may call this; which resources are
 // actually queried is narrowed per-role inside the controller itself.
-router.get('/search', requireRole('super_admin', 'content_editor', 'registrations_officer', 'viewer'), searchController.globalSearch);
+router.get('/search', requireRole(...allRoles), searchController.globalSearch);
 
 // Any authenticated admin role can upload an image (own profile photo at minimum);
 // which resource a URL ends up saved on is still gated by that resource's own route.
 router.post('/uploads/image', uploadImage, uploadController.uploadImage);
 
-// Gallery photo/video uploader — content_editor scope, same as the Media CRUD
-// routes below.
+// Gallery photo/video uploader — same scope as the Media CRUD routes below.
 router.post(
   '/uploads/media',
-  requireRole('super_admin', 'content_editor'),
+  requireRole('super_admin', 'admin'),
   uploadMedia,
   uploadController.uploadMedia
 );
 
-// content_editor is included here too — their access is narrowed to volunteer-type
-// records inside the controllers themselves (isContentEditor()), not at the route
-// level, so this stays one shared endpoint rather than a parallel "volunteers" API.
+// innovator_lead/exhibitor_lead are included here too — their access is narrowed
+// to their own registration type inside the controllers themselves
+// (ROLE_REGISTRATION_TYPES in registration.controller.ts), not at the route
+// level, so this stays one shared endpoint rather than parallel per-type APIs.
 router.get(
   '/registrations',
-  requireRole('super_admin', 'registrations_officer', 'viewer', 'content_editor'),
+  requireRole('super_admin', 'admin', 'registrations_officer', 'viewer', 'innovator_lead', 'exhibitor_lead'),
   registrationController.adminList
 );
 router.get(
   '/registrations/export',
-  requireRole('super_admin', 'registrations_officer'),
+  requireRole('super_admin', 'admin', 'registrations_officer'),
   registrationController.adminExport
 );
 router.post(
   '/registrations',
-  requireRole('super_admin', 'registrations_officer', 'content_editor'),
+  requireRole('super_admin', 'admin', 'registrations_officer', 'innovator_lead', 'exhibitor_lead'),
   registrationController.adminCreate
 );
 router.patch(
   '/registrations/:id',
-  requireRole('super_admin', 'registrations_officer', 'content_editor'),
+  requireRole('super_admin', 'admin', 'registrations_officer', 'innovator_lead', 'exhibitor_lead'),
   registrationController.adminUpdate
 );
-// Delete is a step above what content_editor should touch, so scoped tighter
+// Delete is a step above what the leads above should touch, so scoped tighter
 // than the PATCH above.
 router.delete(
   '/registrations/:id',
-  requireRole('super_admin', 'registrations_officer'),
+  requireRole('super_admin', 'admin', 'registrations_officer'),
   registrationController.adminDelete
 );
 router.post(
   '/registrations/bulk-payment-reminder',
-  requireRole('super_admin', 'registrations_officer'),
+  requireRole('super_admin', 'admin', 'registrations_officer'),
   registrationController.adminBulkSendPaymentReminders
 );
-// A financial action (marks a real payment collected outside Paystack), same
-// role scope as bulk-payment-reminder above — not content_editor territory.
+// A financial action (marks a real payment collected outside Paystack) — not
+// innovator_lead/exhibitor_lead territory.
 router.post(
   '/registrations/:id/mark-paid',
-  requireRole('super_admin', 'registrations_officer'),
+  requireRole('super_admin', 'admin', 'registrations_officer'),
   registrationController.adminMarkPaid
 );
-// Same role scope as PATCH /registrations/:id above (content_editor's own
-// access is volunteer-only either way, since this endpoint only ever touches
-// type: 'volunteer' records) — a bulk version of the exact same "confirm this
-// volunteer" action they can already take one at a time.
 router.post(
   '/registrations/import-volunteers',
-  requireRole('super_admin', 'registrations_officer', 'content_editor'),
+  requireRole('super_admin', 'admin', 'registrations_officer'),
   uploadCsv,
   registrationController.adminImportVolunteers
 );
 
-// Access codes directly gate free entry — same role scope as reviewing registrations,
-// plus content_editor for volunteer-type codes only (enforced in the controller).
-router.get('/access-codes', requireRole('super_admin', 'registrations_officer', 'content_editor'), accessCodeController.adminList);
-router.post('/access-codes', requireRole('super_admin', 'registrations_officer', 'content_editor'), accessCodeController.adminGenerate);
-router.patch('/access-codes/:id/revoke', requireRole('super_admin', 'registrations_officer', 'content_editor'), accessCodeController.adminRevoke);
-router.post('/access-codes/:id/send', requireRole('super_admin', 'registrations_officer', 'content_editor'), accessCodeController.adminSend);
+// Access codes directly gate free entry — registrations_officer/admin/super_admin
+// only (not the per-type leads below — Innovator/Exhibitor heads manage their own
+// registrations but don't issue access codes).
+router.get('/access-codes', requireRole('super_admin', 'admin', 'registrations_officer'), accessCodeController.adminList);
+router.post('/access-codes', requireRole('super_admin', 'admin', 'registrations_officer'), accessCodeController.adminGenerate);
+router.patch('/access-codes/:id/revoke', requireRole('super_admin', 'admin', 'registrations_officer'), accessCodeController.adminRevoke);
+router.post('/access-codes/:id/send', requireRole('super_admin', 'admin', 'registrations_officer'), accessCodeController.adminSend);
 
-router.get('/scholarship-applications', requireRole('super_admin', 'registrations_officer', 'content_editor'), scholarshipApplicationController.adminList);
-router.get('/scholarship-applications/export', requireRole('super_admin', 'registrations_officer', 'content_editor'), scholarshipApplicationController.adminExport);
+router.get('/scholarship-applications', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipApplicationController.adminList);
+router.get('/scholarship-applications/export', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipApplicationController.adminExport);
 router.patch(
   '/scholarship-applications/:id/decide',
-  requireRole('super_admin', 'registrations_officer', 'content_editor'),
+  requireRole('super_admin', 'admin', 'registrations_officer'),
   validate(decideScholarshipApplicationSchema),
   scholarshipApplicationController.adminDecide
 );
 
-router.get('/payments-stats', requireRole('super_admin', 'registrations_officer', 'viewer'), paymentController.adminStats);
-router.get('/payments/reconciliations', requireRole('super_admin', 'registrations_officer'), reconciliationController.list);
-router.post('/payments/reconciliations/:reference/resync', requireRole('super_admin', 'registrations_officer'), reconciliationController.resync);
+router.get('/payments-stats', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer'), paymentController.adminStats);
+router.get('/payments/reconciliations', requireRole('super_admin', 'admin', 'registrations_officer'), reconciliationController.list);
+router.post('/payments/reconciliations/:reference/resync', requireRole('super_admin', 'admin', 'registrations_officer'), reconciliationController.resync);
 
-router.get('/portal-tokens', requireRole('super_admin', 'registrations_officer'), portalTokenController.adminList);
-router.post('/portal-tokens/:id/send-code', requireRole('super_admin', 'registrations_officer'), portalTokenController.adminSendCode);
-router.post('/portal-tokens/bulk-send', requireRole('super_admin', 'registrations_officer'), portalTokenController.adminBulkSendCodes);
+router.get('/portal-tokens', requireRole('super_admin', 'admin', 'registrations_officer'), portalTokenController.adminList);
+router.post('/portal-tokens/:id/send-code', requireRole('super_admin', 'admin', 'registrations_officer'), portalTokenController.adminSendCode);
+router.post('/portal-tokens/bulk-send', requireRole('super_admin', 'admin', 'registrations_officer'), portalTokenController.adminBulkSendCodes);
 
-const contentRoles = ['super_admin', 'content_editor'] as const;
+// Areas not named as their own staff role — folded into Admin (+ super_admin),
+// per the per-area roles plan. Kept as one shared const since these routes are
+// otherwise unrelated (Agenda/Speakers, Translations, Tracks) but share the
+// exact same access scope.
+const adminOnlyRoles = ['super_admin', 'admin'] as const;
+const abstractRoles = ['super_admin', 'admin', 'abstract_lead'] as const;
+const rapporteurRoles = ['super_admin', 'admin', 'rapporteur_lead'] as const;
 
-router.get('/speakers', requireRole(...contentRoles), speakerController.adminList);
-router.post('/speakers', requireRole(...contentRoles), speakerController.adminCreate);
+router.get('/speakers', requireRole(...adminOnlyRoles), speakerController.adminList);
+router.post('/speakers', requireRole(...adminOnlyRoles), speakerController.adminCreate);
 // Must come before the /:id routes below — otherwise Express matches
 // "reorder" as an :id param instead of this route.
-router.patch('/speakers/reorder', requireRole(...contentRoles), speakerController.adminReorder);
-router.patch('/speakers/:id', requireRole(...contentRoles), speakerController.adminUpdate);
-router.delete('/speakers/:id', requireRole(...contentRoles), speakerController.adminDelete);
-router.post('/speakers/:id/translate', requireRole(...contentRoles), speakerController.translate);
-router.patch('/speakers/:id/translations/:lang', requireRole(...contentRoles), speakerController.updateTranslation);
-router.post('/speakers/:id/register', requireRole(...contentRoles), speakerController.adminRegister);
-router.post('/speakers/:id/send-access-email', requireRole(...contentRoles), speakerController.adminSendAccessEmail);
+router.patch('/speakers/reorder', requireRole(...adminOnlyRoles), speakerController.adminReorder);
+router.patch('/speakers/:id', requireRole(...adminOnlyRoles), speakerController.adminUpdate);
+router.delete('/speakers/:id', requireRole(...adminOnlyRoles), speakerController.adminDelete);
+router.post('/speakers/:id/translate', requireRole(...adminOnlyRoles), speakerController.translate);
+router.patch('/speakers/:id/translations/:lang', requireRole(...adminOnlyRoles), speakerController.updateTranslation);
+router.post('/speakers/:id/register', requireRole(...adminOnlyRoles), speakerController.adminRegister);
+router.post('/speakers/:id/send-access-email', requireRole(...adminOnlyRoles), speakerController.adminSendAccessEmail);
 
-router.get('/sessions', requireRole(...contentRoles), sessionController.adminList);
-router.post('/sessions/check-conflict', requireRole(...contentRoles), sessionController.checkConflict);
-router.post('/sessions', requireRole(...contentRoles), sessionController.adminCreate);
-router.patch('/sessions/:id', requireRole(...contentRoles), sessionController.adminUpdate);
-router.delete('/sessions/:id', requireRole(...contentRoles), sessionController.adminDelete);
-router.post('/sessions/:id/rsvp', requireRole(...contentRoles), sessionController.adminAddRsvp);
-router.delete('/sessions/:id/rsvp/:email', requireRole(...contentRoles), sessionController.adminRemoveRsvp);
-router.post('/sessions/:id/translate', requireRole(...contentRoles), sessionController.translate);
-router.patch('/sessions/:id/translations/:lang', requireRole(...contentRoles), sessionController.updateTranslation);
+router.get('/sessions', requireRole(...adminOnlyRoles), sessionController.adminList);
+router.post('/sessions/check-conflict', requireRole(...adminOnlyRoles), sessionController.checkConflict);
+router.post('/sessions', requireRole(...adminOnlyRoles), sessionController.adminCreate);
+router.patch('/sessions/:id', requireRole(...adminOnlyRoles), sessionController.adminUpdate);
+router.delete('/sessions/:id', requireRole(...adminOnlyRoles), sessionController.adminDelete);
+router.post('/sessions/:id/rsvp', requireRole(...adminOnlyRoles), sessionController.adminAddRsvp);
+router.delete('/sessions/:id/rsvp/:email', requireRole(...adminOnlyRoles), sessionController.adminRemoveRsvp);
+router.post('/sessions/:id/translate', requireRole(...adminOnlyRoles), sessionController.translate);
+router.patch('/sessions/:id/translations/:lang', requireRole(...adminOnlyRoles), sessionController.updateTranslation);
 
-router.get('/translations/pending', requireRole(...contentRoles), translationReviewController.adminListPending);
+router.get('/translations/pending', requireRole(...adminOnlyRoles), translationReviewController.adminListPending);
 
-router.get('/tracks', requireRole(...contentRoles), trackController.adminList);
-router.post('/tracks', requireRole(...contentRoles), trackController.adminCreate);
-router.patch('/tracks/:id', requireRole(...contentRoles), trackController.adminUpdate);
-router.delete('/tracks/:id', requireRole(...contentRoles), trackController.adminDelete);
+router.get('/tracks', requireRole(...adminOnlyRoles), trackController.adminList);
+router.post('/tracks', requireRole(...adminOnlyRoles), trackController.adminCreate);
+router.patch('/tracks/:id', requireRole(...adminOnlyRoles), trackController.adminUpdate);
+router.delete('/tracks/:id', requireRole(...adminOnlyRoles), trackController.adminDelete);
 
-router.get('/session-types', requireRole(...contentRoles), sessionTypeController.adminList);
-router.post('/session-types', requireRole(...contentRoles), sessionTypeController.adminCreate);
-router.delete('/session-types/:id', requireRole(...contentRoles), sessionTypeController.adminDelete);
+router.get('/session-types', requireRole(...adminOnlyRoles), sessionTypeController.adminList);
+router.post('/session-types', requireRole(...adminOnlyRoles), sessionTypeController.adminCreate);
+router.delete('/session-types/:id', requireRole(...adminOnlyRoles), sessionTypeController.adminDelete);
 
 // Volunteer track options — same roles as registrations (Volunteers is where
 // this list is managed, not the Agenda/Sessions area Track above belongs to).
-router.get('/volunteer-tracks', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminList);
-router.post('/volunteer-tracks', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminCreate);
-router.patch('/volunteer-tracks/:id', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminUpdate);
-router.delete('/volunteer-tracks/:id', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerTrackController.adminDelete);
+router.get('/volunteer-tracks', requireRole('super_admin', 'admin', 'registrations_officer'), volunteerTrackController.adminList);
+router.post('/volunteer-tracks', requireRole('super_admin', 'admin', 'registrations_officer'), volunteerTrackController.adminCreate);
+router.patch('/volunteer-tracks/:id', requireRole('super_admin', 'admin', 'registrations_officer'), volunteerTrackController.adminUpdate);
+router.delete('/volunteer-tracks/:id', requireRole('super_admin', 'admin', 'registrations_officer'), volunteerTrackController.adminDelete);
 
-router.get('/volunteer-settings', requireRole('super_admin', 'registrations_officer', 'content_editor'), volunteerSettingsController.adminGet);
-router.put('/volunteer-settings', requireRole('super_admin', 'registrations_officer', 'content_editor'), validate(setVolunteerSettingsSchema), volunteerSettingsController.adminSet);
+router.get('/volunteer-settings', requireRole('super_admin', 'admin', 'registrations_officer'), volunteerSettingsController.adminGet);
+router.put('/volunteer-settings', requireRole('super_admin', 'admin', 'registrations_officer'), validate(setVolunteerSettingsSchema), volunteerSettingsController.adminSet);
 
 // super_admin only — launching this starts a real, uncapped-quantity 100%-off
 // giveaway running for a fixed 10 days, a financial decision distinct from
@@ -224,194 +231,192 @@ router.put('/volunteer-settings', requireRole('super_admin', 'registrations_offi
 router.get('/promo/status', requireRole('super_admin'), promoController.adminStatus);
 router.post('/promo/launch', requireRole('super_admin'), promoController.adminLaunch);
 
-router.get('/exhibitors-stats', requireRole('super_admin', 'registrations_officer', 'viewer'), exhibitorController.adminStats);
-router.get('/exhibitors-analytics', requireRole('super_admin', 'registrations_officer', 'viewer'), exhibitorController.adminAnalytics);
-router.post('/exhibitors/import', requireRole('super_admin', 'registrations_officer'), uploadCsv, exhibitorController.adminImport);
-router.get('/exhibitors/:exhibitorId/leads', requireRole('super_admin', 'registrations_officer', 'viewer'), leadController.adminListForExhibitor);
-router.post('/exhibitors/:exhibitorId/leads', requireRole('super_admin', 'registrations_officer'), leadController.adminCreate);
-router.patch('/leads/:id', requireRole('super_admin', 'registrations_officer'), leadController.adminUpdate);
-router.delete('/leads/:id', requireRole('super_admin', 'registrations_officer'), leadController.adminDelete);
+router.get('/exhibitors-stats', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer', 'exhibitor_lead'), exhibitorController.adminStats);
+router.get('/exhibitors-analytics', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer', 'exhibitor_lead'), exhibitorController.adminAnalytics);
+router.post('/exhibitors/import', requireRole('super_admin', 'admin', 'registrations_officer'), uploadCsv, exhibitorController.adminImport);
+router.get('/exhibitors/:exhibitorId/leads', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer', 'exhibitor_lead'), leadController.adminListForExhibitor);
+router.post('/exhibitors/:exhibitorId/leads', requireRole('super_admin', 'admin', 'registrations_officer', 'exhibitor_lead'), leadController.adminCreate);
+router.patch('/leads/:id', requireRole('super_admin', 'admin', 'registrations_officer', 'exhibitor_lead'), leadController.adminUpdate);
+router.delete('/leads/:id', requireRole('super_admin', 'admin', 'registrations_officer'), leadController.adminDelete);
 
-router.get('/attendees-stats', requireRole('super_admin', 'registrations_officer', 'viewer'), attendeeController.adminStats);
+router.get('/attendees-stats', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer'), attendeeController.adminStats);
 
-router.get('/custom-fields', requireRole('super_admin', 'registrations_officer', 'viewer'), customFormFieldController.adminList);
-router.post('/custom-fields', requireRole('super_admin', 'registrations_officer'), customFormFieldController.adminCreate);
-router.patch('/custom-fields/:id', requireRole('super_admin', 'registrations_officer'), customFormFieldController.adminUpdate);
-router.delete('/custom-fields/:id', requireRole('super_admin', 'registrations_officer'), customFormFieldController.adminDelete);
+router.get('/custom-fields', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer'), customFormFieldController.adminList);
+router.post('/custom-fields', requireRole('super_admin', 'admin', 'registrations_officer'), customFormFieldController.adminCreate);
+router.patch('/custom-fields/:id', requireRole('super_admin', 'admin', 'registrations_officer'), customFormFieldController.adminUpdate);
+router.delete('/custom-fields/:id', requireRole('super_admin', 'admin', 'registrations_officer'), customFormFieldController.adminDelete);
 
-router.get('/partners', requireRole(...contentRoles), partnerController.adminList);
-router.post('/partners', requireRole(...contentRoles), partnerController.adminCreate);
-router.patch('/partners/:id', requireRole(...contentRoles), partnerController.adminUpdate);
-router.delete('/partners/:id', requireRole(...contentRoles), partnerController.adminDelete);
-router.get('/partners-analytics', requireRole(...contentRoles), partnerController.analytics);
+router.get('/partners', requireRole(...adminOnlyRoles), partnerController.adminList);
+router.post('/partners', requireRole(...adminOnlyRoles), partnerController.adminCreate);
+router.patch('/partners/:id', requireRole(...adminOnlyRoles), partnerController.adminUpdate);
+router.delete('/partners/:id', requireRole(...adminOnlyRoles), partnerController.adminDelete);
+router.get('/partners-analytics', requireRole(...adminOnlyRoles), partnerController.analytics);
 
-router.get('/sponsorship-packages', requireRole(...contentRoles), sponsorshipPackageController.adminList);
+router.get('/sponsorship-packages', requireRole(...adminOnlyRoles), sponsorshipPackageController.adminList);
 router.post(
   '/sponsorship-packages',
-  requireRole(...contentRoles),
+  requireRole(...adminOnlyRoles),
   validate(createSponsorshipPackageSchema),
   sponsorshipPackageController.adminCreate
 );
 router.patch(
   '/sponsorship-packages/:id',
-  requireRole(...contentRoles),
+  requireRole(...adminOnlyRoles),
   validate(updateSponsorshipPackageSchema),
   sponsorshipPackageController.adminUpdate
 );
-router.delete('/sponsorship-packages/:id', requireRole(...contentRoles), sponsorshipPackageController.adminDelete);
+router.delete('/sponsorship-packages/:id', requireRole(...adminOnlyRoles), sponsorshipPackageController.adminDelete);
 
-router.get('/deliverables', requireRole(...contentRoles), deliverableController.adminList);
+router.get('/deliverables', requireRole(...adminOnlyRoles), deliverableController.adminList);
 router.post(
   '/partners/:id/deliverables',
-  requireRole(...contentRoles),
+  requireRole(...adminOnlyRoles),
   validate(createDeliverableSchema),
   deliverableController.adminCreate
 );
-router.patch('/deliverables/:id', requireRole(...contentRoles), validate(updateDeliverableSchema), deliverableController.adminUpdate);
-router.delete('/deliverables/:id', requireRole(...contentRoles), deliverableController.adminDelete);
+router.patch('/deliverables/:id', requireRole(...adminOnlyRoles), validate(updateDeliverableSchema), deliverableController.adminUpdate);
+router.delete('/deliverables/:id', requireRole(...adminOnlyRoles), deliverableController.adminDelete);
 
-router.get('/interactions', requireRole(...contentRoles), partnerInteractionController.adminList);
+router.get('/interactions', requireRole(...adminOnlyRoles), partnerInteractionController.adminList);
 router.post(
   '/partners/:id/interactions',
-  requireRole(...contentRoles),
+  requireRole(...adminOnlyRoles),
   validate(createPartnerInteractionSchema),
   partnerInteractionController.adminCreate
 );
 router.patch(
   '/interactions/:id/follow-up-done',
-  requireRole(...contentRoles),
+  requireRole(...adminOnlyRoles),
   partnerInteractionController.adminMarkFollowUpDone
 );
 
-router.get('/innovations', requireRole(...contentRoles), innovationController.adminList);
-router.post('/innovations', requireRole(...contentRoles), innovationController.adminCreate);
-router.patch('/innovations/:id', requireRole(...contentRoles), innovationController.adminUpdate);
-router.delete('/innovations/:id', requireRole(...contentRoles), innovationController.adminDelete);
+router.get('/innovations', requireRole(...adminOnlyRoles), innovationController.adminList);
+router.post('/innovations', requireRole(...adminOnlyRoles), innovationController.adminCreate);
+router.patch('/innovations/:id', requireRole(...adminOnlyRoles), innovationController.adminUpdate);
+router.delete('/innovations/:id', requireRole(...adminOnlyRoles), innovationController.adminDelete);
 
-router.get('/confirmed-abstracts', requireRole(...contentRoles), confirmedAbstractController.adminList);
-router.post('/confirmed-abstracts', requireRole(...contentRoles), confirmedAbstractController.adminCreate);
-router.patch('/confirmed-abstracts/:id', requireRole(...contentRoles), confirmedAbstractController.adminUpdate);
-router.delete('/confirmed-abstracts/:id', requireRole(...contentRoles), confirmedAbstractController.adminDelete);
+router.get('/confirmed-abstracts', requireRole(...abstractRoles), confirmedAbstractController.adminList);
+router.post('/confirmed-abstracts', requireRole(...abstractRoles), confirmedAbstractController.adminCreate);
+router.patch('/confirmed-abstracts/:id', requireRole(...abstractRoles), confirmedAbstractController.adminUpdate);
+router.delete('/confirmed-abstracts/:id', requireRole(...abstractRoles), confirmedAbstractController.adminDelete);
 
-router.get('/innovation-showcase-entries', requireRole(...contentRoles), innovationShowcaseEntryController.adminList);
-router.post('/innovation-showcase-entries', requireRole(...contentRoles), innovationShowcaseEntryController.adminCreate);
-router.patch('/innovation-showcase-entries/:id', requireRole(...contentRoles), innovationShowcaseEntryController.adminUpdate);
-router.delete('/innovation-showcase-entries/:id', requireRole(...contentRoles), innovationShowcaseEntryController.adminDelete);
+router.get('/innovation-showcase-entries', requireRole(...adminOnlyRoles), innovationShowcaseEntryController.adminList);
+router.post('/innovation-showcase-entries', requireRole(...adminOnlyRoles), innovationShowcaseEntryController.adminCreate);
+router.patch('/innovation-showcase-entries/:id', requireRole(...adminOnlyRoles), innovationShowcaseEntryController.adminUpdate);
+router.delete('/innovation-showcase-entries/:id', requireRole(...adminOnlyRoles), innovationShowcaseEntryController.adminDelete);
 
-router.get('/abstracts', requireRole(...contentRoles), abstractController.adminList);
-router.patch('/abstracts/:id', requireRole(...contentRoles), abstractController.adminUpdate);
-router.post('/abstracts/summarize', requireRole(...contentRoles), abstractController.adminSummarize);
-router.patch('/abstracts/:id/plain-summary', requireRole(...contentRoles), abstractController.updatePlainSummary);
-router.post('/abstracts/triage', requireRole(...contentRoles), abstractController.adminTriage);
-router.patch('/abstracts/:id/track', requireRole(...contentRoles), abstractController.updateTrack);
+router.get('/abstracts', requireRole(...abstractRoles), abstractController.adminList);
+router.patch('/abstracts/:id', requireRole(...abstractRoles), abstractController.adminUpdate);
+router.post('/abstracts/summarize', requireRole(...abstractRoles), abstractController.adminSummarize);
+router.patch('/abstracts/:id/plain-summary', requireRole(...abstractRoles), abstractController.updatePlainSummary);
+router.post('/abstracts/triage', requireRole(...abstractRoles), abstractController.adminTriage);
+router.patch('/abstracts/:id/track', requireRole(...abstractRoles), abstractController.updateTrack);
 
-router.get('/policy-sources', requireRole(...contentRoles), policySourceController.adminList);
-router.post('/policy-sources', requireRole(...contentRoles), policySourceController.adminCreate);
-router.patch('/policy-sources/:id', requireRole(...contentRoles), policySourceController.adminUpdate);
-router.delete('/policy-sources/:id', requireRole(...contentRoles), policySourceController.adminDelete);
+router.get('/policy-sources', requireRole(...adminOnlyRoles), policySourceController.adminList);
+router.post('/policy-sources', requireRole(...adminOnlyRoles), policySourceController.adminCreate);
+router.patch('/policy-sources/:id', requireRole(...adminOnlyRoles), policySourceController.adminUpdate);
+router.delete('/policy-sources/:id', requireRole(...adminOnlyRoles), policySourceController.adminDelete);
 
-router.get('/policy-tracker', requireRole(...contentRoles), policyTrackerController.adminList);
-router.patch('/policy-tracker/:id', requireRole(...contentRoles), policyTrackerController.adminUpdate);
-router.post('/policy-tracker/refresh-now', requireRole(...contentRoles), policyTrackerController.adminRefreshNow);
+router.get('/policy-tracker', requireRole(...adminOnlyRoles), policyTrackerController.adminList);
+router.patch('/policy-tracker/:id', requireRole(...adminOnlyRoles), policyTrackerController.adminUpdate);
+router.post('/policy-tracker/refresh-now', requireRole(...adminOnlyRoles), policyTrackerController.adminRefreshNow);
 router.post(
   '/abstracts/:id/assignments',
-  requireRole(...contentRoles),
+  requireRole(...abstractRoles),
   validate(adminAssignReviewerSchema),
   abstractController.assignReviewer
 );
-router.delete('/abstracts/:id/assignments/:reviewId', requireRole(...contentRoles), abstractController.unassignReviewer);
+router.delete('/abstracts/:id/assignments/:reviewId', requireRole(...abstractRoles), abstractController.unassignReviewer);
 
-router.get('/review-matrix', requireRole(...contentRoles), abstractController.reviewMatrix);
+router.get('/review-matrix', requireRole(...abstractRoles), abstractController.reviewMatrix);
 
-router.get('/rubric', requireRole(...contentRoles), rubricController.get);
-router.put('/rubric', requireRole(...contentRoles), validate(replaceRubricSchema), rubricController.replace);
-router.post('/rubric/restore-standard', requireRole(...contentRoles), rubricController.restoreStandard);
+router.get('/rubric', requireRole(...abstractRoles), rubricController.get);
+router.put('/rubric', requireRole(...abstractRoles), validate(replaceRubricSchema), rubricController.replace);
+router.post('/rubric/restore-standard', requireRole(...abstractRoles), rubricController.restoreStandard);
 
-router.get('/reviewers', requireRole(...contentRoles), reviewerController.adminList);
-router.post('/reviewers', requireRole(...contentRoles), validate(adminCreateReviewerSchema), reviewerController.adminCreate);
+router.get('/reviewers', requireRole(...abstractRoles), reviewerController.adminList);
+router.post('/reviewers', requireRole(...abstractRoles), validate(adminCreateReviewerSchema), reviewerController.adminCreate);
 
-// AI-Assisted Rapporteur System (Stage 1) — content-team work, same roles as
-// Sessions/Agenda management, since assigning a rapporteur to a session is
-// scoped alongside that content.
-router.get('/rapporteur/sessions', requireRole(...contentRoles), rapporteurController.adminListAssignableSessions);
-router.post('/rapporteur/assign', requireRole(...contentRoles), validate(adminAssignRapporteurSchema), rapporteurController.adminAssign);
-router.get('/rapporteur/reports', requireRole(...contentRoles), rapporteurController.adminListReports);
-router.patch('/rapporteur/reports/:id', requireRole(...contentRoles), validate(adminUpdateReportSchema), rapporteurController.adminUpdateReport);
-router.post('/rapporteur/reports/:id/retry-polish', requireRole(...contentRoles), rapporteurController.adminRetryPolish);
-router.get('/rapporteur/live-status', requireRole(...contentRoles), rapporteurController.adminLiveStatus);
-router.post('/rapporteur/tokens/:id/revoke', requireRole(...contentRoles), rapporteurController.adminRevokeToken);
-router.post('/rapporteur/tokens/:id/resend', requireRole(...contentRoles), rapporteurController.adminResendLink);
+// AI-Assisted Rapporteur System (Stage 1).
+router.get('/rapporteur/sessions', requireRole(...rapporteurRoles), rapporteurController.adminListAssignableSessions);
+router.post('/rapporteur/assign', requireRole(...rapporteurRoles), validate(adminAssignRapporteurSchema), rapporteurController.adminAssign);
+router.get('/rapporteur/reports', requireRole(...rapporteurRoles), rapporteurController.adminListReports);
+router.patch('/rapporteur/reports/:id', requireRole(...rapporteurRoles), validate(adminUpdateReportSchema), rapporteurController.adminUpdateReport);
+router.post('/rapporteur/reports/:id/retry-polish', requireRole(...rapporteurRoles), rapporteurController.adminRetryPolish);
+router.get('/rapporteur/live-status', requireRole(...rapporteurRoles), rapporteurController.adminLiveStatus);
+router.post('/rapporteur/tokens/:id/revoke', requireRole(...rapporteurRoles), rapporteurController.adminRevokeToken);
+router.post('/rapporteur/tokens/:id/resend', requireRole(...rapporteurRoles), rapporteurController.adminResendLink);
 
-// AI-Assisted Rapporteur System Stage 2, Layer 3 — admin-only internal live
-// transcript monitoring, same content roles as the rest of the rapporteur block.
-router.get('/live-transcript/sessions', requireRole(...contentRoles), liveTranscriptController.adminListSessions);
-router.get('/live-transcript/sessions/:id', requireRole(...contentRoles), liveTranscriptController.adminGet);
-router.post('/live-transcript/sessions/:id/start', requireRole(...contentRoles), liveTranscriptController.adminStart);
-router.post('/live-transcript/sessions/:id/stop', requireRole(...contentRoles), liveTranscriptController.adminStop);
+// AI-Assisted Rapporteur System Stage 2, Layer 3 — internal live transcript
+// monitoring, same roles as the rest of the rapporteur block.
+router.get('/live-transcript/sessions', requireRole(...rapporteurRoles), liveTranscriptController.adminListSessions);
+router.get('/live-transcript/sessions/:id', requireRole(...rapporteurRoles), liveTranscriptController.adminGet);
+router.post('/live-transcript/sessions/:id/start', requireRole(...rapporteurRoles), liveTranscriptController.adminStart);
+router.post('/live-transcript/sessions/:id/stop', requireRole(...rapporteurRoles), liveTranscriptController.adminStop);
 router.post(
   '/live-transcript/sessions/:id/chunk',
-  requireRole(...contentRoles),
+  requireRole(...rapporteurRoles),
   liveTranscriptChunkLimiter,
   uploadAudio,
   liveTranscriptController.adminChunk
 );
 
 // AI Feature Suite 2.9 / Rapporteur spec Section 7 — Knowledge Product
-// Drafting, same content roles as the rest of this content-drafting block.
-router.get('/knowledge-products', requireRole(...contentRoles), knowledgeProductController.adminList);
+// Drafting — not named as its own role, folded into Admin.
+router.get('/knowledge-products', requireRole(...adminOnlyRoles), knowledgeProductController.adminList);
 router.post(
   '/knowledge-products/:type/generate',
-  requireRole(...contentRoles),
+  requireRole(...adminOnlyRoles),
   validate(knowledgeProductTypeParamSchema),
   knowledgeProductController.adminGenerate
 );
 router.patch(
   '/knowledge-products/:type',
-  requireRole(...contentRoles),
+  requireRole(...adminOnlyRoles),
   validate(adminUpdateKnowledgeProductSchema),
   knowledgeProductController.adminUpdate
 );
 
-router.get('/abstracts-analytics', requireRole(...contentRoles), abstractController.analytics);
+router.get('/abstracts-analytics', requireRole(...abstractRoles), abstractController.analytics);
 
-router.get('/communications', requireRole(...contentRoles), communicationController.adminList);
+router.get('/communications', requireRole(...adminOnlyRoles), communicationController.adminList);
 router.patch(
   '/communications/:id',
-  requireRole(...contentRoles),
+  requireRole(...adminOnlyRoles),
   validate(adminUpdateCommunicationSchema),
   communicationController.adminUpdate
 );
-router.post('/communications/:id/send', requireRole(...contentRoles), communicationController.adminSend);
-router.post('/communications/:id/cancel', requireRole(...contentRoles), communicationController.adminCancel);
+router.post('/communications/:id/send', requireRole(...adminOnlyRoles), communicationController.adminSend);
+router.post('/communications/:id/cancel', requireRole(...adminOnlyRoles), communicationController.adminCancel);
 
 // Ask the Concept Note's source material — see KnowledgeChunk.model.ts.
-router.get('/ai/knowledge-chunks', requireRole(...contentRoles), knowledgeChunkController.adminList);
-router.post('/ai/knowledge-chunks', requireRole(...contentRoles), knowledgeChunkController.adminCreate);
-router.patch('/ai/knowledge-chunks/:id', requireRole(...contentRoles), knowledgeChunkController.adminUpdate);
-router.delete('/ai/knowledge-chunks/:id', requireRole(...contentRoles), knowledgeChunkController.adminDelete);
+router.get('/ai/knowledge-chunks', requireRole(...adminOnlyRoles), knowledgeChunkController.adminList);
+router.post('/ai/knowledge-chunks', requireRole(...adminOnlyRoles), knowledgeChunkController.adminCreate);
+router.patch('/ai/knowledge-chunks/:id', requireRole(...adminOnlyRoles), knowledgeChunkController.adminUpdate);
+router.delete('/ai/knowledge-chunks/:id', requireRole(...adminOnlyRoles), knowledgeChunkController.adminDelete);
 router.post(
   '/ai/knowledge-chunks/extract',
-  requireRole(...contentRoles),
+  requireRole(...adminOnlyRoles),
   uploadDocument,
   knowledgeChunkController.adminExtract
 );
-router.post('/ai/knowledge-chunks/bulk-create', requireRole(...contentRoles), knowledgeChunkController.adminBulkCreate);
+router.post('/ai/knowledge-chunks/bulk-create', requireRole(...adminOnlyRoles), knowledgeChunkController.adminBulkCreate);
 
-router.get('/media', requireRole(...contentRoles), mediaController.adminList);
-router.post('/media', requireRole(...contentRoles), mediaController.adminCreate);
-router.patch('/media/:id', requireRole(...contentRoles), mediaController.adminUpdate);
-router.delete('/media/:id', requireRole(...contentRoles), mediaController.adminDelete);
+router.get('/media', requireRole(...adminOnlyRoles), mediaController.adminList);
+router.post('/media', requireRole(...adminOnlyRoles), mediaController.adminCreate);
+router.patch('/media/:id', requireRole(...adminOnlyRoles), mediaController.adminUpdate);
+router.delete('/media/:id', requireRole(...adminOnlyRoles), mediaController.adminDelete);
 
-router.get('/inquiries', requireRole(...contentRoles), inquiryController.adminList);
-router.patch('/inquiries/:id', requireRole(...contentRoles), inquiryController.adminUpdateStatus);
+router.get('/inquiries', requireRole(...adminOnlyRoles), inquiryController.adminList);
+router.patch('/inquiries/:id', requireRole(...adminOnlyRoles), inquiryController.adminUpdateStatus);
 
-router.get('/messages', requireRole(...contentRoles), contactController.adminList);
-router.patch('/messages/:id', requireRole(...contentRoles), contactController.adminUpdate);
+router.get('/messages', requireRole(...adminOnlyRoles), contactController.adminList);
+router.patch('/messages/:id', requireRole(...adminOnlyRoles), contactController.adminUpdate);
 
-router.get('/newsletter-subscribers', requireRole(...contentRoles), newsletterController.adminList);
-router.get('/newsletter-subscribers/export', requireRole(...contentRoles), newsletterController.adminExport);
+router.get('/newsletter-subscribers', requireRole(...adminOnlyRoles), newsletterController.adminList);
+router.get('/newsletter-subscribers/export', requireRole(...adminOnlyRoles), newsletterController.adminExport);
 
-router.get('/audit-logs', requireRole('super_admin', 'viewer'), auditLogController.adminList);
+router.get('/audit-logs', requireRole('super_admin', 'admin', 'viewer'), auditLogController.adminList);
 
 router.get('/users', requireRole('super_admin'), userController.adminList);
 router.post('/users', requireRole('super_admin'), userController.adminCreate);
@@ -426,8 +431,6 @@ router.delete('/event-team/:id', requireRole('super_admin'), eventTeamController
 router.get('/integrations/status', requireRole('super_admin'), integrationsController.status);
 router.post('/integrations/test-email', requireRole('super_admin'), integrationsController.testEmail);
 router.post('/integrations/test-push', requireRole('super_admin'), integrationsController.testPush);
-
-const allRoles = ['super_admin', 'content_editor', 'registrations_officer', 'viewer'] as const;
 
 router.get('/analytics', requireRole(...allRoles), analyticsController.overview);
 router.get('/analytics-registrations', requireRole(...allRoles), analyticsController.registrations);
@@ -445,15 +448,15 @@ router.post('/push/unsubscribe', requireRole(...allRoles), validate(unsubscribeP
 router.post('/jobs/run-digest', requireRole('super_admin'), jobController.runDigestNow);
 
 // Check-in — same role scope as reviewing registrations (registrations_officer
-// handles the door on event day; super_admin always can).
-router.get('/check-in/stats', requireRole('super_admin', 'registrations_officer'), checkinController.stats);
-router.get('/check-in/search', requireRole('super_admin', 'registrations_officer'), checkinController.search);
-router.post('/check-in/scan', requireRole('super_admin', 'registrations_officer'), checkinController.scan);
-router.post('/check-in/manual/:id', requireRole('super_admin', 'registrations_officer'), checkinController.manualCheckIn);
+// handles the door on event day; super_admin/admin always can).
+router.get('/check-in/stats', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.stats);
+router.get('/check-in/search', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.search);
+router.post('/check-in/scan', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.scan);
+router.post('/check-in/manual/:id', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.manualCheckIn);
 
 router.post(
   '/delegate-announcements',
-  requireRole('super_admin', 'registrations_officer'),
+  requireRole('super_admin', 'admin', 'registrations_officer'),
   validate(sendAnnouncementSchema),
   delegateAnnouncementController.send
 );
