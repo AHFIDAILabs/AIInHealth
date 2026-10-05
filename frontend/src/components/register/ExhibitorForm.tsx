@@ -5,11 +5,13 @@ import { z } from 'zod';
 import { Button } from '../ui/Button';
 import { Banner } from '../ui/Banner';
 import { LightField, LightTextArea, LightSelect } from '../ui/LightField';
+import { HoneypotField } from '../ui/HoneypotField';
 import { RegisterSuccess } from './RegisterSuccess';
 import { submitRegistration } from '../../services/registration.service';
 import { listCustomFormFields, type CustomFormField } from '../../services/customFormField.service';
 import { getApiErrorMessage } from '../../services/api';
 import { optionalUrlField } from '../../lib/validation';
+import { useFormToken } from '../../hooks/useFormToken';
 
 const schema = z.object({
   companyName: z.string().trim().min(2, "Enter your organization's name"),
@@ -20,6 +22,7 @@ const schema = z.object({
   boothSize: z.enum(['small', 'medium', 'large']).optional(),
   productsDescription: z.string().trim().max(2000).optional(),
   accessCode: z.string().trim().max(32).optional().or(z.literal('')),
+  middleName: z.string().max(0).optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -29,6 +32,7 @@ export const ExhibitorForm = () => {
   const [customFields, setCustomFields] = useState<CustomFormField[]>([]);
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
   const [customError, setCustomError] = useState<string | null>(null);
+  const formToken = useFormToken();
 
   useEffect(() => {
     listCustomFormFields('exhibitor')
@@ -58,6 +62,7 @@ export const ExhibitorForm = () => {
         ...values,
         accessCode: accessCode ? accessCode.toUpperCase() : undefined,
         customFieldAnswers: Object.keys(customAnswers).length ? customAnswers : undefined,
+        formToken,
       });
       setConfirmation(message);
     } catch (err) {
@@ -75,6 +80,7 @@ export const ExhibitorForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+      <HoneypotField {...register('middleName')} />
       <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
         Interested in exhibiting? Fill out the form below and our team will follow up with booth options, pricing,
         and logistics.

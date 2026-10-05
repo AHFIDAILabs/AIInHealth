@@ -9,8 +9,10 @@ import { Reveal } from '../../components/ui/Reveal';
 import { Button } from '../../components/ui/Button';
 import { VenueMap } from '../../components/ui/VenueMap';
 import { LightField, LightTextArea, LightSelect } from '../../components/ui/LightField';
+import { HoneypotField } from '../../components/ui/HoneypotField';
 import { submitContactMessage, CONTACT_CATEGORIES } from '../../services/contact.service';
 import { getApiErrorMessage } from '../../services/api';
+import { useFormToken } from '../../hooks/useFormToken';
 import { SUPPORT_EMAIL, SUPPORT_MAILTO, VENUE_FULL_ADDRESS } from '../../lib/siteInfo';
 import { SEO } from '../../components/seo/SEO';
 
@@ -19,12 +21,14 @@ const schema = z.object({
   email: z.string().trim().toLowerCase().email('Enter a valid email'),
   category: z.enum(CONTACT_CATEGORIES),
   message: z.string().trim().min(10, 'Message should be at least 10 characters'),
+  website: z.string().max(0).optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
 export const Contact = () => {
   const { t } = useTranslation();
   const [submitError, setSubmitError] = useState('');
+  const formToken = useFormToken();
 
   // `id` is the stable, untranslated identifier used for the React key —
   // `label` is display-only translated text (same split as Navbar.tsx's
@@ -44,7 +48,7 @@ export const Contact = () => {
   const onSubmit = async (values: FormValues) => {
     setSubmitError('');
     try {
-      await submitContactMessage(values);
+      await submitContactMessage({ ...values, formToken });
       reset(undefined, { keepIsSubmitSuccessful: true });
     } catch (err) {
       setSubmitError(getApiErrorMessage(err));
@@ -103,6 +107,7 @@ export const Contact = () => {
                 </p>
               )}
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+                <HoneypotField {...register('website')} />
                 <div className="grid gap-5 sm:grid-cols-2">
                   <LightField label={t('contact.form.fullName', 'Full Name')} error={errors.name?.message} {...register('name')} />
                   <LightField label={t('contact.form.email', 'Email')} type="email" error={errors.email?.message} {...register('email')} />

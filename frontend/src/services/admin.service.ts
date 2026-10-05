@@ -59,6 +59,11 @@ export interface AdminRegistration {
   trackAssigned?: string;
   // Independent of status — see backend Registration.model.ts's isActive comment.
   isActive: boolean;
+  // Spam hardening — see backend Registration.model.ts's flaggedSuspicious
+  // comment. Never hides a registration, just flags it for review.
+  flaggedSuspicious?: boolean;
+  spamScore?: number;
+  spamReasons?: string[];
 }
 
 export interface RecentActivityItem {
@@ -87,7 +92,7 @@ export interface DashboardStats {
     innovations: PublishCount;
     abstracts: { total: number; pending: number };
   };
-  communication: { pendingInquiries: number; unreadMessages: number };
+  communication: { pendingInquiries: number; unreadMessages: number; quarantined: number };
   registrationsQueue: { pendingReview: number; unpaid: number };
   team: { activeMembers: number };
   recentActivity: RecentActivityItem[];
@@ -98,6 +103,7 @@ export interface ListRegistrationsParams {
   type?: RegistrationType;
   paymentStatus?: AdminRegistration['paymentStatus'];
   ticketCategory?: TicketCategory;
+  flagged?: 'true';
   q?: string;
   page?: number;
   limit?: number;
@@ -207,6 +213,8 @@ export interface UpdateRegistrationDetailsInput {
   tshirtSize?: string;
   trackSelected?: string;
   trackAssigned?: string;
+  // Admin's "Clear Flag" action — see AdminRegistration's own comment.
+  flaggedSuspicious?: boolean;
 }
 
 export const updateRegistrationDetails = async (

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Download, Upload, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard } from 'lucide-react';
+import { Search, Download, Upload, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard, ShieldAlert, ShieldOff } from 'lucide-react';
 import {
   listRegistrations,
   updateRegistrationStatus,
@@ -29,6 +29,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { VolunteerTrackManagerModal } from '../../components/admin/VolunteerTrackManagerModal';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
+import type { Role } from '../../services/auth.service';
 
 const TICKET_CATEGORIES = Object.keys(TICKET_PRICE_NGN) as TicketCategory[];
 const TICKET_LABEL: Record<TicketCategory, string> = {
@@ -103,6 +104,19 @@ const EMPTY_ADD_FORM: AddFormState = {
 
 const STATUS_OPTIONS: RegistrationStatus[] = ['pending', 'reviewed', 'confirmed', 'declined'];
 const TYPE_OPTIONS: RegistrationType[] = ['attendee', 'exhibitor', 'sponsor', 'volunteer', 'team', 'innovator'];
+// registrations_officer no longer sees exhibitor/innovator rows at all (those
+// moved to their own leads) — drop them from that role's own type picker so
+// picking one doesn't just show an empty list. admin/super_admin/viewer keep
+// every option.
+const REGISTRATIONS_OFFICER_TYPE_OPTIONS: RegistrationType[] = TYPE_OPTIONS.filter(
+  (t) => t !== 'exhibitor' && t !== 'innovator'
+);
+// innovator_lead/exhibitor_lead are locked to exactly their own type — mirrors
+// the backend's ROLE_REGISTRATION_TYPES in registration.controller.ts.
+const ROLE_LOCKED_TYPE: Partial<Record<Role, RegistrationType>> = {
+  innovator_lead: 'innovator',
+  exhibitor_lead: 'exhibitor',
+};
 
 const STATUS_BADGE: Record<RegistrationStatus, string> = {
   pending: 'text-warning bg-warning/10',
@@ -127,11 +141,11 @@ const TYPE_LABEL: Record<RegistrationType, string> = {
 export const RegistrationsPage = () => {
   const toast = useToast();
   const { user } = useAuth();
-  // content_editor's Volunteers access is scoped to volunteer-type registrations
-  // only — the backend forces this regardless of what's requested, so the type
-  // filter is locked here too rather than offering options that would silently
-  // no-op.
-  const contentEditorOnly = user?.role === 'content_editor';
+  // innovator_lead/exhibitor_lead access is scoped to their own registration
+  // type only — the backend forces this regardless of what's requested, so the
+  // type filter is locked here too rather than offering options that would
+  // silently no-op.
+  const lockedType = user?.role ? ROLE_LOCKED_TYPE[user.role] : undefined;
   const [searchParams, setSearchParams] = useSearchParams();
   const initialType = searchParams.get('type');
   const [items, setItems] = useState<AdminRegistration[]>([]);
@@ -142,8 +156,9 @@ export const RegistrationsPage = () => {
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState<RegistrationStatus | ''>('');
   const [type, setType] = useState<RegistrationType | ''>(
-    contentEditorOnly ? 'volunteer' : TYPE_OPTIONS.includes(initialType as RegistrationType) ? (initialType as RegistrationType) : ''
+    lockedType ?? (TYPE_OPTIONS.includes(initialType as RegistrationType) ? (initialType as RegistrationType) : '')
   );
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<AdminRegistration | null>(null);
@@ -245,17 +260,24 @@ export const RegistrationsPage = () => {
   // first, and only "recovers" once some other navigation unmounts and remounts the
   // page fresh. Re-sync whenever the URL's own type param changes under us.
   useEffect(() => {
-    if (contentEditorOnly) return;
+    if (lockedType) return;
     const urlType = searchParams.get('type');
     const next = TYPE_OPTIONS.includes(urlType as RegistrationType) ? (urlType as RegistrationType) : '';
     setType((prev) => (prev === next ? prev : next));
     setPage(1);
-  }, [searchParams, contentEditorOnly]);
+  }, [searchParams, lockedType]);
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    listRegistrations({ status: status || undefined, type: type || undefined, q: q || undefined, page, limit: 20 })
+    listRegistrations({
+      status: status || undefined,
+      type: type || undefined,
+      flagged: flaggedOnly ? 'true' : undefined,
+      q: q || undefined,
+      page,
+      limit: 20,
+    })
       .then((res) => {
         setItems(res.items);
         setPages(res.pages);
@@ -263,7 +285,7 @@ export const RegistrationsPage = () => {
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [status, type, q, page]);
+  }, [status, type, flaggedOnly, q, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
@@ -306,9 +328,24 @@ export const RegistrationsPage = () => {
 
   const clearFilters = () => {
     setStatus('');
-    if (!contentEditorOnly) setType('');
+    if (!lockedType) setType('');
+    setFlaggedOnly(false);
     setQ('');
     setPage(1);
+  };
+
+  const clearFlag = async (registration: AdminRegistration) => {
+    setSavingId(registration._id);
+    try {
+      const updated = await updateRegistrationDetails(registration._id, { flaggedSuspicious: false });
+      setItems((prev) => prev.map((r) => (r._id === registration._id ? updated : r)));
+      if (active?._id === registration._id) setActive(updated);
+      toast('success', 'Flag cleared');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSavingId(null);
+    }
   };
 
   const confirmToggleActive = async () => {
@@ -345,7 +382,7 @@ export const RegistrationsPage = () => {
   };
 
   const openAddForm = () => {
-    setAddForm({ ...EMPTY_ADD_FORM, type: contentEditorOnly ? 'volunteer' : 'attendee' });
+    setAddForm({ ...EMPTY_ADD_FORM, type: lockedType ?? 'attendee' });
     setAddError('');
     setAddFormOpen(true);
   };
@@ -521,7 +558,7 @@ export const RegistrationsPage = () => {
             </option>
           ))}
         </select>
-        {!contentEditorOnly && (
+        {!lockedType && (
           <select
             value={type}
             onChange={(e) => {
@@ -533,14 +570,23 @@ export const RegistrationsPage = () => {
             className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
           >
             <option value="">All Types</option>
-            {TYPE_OPTIONS.map((t) => (
+            {(user?.role === 'registrations_officer' ? REGISTRATIONS_OFFICER_TYPE_OPTIONS : TYPE_OPTIONS).map((t) => (
               <option key={t} value={t}>
                 {t[0].toUpperCase() + t.slice(1)}
               </option>
             ))}
           </select>
         )}
-        {(status || (!contentEditorOnly && type) || q) && (
+        <button
+          onClick={() => {
+            setPage(1);
+            setFlaggedOnly((v) => !v);
+          }}
+          className={`flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium ${flaggedOnly ? 'border-danger bg-danger text-white' : 'border-slate-200 text-slate-600'}`}
+        >
+          <ShieldAlert size={13} /> Flagged
+        </button>
+        {(status || (!lockedType && type) || flaggedOnly || q) && (
           <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
             Clear
           </button>
@@ -551,13 +597,13 @@ export const RegistrationsPage = () => {
             <button
               onClick={triggerImport}
               disabled={importing}
-              className={`flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-navy transition-colors hover:border-orange/40 disabled:opacity-60 ${contentEditorOnly ? 'ml-auto' : ''}`}
+              className={`flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-navy transition-colors hover:border-orange/40 disabled:opacity-60 ${lockedType ? 'ml-auto' : ''}`}
             >
               <Upload size={15} /> {importing ? 'Importing…' : 'Import Volunteer List'}
             </button>
           </>
         )}
-        {!contentEditorOnly && (
+        {!lockedType && (
           <a
             href={exportRegistrationsUrl({ status: status || undefined, type: type || undefined, q: q || undefined })}
             className={`flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-navy transition-colors hover:border-orange/40 ${type === 'volunteer' ? '' : 'ml-auto'}`}
@@ -663,6 +709,14 @@ export const RegistrationsPage = () => {
                           {r.status}
                         </span>
                         {r.idCardUrl && <IdCard size={13} className="shrink-0 text-warning" aria-label="ID uploaded, needs review" />}
+                        {r.flaggedSuspicious && (
+                          <span
+                            title={r.spamReasons?.join(', ')}
+                            className="flex shrink-0 items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-[11px] font-semibold text-danger"
+                          >
+                            <ShieldAlert size={11} /> Flagged
+                          </span>
+                        )}
                         {!r.isActive && (
                           <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500">
                             Inactive
@@ -895,6 +949,30 @@ export const RegistrationsPage = () => {
                 </div>
               </div>
 
+              {active.flaggedSuspicious && (
+                <div className="border-t border-slate-100 px-5 py-4">
+                  <div className="rounded-lg border border-danger/30 bg-danger/5 p-3">
+                    <div className="flex items-center gap-1.5 text-[13px] font-semibold text-danger">
+                      <ShieldAlert size={14} /> Flagged as suspicious{typeof active.spamScore === 'number' ? ` (score ${active.spamScore})` : ''}
+                    </div>
+                    {active.spamReasons && active.spamReasons.length > 0 && (
+                      <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-xs text-slate-600">
+                        {active.spamReasons.map((reason) => (
+                          <li key={reason}>{reason}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <button
+                      onClick={() => clearFlag(active)}
+                      disabled={savingId === active._id}
+                      className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-danger py-2 text-[13px] font-semibold text-white hover:bg-danger/90 disabled:opacity-60"
+                    >
+                      <ShieldOff size={14} /> Clear Flag
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="border-t border-slate-100 px-5 py-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Status</p>
                 <div className="mt-2 grid grid-cols-2 gap-2">
@@ -947,9 +1025,9 @@ export const RegistrationsPage = () => {
               <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
                 {addError && <Banner variant="error">{addError}</Banner>}
 
-                {!contentEditorOnly && (
+                {!lockedType && (
                   <div className="grid grid-cols-3 gap-2">
-                    {TYPE_OPTIONS.map((t) => (
+                    {(user?.role === 'registrations_officer' ? REGISTRATIONS_OFFICER_TYPE_OPTIONS : TYPE_OPTIONS).map((t) => (
                       <button
                         key={t}
                         onClick={() => setAddForm({ ...EMPTY_ADD_FORM, type: t })}

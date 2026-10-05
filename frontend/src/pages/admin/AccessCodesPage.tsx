@@ -22,7 +22,6 @@ import { Banner } from '../../components/ui/Banner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { AdminInput, AdminSelect, AdminTextarea } from '../../components/ui/AdminField';
 import { useToast } from '../../contexts/ToastContext';
-import { useAuth } from '../../contexts/AuthContext';
 
 const TYPE_LABEL: Record<AccessCodeType, string> = {
   volunteer: 'Volunteer',
@@ -66,24 +65,19 @@ const EMPTY_FORM: FormState = {
 
 export const AccessCodesPage = () => {
   const toast = useToast();
-  const { user } = useAuth();
-  // content_editor's Volunteers access is scoped to volunteer-type codes only —
-  // the backend enforces this too, this just keeps the form from offering an
-  // option that would only bounce back as a 403.
-  const contentEditorOnly = user?.role === 'content_editor';
 
   const [items, setItems] = useState<AdminAccessCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
-  const [typeFilter, setTypeFilter] = useState<AccessCodeType | ''>(contentEditorOnly ? 'volunteer' : '');
+  const [typeFilter, setTypeFilter] = useState<AccessCodeType | ''>('');
   const [statusFilter, setStatusFilter] = useState<AccessCodeStatus | ''>('');
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
 
   const [formOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState<FormState>({ ...EMPTY_FORM, type: contentEditorOnly ? 'volunteer' : EMPTY_FORM.type });
+  const [form, setForm] = useState<FormState>({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -112,7 +106,7 @@ export const AccessCodesPage = () => {
   }, [load, q]);
 
   const openCreate = () => {
-    setForm({ ...EMPTY_FORM, type: contentEditorOnly ? 'volunteer' : EMPTY_FORM.type });
+    setForm({ ...EMPTY_FORM });
     setFormError('');
     setFormOpen(true);
   };
@@ -198,7 +192,7 @@ export const AccessCodesPage = () => {
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-navy">{contentEditorOnly ? 'Volunteer Access Codes' : 'Access Codes'}</h1>
+          <h1 className="font-display text-2xl font-semibold text-navy">Access Codes</h1>
           <p className="text-sm text-slate-500">{total} code{total === 1 ? '' : 's'}</p>
         </div>
         <button
@@ -222,23 +216,21 @@ export const AccessCodesPage = () => {
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
           />
         </div>
-        {!contentEditorOnly && (
-          <select
-            value={typeFilter}
-            onChange={(e) => {
-              setPage(1);
-              setTypeFilter(e.target.value as AccessCodeType | '');
-            }}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
-          >
-            <option value="">All Types</option>
-            {ACCESS_CODE_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {TYPE_LABEL[t]}
-              </option>
-            ))}
-          </select>
-        )}
+        <select
+          value={typeFilter}
+          onChange={(e) => {
+            setPage(1);
+            setTypeFilter(e.target.value as AccessCodeType | '');
+          }}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
+          <option value="">All Types</option>
+          {ACCESS_CODE_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {TYPE_LABEL[t]}
+            </option>
+          ))}
+        </select>
         <select
           value={statusFilter}
           onChange={(e) => {
@@ -283,7 +275,7 @@ export const AccessCodesPage = () => {
               <thead className="border-b border-slate-100 bg-offwhite/60 text-[11px] uppercase tracking-wide text-slate-400">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Code</th>
-                  {!contentEditorOnly && <th className="px-3 py-3 font-semibold">Type</th>}
+                  <th className="px-3 py-3 font-semibold">Type</th>
                   <th className="px-3 py-3 font-semibold">Issued To</th>
                   <th className="px-3 py-3 font-semibold">Status</th>
                   <th className="px-3 py-3 font-semibold">Expires</th>
@@ -305,21 +297,19 @@ export const AccessCodesPage = () => {
                         </button>
                       </div>
                     </td>
-                    {!contentEditorOnly && (
-                      <td className="px-3 py-3 text-slate-500">
-                        {TYPE_LABEL[c.type]}
-                        {c.type === 'scholarship' && c.discountPercent && (
-                          <span className="ml-1.5 rounded-full bg-orange/10 px-2 py-0.5 text-[11px] font-semibold text-orange">
-                            {c.discountPercent}%
-                          </span>
-                        )}
-                        {c.type === 'abstract_presenter' && c.presentationType && (
-                          <span className="ml-1.5 rounded-full bg-info/10 px-2 py-0.5 text-[11px] font-semibold text-info">
-                            {PRESENTATION_TYPE_LABEL[c.presentationType]}
-                          </span>
-                        )}
-                      </td>
-                    )}
+                    <td className="px-3 py-3 text-slate-500">
+                      {TYPE_LABEL[c.type]}
+                      {c.type === 'scholarship' && c.discountPercent && (
+                        <span className="ml-1.5 rounded-full bg-orange/10 px-2 py-0.5 text-[11px] font-semibold text-orange">
+                          {c.discountPercent}%
+                        </span>
+                      )}
+                      {c.type === 'abstract_presenter' && c.presentationType && (
+                        <span className="ml-1.5 rounded-full bg-info/10 px-2 py-0.5 text-[11px] font-semibold text-info">
+                          {PRESENTATION_TYPE_LABEL[c.presentationType]}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-slate-500">
                       {c.issuedTo}
                       {c.usedByRegistration ? (
@@ -409,19 +399,17 @@ export const AccessCodesPage = () => {
 
               <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
                 {formError && <Banner variant="error">{formError}</Banner>}
-                {!contentEditorOnly && (
-                  <AdminSelect
-                    label="Type"
-                    value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value as AccessCodeType, discountPercent: '', presentationType: '' })}
-                  >
-                    {ACCESS_CODE_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {TYPE_LABEL[t]}
-                      </option>
-                    ))}
-                  </AdminSelect>
-                )}
+                <AdminSelect
+                  label="Type"
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value as AccessCodeType, discountPercent: '', presentationType: '' })}
+                >
+                  {ACCESS_CODE_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {TYPE_LABEL[t]}
+                    </option>
+                  ))}
+                </AdminSelect>
                 {form.type === 'scholarship' && (
                   <div>
                     <AdminSelect

@@ -7,11 +7,13 @@ import { User, Users, Globe2, Briefcase, GraduationCap, Crown, Landmark, Newspap
 import { Button } from '../ui/Button';
 import { Banner } from '../ui/Banner';
 import { LightField } from '../ui/LightField';
+import { HoneypotField } from '../ui/HoneypotField';
 import { RegisterSuccess } from './RegisterSuccess';
 import { IdCardUpload } from './IdCardUpload';
 import { submitRegistration, ID_VERIFICATION_TICKET_CATEGORIES, type TicketCategory } from '../../services/registration.service';
 import { initializePayment } from '../../services/payment.service';
 import { getApiErrorMessage } from '../../services/api';
+import { useFormToken } from '../../hooks/useFormToken';
 import { TICKET_PRICE_NGN, formatNaira } from '../../lib/pricing';
 
 const TICKET_OPTIONS: { value: TicketCategory; label: string; icon: typeof Globe2 }[] = [
@@ -60,6 +62,7 @@ const schema = z
     // Optional — see the note above the field for why.
     accessCode: z.string().trim().max(32).optional().or(z.literal('')),
     idCardUrl: z.string().optional(),
+    middleName: z.string().max(0).optional(),
   })
   // Required only for the categories people were abusing to skip/cut the fee —
   // see ID_VERIFICATION_TICKET_CATEGORIES's own comment. Mirrors the same
@@ -92,6 +95,7 @@ export const AttendeeForm = () => {
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   const [discountApplied, setDiscountApplied] = useState<10 | 25 | 50 | null>(null);
+  const formToken = useFormToken();
 
   const {
     register,
@@ -120,6 +124,7 @@ export const AttendeeForm = () => {
         type: 'attendee',
         ...values,
         accessCode: accessCode ? accessCode.toUpperCase() : undefined,
+        formToken,
       });
       if (requiresPayment) {
         setDiscountApplied(applied ?? null);
@@ -212,6 +217,7 @@ export const AttendeeForm = () => {
             noValidate
             className="space-y-7"
           >
+            <HoneypotField {...register('middleName')} />
             <button
               type="button"
               onClick={() => setStep(0)}

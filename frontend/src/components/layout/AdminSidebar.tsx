@@ -43,8 +43,12 @@ import summitMark from '../../assets/images/summit_logo_mark.png';
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super Admin',
-  content_editor: 'Content Editor',
+  admin: 'Admin',
   registrations_officer: 'Registrations Officer',
+  innovator_lead: 'Innovator Lead',
+  exhibitor_lead: 'Exhibitor Lead',
+  abstract_lead: 'Abstract Lead',
+  rapporteur_lead: 'Rapporteur Lead',
   viewer: 'Viewer',
 };
 
@@ -61,9 +65,21 @@ interface NavSection {
   items: NavItem[];
 }
 
-const contentRoles: Role[] = ['super_admin', 'content_editor'];
-const registrationRoles: Role[] = ['super_admin', 'registrations_officer'];
-const allRoles: Role[] = ['super_admin', 'content_editor', 'registrations_officer', 'viewer'];
+// Areas not named as their own staff role — folded into Admin (+ super_admin).
+const adminOnlyRoles: Role[] = ['super_admin', 'admin'];
+const registrationRoles: Role[] = ['super_admin', 'admin', 'registrations_officer'];
+const abstractRoles: Role[] = ['super_admin', 'admin', 'abstract_lead'];
+const rapporteurRoles: Role[] = ['super_admin', 'admin', 'rapporteur_lead'];
+const allRoles: Role[] = [
+  'super_admin',
+  'admin',
+  'registrations_officer',
+  'innovator_lead',
+  'exhibitor_lead',
+  'abstract_lead',
+  'rapporteur_lead',
+  'viewer',
+];
 
 const NAV_SECTIONS: NavSection[] = [
   {
@@ -73,13 +89,13 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Event Setup',
     items: [
-      { label: 'Registrations', to: '/admin/registrations', icon: ClipboardList, roles: [...registrationRoles, 'viewer'] },
-      { label: 'Access Codes', to: '/admin/access-codes', icon: KeyRound, roles: [...registrationRoles, 'content_editor'] },
+      { label: 'Registrations', to: '/admin/registrations', icon: ClipboardList, roles: [...registrationRoles, 'viewer', 'innovator_lead', 'exhibitor_lead'] },
+      { label: 'Access Codes', to: '/admin/access-codes', icon: KeyRound, roles: registrationRoles },
       {
         label: 'Sponsorship Applications',
         to: '/admin/scholarship-applications',
         icon: GraduationCap,
-        roles: [...registrationRoles, 'content_editor'],
+        roles: registrationRoles,
       },
       { label: 'Payments', to: '/admin/payments', icon: CreditCard, roles: [...registrationRoles, 'viewer'] },
       { label: 'Reconciliations', to: '/admin/reconciliations', icon: Scale, roles: registrationRoles },
@@ -89,38 +105,38 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Content',
     items: [
-      { label: 'Agenda', to: '/admin/sessions', icon: CalendarDays, roles: contentRoles },
-      { label: 'Speakers', to: '/admin/speakers', icon: Users, roles: contentRoles },
-      { label: 'Innovation Showcase', to: '/admin/innovations', icon: Lightbulb, roles: contentRoles },
-      { label: 'Confirmed Showcase', to: '/admin/innovation-showcase-entries', icon: Rocket, roles: contentRoles },
-      { label: 'Abstracts', to: '/admin/abstracts', icon: FileText, roles: contentRoles },
-      { label: 'Confirmed Abstracts', to: '/admin/confirmed-abstracts', icon: FileText, roles: contentRoles },
-      { label: 'Gallery', to: '/admin/media', icon: Images, roles: contentRoles },
-      { label: 'Knowledge Base', to: '/admin/knowledge-base', icon: Sparkles, roles: contentRoles },
-      { label: 'Policy Tracker', to: '/admin/policy-tracker', icon: Globe2, roles: contentRoles },
-      { label: 'Translations', to: '/admin/translations', icon: Languages, roles: contentRoles },
-      { label: 'Rapporteurs', to: '/admin/rapporteur', icon: Mic, roles: contentRoles },
-      { label: 'Knowledge Products', to: '/admin/knowledge-products', icon: ScrollText, roles: contentRoles },
+      { label: 'Agenda', to: '/admin/sessions', icon: CalendarDays, roles: adminOnlyRoles },
+      { label: 'Speakers', to: '/admin/speakers', icon: Users, roles: adminOnlyRoles },
+      { label: 'Innovation Showcase', to: '/admin/innovations', icon: Lightbulb, roles: adminOnlyRoles },
+      { label: 'Confirmed Showcase', to: '/admin/innovation-showcase-entries', icon: Rocket, roles: adminOnlyRoles },
+      { label: 'Abstracts', to: '/admin/abstracts', icon: FileText, roles: abstractRoles },
+      { label: 'Confirmed Abstracts', to: '/admin/confirmed-abstracts', icon: FileText, roles: abstractRoles },
+      { label: 'Gallery', to: '/admin/media', icon: Images, roles: adminOnlyRoles },
+      { label: 'Knowledge Base', to: '/admin/knowledge-base', icon: Sparkles, roles: adminOnlyRoles },
+      { label: 'Policy Tracker', to: '/admin/policy-tracker', icon: Globe2, roles: adminOnlyRoles },
+      { label: 'Translations', to: '/admin/translations', icon: Languages, roles: adminOnlyRoles },
+      { label: 'Rapporteurs', to: '/admin/rapporteur', icon: Mic, roles: rapporteurRoles },
+      { label: 'Knowledge Products', to: '/admin/knowledge-products', icon: ScrollText, roles: adminOnlyRoles },
     ],
   },
   {
     label: 'People',
     items: [
       { label: 'Attendees', to: '/admin/attendees', icon: UserPlus, roles: [...registrationRoles, 'viewer'] },
-      { label: 'Exhibitors', to: '/admin/exhibitors', icon: Building2, roles: [...registrationRoles, 'viewer'] },
-      { label: 'Innovators', to: '/admin/innovators', icon: Lightbulb, roles: [...registrationRoles, 'viewer'] },
-      { label: 'Volunteers', to: '/admin/registrations?type=volunteer', icon: HeartHandshake, roles: [...registrationRoles, 'viewer', 'content_editor'] },
+      { label: 'Exhibitors', to: '/admin/exhibitors', icon: Building2, roles: [...registrationRoles, 'viewer', 'exhibitor_lead'] },
+      { label: 'Innovators', to: '/admin/innovators', icon: Lightbulb, roles: [...registrationRoles, 'viewer', 'innovator_lead'] },
+      { label: 'Volunteers', to: '/admin/registrations?type=volunteer', icon: HeartHandshake, roles: [...registrationRoles, 'viewer'] },
       { label: 'Team Registrations', to: '/admin/registrations?type=team', icon: UsersRound, roles: [...registrationRoles, 'viewer'] },
-      { label: 'Sponsors & Partners', to: '/admin/partners', icon: Handshake, roles: contentRoles },
+      { label: 'Sponsors & Partners', to: '/admin/partners', icon: Handshake, roles: adminOnlyRoles },
       { label: 'Portal Tokens', to: '/admin/portal-tokens', icon: Smartphone, roles: registrationRoles },
     ],
   },
   {
     label: 'Communication',
     items: [
-      { label: 'Partnership Inquiries', to: '/admin/inquiries', icon: Mail, roles: contentRoles },
-      { label: 'Messages', to: '/admin/messages', icon: MessageSquare, roles: contentRoles },
-      { label: 'Newsletter', to: '/admin/newsletter', icon: Rss, roles: contentRoles },
+      { label: 'Partnership Inquiries', to: '/admin/inquiries', icon: Mail, roles: adminOnlyRoles },
+      { label: 'Messages', to: '/admin/messages', icon: MessageSquare, roles: adminOnlyRoles },
+      { label: 'Newsletter', to: '/admin/newsletter', icon: Rss, roles: adminOnlyRoles },
     ],
   },
   {
@@ -133,7 +149,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Event Team', to: '/admin/event-team', icon: UsersRound, roles: ['super_admin'] },
       { label: 'Integrations', to: '/admin/integrations', icon: Plug, roles: ['super_admin'] },
       { label: 'Roles & Permissions', to: '/admin/roles-permissions', icon: ShieldCheck, roles: ['super_admin'] },
-      { label: 'Audit Log', to: '/admin/audit-log', icon: ScrollText, roles: ['super_admin', 'viewer'] },
+      { label: 'Audit Log', to: '/admin/audit-log', icon: ScrollText, roles: ['super_admin', 'admin', 'viewer'] },
       { label: 'Users', to: '/admin/users', icon: UserCog, roles: ['super_admin'] },
     ],
   },

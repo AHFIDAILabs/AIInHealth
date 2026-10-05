@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MessageSquare, X, CheckCircle2, Mail, Search, ShieldAlert, Flame } from 'lucide-react';
+import { MessageSquare, X, CheckCircle2, Mail, Search, ShieldAlert, Flame, ShieldX, ShieldOff } from 'lucide-react';
 import { adminListMessages, adminUpdateMessage, CONTACT_CATEGORIES, type AdminMessage, type ContactCategory } from '../../services/adminMessage.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
@@ -33,6 +33,7 @@ export const MessagesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [spamOnly, setSpamOnly] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<ContactCategory | ''>('');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
@@ -46,6 +47,7 @@ export const MessagesPage = () => {
     adminListMessages({
       read: unreadOnly ? 'false' : undefined,
       category: categoryFilter || undefined,
+      spam: spamOnly ? 'true' : undefined,
       q: q || undefined,
       page,
       limit: 20,
@@ -57,7 +59,7 @@ export const MessagesPage = () => {
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [unreadOnly, categoryFilter, q, page]);
+  }, [unreadOnly, spamOnly, categoryFilter, q, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
@@ -66,7 +68,7 @@ export const MessagesPage = () => {
 
   const openMessage = async (msg: AdminMessage) => {
     setActive(msg);
-    if (!msg.isRead) {
+    if (!msg.isRead && !msg.isSpam) {
       try {
         const updated = await adminUpdateMessage(msg._id, { isRead: true });
         setItems((prev) => prev.map((m) => (m._id === msg._id ? updated : m)));
@@ -88,6 +90,21 @@ export const MessagesPage = () => {
     }
   };
 
+  // Either direction removes the item from whatever list is currently shown
+  // (a restored item no longer belongs in the spam view; a newly-spammed one
+  // no longer belongs in the normal inbox) and closes the drawer.
+  const toggleSpam = async (msg: AdminMessage) => {
+    try {
+      await adminUpdateMessage(msg._id, { isSpam: !msg.isSpam });
+      setItems((prev) => prev.filter((m) => m._id !== msg._id));
+      setTotal((prev) => prev - 1);
+      setActive(null);
+      toast('success', msg.isSpam ? 'Restored — no longer marked as spam' : 'Marked as spam');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    }
+  };
+
   const unreadCount = items.filter((m) => !m.isRead).length;
 
   return (
@@ -100,16 +117,33 @@ export const MessagesPage = () => {
             {unreadCount > 0 && <span className="ml-1.5 font-semibold text-orange">&middot; {unreadCount} unread on this page</span>}
           </p>
         </div>
-        <button
-          onClick={() => {
-            setPage(1);
-            setUnreadOnly((v) => !v);
-          }}
-          className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${unreadOnly ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
-        >
-          Unread only
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setPage(1);
+              setUnreadOnly((v) => !v);
+            }}
+            className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${unreadOnly ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'}`}
+          >
+            Unread only
+          </button>
+          <button
+            onClick={() => {
+              setPage(1);
+              setSpamOnly((v) => !v);
+            }}
+            className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium ${spamOnly ? 'border-danger bg-danger text-white' : 'border-slate-200 text-slate-600'}`}
+          >
+            <ShieldAlert size={13} /> Spam
+          </button>
+        </div>
       </div>
+
+      {spamOnly && (
+        <div className="mt-3">
+          <Banner variant="info">Quarantined messages are deleted automatically after 30 days.</Banner>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 sm:max-w-xs">
@@ -139,12 +173,13 @@ export const MessagesPage = () => {
             </option>
           ))}
         </select>
-        {(q || categoryFilter || unreadOnly) && (
+        {(q || categoryFilter || unreadOnly || spamOnly) && (
           <button
             onClick={() => {
               setQ('');
               setCategoryFilter('');
               setUnreadOnly(false);
+              setSpamOnly(false);
               setPage(1);
             }}
             className="text-[13px] font-semibold text-orange hover:text-orange-hover"
@@ -243,23 +278,53 @@ export const MessagesPage = () => {
                   <span className="rounded-full bg-navy-secondary px-2.5 py-0.5 text-[11px] font-medium text-orange">{active.category}</span>
                 </div>
                 <PriorityBadge msg={active} />
+                {active.isSpam && active.spamReasons && active.spamReasons.length > 0 && (
+                  <div className="rounded-lg border border-danger/30 bg-danger/5 px-3.5 py-3 text-xs text-danger">
+                    <p className="flex items-center gap-1.5 font-semibold">
+                      <ShieldAlert size={13} /> Flagged as spam{active.spamScore !== undefined ? ` (score ${active.spamScore})` : ''}
+                    </p>
+                    <ul className="mt-1.5 list-inside list-disc space-y-0.5">
+                      {active.spamReasons.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-navy">{active.message}</p>
                 <p className="text-xs text-slate-400">{new Date(active.createdAt).toLocaleString()}</p>
               </div>
 
               <div className="flex gap-2.5 border-t border-slate-100 px-5 py-4">
-                <a
-                  href={`mailto:${active.email}?subject=${encodeURIComponent('Re: Your message to AI in Health Summit 2026')}`}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 py-2.5 text-[13px] font-semibold text-navy hover:bg-offwhite"
-                >
-                  <Mail size={15} /> Reply via Email
-                </a>
-                <button
-                  onClick={() => toggleResolved(active)}
-                  className={`flex-1 rounded-lg py-2.5 text-[13px] font-semibold text-white ${active.isResolved ? 'bg-slate-400 hover:bg-slate-500' : 'bg-orange hover:bg-orange-hover'}`}
-                >
-                  {active.isResolved ? 'Reopen' : 'Mark Resolved'}
-                </button>
+                {active.isSpam ? (
+                  <button
+                    onClick={() => toggleSpam(active)}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-orange py-2.5 text-[13px] font-semibold text-white hover:bg-orange-hover"
+                  >
+                    <ShieldOff size={15} /> Not Spam
+                  </button>
+                ) : (
+                  <>
+                    <a
+                      href={`mailto:${active.email}?subject=${encodeURIComponent('Re: Your message to AI in Health Summit 2026')}`}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 py-2.5 text-[13px] font-semibold text-navy hover:bg-offwhite"
+                    >
+                      <Mail size={15} /> Reply via Email
+                    </a>
+                    <button
+                      onClick={() => toggleResolved(active)}
+                      className={`flex-1 rounded-lg py-2.5 text-[13px] font-semibold text-white ${active.isResolved ? 'bg-slate-400 hover:bg-slate-500' : 'bg-orange hover:bg-orange-hover'}`}
+                    >
+                      {active.isResolved ? 'Reopen' : 'Mark Resolved'}
+                    </button>
+                    <button
+                      onClick={() => toggleSpam(active)}
+                      title="Mark as spam"
+                      className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 px-3 py-2.5 text-slate-400 hover:border-danger/40 hover:text-danger"
+                    >
+                      <ShieldX size={15} />
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           </motion.div>

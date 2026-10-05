@@ -5,11 +5,13 @@ import { z } from 'zod';
 import { Button } from '../ui/Button';
 import { Banner } from '../ui/Banner';
 import { LightField, LightSelect } from '../ui/LightField';
+import { HoneypotField } from '../ui/HoneypotField';
 import { RegisterSuccess } from './RegisterSuccess';
 import { submitRegistration } from '../../services/registration.service';
 import { getApiErrorMessage } from '../../services/api';
 import { listVolunteerTracks, type PublicVolunteerTrack } from '../../services/volunteerTrack.service';
 import { fetchVolunteerApplicationsStatus } from '../../services/volunteerSettings.service';
+import { useFormToken } from '../../hooks/useFormToken';
 
 const TSHIRT_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 
@@ -21,6 +23,7 @@ const schema = z.object({
   accessCode: z.string().trim().max(32).optional().or(z.literal('')),
   tshirtSize: z.string().trim().optional(),
   trackSelected: z.string().trim().max(200).optional(),
+  middleName: z.string().max(0).optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -28,6 +31,7 @@ export const VolunteerForm = () => {
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [tracks, setTracks] = useState<PublicVolunteerTrack[]>([]);
+  const formToken = useFormToken();
   // null while loading — treated as "open" (don't flash a false "closed"
   // notice before the real status arrives); an already-issued access code is
   // never blocked by this either way, only a fresh application is.
@@ -62,6 +66,7 @@ export const VolunteerForm = () => {
         type: 'volunteer',
         ...values,
         accessCode: accessCode ? accessCode.toUpperCase() : undefined,
+        formToken,
       });
       setConfirmation(message);
     } catch (err) {
@@ -83,6 +88,7 @@ export const VolunteerForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+      <HoneypotField {...register('middleName')} />
       <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
         {applicationsClosed
           ? "We're not accepting new volunteer applications right now — if you already have an access code from us, enter it below to confirm your spot."

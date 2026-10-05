@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Mail, X, ArrowRightCircle, Search, ShieldAlert, Flame } from 'lucide-react';
+import { Mail, X, ArrowRightCircle, Search, ShieldAlert, Flame, ShieldX, ShieldOff } from 'lucide-react';
 import {
   adminListInquiries,
   adminUpdateInquiryStatus,
+  adminUpdateInquirySpam,
   INQUIRY_STATUSES,
   type AdminInquiry,
   type InquiryStatus,
@@ -48,6 +49,7 @@ export const InquiriesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<InquiryStatus | ''>('');
+  const [spamOnly, setSpamOnly] = useState(false);
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -58,7 +60,7 @@ export const InquiriesPage = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListInquiries({ status: statusFilter || undefined, q: q || undefined, page, limit: 20 })
+    adminListInquiries({ status: statusFilter || undefined, spam: spamOnly ? 'true' : undefined, q: q || undefined, page, limit: 20 })
       .then((res) => {
         setItems(res.items);
         setPages(res.pages);
@@ -66,7 +68,7 @@ export const InquiriesPage = () => {
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [statusFilter, q, page]);
+  }, [statusFilter, spamOnly, q, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
@@ -80,6 +82,21 @@ export const InquiriesPage = () => {
       setItems((prev) => prev.map((i) => (i._id === inquiry._id ? updated : i)));
       setActive(updated);
       toast('success', `Marked as ${status}`);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const toggleSpam = async (inquiry: AdminInquiry) => {
+    setUpdating(true);
+    try {
+      await adminUpdateInquirySpam(inquiry._id, !inquiry.isSpam);
+      setItems((prev) => prev.filter((i) => i._id !== inquiry._id));
+      setTotal((prev) => prev - 1);
+      setActive(null);
+      toast('success', inquiry.isSpam ? 'Restored — no longer marked as spam' : 'Marked as spam');
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -130,6 +147,15 @@ export const InquiriesPage = () => {
               {s}
             </button>
           ))}
+          <button
+            onClick={() => {
+              setPage(1);
+              setSpamOnly((v) => !v);
+            }}
+            className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium ${spamOnly ? 'border-danger bg-danger text-white' : 'border-slate-200 text-slate-600'}`}
+          >
+            <ShieldAlert size={13} /> Spam
+          </button>
         </div>
         <div className="relative sm:max-w-xs">
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -144,6 +170,12 @@ export const InquiriesPage = () => {
           />
         </div>
       </div>
+
+      {spamOnly && (
+        <div className="mt-3">
+          <Banner variant="info">Quarantined inquiries are deleted automatically after 30 days.</Banner>
+        </div>
+      )}
 
       {error && (
         <div className="mt-4">
@@ -236,6 +268,18 @@ export const InquiriesPage = () => {
 
               <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
                 <PriorityBadge inq={active} />
+                {active.isSpam && active.spamReasons && active.spamReasons.length > 0 && (
+                  <div className="rounded-lg border border-danger/30 bg-danger/5 px-3.5 py-3 text-xs text-danger">
+                    <p className="flex items-center gap-1.5 font-semibold">
+                      <ShieldAlert size={13} /> Flagged as spam{active.spamScore !== undefined ? ` (score ${active.spamScore})` : ''}
+                    </p>
+                    <ul className="mt-1.5 list-inside list-disc space-y-0.5">
+                      {active.spamReasons.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Contact</p>
                   <p className="mt-1 text-sm text-navy">{active.contactName}</p>
@@ -255,33 +299,55 @@ export const InquiriesPage = () => {
                     <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-navy">{active.message}</p>
                   </div>
                 )}
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Status</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {INQUIRY_STATUSES.map((s) => (
-                      <button
-                        key={s}
-                        disabled={updating}
-                        onClick={() => updateStatus(active, s)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold disabled:opacity-50 ${
-                          active.status === s ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                {!active.isSpam && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Status</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {INQUIRY_STATUSES.map((s) => (
+                        <button
+                          key={s}
+                          disabled={updating}
+                          onClick={() => updateStatus(active, s)}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold disabled:opacity-50 ${
+                            active.status === s ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600 hover:border-orange/40'
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
-              <div className="border-t border-slate-100 px-5 py-4">
-                <button
-                  onClick={() => convertToPartner(active)}
-                  disabled={updating}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange py-2.5 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
-                >
-                  <ArrowRightCircle size={16} /> Convert to Partner
-                </button>
+              <div className="flex gap-2.5 border-t border-slate-100 px-5 py-4">
+                {active.isSpam ? (
+                  <button
+                    onClick={() => toggleSpam(active)}
+                    disabled={updating}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange py-2.5 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
+                  >
+                    <ShieldOff size={16} /> Not Spam
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => convertToPartner(active)}
+                      disabled={updating}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-orange py-2.5 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
+                    >
+                      <ArrowRightCircle size={16} /> Convert to Partner
+                    </button>
+                    <button
+                      onClick={() => toggleSpam(active)}
+                      disabled={updating}
+                      title="Mark as spam"
+                      className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 px-3 py-2.5 text-slate-400 hover:border-danger/40 hover:text-danger disabled:opacity-50"
+                    >
+                      <ShieldX size={15} />
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           </motion.div>

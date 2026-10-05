@@ -9,9 +9,11 @@ import { Reveal } from '../../components/ui/Reveal';
 import { Button } from '../../components/ui/Button';
 import { Banner } from '../../components/ui/Banner';
 import { LightField } from '../../components/ui/LightField';
+import { HoneypotField } from '../../components/ui/HoneypotField';
 import { RegisterSuccess } from '../../components/register/RegisterSuccess';
 import { submitRegistration } from '../../services/registration.service';
 import { getApiErrorMessage } from '../../services/api';
+import { useFormToken } from '../../hooks/useFormToken';
 import { SEO } from '../../components/seo/SEO';
 
 const schema = z.object({
@@ -20,6 +22,7 @@ const schema = z.object({
   phone: z.string().trim().min(6, 'Enter a valid phone number'),
   jobTitle: z.string().trim().max(200).optional(),
   organization: z.string().trim().optional(),
+  middleName: z.string().max(0).optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -38,6 +41,7 @@ export const TeamRegistration = () => {
   const { t } = useTranslation();
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  const formToken = useFormToken();
 
   const {
     register,
@@ -49,7 +53,7 @@ export const TeamRegistration = () => {
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
     try {
-      const { message } = await submitRegistration({ type: 'team', ...values });
+      const { message } = await submitRegistration({ type: 'team', ...values, formToken });
       setConfirmation(message);
     } catch (err) {
       setServerError(getApiErrorMessage(err));
@@ -77,6 +81,7 @@ export const TeamRegistration = () => {
               <RegisterSuccess message={confirmation} onReset={resetAll} />
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+                <HoneypotField {...register('middleName')} />
                 {serverError && <Banner variant="error">{serverError}</Banner>}
                 <p className="rounded-xl border border-slate-200 bg-offwhite px-4 py-3 text-sm text-slate-600">
                   {t(

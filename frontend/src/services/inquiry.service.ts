@@ -6,6 +6,9 @@ export interface PartnershipInquiryPayload {
   contactEmail: string;
   tierInterested?: string;
   message?: string;
+  // Spam hardening — see contact.service.ts's identical comment.
+  website?: string;
+  formToken?: string;
 }
 
 export const submitPartnershipInquiry = async (payload: PartnershipInquiryPayload): Promise<string> => {

@@ -8,6 +8,11 @@ export interface ContactMessagePayload {
   email: string;
   category: ContactCategory;
   message: string;
+  // Spam hardening — a real visitor never sees or fills this (HoneypotField);
+  // formToken is the time-trap token from useFormToken(). Both optional at
+  // this layer — see backend's own graceful-degrade comments.
+  website?: string;
+  formToken?: string;
 }
 
 export const submitContactMessage = async (payload: ContactMessagePayload): Promise<string> => {

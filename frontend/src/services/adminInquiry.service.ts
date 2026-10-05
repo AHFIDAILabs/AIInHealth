@@ -18,6 +18,10 @@ export interface AdminInquiry {
   priorityLabel?: 'standard' | 'high' | 'protocol_sensitive';
   priorityReason?: string;
   createdAt: string;
+  // Spam hardening — see backend PartnershipInquiry.model.ts's comment.
+  isSpam?: boolean;
+  spamScore?: number;
+  spamReasons?: string[];
 }
 
 export interface Paginated<T> {
@@ -28,7 +32,14 @@ export interface Paginated<T> {
   pages: number;
 }
 
-export const adminListInquiries = async (params: { status?: InquiryStatus; q?: string; page?: number; limit?: number }): Promise<Paginated<AdminInquiry>> => {
+export const adminListInquiries = async (params: {
+  status?: InquiryStatus;
+  // Present -> list ONLY quarantined inquiries (see backend's buildFilter).
+  spam?: 'true';
+  q?: string;
+  page?: number;
+  limit?: number;
+}): Promise<Paginated<AdminInquiry>> => {
   const res = await api.get<{ success: true; data: AdminInquiry[]; meta: Omit<Paginated<never>, 'items'> }>(
     '/admin/inquiries',
     { params }
@@ -38,5 +49,10 @@ export const adminListInquiries = async (params: { status?: InquiryStatus; q?: s
 
 export const adminUpdateInquiryStatus = async (id: string, status: InquiryStatus): Promise<AdminInquiry> => {
   const res = await api.patch<{ success: true; data: AdminInquiry }>(`/admin/inquiries/${id}`, { status });
+  return res.data.data;
+};
+
+export const adminUpdateInquirySpam = async (id: string, isSpam: boolean): Promise<AdminInquiry> => {
+  const res = await api.patch<{ success: true; data: AdminInquiry }>(`/admin/inquiries/${id}`, { isSpam });
   return res.data.data;
 };

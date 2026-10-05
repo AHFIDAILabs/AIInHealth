@@ -28,6 +28,7 @@ import {
   Eye,
   ScrollText,
   BarChart3,
+  Mic,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -171,9 +172,13 @@ const TYPE_META: Record<string, { label: string; icon: typeof UserPlus; hex: str
 
 const RECENT_ACTIVITY_FILTER: Record<string, string[] | null> = {
   super_admin: null, // sees everything
+  admin: null, // sees everything except Users/Event Team/Integrations, none of which notify
   registrations_officer: ['registration.new'],
   viewer: ['registration.new'],
-  content_editor: ['inquiry.new', 'message.new', 'abstract.new'],
+  innovator_lead: ['registration.new'],
+  exhibitor_lead: ['registration.new'],
+  abstract_lead: ['abstract.new', 'abstract.reviewer_declined'],
+  rapporteur_lead: [], // no rapporteur-specific notification event exists yet
 };
 
 export const DashboardPage = () => {
@@ -185,7 +190,7 @@ export const DashboardPage = () => {
 
   const role = user?.role;
   const showRegistrations = role === 'super_admin' || role === 'registrations_officer' || role === 'viewer';
-  const showContent = role === 'super_admin' || role === 'content_editor';
+  const showContent = role === 'super_admin' || role === 'admin';
   const isViewer = role === 'viewer';
 
   useEffect(() => {
@@ -236,13 +241,13 @@ export const DashboardPage = () => {
             <AttentionTile to="/admin/payments" icon={Wallet2} color="rose" count={stats?.registrationsQueue.unpaid ?? 0} label="Unpaid attendee registrations" />
           </>
         )}
-        {(role === 'super_admin' || role === 'content_editor') && (
-          <>
-            <AttentionTile to="/admin/abstracts?status=pending" icon={FileText} color="violet" count={stats?.content.abstracts.pending ?? 0} label="Abstracts awaiting review" />
-            <AttentionTile to="/admin/inquiries" icon={Mail} color="teal" count={stats?.communication.pendingInquiries ?? 0} label="New partnership inquiries" />
-          </>
+        {(role === 'super_admin' || role === 'admin' || role === 'abstract_lead') && (
+          <AttentionTile to="/admin/abstracts?status=pending" icon={FileText} color="violet" count={stats?.content.abstracts.pending ?? 0} label="Abstracts awaiting review" />
         )}
-        {role === 'content_editor' && (
+        {(role === 'super_admin' || role === 'admin') && (
+          <AttentionTile to="/admin/inquiries" icon={Mail} color="teal" count={stats?.communication.pendingInquiries ?? 0} label="New partnership inquiries" />
+        )}
+        {role === 'admin' && (
           <AttentionTile to="/admin/messages" icon={MessageSquare} color="blue" count={stats?.communication.unreadMessages ?? 0} label="Unread contact messages" />
         )}
         {isViewer && (
@@ -420,7 +425,7 @@ export const DashboardPage = () => {
         </>
       )}
 
-      {/* Content publishing — super_admin, content_editor */}
+      {/* Content publishing — super_admin, admin */}
       {showContent && (
         <div className={`mt-5 p-6 ${CARD_CLASS}`}>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Content Publishing</p>
@@ -497,16 +502,30 @@ export const DashboardPage = () => {
                 <QuickAction href={exportRegistrationsUrl({})} icon={Download} color="blue" label="Export Data" />
               </>
             )}
-            {role === 'content_editor' && (
+            {role === 'admin' && (
               <>
                 <QuickAction to="/admin/speakers" icon={Users} color="violet" label="Add Speaker" />
                 <QuickAction to="/admin/sessions" icon={CalendarDays} color="teal" label="Add Session" />
                 <QuickAction to="/admin/innovations" icon={Lightbulb} color="rose" label="Add Innovation" />
                 <QuickAction to="/admin/partners" icon={Handshake} color="amber" label="Add Partner" />
                 <QuickAction to="/admin/abstracts" icon={FileText} color="orange" label="Review Abstracts" />
-                <QuickAction to="/admin/access-codes" icon={KeyRound} color="amber" label="Invite Volunteers" />
                 <QuickAction to="/admin/messages" icon={MessageSquare} color="blue" label="Contact Messages" />
               </>
+            )}
+            {role === 'innovator_lead' && (
+              <QuickAction to="/admin/innovators" icon={Lightbulb} color="rose" label="Review Innovators" />
+            )}
+            {role === 'exhibitor_lead' && (
+              <QuickAction to="/admin/exhibitors" icon={Building2} color="violet" label="Review Exhibitors" />
+            )}
+            {role === 'abstract_lead' && (
+              <>
+                <QuickAction to="/admin/abstracts" icon={FileText} color="orange" label="Review Abstracts" />
+                <QuickAction to="/admin/confirmed-abstracts" icon={FileText} color="violet" label="Confirmed Abstracts" />
+              </>
+            )}
+            {role === 'rapporteur_lead' && (
+              <QuickAction to="/admin/rapporteur" icon={Mic} color="teal" label="Manage Rapporteurs" />
             )}
             {isViewer && (
               <>

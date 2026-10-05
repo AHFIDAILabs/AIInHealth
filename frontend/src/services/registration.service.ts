@@ -27,7 +27,16 @@ export interface GroupAttendee {
   email: string;
 }
 
-export interface AttendeePayload {
+// Spam hardening — intersected into every payload type below. `middleName` is
+// a honeypot (HoneypotField) — `website` is already a real field on
+// Exhibitor/Sponsor/Innovator, so registration uses a different, non-colliding
+// name. `formToken` is the time-trap token from useFormToken().
+interface SpamHardeningFields {
+  middleName?: string;
+  formToken?: string;
+}
+
+export interface AttendeePayload extends SpamHardeningFields {
   type: 'attendee';
   registrationMode: RegistrationMode;
   ticketCategory: TicketCategory;
@@ -49,7 +58,7 @@ export interface AttendeePayload {
   idCardUrl?: string;
 }
 
-export interface ExhibitorPayload {
+export interface ExhibitorPayload extends SpamHardeningFields {
   type: 'exhibitor';
   companyName: string;
   contactName: string;
@@ -66,7 +75,7 @@ export interface ExhibitorPayload {
   accessCode?: string;
 }
 
-export interface SponsorPayload {
+export interface SponsorPayload extends SpamHardeningFields {
   type: 'sponsor';
   companyName: string;
   contactName: string;
@@ -76,7 +85,7 @@ export interface SponsorPayload {
   message?: string;
 }
 
-export interface VolunteerPayload {
+export interface VolunteerPayload extends SpamHardeningFields {
   type: 'volunteer';
   fullName: string;
   email: string;
@@ -90,7 +99,7 @@ export interface VolunteerPayload {
 
 // Event staff — its own type, own public page (TeamRegistration.tsx), gated
 // against the EventTeamMember roster server-side rather than an access code.
-export interface TeamPayload {
+export interface TeamPayload extends SpamHardeningFields {
   type: 'team';
   fullName: string;
   email: string;
@@ -101,7 +110,7 @@ export interface TeamPayload {
 
 // Innovator — architected like ExhibitorPayload (own self-service tab), not a
 // sub-case of attendee. See backend's innovatorSchema comment.
-export interface InnovatorPayload {
+export interface InnovatorPayload extends SpamHardeningFields {
   type: 'innovator';
   companyName: string;
   contactName: string;

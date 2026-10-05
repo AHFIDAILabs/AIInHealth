@@ -10,9 +10,11 @@ import { Reveal } from '../../components/ui/Reveal';
 import { Button, ButtonLink } from '../../components/ui/Button';
 import { AhfidBadge } from '../../components/ui/AhfidBadge';
 import { LightField, LightTextArea, LightSelect } from '../../components/ui/LightField';
+import { HoneypotField } from '../../components/ui/HoneypotField';
 import ahfidMark from '../../assets/images/Icon@4x.png';
 import { submitPartnershipInquiry } from '../../services/inquiry.service';
 import { getApiErrorMessage } from '../../services/api';
+import { useFormToken } from '../../hooks/useFormToken';
 import { listPublicPartners, type AdminPartner } from '../../services/partner.service';
 import { listPublicPackages, type PublicSponsorshipPackage } from '../../services/sponsorshipPackage.service';
 import { SEO } from '../../components/seo/SEO';
@@ -60,6 +62,7 @@ export const Partners = () => {
     contactEmail: z.string().trim().toLowerCase().email(t('partners.form.validation.contactEmail', 'Enter a valid email')),
     tierInterested: z.string().trim().optional(),
     message: z.string().trim().max(2000).optional(),
+    website: z.string().max(0).optional(),
   });
   type InquiryValues = z.infer<typeof inquirySchema>;
 
@@ -67,6 +70,7 @@ export const Partners = () => {
   const [packages, setPackages] = useState<PublicSponsorshipPackage[]>([]);
   const [submitError, setSubmitError] = useState('');
   const [activePartner, setActivePartner] = useState<AdminPartner | null>(null);
+  const formToken = useFormToken();
 
   useEffect(() => {
     listPublicPartners()
@@ -95,7 +99,7 @@ export const Partners = () => {
   const onSubmit = async (values: InquiryValues) => {
     setSubmitError('');
     try {
-      await submitPartnershipInquiry(values);
+      await submitPartnershipInquiry({ ...values, formToken });
       reset(undefined, { keepIsSubmitSuccessful: true });
     } catch (err) {
       setSubmitError(getApiErrorMessage(err));
@@ -256,6 +260,7 @@ export const Partners = () => {
               </p>
             )}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+              <HoneypotField {...register('website')} />
               <div className="grid gap-5 sm:grid-cols-2">
                 <LightField label={t('partners.form.organizationName', 'Organization Name')} error={errors.organizationName?.message} {...register('organizationName')} />
                 <LightField label={t('partners.form.contactName', 'Contact Name')} error={errors.contactName?.message} {...register('contactName')} />

@@ -16,6 +16,10 @@ export interface AdminMessage {
   priorityLabel?: 'standard' | 'high' | 'protocol_sensitive';
   priorityReason?: string;
   createdAt: string;
+  // Spam hardening — see backend ContactMessage.model.ts's comment.
+  isSpam?: boolean;
+  spamScore?: number;
+  spamReasons?: string[];
 }
 
 export interface Paginated<T> {
@@ -30,6 +34,8 @@ export const adminListMessages = async (params: {
   read?: 'true' | 'false';
   resolved?: 'true' | 'false';
   category?: ContactCategory;
+  // Present -> list ONLY quarantined messages (see backend's buildFilter).
+  spam?: 'true';
   q?: string;
   page?: number;
   limit?: number;
@@ -41,7 +47,10 @@ export const adminListMessages = async (params: {
   return { items: res.data.data, ...res.data.meta };
 };
 
-export const adminUpdateMessage = async (id: string, input: { isRead?: boolean; isResolved?: boolean }): Promise<AdminMessage> => {
+export const adminUpdateMessage = async (
+  id: string,
+  input: { isRead?: boolean; isResolved?: boolean; isSpam?: boolean }
+): Promise<AdminMessage> => {
   const res = await api.patch<{ success: true; data: AdminMessage }>(`/admin/messages/${id}`, input);
   return res.data.data;
 };

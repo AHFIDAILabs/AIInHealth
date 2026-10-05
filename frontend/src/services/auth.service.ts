@@ -1,6 +1,18 @@
 import { api } from './api';
 
-export const ROLES = ['super_admin', 'content_editor', 'registrations_officer', 'viewer'] as const;
+// Per-area staff roles — kept manually in sync with backend/src/types/enums.ts's
+// ROLES (same existing duplication convention as the rest of this enum, not a
+// new problem introduced here).
+export const ROLES = [
+  'super_admin',
+  'admin',
+  'registrations_officer',
+  'innovator_lead',
+  'exhibitor_lead',
+  'abstract_lead',
+  'rapporteur_lead',
+  'viewer',
+] as const;
 export type Role = (typeof ROLES)[number];
 
 export const NOTIFICATION_EVENTS = [

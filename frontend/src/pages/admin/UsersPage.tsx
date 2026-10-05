@@ -13,8 +13,12 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const ROLE_LABEL: Record<Role, string> = {
   super_admin: 'Super Admin',
-  content_editor: 'Content Editor',
+  admin: 'Admin',
   registrations_officer: 'Registrations Officer',
+  innovator_lead: 'Innovator Lead',
+  exhibitor_lead: 'Exhibitor Lead',
+  abstract_lead: 'Abstract Lead',
+  rapporteur_lead: 'Rapporteur Lead',
   viewer: 'Viewer',
 };
 

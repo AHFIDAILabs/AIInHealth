@@ -16,7 +16,7 @@ import { adminFetchPromoStatus, adminLaunchPromoCampaign, type PromoStatus } fro
 // Same roles that manage Volunteers elsewhere (Registrations' Volunteers
 // filter, Volunteer Tracks) — not the personal-account roles above, this is
 // the one event-wide setting on an otherwise per-admin page.
-const VOLUNTEER_SETTINGS_ROLES = ['super_admin', 'registrations_officer', 'content_editor'];
+const VOLUNTEER_SETTINGS_ROLES = ['super_admin', 'admin', 'registrations_officer'];
 
 const EVENT_LABEL: Record<NotificationEvent, string> = {
   'registration.new': 'New registration submitted',
@@ -140,7 +140,7 @@ export const SettingsPage = () => {
 
   // A real, uncapped-quantity 100%-off giveaway running for a fixed 10 days
   // once launched — restricted to super_admin, distinct from the broader
-  // registrations_officer/content_editor scope every other card above allows.
+  // registrations_officer/admin scope every other card above allows.
   const canManagePromo = user?.role === 'super_admin';
   const [promoStatus, setPromoStatus] = useState<PromoStatus | null>(null);
   const [promoLaunching, setPromoLaunching] = useState(false);

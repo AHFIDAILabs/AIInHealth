@@ -87,8 +87,11 @@ import { ReviewerLogin } from './pages/reviewer/ReviewerLogin';
 import { ReviewerDashboard } from './pages/reviewer/ReviewerDashboard';
 import { ReviewerScoreForm } from './pages/reviewer/ReviewerScoreForm';
 
-const CONTENT_ROLES = ['super_admin', 'content_editor'] as const;
-const REGISTRATION_ROLES = ['super_admin', 'registrations_officer'] as const;
+// Areas not named as their own staff role — folded into Admin (+ super_admin).
+const ADMIN_ONLY_ROLES = ['super_admin', 'admin'] as const;
+const REGISTRATION_ROLES = ['super_admin', 'admin', 'registrations_officer'] as const;
+const ABSTRACT_ROLES = ['super_admin', 'admin', 'abstract_lead'] as const;
+const RAPPORTEUR_ROLES = ['super_admin', 'admin', 'rapporteur_lead'] as const;
 
 function App() {
   return (
@@ -136,20 +139,16 @@ function App() {
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<DashboardPage />} />
 
-              {/* content_editor is admitted here too — RegistrationsPage/AccessCodesPage each
-                  self-scope to volunteer-only data for that role (and the backend enforces
-                  the same scoping), matching how content_editor's "Volunteers" sidebar
-                  entry actually links here. */}
-              <Route element={<RequireRole roles={['super_admin', 'registrations_officer', 'viewer', 'content_editor']} />}>
+              {/* innovator_lead/exhibitor_lead are admitted here too — RegistrationsPage
+                  self-scopes to their own registration type (and the backend enforces
+                  the same scoping). */}
+              <Route element={<RequireRole roles={['super_admin', 'admin', 'registrations_officer', 'viewer', 'innovator_lead', 'exhibitor_lead']} />}>
                 <Route path="/admin/registrations" element={<RegistrationsPage />} />
               </Route>
 
-              <Route element={<RequireRole roles={[...REGISTRATION_ROLES, 'content_editor']} />}>
+              <Route element={<RequireRole roles={[...REGISTRATION_ROLES]} />}>
                 <Route path="/admin/access-codes" element={<AccessCodesPage />} />
                 <Route path="/admin/scholarship-applications" element={<ScholarshipApplicationsPage />} />
-              </Route>
-
-              <Route element={<RequireRole roles={[...REGISTRATION_ROLES]} />}>
                 <Route path="/admin/check-in" element={<CheckInPage />} />
                 <Route path="/admin/reconciliations" element={<ReconciliationsPage />} />
                 <Route path="/admin/portal-tokens" element={<PortalTokensPage />} />
@@ -157,35 +156,53 @@ function App() {
 
               <Route element={<RequireRole roles={[...REGISTRATION_ROLES, 'viewer']} />}>
                 <Route path="/admin/payments" element={<PaymentsPage />} />
-                <Route path="/admin/exhibitors" element={<ExhibitorsPage />} />
-                <Route path="/admin/innovators" element={<InnovatorsPage />} />
                 <Route path="/admin/attendees" element={<AttendeesPage />} />
               </Route>
 
-              <Route element={<RequireRole roles={[...CONTENT_ROLES]} />}>
+              <Route element={<RequireRole roles={[...REGISTRATION_ROLES, 'viewer', 'exhibitor_lead']} />}>
+                <Route path="/admin/exhibitors" element={<ExhibitorsPage />} />
+              </Route>
+
+              <Route element={<RequireRole roles={[...REGISTRATION_ROLES, 'viewer', 'innovator_lead']} />}>
+                <Route path="/admin/innovators" element={<InnovatorsPage />} />
+              </Route>
+
+              <Route element={<RequireRole roles={[...ABSTRACT_ROLES]} />}>
+                <Route path="/admin/abstracts" element={<AbstractsPage />} />
+                <Route path="/admin/confirmed-abstracts" element={<ConfirmedAbstractsPage />} />
+              </Route>
+
+              <Route element={<RequireRole roles={[...RAPPORTEUR_ROLES]} />}>
+                <Route path="/admin/rapporteur" element={<RapporteurPage />} />
+              </Route>
+
+              <Route element={<RequireRole roles={[...ADMIN_ONLY_ROLES]} />}>
                 <Route path="/admin/speakers" element={<SpeakersPage />} />
                 <Route path="/admin/sessions" element={<SessionsPage />} />
                 <Route path="/admin/innovations" element={<InnovationsPage />} />
                 <Route path="/admin/innovation-showcase-entries" element={<InnovationShowcaseEntriesPage />} />
-                <Route path="/admin/confirmed-abstracts" element={<ConfirmedAbstractsPage />} />
                 <Route path="/admin/partners" element={<PartnersPage />} />
                 <Route path="/admin/inquiries" element={<InquiriesPage />} />
                 <Route path="/admin/messages" element={<MessagesPage />} />
                 <Route path="/admin/newsletter" element={<NewsletterPage />} />
-                <Route path="/admin/abstracts" element={<AbstractsPage />} />
                 <Route path="/admin/media" element={<MediaPage />} />
                 <Route path="/admin/knowledge-base" element={<KnowledgeBasePage />} />
                 <Route path="/admin/policy-tracker" element={<PolicyTrackerPage />} />
                 <Route path="/admin/translations" element={<TranslationsQueuePage />} />
-                <Route path="/admin/rapporteur" element={<RapporteurPage />} />
                 <Route path="/admin/knowledge-products" element={<KnowledgeProductsPage />} />
               </Route>
 
-              <Route element={<RequireRole roles={['super_admin', 'content_editor', 'registrations_officer', 'viewer']} />}>
+              <Route
+                element={
+                  <RequireRole
+                    roles={['super_admin', 'admin', 'registrations_officer', 'innovator_lead', 'exhibitor_lead', 'abstract_lead', 'rapporteur_lead', 'viewer']}
+                  />
+                }
+              >
                 <Route path="/admin/analytics" element={<AnalyticsPage />} />
               </Route>
 
-              <Route element={<RequireRole roles={['super_admin', 'viewer']} />}>
+              <Route element={<RequireRole roles={['super_admin', 'admin', 'viewer']} />}>
                 <Route path="/admin/audit-log" element={<AuditLogPage />} />
               </Route>
 
