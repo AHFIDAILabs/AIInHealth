@@ -6,6 +6,7 @@ export interface PromoStatus {
   endsAt: string | null;
   daysRemaining: number;
   claimedCount: number;
+  pausedReason?: string;
 }
 
 export interface PromoToken {
@@ -49,5 +50,12 @@ export const adminFetchPromoStatus = async (): Promise<PromoStatus> => {
 
 export const adminLaunchPromoCampaign = async (): Promise<{ startedAt: string; endsAt: string | null }> => {
   const res = await api.post<{ success: true; data: { startedAt: string; endsAt: string | null } }>('/admin/promo/launch');
+  return res.data.data;
+};
+
+// Admin — Settings page's pause/resume toggle. Doesn't touch the 10-day
+// clock, just gates whether the campaign counts as live right now.
+export const adminSetPromoActive = async (active: boolean, reason?: string): Promise<PromoStatus> => {
+  const res = await api.put<{ success: true; data: PromoStatus }>('/admin/promo/active', { active, reason });
   return res.data.data;
 };

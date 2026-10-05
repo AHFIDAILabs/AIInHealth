@@ -11,7 +11,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadAdminImage } from '../../services/upload.service';
 import { fetchAdminVolunteerSettings, setVolunteerApplicationsOpen } from '../../services/volunteerSettings.service';
-import { adminFetchPromoStatus, adminLaunchPromoCampaign, type PromoStatus } from '../../services/promo.service';
+import { adminFetchPromoStatus, adminLaunchPromoCampaign, adminSetPromoActive, type PromoStatus } from '../../services/promo.service';
 
 // Same roles that manage Volunteers elsewhere (Registrations' Volunteers
 // filter, Volunteer Tracks) — not the personal-account roles above, this is
@@ -145,6 +145,7 @@ export const SettingsPage = () => {
   const [promoStatus, setPromoStatus] = useState<PromoStatus | null>(null);
   const [promoLaunching, setPromoLaunching] = useState(false);
   const [confirmLaunchOpen, setConfirmLaunchOpen] = useState(false);
+  const [promoBusy, setPromoBusy] = useState(false);
 
   useEffect(() => {
     if (!canManageVolunteerSettings) return;
@@ -188,6 +189,20 @@ export const SettingsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setPromoLaunching(false);
+    }
+  };
+
+  const togglePromoActive = async (next: boolean) => {
+    const reason = !next ? window.prompt('Optional: reason shown to admins — e.g. "Pausing until the next cohort."') ?? undefined : undefined;
+    setPromoBusy(true);
+    try {
+      const refreshed = await adminSetPromoActive(next, reason);
+      setPromoStatus(refreshed);
+      toast('success', next ? 'Promo campaign resumed' : 'Promo campaign paused');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setPromoBusy(false);
     }
   };
 
@@ -328,11 +343,28 @@ export const SettingsPage = () => {
                 <p className="text-[13px] font-semibold text-navy">
                   {promoStatus.active ? (
                     <span className="text-success">Live — {promoStatus.daysRemaining} day(s) remaining</span>
+                  ) : promoStatus.daysRemaining > 0 ? (
+                    <span className="text-warning">Paused — {promoStatus.daysRemaining} day(s) remaining</span>
                   ) : (
                     <span className="text-slate-400">Ended</span>
                   )}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">{promoStatus.claimedCount} code(s) claimed so far.</p>
+                {!promoStatus.active && promoStatus.pausedReason && (
+                  <p className="mt-1 text-xs text-slate-400">Reason: {promoStatus.pausedReason}</p>
+                )}
+                <div className="mt-3">
+                  <AdminToggle
+                    label={promoBusy ? 'Campaign active (updating…)' : 'Campaign active'}
+                    checked={promoStatus.active}
+                    onChange={togglePromoActive}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-slate-400">
+                  Turn this off to pause the landing page's QR banner and stop new claims at any time, or leave it off
+                  permanently to end the campaign early — the original 10-day window and days-remaining count keep
+                  running in the background either way. Anyone who already claimed a code can still use it either way.
+                </p>
               </>
             ) : (
               <>
@@ -343,8 +375,8 @@ export const SettingsPage = () => {
                   Launch QR Promo Campaign
                 </button>
                 <p className="mt-2 text-xs text-slate-400">
-                  Starts the landing page's drifting QR banner and its fixed 10-day claim window immediately. This can't be
-                  undone or paused once started.
+                  Starts the landing page's drifting QR banner and its fixed 10-day claim window immediately. The launch
+                  itself can't be undone, but you'll be able to pause or stop the campaign early afterward.
                 </p>
               </>
             )}
@@ -355,7 +387,7 @@ export const SettingsPage = () => {
       <ConfirmDialog
         open={confirmLaunchOpen}
         title="Launch the QR promo campaign?"
-        description="This immediately starts a 10-day window where anyone who scans the landing page's QR banner gets a free (100% off) registration code. This can't be undone or paused once started."
+        description="This immediately starts a 10-day window where anyone who scans the landing page's QR banner gets a free (100% off) registration code. The launch itself can't be undone, but you can pause or stop the campaign early afterward."
         confirmLabel="Launch"
         danger={false}
         loading={promoLaunching}
