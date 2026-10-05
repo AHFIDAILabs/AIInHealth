@@ -8,3 +8,11 @@ export const claimPromoCodeSchema = z.object({
 });
 
 export type ClaimPromoCodeInput = z.infer<typeof claimPromoCodeSchema>['body'];
+
+export const setPromoActiveSchema = z.object({
+  body: z.object({
+    active: z.boolean(),
+    reason: z.string().trim().max(200).optional(),
+  }),
+});
+export type SetPromoActiveInput = z.infer<typeof setPromoActiveSchema>['body'];

@@ -12,7 +12,7 @@ import { recordAudit } from '../services/audit.service.js';
 import { logger } from '../config/logger.js';
 import { env } from '../config/env.js';
 import { PROMO_CAMPAIGN_DURATION_MS } from '../config/event.js';
-import type { ClaimPromoCodeInput } from '../validations/promo.validation.js';
+import type { ClaimPromoCodeInput, SetPromoActiveInput } from '../validations/promo.validation.js';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -28,32 +28,40 @@ const campaignWindow = async () => {
   if (!settings.startedAt) return { launched: false as const, settings };
   const endsAt = new Date(settings.startedAt.getTime() + PROMO_CAMPAIGN_DURATION_MS);
   const now = new Date();
-  const active = now >= settings.startedAt && now < endsAt;
+  // The pause toggle gates this regardless of where the clock itself is —
+  // pausing never pauses the clock, it only stops the campaign from counting
+  // as "live" right now (see PromoSettings.model.ts's comment).
+  const active = settings.active && now >= settings.startedAt && now < endsAt;
   return { launched: true as const, settings, endsAt, active };
+};
+
+// Shared response shape for every status-ish endpoint below (public status,
+// admin status, and the admin pause/resume toggle's own response) — one place
+// to compute it so none of them can drift out of sync with each other.
+const statusPayload = async () => {
+  const window = await campaignWindow();
+  const claimedCount = await AccessCode.countDocuments({ type: 'promo' });
+
+  if (!window.launched) {
+    return { active: false, startedAt: null, endsAt: null, daysRemaining: 0, claimedCount, pausedReason: undefined };
+  }
+
+  const daysRemaining = Math.max(0, Math.ceil((window.endsAt.getTime() - Date.now()) / ONE_DAY_MS));
+  return {
+    active: window.active,
+    startedAt: window.settings.startedAt,
+    endsAt: window.endsAt,
+    daysRemaining,
+    claimedCount,
+    pausedReason: window.settings.active ? undefined : window.settings.pausedReason,
+  };
 };
 
 // GET /promo/status — public. Polled by the landing page's banner widget to
 // decide whether to render at all, and to show the two live counters
 // (days remaining, claimed so far) the pitch specifically asked for.
 export const status = catchAsync(async (_req: Request, res: Response) => {
-  const window = await campaignWindow();
-  const claimedCount = await AccessCode.countDocuments({ type: 'promo' });
-
-  if (!window.launched) {
-    res.json(new ApiResponse({ active: false, startedAt: null, endsAt: null, daysRemaining: 0, claimedCount }));
-    return;
-  }
-
-  const daysRemaining = Math.max(0, Math.ceil((window.endsAt.getTime() - Date.now()) / ONE_DAY_MS));
-  res.json(
-    new ApiResponse({
-      active: window.active,
-      startedAt: window.settings.startedAt,
-      endsAt: window.endsAt,
-      daysRemaining,
-      claimedCount,
-    })
-  );
+  res.json(new ApiResponse(await statusPayload()));
 });
 
 // GET /promo/token — public. Called by the banner widget just-in-time, right
@@ -157,6 +165,34 @@ export const adminLaunch = catchAsync(async (req: Request, res: Response) => {
 
   const window = await campaignWindow();
   res.json(new ApiResponse({ startedAt: settings.startedAt, endsAt: window.launched ? window.endsAt : null }));
+});
+
+// PUT /admin/promo/active — super_admin only (see admin.routes.ts). Pauses or
+// resumes the campaign without touching the 10-day clock — same "plain on/off
+// gate" shape as volunteerSettings.controller.ts's adminSet. A no-op (no
+// write, no audit entry) if the requested state already matches, same
+// idempotency reasoning as adminLaunch above.
+export const adminSetActive = catchAsync(async (req: Request, res: Response) => {
+  const { active, reason } = req.body as SetPromoActiveInput;
+  const settings = await getOrCreatePromoSettings();
+
+  if (settings.active !== active) {
+    settings.active = active;
+    settings.pausedReason = active ? undefined : reason;
+    settings.pausedAt = active ? undefined : new Date();
+    settings.pausedBy = active ? undefined : (req.user!.sub as never);
+    await settings.save();
+
+    await recordAudit({
+      req,
+      action: active ? 'promo.resumed' : 'promo.paused',
+      resourceType: 'PromoSettings',
+      resourceId: settings.id,
+      after: { active, reason },
+    });
+  }
+
+  res.json(new ApiResponse(await statusPayload()));
 });
 
 // GET /admin/promo/status — same shape as the public one, reused by the

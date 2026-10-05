@@ -10,6 +10,17 @@ const promoSettingsSchema = new Schema(
   {
     startedAt: { type: Date },
     startedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    // Pause/resume toggle, same shape as VolunteerSettings' applicationsOpen —
+    // only meaningful once startedAt is set. Toggling this off does NOT pause
+    // the 10-day clock itself (see campaignWindow() in promo.controller.ts);
+    // it just gates whether the banner/token/claim endpoints treat the
+    // campaign as live right now. An admin can use it to pause temporarily or
+    // just never turn it back on — same single mechanism either way, no
+    // separate "permanent stop" state.
+    active: { type: Boolean, default: true },
+    pausedReason: { type: String, trim: true },
+    pausedAt: { type: Date },
+    pausedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
 );

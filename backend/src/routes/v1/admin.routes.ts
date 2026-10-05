@@ -70,6 +70,7 @@ import { createDeliverableSchema, updateDeliverableSchema } from '../../validati
 import { createPartnerInteractionSchema } from '../../validations/partnerInteraction.validation.js';
 import { blockIpSchema, setLockdownSchema } from '../../validations/security.validation.js';
 import { setVolunteerSettingsSchema } from '../../validations/volunteerSettings.validation.js';
+import { setPromoActiveSchema } from '../../validations/promo.validation.js';
 import { decideScholarshipApplicationSchema } from '../../validations/scholarshipApplication.validation.js';
 
 const router = Router();
@@ -230,6 +231,7 @@ router.put('/volunteer-settings', requireRole('super_admin', 'admin', 'registrat
 // every other role's normal content/registrations scope.
 router.get('/promo/status', requireRole('super_admin'), promoController.adminStatus);
 router.post('/promo/launch', requireRole('super_admin'), promoController.adminLaunch);
+router.put('/promo/active', requireRole('super_admin'), validate(setPromoActiveSchema), promoController.adminSetActive);
 
 router.get('/exhibitors-stats', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer', 'exhibitor_lead'), exhibitorController.adminStats);
 router.get('/exhibitors-analytics', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer', 'exhibitor_lead'), exhibitorController.adminAnalytics);
