@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, ArrowUpRight, ArrowRight, LogIn, Globe } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ArrowRight, LogIn, Globe, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import logo from '../../assets/AI_Logo_New_white.png';
@@ -35,10 +35,18 @@ const LanguageSwitcher = ({ className = '' }: { className?: string }) => {
   );
 };
 
+// Ids tucked into the desktop "More" dropdown instead of the flat main row —
+// kept out of NAV_ITEMS' own shape (no per-item "inMoreMenu" flag) since this
+// is purely a desktop-row grouping decision; the mobile menu still lists
+// every item flat, where clutter isn't a concern the same way.
+const MORE_MENU_IDS = ['sponsored-delegates', 'wai-health'];
+
 export const Navbar = () => {
   const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(64);
   const location = useLocation();
@@ -58,7 +66,10 @@ export const Navbar = () => {
     { id: 'abstracts', label: t('nav.abstracts', 'Abstracts'), to: '/abstracts/confirmed' },
     { id: 'innovations', label: t('nav.innovations', 'Innovations'), to: '/innovation-showcase/confirmed' },
     { id: 'gallery', label: t('nav.gallery', 'Gallery'), to: '/gallery' },
+    // Tucked into the "More" dropdown below rather than the main row — two
+    // more flat items here made the header read as cluttered.
     { id: 'sponsored-delegates', label: t('nav.sponsoredDelegates', 'Sponsored Delegates'), to: '/sponsored-delegates' },
+    { id: 'wai-health', label: t('nav.waiHealth', 'Women in AI'), to: '/wai-health-breakfast' },
     { id: 'register', label: t('nav.registerNow', 'Register Now'), to: '/register' },
     { id: 'ahfid', label: 'AHFID', to: 'https://ahfid.org/', external: true },
     // Delegate portal sign-in — kept out of the main nav row (see the filter
@@ -96,7 +107,17 @@ export const Navbar = () => {
 
   useEffect(() => {
     setMobileOpen(false);
+    setMoreOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [moreOpen]);
 
   return (
     <>
@@ -153,30 +174,71 @@ export const Navbar = () => {
           </Link>
 
           <nav className="hidden items-center gap-1.5 lg:flex">
-            {NAV_ITEMS.filter((i) => i.id !== 'ahfid' && i.id !== 'login').map((item) =>
-              item.id === 'register' ? (
-                <Link
-                  key={item.id}
-                  to={item.to}
-                  className="ml-3 flex items-center gap-2 rounded-full bg-orange px-5 py-1.5 text-sm font-bold text-white shadow-lg shadow-orange/30 transition-all hover:scale-[1.03] hover:bg-orange-hover"
-                >
-                  {item.label} <ArrowRight size={16} />
-                </Link>
-              ) : (
-                <NavLink
-                  key={item.id}
-                  to={item.to}
-                  end={item.to === '/'}
-                  className={({ isActive }) =>
-                    `rounded-lg px-4 py-2 text-[12px] font-bold uppercase tracking-wide transition-colors ${
-                      isActive ? 'text-orange' : 'text-white hover:text-orange'
-                    }`
-                  }
-                >
-                  {item.label}
-                </NavLink>
-              )
-            )}
+            {NAV_ITEMS.filter((i) => i.id !== 'ahfid' && i.id !== 'login' && !MORE_MENU_IDS.includes(i.id)).map((item) => (
+              <Fragment key={item.id}>
+                {item.id === 'register' ? (
+                  <Link
+                    to={item.to}
+                    className="ml-3 flex items-center gap-2 rounded-full bg-orange px-5 py-1.5 text-sm font-bold text-white shadow-lg shadow-orange/30 transition-all hover:scale-[1.03] hover:bg-orange-hover"
+                  >
+                    {item.label} <ArrowRight size={16} />
+                  </Link>
+                ) : (
+                  <NavLink
+                    to={item.to}
+                    end={item.to === '/'}
+                    className={({ isActive }) =>
+                      `rounded-lg px-4 py-2 text-[12px] font-bold uppercase tracking-wide transition-colors ${
+                        isActive ? 'text-orange' : 'text-white hover:text-orange'
+                      }`
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                )}
+                {/* "More" (Sponsored Delegates / Women in AI) sits right after
+                    Gallery, rather than at the end of the row, per direct request. */}
+                {item.id === 'gallery' && (
+                  <div className="relative" ref={moreRef}>
+                    <button
+                      onClick={() => setMoreOpen((v) => !v)}
+                      aria-expanded={moreOpen}
+                      className={`flex items-center gap-1 rounded-lg px-4 py-2 text-[12px] font-bold uppercase tracking-wide transition-colors ${
+                        moreOpen || MORE_MENU_IDS.some((id) => location.pathname === NAV_ITEMS.find((i) => i.id === id)?.to)
+                          ? 'text-orange'
+                          : 'text-white hover:text-orange'
+                      }`}
+                    >
+                      {t('nav.more', 'More')} <ChevronDown size={14} className={`transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    <AnimatePresence>
+                      {moreOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute left-0 top-full mt-2 min-w-[200px] overflow-hidden rounded-xl border border-white/10 bg-navy-nav shadow-xl"
+                        >
+                          {NAV_ITEMS.filter((i) => MORE_MENU_IDS.includes(i.id)).map((moreItem) => (
+                            <NavLink
+                              key={moreItem.id}
+                              to={moreItem.to}
+                              onClick={() => setMoreOpen(false)}
+                              className={({ isActive }) =>
+                                `block px-4 py-3 text-[13px] font-semibold ${isActive ? 'text-orange' : 'text-white hover:bg-white/5 hover:text-orange'}`
+                              }
+                            >
+                              {moreItem.label}
+                            </NavLink>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </Fragment>
+            ))}
           </nav>
 
           <button

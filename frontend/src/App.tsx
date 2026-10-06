@@ -35,6 +35,7 @@ import { PromoClaim } from './pages/public/PromoClaim';
 import { AbstractSubmission } from './pages/public/AbstractSubmission';
 import { ScholarshipApplication } from './pages/public/ScholarshipApplication';
 import { TeamRegistration } from './pages/public/TeamRegistration';
+import { WaiHealthBreakfast } from './pages/public/WaiHealthBreakfast';
 import { RapporteurForm } from './pages/public/RapporteurForm';
 import { KnowledgeProductView } from './pages/public/KnowledgeProductView';
 import { Contact } from './pages/public/Contact';
@@ -74,6 +75,7 @@ import { EventTeamPage } from './pages/admin/EventTeamPage';
 import { SecurityPage } from './pages/admin/SecurityPage';
 import { PortalTokensPage } from './pages/admin/PortalTokensPage';
 import { ScholarshipApplicationsPage } from './pages/admin/ScholarshipApplicationsPage';
+import { WaiHealthPage } from './pages/admin/WaiHealthPage';
 import { AnalyticsPage } from './pages/admin/AnalyticsPage';
 import { IntegrationsPage } from './pages/admin/IntegrationsPage';
 import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage';
@@ -123,6 +125,7 @@ function App() {
             <Route path="/abstracts/submit" element={<AbstractSubmission />} />
             <Route path="/sponsored-delegates" element={<ScholarshipApplication />} />
             <Route path="/team/register" element={<TeamRegistration />} />
+            <Route path="/wai-health-breakfast" element={<WaiHealthBreakfast />} />
             <Route path="/rapporteur/:token" element={<RapporteurForm />} />
             <Route path="/knowledge-products/:type" element={<KnowledgeProductView />} />
             <Route path="/contact" element={<Contact />} />
@@ -147,15 +150,24 @@ function App() {
               </Route>
 
               <Route element={<RequireRole roles={[...REGISTRATION_ROLES]} />}>
-                <Route path="/admin/access-codes" element={<AccessCodesPage />} />
                 <Route path="/admin/scholarship-applications" element={<ScholarshipApplicationsPage />} />
                 <Route path="/admin/check-in" element={<CheckInPage />} />
+              </Route>
+
+              {/* Deliberately narrowed off registrations_officer — see admin.routes.ts's
+                  matching routes. */}
+              <Route element={<RequireRole roles={[...ADMIN_ONLY_ROLES]} />}>
+                <Route path="/admin/access-codes" element={<AccessCodesPage />} />
                 <Route path="/admin/reconciliations" element={<ReconciliationsPage />} />
                 <Route path="/admin/portal-tokens" element={<PortalTokensPage />} />
+                <Route path="/admin/wai-health" element={<WaiHealthPage />} />
+              </Route>
+
+              <Route element={<RequireRole roles={[...ADMIN_ONLY_ROLES, 'viewer']} />}>
+                <Route path="/admin/payments" element={<PaymentsPage />} />
               </Route>
 
               <Route element={<RequireRole roles={[...REGISTRATION_ROLES, 'viewer']} />}>
-                <Route path="/admin/payments" element={<PaymentsPage />} />
                 <Route path="/admin/attendees" element={<AttendeesPage />} />
               </Route>
 

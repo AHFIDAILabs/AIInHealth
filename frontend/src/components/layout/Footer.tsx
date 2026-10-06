@@ -35,6 +35,7 @@ export const Footer = () => {
             <li><Link to="/gallery" className="hover:text-orange">{t('nav.gallery', 'Gallery')}</Link></li>
             <li><Link to="/abstracts/confirmed" className="hover:text-orange">{t('footer.summit.submitAbstract', 'Submit an Abstract')}</Link></li>
             <li><Link to="/policy-tracker" className="hover:text-orange">{t('footer.summit.policyTracker', 'Policy Tracker')}</Link></li>
+            <li><Link to="/wai-health-breakfast" className="hover:text-orange">{t('footer.summit.waiHealth', 'WAI-Health Breakfast')}</Link></li>
           </ul>
         </div>
         <div>

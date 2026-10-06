@@ -35,6 +35,7 @@ import {
   Languages,
   GraduationCap,
   Mic,
+  Coffee,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -90,15 +91,18 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Event Setup',
     items: [
       { label: 'Registrations', to: '/admin/registrations', icon: ClipboardList, roles: [...registrationRoles, 'viewer', 'innovator_lead', 'exhibitor_lead'] },
-      { label: 'Access Codes', to: '/admin/access-codes', icon: KeyRound, roles: registrationRoles },
+      // Access Codes/Payments/Reconciliations/Portal Tokens are deliberately
+      // narrowed off registrations_officer — admin/super_admin only.
+      { label: 'Access Codes', to: '/admin/access-codes', icon: KeyRound, roles: adminOnlyRoles },
       {
         label: 'Sponsorship Applications',
         to: '/admin/scholarship-applications',
         icon: GraduationCap,
         roles: registrationRoles,
       },
-      { label: 'Payments', to: '/admin/payments', icon: CreditCard, roles: [...registrationRoles, 'viewer'] },
-      { label: 'Reconciliations', to: '/admin/reconciliations', icon: Scale, roles: registrationRoles },
+      { label: 'Payments', to: '/admin/payments', icon: CreditCard, roles: [...adminOnlyRoles, 'viewer'] },
+      { label: 'Reconciliations', to: '/admin/reconciliations', icon: Scale, roles: adminOnlyRoles },
+      { label: 'Women in AI & Health', to: '/admin/wai-health', icon: Coffee, roles: adminOnlyRoles },
       { label: 'Check-In', to: '/admin/check-in', icon: ScanLine, roles: registrationRoles },
     ],
   },
@@ -128,7 +132,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Volunteers', to: '/admin/registrations?type=volunteer', icon: HeartHandshake, roles: [...registrationRoles, 'viewer'] },
       { label: 'Team Registrations', to: '/admin/registrations?type=team', icon: UsersRound, roles: [...registrationRoles, 'viewer'] },
       { label: 'Sponsors & Partners', to: '/admin/partners', icon: Handshake, roles: adminOnlyRoles },
-      { label: 'Portal Tokens', to: '/admin/portal-tokens', icon: Smartphone, roles: registrationRoles },
+      { label: 'Portal Tokens', to: '/admin/portal-tokens', icon: Smartphone, roles: adminOnlyRoles },
     ],
   },
   {

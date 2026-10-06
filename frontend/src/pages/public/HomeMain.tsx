@@ -8,6 +8,7 @@ import { buildEventJsonLd, buildOrganizationJsonLd } from '../../lib/seo';
 import { SpeakersGrid } from '../../components/home/SpeakersGrid';
 import { PromoBanner } from '../../components/home/PromoBanner';
 import { SummitProgramme } from '../../components/home/SummitProgramme';
+import { WaiHealthSpotlight } from '../../components/home/WaiHealthSpotlight';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase';
 import { CountdownCard } from '../../components/home-v2/CountdownCard';
 import { VENUE_NAME, VENUE_STREET_ADDRESS, VENUE_CITY } from '../../lib/siteInfo';
@@ -152,6 +153,7 @@ export const HomeMain = () => {
         </div>
       </section>
 
+      <WaiHealthSpotlight />
       <SpeakersGrid />
       <SummitProgramme />
       <PartnersShowcase />
