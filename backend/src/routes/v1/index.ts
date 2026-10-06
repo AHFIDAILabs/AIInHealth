@@ -29,6 +29,7 @@ import promoRoutes from './promo.routes.js';
 import rapporteurRoutes from './rapporteur.routes.js';
 import knowledgeProductRoutes from './knowledgeProduct.routes.js';
 import formsRoutes from './forms.routes.js';
+import waiHealthRoutes from './waiHealth.routes.js';
 
 const router = Router();
 
@@ -62,5 +63,6 @@ router.use('/promo', promoRoutes);
 router.use('/rapporteur', rapporteurRoutes);
 router.use('/knowledge-products', knowledgeProductRoutes);
 router.use('/forms', formsRoutes);
+router.use('/wai-health', waiHealthRoutes);
 
 export default router;

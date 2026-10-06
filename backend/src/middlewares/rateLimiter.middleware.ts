@@ -304,6 +304,18 @@ export const formTokenLimiter = rateLimit({
   handler: onLimitExceeded('formTokenLimiter', 'low'),
 });
 
+// Women in AI & Health Breakfast — same email+IP keying/window as
+// registrationLimiter/abstractLimiter above.
+export const waiHealthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: emailKey,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many submissions. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('waiHealthLimiter', 'low'),
+});
+
 export const askAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

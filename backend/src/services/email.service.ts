@@ -299,6 +299,23 @@ export const sendSponsorshipReceivedEmail = async (to: string, fullName: string)
   });
 };
 
+// waiHealth.controller.ts's register() — the Breakfast's own confirmation,
+// separate from (and sent regardless of) whether the registrant also opted
+// into a full Summit registration through the same form; that opt-in, if
+// taken, gets its own normal confirmation/payment-link email unchanged.
+export const sendWaiHealthConfirmationEmail = async (to: string, fullName: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "You're on the list: Women in AI & Health Breakfast",
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Thanks for registering for the Women in AI & Health Breakfast, the opening session of Day 1 of the AI in Health Summit 2026.</p>
+      <p><strong>When:</strong> 08:00&ndash;09:00, Day 1 (19 October 2026)<br /><strong>Where:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
+      <p>We look forward to seeing you there. Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 // scholarshipApplication.controller.ts's adminDecide() approval branch — its
 // own copy (rather than reusing sendAccessCodeEmail's generic wording) so the
 // applicant's whole journey (received → approved) consistently says

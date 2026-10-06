@@ -14,6 +14,7 @@ import * as pushController from '../../controllers/push.controller.js';
 import * as jobController from '../../controllers/job.controller.js';
 import * as accessCodeController from '../../controllers/accessCode.controller.js';
 import * as scholarshipApplicationController from '../../controllers/scholarshipApplication.controller.js';
+import * as waiHealthController from '../../controllers/waiHealth.controller.js';
 import * as promoController from '../../controllers/promo.controller.js';
 import * as innovationController from '../../controllers/innovation.controller.js';
 import * as checkinController from '../../controllers/checkin.controller.js';
@@ -71,6 +72,7 @@ import { createPartnerInteractionSchema } from '../../validations/partnerInterac
 import { blockIpSchema, setLockdownSchema } from '../../validations/security.validation.js';
 import { setVolunteerSettingsSchema } from '../../validations/volunteerSettings.validation.js';
 import { setPromoActiveSchema } from '../../validations/promo.validation.js';
+import { setWaiHealthCapacitySchema } from '../../validations/waiHealth.validation.js';
 import { decideScholarshipApplicationSchema } from '../../validations/scholarshipApplication.validation.js';
 
 const router = Router();
@@ -150,13 +152,14 @@ router.post(
   registrationController.adminImportVolunteers
 );
 
-// Access codes directly gate free entry — registrations_officer/admin/super_admin
-// only (not the per-type leads below — Innovator/Exhibitor heads manage their own
-// registrations but don't issue access codes).
-router.get('/access-codes', requireRole('super_admin', 'admin', 'registrations_officer'), accessCodeController.adminList);
-router.post('/access-codes', requireRole('super_admin', 'admin', 'registrations_officer'), accessCodeController.adminGenerate);
-router.patch('/access-codes/:id/revoke', requireRole('super_admin', 'admin', 'registrations_officer'), accessCodeController.adminRevoke);
-router.post('/access-codes/:id/send', requireRole('super_admin', 'admin', 'registrations_officer'), accessCodeController.adminSend);
+// Access codes directly gate free entry — admin/super_admin only. Not
+// registrations_officer (deliberately narrowed off this role) and not the
+// per-type leads below — Innovator/Exhibitor heads manage their own
+// registrations but don't issue access codes.
+router.get('/access-codes', requireRole('super_admin', 'admin'), accessCodeController.adminList);
+router.post('/access-codes', requireRole('super_admin', 'admin'), accessCodeController.adminGenerate);
+router.patch('/access-codes/:id/revoke', requireRole('super_admin', 'admin'), accessCodeController.adminRevoke);
+router.post('/access-codes/:id/send', requireRole('super_admin', 'admin'), accessCodeController.adminSend);
 
 router.get('/scholarship-applications', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipApplicationController.adminList);
 router.get('/scholarship-applications/export', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipApplicationController.adminExport);
@@ -167,13 +170,25 @@ router.patch(
   scholarshipApplicationController.adminDecide
 );
 
-router.get('/payments-stats', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer'), paymentController.adminStats);
-router.get('/payments/reconciliations', requireRole('super_admin', 'admin', 'registrations_officer'), reconciliationController.list);
-router.post('/payments/reconciliations/:reference/resync', requireRole('super_admin', 'admin', 'registrations_officer'), reconciliationController.resync);
+// Women in AI & Health Breakfast — a new, separate event-registration area,
+// not folded into the core registrations_officer scope.
+router.get('/wai-health', requireRole('super_admin', 'admin'), waiHealthController.adminList);
+router.get('/wai-health/export', requireRole('super_admin', 'admin'), waiHealthController.adminExport);
+router.get('/wai-health/settings', requireRole('super_admin', 'admin'), waiHealthController.adminGetSettings);
+router.put(
+  '/wai-health/settings',
+  requireRole('super_admin', 'admin'),
+  validate(setWaiHealthCapacitySchema),
+  waiHealthController.adminSetCapacity
+);
 
-router.get('/portal-tokens', requireRole('super_admin', 'admin', 'registrations_officer'), portalTokenController.adminList);
-router.post('/portal-tokens/:id/send-code', requireRole('super_admin', 'admin', 'registrations_officer'), portalTokenController.adminSendCode);
-router.post('/portal-tokens/bulk-send', requireRole('super_admin', 'admin', 'registrations_officer'), portalTokenController.adminBulkSendCodes);
+router.get('/payments-stats', requireRole('super_admin', 'admin', 'viewer'), paymentController.adminStats);
+router.get('/payments/reconciliations', requireRole('super_admin', 'admin'), reconciliationController.list);
+router.post('/payments/reconciliations/:reference/resync', requireRole('super_admin', 'admin'), reconciliationController.resync);
+
+router.get('/portal-tokens', requireRole('super_admin', 'admin'), portalTokenController.adminList);
+router.post('/portal-tokens/:id/send-code', requireRole('super_admin', 'admin'), portalTokenController.adminSendCode);
+router.post('/portal-tokens/bulk-send', requireRole('super_admin', 'admin'), portalTokenController.adminBulkSendCodes);
 
 // Areas not named as their own staff role — folded into Admin (+ super_admin),
 // per the per-area roles plan. Kept as one shared const since these routes are
