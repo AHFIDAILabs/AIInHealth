@@ -111,6 +111,19 @@ const TYPE_OPTIONS: RegistrationType[] = ['attendee', 'exhibitor', 'sponsor', 'v
 const REGISTRATIONS_OFFICER_TYPE_OPTIONS: RegistrationType[] = TYPE_OPTIONS.filter(
   (t) => t !== 'exhibitor' && t !== 'innovator'
 );
+
+// 'organizer' is a UI-only sentinel for the list's own type FILTER dropdown —
+// never a real RegistrationType, never sent to the backend as a literal
+// `type`. Most real team members actually registered as Attendee under the
+// 'staff' ("Organizer") ticket category rather than through the separate Team
+// registration page — selecting this translates to `{ type: 'attendee',
+// ticketCategory: 'staff' }` in load() below. Deliberately NOT added to
+// TYPE_OPTIONS itself, which stays real-types-only for the Add-Registration
+// modal's picker (see admin.routes.ts's buildAdminFilter for the matching
+// 'team' pool-widening on the backend).
+type TypeFilterValue = RegistrationType | 'organizer';
+const FILTER_TYPE_OPTIONS: TypeFilterValue[] = [...TYPE_OPTIONS, 'organizer'];
+const REGISTRATIONS_OFFICER_FILTER_TYPE_OPTIONS: TypeFilterValue[] = [...REGISTRATIONS_OFFICER_TYPE_OPTIONS, 'organizer'];
 // innovator_lead/exhibitor_lead are locked to exactly their own type — mirrors
 // the backend's ROLE_REGISTRATION_TYPES in registration.controller.ts.
 const ROLE_LOCKED_TYPE: Partial<Record<Role, RegistrationType>> = {
@@ -129,13 +142,14 @@ const displayName = (r: AdminRegistration) => r.fullName || r.contactName || '�
 const displayEmail = (r: AdminRegistration) => r.email || r.contactEmail || '—';
 const displayOrg = (r: AdminRegistration) => r.organization || r.companyName || '—';
 
-const TYPE_LABEL: Record<RegistrationType, string> = {
+const TYPE_LABEL: Record<TypeFilterValue, string> = {
   attendee: 'Attendees',
   exhibitor: 'Exhibitors',
   sponsor: 'Sponsors',
   volunteer: 'Volunteers',
   team: 'Team',
   innovator: 'Innovators',
+  organizer: 'Organizers',
 };
 
 export const RegistrationsPage = () => {
@@ -155,8 +169,8 @@ export const RegistrationsPage = () => {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState<RegistrationStatus | ''>('');
-  const [type, setType] = useState<RegistrationType | ''>(
-    lockedType ?? (TYPE_OPTIONS.includes(initialType as RegistrationType) ? (initialType as RegistrationType) : '')
+  const [type, setType] = useState<TypeFilterValue | ''>(
+    lockedType ?? (FILTER_TYPE_OPTIONS.includes(initialType as TypeFilterValue) ? (initialType as TypeFilterValue) : '')
   );
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [q, setQ] = useState(searchParams.get('q') ?? '');
@@ -262,7 +276,7 @@ export const RegistrationsPage = () => {
   useEffect(() => {
     if (lockedType) return;
     const urlType = searchParams.get('type');
-    const next = TYPE_OPTIONS.includes(urlType as RegistrationType) ? (urlType as RegistrationType) : '';
+    const next = FILTER_TYPE_OPTIONS.includes(urlType as TypeFilterValue) ? (urlType as TypeFilterValue) : '';
     setType((prev) => (prev === next ? prev : next));
     setPage(1);
   }, [searchParams, lockedType]);
@@ -270,9 +284,13 @@ export const RegistrationsPage = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
+    // 'organizer' is a UI-only sentinel — never sent to the backend as a
+    // literal type; it translates to the real attendee+staff-category shape
+    // instead (see FILTER_TYPE_OPTIONS' comment above).
     listRegistrations({
       status: status || undefined,
-      type: type || undefined,
+      type: type === 'organizer' ? 'attendee' : type || undefined,
+      ticketCategory: type === 'organizer' ? 'staff' : undefined,
       flagged: flaggedOnly ? 'true' : undefined,
       q: q || undefined,
       page,
@@ -563,14 +581,14 @@ export const RegistrationsPage = () => {
             value={type}
             onChange={(e) => {
               setPage(1);
-              const next = e.target.value as RegistrationType | '';
+              const next = e.target.value as TypeFilterValue | '';
               setType(next);
               setSearchParams(next ? { type: next } : {}, { replace: true });
             }}
             className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
           >
             <option value="">All Types</option>
-            {(user?.role === 'registrations_officer' ? REGISTRATIONS_OFFICER_TYPE_OPTIONS : TYPE_OPTIONS).map((t) => (
+            {(user?.role === 'registrations_officer' ? REGISTRATIONS_OFFICER_FILTER_TYPE_OPTIONS : FILTER_TYPE_OPTIONS).map((t) => (
               <option key={t} value={t}>
                 {t[0].toUpperCase() + t.slice(1)}
               </option>
@@ -605,7 +623,12 @@ export const RegistrationsPage = () => {
         )}
         {!lockedType && (
           <a
-            href={exportRegistrationsUrl({ status: status || undefined, type: type || undefined, q: q || undefined })}
+            href={exportRegistrationsUrl({
+              status: status || undefined,
+              type: type === 'organizer' ? 'attendee' : type || undefined,
+              ticketCategory: type === 'organizer' ? 'staff' : undefined,
+              q: q || undefined,
+            })}
             className={`flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-navy transition-colors hover:border-orange/40 ${type === 'volunteer' ? '' : 'ml-auto'}`}
           >
             <Download size={15} /> Export (current filters)
