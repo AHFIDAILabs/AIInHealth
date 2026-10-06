@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
-import { app, useTestDb } from './helpers.js';
+import { app, useTestDb, seedAndLoginAdmin } from './helpers.js';
 import { Registration } from '../models/Registration.model.js';
 import { AccessCode } from '../models/AccessCode.model.js';
 import { VolunteerSettings } from '../models/VolunteerSettings.model.js';
@@ -79,6 +79,62 @@ describe('POST /api/v1/registrations — attendee/exhibitor/sponsor idempotency'
     expect(other.status).toBe(201);
     const count = await Registration.countDocuments({ type: 'attendee' });
     expect(count).toBe(2);
+  });
+});
+
+describe('GET /admin/registrations?type=team — Organizer pool widening', () => {
+  useTestDb();
+
+  it('a narrowed ?type=team filter includes both real team registrations and attendee+staff ("Organizer") ones', async () => {
+    await Registration.create({ type: 'team', fullName: 'Real Team Member', email: 'team.member@example.com', status: 'confirmed' });
+    await Registration.create({
+      type: 'attendee',
+      ticketCategory: 'staff',
+      fullName: 'Organizer Attendee',
+      email: 'organizer.attendee@example.com',
+      phone: '+2348000000000',
+      country: 'Nigeria',
+      registrationMode: 'individual',
+      status: 'confirmed',
+    });
+    await Registration.create({
+      type: 'attendee',
+      ticketCategory: 'nigerian_professional',
+      fullName: 'Plain Attendee',
+      email: 'plain.attendee@example.com',
+      phone: '+2348000000001',
+      country: 'Nigeria',
+      registrationMode: 'individual',
+      status: 'confirmed',
+    });
+
+    const admin = await seedAndLoginAdmin('super_admin');
+    const res = await admin.get('/api/v1/admin/registrations').query({ type: 'team' });
+
+    expect(res.status).toBe(200);
+    const emails = res.body.data.map((r: { email: string }) => r.email).sort();
+    expect(emails).toEqual(['organizer.attendee@example.com', 'team.member@example.com']);
+  });
+
+  it('combines correctly with a simultaneous ?q= search (the $and/$or combination)', async () => {
+    await Registration.create({ type: 'team', fullName: 'Findable Name', email: 'findable@example.com', status: 'confirmed' });
+    await Registration.create({
+      type: 'attendee',
+      ticketCategory: 'staff',
+      fullName: 'Other Organizer',
+      email: 'other.organizer@example.com',
+      phone: '+2348000000002',
+      country: 'Nigeria',
+      registrationMode: 'individual',
+      status: 'confirmed',
+    });
+
+    const admin = await seedAndLoginAdmin('super_admin');
+    const res = await admin.get('/api/v1/admin/registrations').query({ type: 'team', q: 'Findable' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].email).toBe('findable@example.com');
   });
 });
 

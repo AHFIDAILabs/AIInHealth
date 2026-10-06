@@ -843,22 +843,50 @@ const buildAdminFilter = (query: ListRegistrationsQuery, req: Request): FilterQu
   } else if (query.type) {
     filter.type = query.type;
   }
+
+  // "Team" is a pool, not a literal type match — a narrowed-to-exactly-'team'
+  // filter also pulls in Attendee registrations under the 'staff'
+  // ("Organizer") ticket category, since that's the form most real team
+  // members actually registered through (see
+  // scripts/migrateOrganizerToTeam.ts's header comment for the full
+  // rationale, and why NEW Organizer sign-ups are deliberately left as
+  // attendee+staff rather than migrated at creation time).
+  const teamPoolRequested = filter.type === 'team';
+  if (teamPoolRequested) delete filter.type;
+
   if (query.status) filter.status = query.status;
   if (query.paymentStatus) filter.paymentStatus = query.paymentStatus;
   if (query.ticketCategory) filter.ticketCategory = query.ticketCategory;
   if (query.flagged === 'true') filter.flaggedSuspicious = true;
-  if (query.q) {
-    const rx = new RegExp(query.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    filter.$or = [
-      { fullName: rx },
-      { email: rx },
-      { organization: rx },
-      { companyName: rx },
-      { contactEmail: rx },
-      { contactName: rx },
-      { paymentReference: rx },
-    ];
+
+  const teamPoolOr = teamPoolRequested ? [{ type: 'team' }, { type: 'attendee', ticketCategory: 'staff' }] : null;
+  const searchOr = query.q
+    ? (() => {
+        const rx = new RegExp(query.q!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        return [
+          { fullName: rx },
+          { email: rx },
+          { organization: rx },
+          { companyName: rx },
+          { contactEmail: rx },
+          { contactName: rx },
+          { paymentReference: rx },
+        ];
+      })()
+    : null;
+
+  // Both teamPoolOr and searchOr are their own $or — can't both live under
+  // filter.$or at once (a plain object can only hold one), so when both are
+  // present they're combined under $and instead of one silently clobbering
+  // the other.
+  if (teamPoolOr && searchOr) {
+    filter.$and = [{ $or: teamPoolOr }, { $or: searchOr }];
+  } else if (teamPoolOr) {
+    filter.$or = teamPoolOr;
+  } else if (searchOr) {
+    filter.$or = searchOr;
   }
+
   return filter;
 };
 
