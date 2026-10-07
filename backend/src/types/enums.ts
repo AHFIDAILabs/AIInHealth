@@ -217,6 +217,14 @@ export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 // abstracts (see Reviewer.model.ts — that's the *review-portal* account;
 // this is how the same person ALSO registers to physically attend). No
 // presentationType — that distinction is presenter-only.
+// 'bulk_invite' is the odd one out: every other type's `issuedTo` is a real
+// identity check (registration.controller.ts rejects a redemption whose
+// email doesn't match it). This type is generated in a BATCH of N
+// (accessCodeBatch.controller.ts) against one known distributor's email, who
+// then hands individual codes to people whose emails are NOT known in
+// advance — so redemption deliberately skips the issuedTo match for this
+// type alone. Always a full (100%) comp, same as complimentary/
+// keynote_speaker/staff, and — unlike 'promo' — not excluded from VIP.
 export const ACCESS_CODE_TYPES = [
   'volunteer',
   'keynote_speaker',
@@ -226,6 +234,7 @@ export const ACCESS_CODE_TYPES = [
   'promo',
   'abstract_presenter',
   'abstract_reviewer',
+  'bulk_invite',
   // 'exhibitor'/'innovator' are a different shape from every type above —
   // those all bind to an ATTENDEE ticketCategory; these two instead upgrade
   // an Exhibitor/Innovator *application* straight to 'confirmed' on
@@ -248,6 +257,7 @@ export const ATTENDEE_ACCESS_CODE_TYPES = [
   'promo',
   'abstract_presenter',
   'abstract_reviewer',
+  'bulk_invite',
 ] as const;
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;

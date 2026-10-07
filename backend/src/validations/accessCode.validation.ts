@@ -25,6 +25,12 @@ export const generateAccessCodesSchema = z.object({
       presentationType: z.enum(PRESENTATION_TYPES).optional(),
     })
     .superRefine((body, ctx) => {
+      // bulk_invite codes are only ever minted via accessCodeBatch.controller.ts's
+      // adminGenerate (one distributor email, N anonymous codes) — this
+      // endpoint's one-code-per-listed-email shape doesn't fit it.
+      if (body.type === 'bulk_invite') {
+        ctx.addIssue({ code: 'custom', path: ['type'], message: 'Generate bulk_invite codes from the Access Code Batches page instead.' });
+      }
       if (body.type === 'scholarship' && body.discountPercent === undefined) {
         ctx.addIssue({ code: 'custom', path: ['discountPercent'], message: 'Choose a discount tier for a scholarship code.' });
       }

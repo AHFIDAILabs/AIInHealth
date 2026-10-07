@@ -34,6 +34,7 @@ const PREFIX: Record<AccessCodeType, string> = {
   abstract_reviewer: 'REV',
   exhibitor: 'EXH',
   innovator: 'INNO',
+  bulk_invite: 'GRP',
 };
 
 export const generateCode = (type: AccessCodeType): string => {

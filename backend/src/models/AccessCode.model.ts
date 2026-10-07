@@ -28,6 +28,11 @@ const accessCodeSchema = new Schema(
     // badge/tag printing can tell the two apart. Required-when-abstract_presenter
     // is enforced at the zod layer (accessCode.validation.ts), not here.
     presentationType: { type: String, enum: PRESENTATION_TYPES },
+    // bulk_invite-type only — links this code back to the batch
+    // (AccessCodeBatch.model.ts) it was generated as part of, so
+    // accessCodeBatch.controller.ts's adminGetOne can list every code in a
+    // batch plus who ultimately redeemed each.
+    batch: { type: Schema.Types.ObjectId, ref: 'AccessCodeBatch' },
   },
   { timestamps: true }
 );
@@ -35,6 +40,7 @@ const accessCodeSchema = new Schema(
 // `code`'s own `unique: true` above already creates that index — no separate
 // .index({ code: 1 }) call needed.
 accessCodeSchema.index({ status: 1, type: 1 });
+accessCodeSchema.index({ batch: 1 });
 
 // At most one *unused* code per (issuedTo, type, discountPercent) — matches what
 // accessCode.controller.ts's adminGenerate already intends via its find-existing-
@@ -44,6 +50,15 @@ accessCodeSchema.index({ status: 1, type: 1 });
 // discountPercent is absent for non-scholarship types, which MongoDB indexes as
 // null — exactly right, since only one unused volunteer/keynote_speaker/
 // complimentary code per person should exist anyway.
+//
+// bulk_invite codes all nominally belong to the same distributor, which would
+// otherwise collide here after the first one in a batch — rather than trying
+// to carve out an exception in this filter (MongoDB's partialFilterExpression
+// only supports equality/$exists:true/$gt(e)/$lt(e)/$type/top-level $and; it
+// rejects $exists:false outright as an unsupported $not), accessCodeBatch.
+// controller.ts's adminGenerate sidesteps the whole question by giving each
+// code in a batch its own plus-addressed variant of the distributor's email
+// (issuedTo), which is naturally unique per code without touching this index.
 accessCodeSchema.index(
   { issuedTo: 1, type: 1, discountPercent: 1 },
   { unique: true, partialFilterExpression: { status: 'unused' } }

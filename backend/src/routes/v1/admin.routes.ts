@@ -13,6 +13,7 @@ import * as notificationController from '../../controllers/notification.controll
 import * as pushController from '../../controllers/push.controller.js';
 import * as jobController from '../../controllers/job.controller.js';
 import * as accessCodeController from '../../controllers/accessCode.controller.js';
+import * as accessCodeBatchController from '../../controllers/accessCodeBatch.controller.js';
 import * as scholarshipApplicationController from '../../controllers/scholarshipApplication.controller.js';
 import * as waiHealthController from '../../controllers/waiHealth.controller.js';
 import * as whatsappController from '../../controllers/whatsapp.controller.js';
@@ -171,6 +172,14 @@ router.get('/access-codes', requireRole('super_admin', 'admin'), accessCodeContr
 router.post('/access-codes', requireRole('super_admin', 'admin'), accessCodeController.adminGenerate);
 router.patch('/access-codes/:id/revoke', requireRole('super_admin', 'admin'), accessCodeController.adminRevoke);
 router.post('/access-codes/:id/send', requireRole('super_admin', 'admin'), accessCodeController.adminSend);
+
+// Access Code Batches — a bunch of anonymous, 48h-expiring bulk_invite codes
+// generated at once and emailed to one distributor; see AccessCode.model.ts's
+// comment for how these differ from every other access code type. Same
+// sensitivity class/gating as Access Codes above.
+router.get('/access-code-batches', requireRole('super_admin', 'admin'), accessCodeBatchController.adminList);
+router.post('/access-code-batches', requireRole('super_admin', 'admin'), accessCodeBatchController.adminGenerate);
+router.get('/access-code-batches/:id', requireRole('super_admin', 'admin'), accessCodeBatchController.adminGetOne);
 
 router.get('/scholarship-applications', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipApplicationController.adminList);
 router.get('/scholarship-applications/export', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipApplicationController.adminExport);

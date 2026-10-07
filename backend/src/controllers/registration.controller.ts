@@ -452,7 +452,11 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     if (code.expiresAt && code.expiresAt < new Date()) {
       throw new ApiError(422, 'That access code has expired. Contact the organizing team.', 'ACCESS_CODE_EXPIRED');
     }
-    if (code.issuedTo !== input.email.trim().toLowerCase()) {
+    // bulk_invite is the one deliberate exception — its issuedTo is the
+    // distributor's email, not any individual recipient's (see
+    // AccessCode.model.ts's comment), so it's never checked against who's
+    // actually registering.
+    if (code.type !== 'bulk_invite' && code.issuedTo !== input.email.trim().toLowerCase()) {
       throw new ApiError(422, 'This access code was issued to a different email address. Please use the email it was sent to.', 'ACCESS_CODE_EMAIL_MISMATCH');
     }
     discountPercent = code.type === 'scholarship' ? code.discountPercent ?? undefined : 100;

@@ -427,6 +427,45 @@ export const sendPromoCodeEmail = async (to: string, code: string): Promise<void
   });
 };
 
+// accessCodeBatch.controller.ts's adminGenerate — ONE email to the
+// distributor containing N cards, one per code, each with its OWN
+// registration link so the distributor can forward/share a single card with
+// a different person per code (nobody's email is known in advance — see
+// AccessCode.model.ts's comment on why bulk_invite skips the usual
+// issuedTo-match check these cards would otherwise fail). Points at the
+// Sponsored Delegate page rather than the general Register page — that page
+// switches to the real Attendee form when it sees a `?code=` of its own
+// (ScholarshipApplication.tsx).
+export const sendBulkAccessCodeBatchEmail = async (to: string, codes: string[], expiresAt: Date, label?: string): Promise<void> => {
+  const expiresLabel = expiresAt.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Lagos' });
+  const cards = codes
+    .map(
+      (code) => `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;">
+          <tr>
+            <td style="border:1px solid #E2E8F0;border-radius:10px;padding:16px 18px;">
+              <p style="margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#94A3B8;">Registration Code</p>
+              <p style="margin:0 0 12px;font-size:20px;font-weight:bold;letter-spacing:1px;color:#0F172A;">${code}</p>
+              ${emailButton(`${env.FRONTEND_ORIGIN}/sponsored-delegates?code=${code}`, 'Register Now')}
+            </td>
+          </tr>
+        </table>
+      `
+    )
+    .join('');
+
+  await sendEmail({
+    to,
+    subject: `${codes.length} free registration code${codes.length === 1 ? '' : 's'} for the AI in Health Summit 2026${label ? ` — ${label}` : ''}`,
+    html: `
+      <p>You've received <strong>${codes.length}</strong> free registration code${codes.length === 1 ? '' : 's'} for the AI in Health Summit 2026.</p>
+      <p>Share <strong>one card below per person</strong> — each code is good for one 100%-free attendee registration and can only be used once. All of them expire on <strong>${expiresLabel}</strong>, whether used or not, so please distribute them promptly.</p>
+      ${cards}
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 export const sendPasswordResetEmail = async (to: string, resetUrl: string): Promise<void> => {
   await sendEmail({
     to,
