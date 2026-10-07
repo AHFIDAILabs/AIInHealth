@@ -57,6 +57,7 @@ import { InnovationsPage } from './pages/admin/InnovationsPage';
 import { InnovationShowcaseEntriesPage } from './pages/admin/InnovationShowcaseEntriesPage';
 import { ConfirmedAbstractsPage } from './pages/admin/ConfirmedAbstractsPage';
 import { AccessCodesPage } from './pages/admin/AccessCodesPage';
+import { WhatsAppConversationsPage } from './pages/admin/WhatsAppConversationsPage';
 import { InquiriesPage } from './pages/admin/InquiriesPage';
 import { MessagesPage } from './pages/admin/MessagesPage';
 import { NewsletterPage } from './pages/admin/NewsletterPage';
@@ -202,6 +203,7 @@ function App() {
                 <Route path="/admin/policy-tracker" element={<PolicyTrackerPage />} />
                 <Route path="/admin/translations" element={<TranslationsQueuePage />} />
                 <Route path="/admin/knowledge-products" element={<KnowledgeProductsPage />} />
+                <Route path="/admin/whatsapp" element={<WhatsAppConversationsPage />} />
               </Route>
 
               <Route

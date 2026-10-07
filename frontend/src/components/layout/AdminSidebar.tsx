@@ -36,6 +36,7 @@ import {
   GraduationCap,
   Mic,
   Coffee,
+  MessageCircle,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -140,6 +141,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Partnership Inquiries', to: '/admin/inquiries', icon: Mail, roles: adminOnlyRoles },
       { label: 'Messages', to: '/admin/messages', icon: MessageSquare, roles: adminOnlyRoles },
+      { label: 'WhatsApp Concierge', to: '/admin/whatsapp', icon: MessageCircle, roles: adminOnlyRoles },
       { label: 'Newsletter', to: '/admin/newsletter', icon: Rss, roles: adminOnlyRoles },
     ],
   },
