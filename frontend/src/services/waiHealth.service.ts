@@ -11,6 +11,8 @@ export const fetchWaiHealthStatus = async (): Promise<WaiHealthStatus> => {
   return res.data.data;
 };
 
+export type WaiHealthGender = 'female' | 'male';
+
 export interface SubmitWaiHealthRegistrationPayload {
   fullName: string;
   email: string;
@@ -19,7 +21,7 @@ export interface SubmitWaiHealthRegistrationPayload {
   jobTitle?: string;
   country: string;
   coHostNetwork?: string;
-  confirmsWomen: true;
+  gender: WaiHealthGender;
   middleName?: string; // honeypot
   formToken?: string;
 }
@@ -42,6 +44,22 @@ export const linkWaiHealthRegistration = async (waiHealthId: string, registratio
   await api.post(`/wai-health/register/${waiHealthId}/link-registration`, { registrationId });
 };
 
+export type WaiHealthRsvpStatus = 'confirmed' | 'already_confirmed' | 'full' | 'not_eligible';
+
+export interface WaiHealthRsvpResult {
+  status: WaiHealthRsvpStatus;
+  confirmedAt?: string;
+}
+
+// POST /wai-health/rsvp/:token — the actual seat reservation, redeemed from
+// the link in the signup email. A 404 (invalid token) surfaces as a thrown
+// error, same as any other API call; every other outcome (confirmed/
+// already_confirmed/full/not_eligible) is a normal 200 the caller inspects.
+export const confirmWaiHealthRsvp = async (token: string): Promise<WaiHealthRsvpResult> => {
+  const res = await api.post<{ success: true; data: WaiHealthRsvpResult }>(`/wai-health/rsvp/${token}`);
+  return res.data.data;
+};
+
 export interface AdminWaiHealthRegistration {
   _id: string;
   fullName: string;
@@ -51,7 +69,10 @@ export interface AdminWaiHealthRegistration {
   jobTitle?: string;
   country: string;
   coHostNetwork?: string;
-  confirmsWomen: boolean;
+  gender: WaiHealthGender;
+  rsvpConfirmedAt?: string;
+  declined?: boolean;
+  notifiedNotEligibleAt?: string;
   registration?: { _id: string; status: string; paymentStatus: string; ticketCategory?: string } | null;
   createdAt: string;
 }
@@ -64,12 +85,36 @@ export interface Paginated<T> {
   pages: number;
 }
 
-export const adminListWaiHealth = async (params: { q?: string; page?: number; limit?: number }): Promise<Paginated<AdminWaiHealthRegistration>> => {
+export const adminListWaiHealth = async (params: {
+  q?: string;
+  gender?: WaiHealthGender;
+  page?: number;
+  limit?: number;
+}): Promise<Paginated<AdminWaiHealthRegistration>> => {
   const res = await api.get<{ success: true; data: AdminWaiHealthRegistration[]; meta: Omit<Paginated<never>, 'items'> }>(
     '/admin/wai-health',
     { params }
   );
   return { items: res.data.data, ...res.data.meta };
+};
+
+// POST /admin/wai-health/:id/notify-not-eligible — detail drawer's single-row action.
+export const adminNotifyNotEligible = async (id: string): Promise<{ sent: boolean; declined: boolean }> => {
+  const res = await api.post<{ success: true; data: { sent: boolean; declined: boolean } }>(`/admin/wai-health/${id}/notify-not-eligible`);
+  return res.data.data;
+};
+
+export interface AdminBulkResult {
+  attempted: number;
+  sent: number;
+  failed: number;
+}
+
+// POST /admin/wai-health/notify-not-eligible/bulk — every gender:'male' row
+// never yet notified, server-side (not limited to the current filtered page).
+export const adminBulkNotifyNotEligible = async (): Promise<AdminBulkResult> => {
+  const res = await api.post<{ success: true; data: AdminBulkResult }>('/admin/wai-health/notify-not-eligible/bulk');
+  return res.data.data;
 };
 
 export const adminExportWaiHealthUrl = (params: { q?: string } = {}): string => {

@@ -36,6 +36,7 @@ import { AbstractSubmission } from './pages/public/AbstractSubmission';
 import { ScholarshipApplication } from './pages/public/ScholarshipApplication';
 import { TeamRegistration } from './pages/public/TeamRegistration';
 import { WaiHealthBreakfast } from './pages/public/WaiHealthBreakfast';
+import { WaiHealthRsvp } from './pages/public/WaiHealthRsvp';
 import { RapporteurForm } from './pages/public/RapporteurForm';
 import { KnowledgeProductView } from './pages/public/KnowledgeProductView';
 import { Contact } from './pages/public/Contact';
@@ -127,6 +128,7 @@ function App() {
             <Route path="/sponsored-delegates" element={<ScholarshipApplication />} />
             <Route path="/team/register" element={<TeamRegistration />} />
             <Route path="/wai-health-breakfast" element={<WaiHealthBreakfast />} />
+            <Route path="/wai-health-breakfast/rsvp/:token" element={<WaiHealthRsvp />} />
             <Route path="/rapporteur/:token" element={<RapporteurForm />} />
             <Route path="/knowledge-products/:type" element={<KnowledgeProductView />} />
             <Route path="/contact" element={<Contact />} />
@@ -161,6 +163,11 @@ function App() {
                 <Route path="/admin/access-codes" element={<AccessCodesPage />} />
                 <Route path="/admin/reconciliations" element={<ReconciliationsPage />} />
                 <Route path="/admin/portal-tokens" element={<PortalTokensPage />} />
+              </Route>
+
+              {/* wai_health_lead owns this area fully; registrations_officer gets
+                  view-only access (admin.routes.ts enforces the write-action split). */}
+              <Route element={<RequireRole roles={[...ADMIN_ONLY_ROLES, 'wai_health_lead', 'registrations_officer']} />}>
                 <Route path="/admin/wai-health" element={<WaiHealthPage />} />
               </Route>
 
@@ -209,7 +216,17 @@ function App() {
               <Route
                 element={
                   <RequireRole
-                    roles={['super_admin', 'admin', 'registrations_officer', 'innovator_lead', 'exhibitor_lead', 'abstract_lead', 'rapporteur_lead', 'viewer']}
+                    roles={[
+                      'super_admin',
+                      'admin',
+                      'registrations_officer',
+                      'innovator_lead',
+                      'exhibitor_lead',
+                      'abstract_lead',
+                      'rapporteur_lead',
+                      'wai_health_lead',
+                      'viewer',
+                    ]}
                   />
                 }
               >

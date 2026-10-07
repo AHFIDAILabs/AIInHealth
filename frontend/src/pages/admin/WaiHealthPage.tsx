@@ -1,30 +1,65 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, X, Users, Download, CheckCircle2 } from 'lucide-react';
+import { Search, X, Users, Download, CheckCircle2, Clock, Ban, Send } from 'lucide-react';
 import {
   adminListWaiHealth,
   adminExportWaiHealthUrl,
   adminFetchWaiHealthSettings,
   adminSetWaiHealthCapacity,
+  adminNotifyNotEligible,
+  adminBulkNotifyNotEligible,
   type AdminWaiHealthRegistration,
+  type WaiHealthGender,
 } from '../../services/waiHealth.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
+
+const RsvpBadge = ({ r }: { r: AdminWaiHealthRegistration }) => {
+  if (r.declined) {
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-[11px] font-semibold text-danger">
+        <Ban size={11} /> Declined
+      </span>
+    );
+  }
+  if (r.rsvpConfirmedAt) {
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
+        <CheckCircle2 size={11} /> Confirmed
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
+      <Clock size={11} /> Pending
+    </span>
+  );
+};
 
 export const WaiHealthPage = () => {
   const toast = useToast();
+  const { user } = useAuth();
+  // registrations_officer gets view-only access to this page (list, filters,
+  // export, detail drawer) — admin.routes.ts already enforces this at the API
+  // level for capacity/notify-not-eligible; this just keeps those controls
+  // from appearing for a role that would only get a 403 clicking them.
+  const canManage = user?.role !== 'registrations_officer';
 
   const [items, setItems] = useState<AdminWaiHealthRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
+  const [gender, setGender] = useState<WaiHealthGender | ''>('');
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
 
   const [active, setActive] = useState<AdminWaiHealthRegistration | null>(null);
+  const [notifying, setNotifying] = useState(false);
+  const [bulkNotifying, setBulkNotifying] = useState(false);
 
   const [capacity, setCapacity] = useState<number | null>(null);
   const [confirmedCount, setConfirmedCount] = useState(0);
@@ -34,7 +69,7 @@ export const WaiHealthPage = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError('');
-    adminListWaiHealth({ q: q || undefined, page, limit: 20 })
+    adminListWaiHealth({ q: q || undefined, gender: gender || undefined, page, limit: 20 })
       .then((res) => {
         setItems(res.items);
         setPages(res.pages);
@@ -42,7 +77,7 @@ export const WaiHealthPage = () => {
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [q, page]);
+  }, [q, gender, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
@@ -78,6 +113,41 @@ export const WaiHealthPage = () => {
     }
   };
 
+  const notifyOne = async (reg: AdminWaiHealthRegistration) => {
+    if (!window.confirm(`Send ${reg.fullName} the "not eligible" notice? This also releases their seat if they'd RSVP'd.`)) return;
+    setNotifying(true);
+    try {
+      await adminNotifyNotEligible(reg._id);
+      toast('success', 'Notice sent');
+      load();
+      adminFetchWaiHealthSettings()
+        .then((s) => setConfirmedCount(s.confirmedCount))
+        .catch(() => {});
+      setActive(null);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setNotifying(false);
+    }
+  };
+
+  const notifyAllMale = async () => {
+    if (!window.confirm('Send the "not eligible" notice to EVERY Male registrant not yet notified? This releases any seats they held.')) return;
+    setBulkNotifying(true);
+    try {
+      const res = await adminBulkNotifyNotEligible();
+      toast('success', `Sent to ${res.sent} of ${res.attempted}${res.failed ? ` (${res.failed} failed)` : ''}`);
+      load();
+      adminFetchWaiHealthSettings()
+        .then((s) => setConfirmedCount(s.confirmedCount))
+        .catch(() => {});
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setBulkNotifying(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -87,12 +157,23 @@ export const WaiHealthPage = () => {
             {total} registration{total === 1 ? '' : 's'}
           </p>
         </div>
-        <a
-          href={adminExportWaiHealthUrl({ q: q || undefined })}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy hover:border-orange/40"
-        >
-          <Download size={16} /> Export CSV
-        </a>
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <button
+              onClick={notifyAllMale}
+              disabled={bulkNotifying}
+              className="flex items-center gap-2 rounded-xl border border-danger/30 bg-white px-4 py-2.5 text-[13px] font-semibold text-danger hover:bg-danger/5 disabled:opacity-50"
+            >
+              <Send size={16} /> {bulkNotifying ? 'Sending…' : 'Notify all Male registrants'}
+            </button>
+          )}
+          <a
+            href={adminExportWaiHealthUrl({ q: q || undefined })}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy hover:border-orange/40"
+          >
+            <Download size={16} /> Export CSV
+          </a>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-card sm:flex-row sm:items-center sm:justify-between">
@@ -100,22 +181,24 @@ export const WaiHealthPage = () => {
           <span className="font-semibold text-navy">{confirmedCount}</span> of{' '}
           <span className="font-semibold text-navy">{capacity ?? '…'}</span> spots filled
         </p>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min={1}
-            value={capacityInput}
-            onChange={(e) => setCapacityInput(e.target.value)}
-            className="w-24 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
-          />
-          <button
-            onClick={saveCapacity}
-            disabled={savingCapacity || capacityInput === String(capacity)}
-            className="rounded-lg bg-orange px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-orange-hover disabled:opacity-50"
-          >
-            {savingCapacity ? 'Saving…' : 'Update Capacity'}
-          </button>
-        </div>
+        {canManage && (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              value={capacityInput}
+              onChange={(e) => setCapacityInput(e.target.value)}
+              className="w-24 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+            />
+            <button
+              onClick={saveCapacity}
+              disabled={savingCapacity || capacityInput === String(capacity)}
+              className="rounded-lg bg-orange px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-orange-hover disabled:opacity-50"
+            >
+              {savingCapacity ? 'Saving…' : 'Update Capacity'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -130,6 +213,22 @@ export const WaiHealthPage = () => {
             placeholder="Search by name, email, or organization..."
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
           />
+        </div>
+        <div className="flex gap-2">
+          {(['', 'female', 'male'] as const).map((g) => (
+            <button
+              key={g || 'all'}
+              onClick={() => {
+                setPage(1);
+                setGender(g);
+              }}
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-medium capitalize ${
+                gender === g ? 'border-orange bg-orange text-white' : 'border-slate-200 text-slate-600'
+              }`}
+            >
+              {g || 'All'}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -157,6 +256,8 @@ export const WaiHealthPage = () => {
               <thead className="border-b border-slate-100 bg-offwhite/60 text-[11px] uppercase tracking-wide text-slate-400">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Name</th>
+                  <th className="px-3 py-3 font-semibold">Gender</th>
+                  <th className="px-3 py-3 font-semibold">RSVP</th>
                   <th className="px-3 py-3 font-semibold">Organization</th>
                   <th className="px-3 py-3 font-semibold">Network</th>
                   <th className="px-3 py-3 font-semibold">Summit Registration</th>
@@ -169,6 +270,10 @@ export const WaiHealthPage = () => {
                     <td className="px-4 py-3">
                       <p className="font-medium text-navy">{r.fullName}</p>
                       <p className="text-xs text-slate-400">{r.email}</p>
+                    </td>
+                    <td className="px-3 py-3 capitalize text-slate-500">{r.gender}</td>
+                    <td className="px-3 py-3">
+                      <RsvpBadge r={r} />
                     </td>
                     <td className="px-3 py-3 text-slate-500">{r.organization}</td>
                     <td className="px-3 py-3 text-slate-500">{r.coHostNetwork || '—'}</td>
@@ -263,9 +368,15 @@ export const WaiHealthPage = () => {
                     <p className="text-[11px] uppercase tracking-wide text-slate-400">Women's Network</p>
                     <p className="text-navy">{active.coHostNetwork || '—'}</p>
                   </div>
-                  <div className="col-span-2">
-                    <p className="text-[11px] uppercase tracking-wide text-slate-400">Confirmed Eligibility</p>
-                    <p className="text-navy">{active.confirmsWomen ? 'Yes' : '—'}</p>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-slate-400">Gender</p>
+                    <p className="capitalize text-navy">{active.gender}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-slate-400">RSVP</p>
+                    <div className="mt-0.5">
+                      <RsvpBadge r={active} />
+                    </div>
                   </div>
                 </div>
 
@@ -283,6 +394,18 @@ export const WaiHealthPage = () => {
 
                 <p className="text-xs text-slate-400">Submitted {new Date(active.createdAt).toLocaleString()}</p>
               </div>
+
+              {canManage && !active.declined && (
+                <div className="border-t border-slate-100 px-5 py-4">
+                  <button
+                    onClick={() => notifyOne(active)}
+                    disabled={notifying}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-danger/30 py-2.5 text-[13px] font-semibold text-danger hover:bg-danger/5 disabled:opacity-50"
+                  >
+                    <Send size={15} /> Send Not Eligible Email
+                  </button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

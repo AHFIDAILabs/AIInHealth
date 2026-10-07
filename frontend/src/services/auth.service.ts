@@ -11,6 +11,7 @@ export const ROLES = [
   'exhibitor_lead',
   'abstract_lead',
   'rapporteur_lead',
+  'wai_health_lead',
   'viewer',
 ] as const;
 export type Role = (typeof ROLES)[number];

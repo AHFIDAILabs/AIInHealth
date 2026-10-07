@@ -9,6 +9,7 @@ type Role =
   | 'exhibitor_lead'
   | 'abstract_lead'
   | 'rapporteur_lead'
+  | 'wai_health_lead'
   | 'viewer';
 
 const ROLES: { key: Role; label: string; blurb: string }[] = [
@@ -19,6 +20,7 @@ const ROLES: { key: Role; label: string; blurb: string }[] = [
   { key: 'exhibitor_lead', label: 'Exhibitor Lead', blurb: 'Reviews and manages Exhibitor registrations, stats, and leads only.' },
   { key: 'abstract_lead', label: 'Abstract Lead', blurb: 'Owns abstract review, the rubric, reviewers, and confirmed abstracts.' },
   { key: 'rapporteur_lead', label: 'Rapporteur Lead', blurb: 'Owns rapporteur assignment, reports, and live transcript monitoring.' },
+  { key: 'wai_health_lead', label: 'WAI-Health Lead', blurb: 'Owns the Women in AI & Health Breakfast registrations, capacity, and eligibility notices.' },
   { key: 'viewer', label: 'Viewer', blurb: 'Read-only — dashboards, registrations, and the audit log.' },
 ];
 
@@ -35,6 +37,7 @@ const FULL_ALL: Row['access'] = {
   exhibitor_lead: 'full',
   abstract_lead: 'full',
   rapporteur_lead: 'full',
+  wai_health_lead: 'full',
   viewer: 'full',
 };
 
@@ -55,6 +58,10 @@ const SECTIONS: { section: string; rows: Row[] }[] = [
       { area: 'Payments', access: { super_admin: 'full', admin: 'full', viewer: 'view' } },
       { area: 'Reconciliations / Portal Tokens', access: { super_admin: 'full', admin: 'full' } },
       { area: 'Check-In', access: { super_admin: 'full', admin: 'full', registrations_officer: 'full' } },
+      {
+        area: 'Women in AI & Health Breakfast (capacity/eligibility notices are wai_health_lead-only; Registrations Officer is view-only)',
+        access: { super_admin: 'full', admin: 'full', wai_health_lead: 'full', registrations_officer: 'view' },
+      },
     ],
   },
   {
@@ -104,7 +111,7 @@ export const RolesPermissionsPage = () => (
     <div>
       <h1 className="font-display text-2xl font-semibold text-navy">Roles &amp; Permissions</h1>
       <p className="text-sm text-slate-500">
-        A reference for what each of the 8 fixed admin roles can access. Roles are assigned per-account from Users — this page is read-only. The
+        A reference for what each of the 9 fixed admin roles can access. Roles are assigned per-account from Users — this page is read-only. The
         Security Command Center is gated separately on the one originally-seeded account, not by role.
       </p>
     </div>

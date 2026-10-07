@@ -19,6 +19,7 @@ const ROLE_LABEL: Record<Role, string> = {
   exhibitor_lead: 'Exhibitor Lead',
   abstract_lead: 'Abstract Lead',
   rapporteur_lead: 'Rapporteur Lead',
+  wai_health_lead: 'WAI-Health Lead',
   viewer: 'Viewer',
 };
 

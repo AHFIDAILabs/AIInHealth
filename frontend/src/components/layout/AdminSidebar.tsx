@@ -51,6 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
   exhibitor_lead: 'Exhibitor Lead',
   abstract_lead: 'Abstract Lead',
   rapporteur_lead: 'Rapporteur Lead',
+  wai_health_lead: 'WAI-Health Lead',
   viewer: 'Viewer',
 };
 
@@ -80,6 +81,7 @@ const allRoles: Role[] = [
   'exhibitor_lead',
   'abstract_lead',
   'rapporteur_lead',
+  'wai_health_lead',
   'viewer',
 ];
 
@@ -103,7 +105,12 @@ const NAV_SECTIONS: NavSection[] = [
       },
       { label: 'Payments', to: '/admin/payments', icon: CreditCard, roles: [...adminOnlyRoles, 'viewer'] },
       { label: 'Reconciliations', to: '/admin/reconciliations', icon: Scale, roles: adminOnlyRoles },
-      { label: 'Women in AI & Health', to: '/admin/wai-health', icon: Coffee, roles: adminOnlyRoles },
+      {
+        label: 'Women in AI & Health',
+        to: '/admin/wai-health',
+        icon: Coffee,
+        roles: [...adminOnlyRoles, 'wai_health_lead', 'registrations_officer'],
+      },
       { label: 'Check-In', to: '/admin/check-in', icon: ScanLine, roles: registrationRoles },
     ],
   },

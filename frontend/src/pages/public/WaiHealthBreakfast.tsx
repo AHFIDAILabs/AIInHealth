@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,7 +11,7 @@ import { LightField } from '../../components/ui/LightField';
 import { HoneypotField } from '../../components/ui/HoneypotField';
 import { RegisterSuccess } from '../../components/register/RegisterSuccess';
 import { IdCardUpload } from '../../components/register/IdCardUpload';
-import { submitWaiHealthRegistration, linkWaiHealthRegistration, fetchWaiHealthStatus } from '../../services/waiHealth.service';
+import { submitWaiHealthRegistration, linkWaiHealthRegistration } from '../../services/waiHealth.service';
 import { submitRegistration, ID_VERIFICATION_TICKET_CATEGORIES, type TicketCategory } from '../../services/registration.service';
 import { initializePayment } from '../../services/payment.service';
 import { getApiErrorMessage } from '../../services/api';
@@ -37,9 +37,7 @@ const schema = z
     jobTitle: z.string().trim().max(200).optional(),
     country: z.string().trim().min(2, 'Enter your country'),
     coHostNetwork: z.string().trim().max(200).optional(),
-    confirmsWomen: z.literal(true, {
-      errorMap: () => ({ message: 'Please confirm you identify as a woman to register for this session.' }),
-    }),
+    gender: z.enum(['female', 'male'], { errorMap: () => ({ message: 'Select Male or Female.' }) }),
     middleName: z.string().max(0).optional(),
     // Summit opt-in — only required/validated when alsoRegister is checked.
     alsoRegister: z.boolean(),
@@ -71,14 +69,7 @@ export const WaiHealthBreakfast = () => {
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
-  const [full, setFull] = useState(false);
   const formToken = useFormToken();
-
-  useEffect(() => {
-    fetchWaiHealthStatus()
-      .then((s) => setFull(s.full))
-      .catch(() => {});
-  }, []);
 
   const {
     register,
@@ -104,7 +95,7 @@ export const WaiHealthBreakfast = () => {
         jobTitle: values.jobTitle,
         country: values.country,
         coHostNetwork: values.coHostNetwork,
-        confirmsWomen: values.confirmsWomen,
+        gender: values.gender,
         middleName: values.middleName,
         formToken,
       });
@@ -143,10 +134,10 @@ export const WaiHealthBreakfast = () => {
         }
         setConfirmation(message);
       } catch (err) {
-        // Breakfast seat is already confirmed at this point — don't lose that
-        // confirmation just because the Summit opt-in failed.
+        // Breakfast signup already went through at this point — don't lose
+        // that just because the Summit opt-in failed.
         setServerError(
-          `Your Breakfast seat is confirmed. We couldn't complete your Summit registration: ${getApiErrorMessage(err)}. You can register separately any time at /register.`
+          `You're on the list for the Breakfast. We couldn't complete your Summit registration: ${getApiErrorMessage(err)}. You can register separately any time at /register.`
         );
       }
     } catch (err) {
@@ -158,25 +149,6 @@ export const WaiHealthBreakfast = () => {
     reset({ alsoRegister: false });
     setConfirmation(null);
   };
-
-  if (full && !confirmation) {
-    return (
-      <>
-        <PageHero
-          eyebrow="Day 1 · 08:00–09:00"
-          title="Women in AI & Health Breakfast"
-          subtitle="Leading the Future: Women's Voices Shaping AI and Health in Africa"
-        />
-        <section className="bg-offwhite py-16">
-          <Reveal className="mx-auto max-w-2xl px-4 text-center sm:px-6 lg:px-8">
-            <Banner variant="info">
-              The Breakfast is at capacity. Please contact AHFID directly if you'd like to be added to the waitlist.
-            </Banner>
-          </Reveal>
-        </section>
-      </>
-    );
-  }
 
   return (
     <>
@@ -202,7 +174,7 @@ export const WaiHealthBreakfast = () => {
                 {serverError && <Banner variant="error">{serverError}</Banner>}
 
                 <p className="rounded-xl border border-orange/20 bg-orange/5 px-4 py-3 text-sm text-navy">
-                  This session is reserved for women leaders across health, technology, research, and innovation.
+                  This session is an in-person, closed door, invite-only, special breakfast session. It  is reserved for women leaders across health, technology, research, and innovation.
                 </p>
 
                 <LightField label="Full Name" error={errors.fullName?.message} {...register('fullName')} />
@@ -225,11 +197,18 @@ export const WaiHealthBreakfast = () => {
                 </div>
 
                 <div>
-                  <label className="flex items-start gap-3 rounded-xl border border-slate-200 px-4 py-3.5">
-                    <input type="checkbox" className="mt-0.5 h-4 w-4 accent-orange" {...register('confirmsWomen')} />
-                    <span className="text-sm text-navy">I confirm I identify as a woman.</span>
-                  </label>
-                  {errors.confirmsWomen && <p className="mt-1.5 text-xs text-danger">{errors.confirmsWomen.message}</p>}
+                  <label className="mb-1.5 block text-[13px] font-semibold text-navy">Gender</label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3.5">
+                      <input type="radio" value="female" className="h-4 w-4 accent-orange" {...register('gender')} />
+                      <span className="text-sm text-navy">Female</span>
+                    </label>
+                    <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3.5">
+                      <input type="radio" value="male" className="h-4 w-4 accent-orange" {...register('gender')} />
+                      <span className="text-sm text-navy">Male</span>
+                    </label>
+                  </div>
+                  {errors.gender && <p className="mt-1.5 text-xs text-danger">{errors.gender.message}</p>}
                 </div>
 
                 <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-offwhite px-4 py-3.5">
