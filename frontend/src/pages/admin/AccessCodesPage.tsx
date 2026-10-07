@@ -7,6 +7,7 @@ import {
   adminRevokeAccessCode,
   adminSendAccessCode,
   ACCESS_CODE_TYPES,
+  SINGLE_GENERATE_ACCESS_CODE_TYPES,
   ACCESS_CODE_STATUSES,
   ACCESS_CODE_DISCOUNTS,
   PRESENTATION_TYPES,
@@ -38,6 +39,9 @@ const TYPE_LABEL: Record<AccessCodeType, string> = {
   abstract_reviewer: 'Abstract Reviewer',
   exhibitor: 'Exhibitor (Pre-Approved)',
   innovator: 'Innovator (Pre-Approved)',
+  // Generated from the separate Access Code Batches page, not this one's
+  // "Generate Codes" form — see SINGLE_GENERATE_ACCESS_CODE_TYPES.
+  bulk_invite: 'Group Invite (Batch)',
 };
 
 const PRESENTATION_TYPE_LABEL: Record<PresentationType, string> = { oral: 'Oral Presenter', poster: 'Poster Presenter' };
@@ -404,7 +408,7 @@ export const AccessCodesPage = () => {
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value as AccessCodeType, discountPercent: '', presentationType: '' })}
                 >
-                  {ACCESS_CODE_TYPES.map((t) => (
+                  {SINGLE_GENERATE_ACCESS_CODE_TYPES.map((t) => (
                     <option key={t} value={t}>
                       {TYPE_LABEL[t]}
                     </option>

@@ -37,6 +37,8 @@ import {
   Mic,
   Coffee,
   MessageCircle,
+  Layers,
+  UserCheck,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -97,6 +99,7 @@ const NAV_SECTIONS: NavSection[] = [
       // Access Codes/Payments/Reconciliations/Portal Tokens are deliberately
       // narrowed off registrations_officer — admin/super_admin only.
       { label: 'Access Codes', to: '/admin/access-codes', icon: KeyRound, roles: adminOnlyRoles },
+      { label: 'Access Code Batches', to: '/admin/access-code-batches', icon: Layers, roles: adminOnlyRoles },
       {
         label: 'Sponsorship Applications',
         to: '/admin/scholarship-applications',
@@ -135,6 +138,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'People',
     items: [
       { label: 'Attendees', to: '/admin/attendees', icon: UserPlus, roles: [...registrationRoles, 'viewer'] },
+      { label: 'Confirmed Attendees', to: '/admin/attendees?status=confirmed', icon: UserCheck, roles: [...registrationRoles, 'viewer'] },
       { label: 'Exhibitors', to: '/admin/exhibitors', icon: Building2, roles: [...registrationRoles, 'viewer', 'exhibitor_lead'] },
       { label: 'Innovators', to: '/admin/innovators', icon: Lightbulb, roles: [...registrationRoles, 'viewer', 'innovator_lead'] },
       { label: 'Volunteers', to: '/admin/registrations?type=volunteer', icon: HeartHandshake, roles: [...registrationRoles, 'viewer'] },

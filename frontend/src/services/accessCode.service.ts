@@ -13,8 +13,20 @@ export const ACCESS_CODE_TYPES = [
   // queue on the Exhibitor/Innovator tab — see backend enums.ts's comment.
   'exhibitor',
   'innovator',
+  // Anonymous, batch-generated, 48h-expiring codes — see
+  // accessCodeBatch.service.ts, not this file's adminGenerateAccessCodes
+  // (its one-code-per-listed-email shape doesn't fit this type; the backend
+  // rejects it there too). Included here only so the type/status filters and
+  // TYPE_LABEL on AccessCodesPage.tsx render real labels for these when
+  // they show up in the shared flat list.
+  'bulk_invite',
 ] as const;
 export type AccessCodeType = (typeof ACCESS_CODE_TYPES)[number];
+
+// The subset of ACCESS_CODE_TYPES selectable on the single-code "Generate
+// Codes" form (AccessCodesPage.tsx) — excludes bulk_invite, whose batch shape
+// is generated from the separate Access Code Batches page instead.
+export const SINGLE_GENERATE_ACCESS_CODE_TYPES = ACCESS_CODE_TYPES.filter((t) => t !== 'bulk_invite');
 
 export const ACCESS_CODE_STATUSES = ['unused', 'used', 'revoked'] as const;
 export type AccessCodeStatus = (typeof ACCESS_CODE_STATUSES)[number];

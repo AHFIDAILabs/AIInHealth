@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +11,7 @@ import { Button } from '../../components/ui/Button';
 import { Banner } from '../../components/ui/Banner';
 import { LightField, LightTextArea, LightSelect } from '../../components/ui/LightField';
 import { RegisterSuccess } from '../../components/register/RegisterSuccess';
+import { AttendeeForm } from '../../components/register/AttendeeForm';
 import {
   submitScholarshipApplication,
   uploadScholarshipDocument,
@@ -70,6 +72,8 @@ const ALLOWED_DOCUMENT_EXTENSIONS = ['.pdf', '.docx', '.txt', '.md'];
 
 export const ScholarshipApplication = () => {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const inviteCode = searchParams.get('code');
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
@@ -143,6 +147,35 @@ export const ScholarshipApplication = () => {
     removeDocument();
     setConfirmation(null);
   };
+
+  // Reached via an accessCodeBatch.controller.ts-generated card link
+  // (`/sponsored-delegates?code=...`) — the code already covers the
+  // registration fee in full, so skip the application-and-wait-for-review
+  // form entirely and drop straight into the real Attendee form, pre-filled
+  // with this code (AttendeeForm's defaultAccessCode prop).
+  if (inviteCode) {
+    return (
+      <>
+        <SEO
+          title="You're Invited | AI in Health Summit 2026"
+          description="Complete your free registration for the AI in Health Summit 2026 in Abuja, Nigeria."
+          path="/sponsored-delegates"
+        />
+        <PageHero
+          eyebrow={t('sponsorship.eyebrow', 'Sponsorships')}
+          title="You're Invited"
+          subtitle="You've been sent a free registration code for the AI in Health Summit 2026 — complete the form below to claim your seat."
+        />
+        <section className="bg-offwhite pb-16 pt-16 sm:pt-20">
+          <Reveal className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-glow-subtle sm:p-9">
+              <AttendeeForm defaultAccessCode={inviteCode} />
+            </div>
+          </Reveal>
+        </section>
+      </>
+    );
+  }
 
   return (
     <>

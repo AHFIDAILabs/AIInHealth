@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, Download, X, Users, UserCheck, QrCode, Wallet, Plus, Trash2, Ban, IdCard } from 'lucide-react';
 import {
@@ -70,6 +71,7 @@ const EMPTY_FORM: AddFormState = {
 
 export const AttendeesPage = () => {
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<AdminRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -77,7 +79,11 @@ export const AttendeesPage = () => {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [q, setQ] = useState('');
-  const [status, setStatus] = useState<RegistrationStatus | ''>('');
+  // Seeded from the URL (e.g. the "Confirmed Attendees" sidebar link and the
+  // "Confirmed" stat tile below both deep-link to ?status=confirmed) so this
+  // same page/route doubles as a dedicated, bookmarkable view without a
+  // second component.
+  const [status, setStatus] = useState<RegistrationStatus | ''>(() => (searchParams.get('status') as RegistrationStatus | null) ?? '');
   const [paymentStatus, setPaymentStatus] = useState<AdminRegistration['paymentStatus'] | ''>('');
 
   const [stats, setStats] = useState<AttendeeStats | null>(null);
@@ -242,7 +248,20 @@ export const AttendeesPage = () => {
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <AnalyticsStatCard icon={Users} label="Total Attendees" value={stats?.total ?? null} />
-        <AnalyticsStatCard icon={UserCheck} label="Confirmed" value={stats?.confirmed ?? null} />
+        <AnalyticsStatCard
+          icon={UserCheck}
+          label="Confirmed"
+          value={stats?.confirmed ?? null}
+          onClick={() => {
+            setPage(1);
+            setStatus('confirmed');
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              next.set('status', 'confirmed');
+              return next;
+            });
+          }}
+        />
         <AnalyticsStatCard icon={QrCode} label="Checked In" value={stats?.checkedIn ?? null} suffix={stats ? `(${stats.checkInRate}%)` : undefined} />
         <AnalyticsStatCard icon={Wallet} label="Revenue" value={stats ? formatNaira(stats.revenueNaira) : null} />
       </div>

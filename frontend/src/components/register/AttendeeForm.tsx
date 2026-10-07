@@ -89,7 +89,15 @@ const schema = z
   });
 type FormValues = z.infer<typeof schema>;
 
-export const AttendeeForm = () => {
+interface AttendeeFormProps {
+  // Seeds the Access Code field — used by ScholarshipApplication.tsx when
+  // it's reached via a `/sponsored-delegates?code=...` link (an
+  // accessCodeBatch.controller.ts-generated bulk_invite code), so the person
+  // doesn't have to re-type what was already in their link.
+  defaultAccessCode?: string;
+}
+
+export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
   const [step, setStep] = useState<0 | 1>(0);
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -105,7 +113,10 @@ export const AttendeeForm = () => {
     setValue,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { groupAttendees: [] } });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { groupAttendees: [], accessCode: defaultAccessCode ?? '' },
+  });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'groupAttendees' });
   const mode = watch('registrationMode');

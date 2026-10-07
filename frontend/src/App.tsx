@@ -58,6 +58,7 @@ import { InnovationsPage } from './pages/admin/InnovationsPage';
 import { InnovationShowcaseEntriesPage } from './pages/admin/InnovationShowcaseEntriesPage';
 import { ConfirmedAbstractsPage } from './pages/admin/ConfirmedAbstractsPage';
 import { AccessCodesPage } from './pages/admin/AccessCodesPage';
+import { AccessCodeBatchesPage } from './pages/admin/AccessCodeBatchesPage';
 import { WhatsAppConversationsPage } from './pages/admin/WhatsAppConversationsPage';
 import { InquiriesPage } from './pages/admin/InquiriesPage';
 import { MessagesPage } from './pages/admin/MessagesPage';
@@ -161,6 +162,7 @@ function App() {
                   matching routes. */}
               <Route element={<RequireRole roles={[...ADMIN_ONLY_ROLES]} />}>
                 <Route path="/admin/access-codes" element={<AccessCodesPage />} />
+                <Route path="/admin/access-code-batches" element={<AccessCodeBatchesPage />} />
                 <Route path="/admin/reconciliations" element={<ReconciliationsPage />} />
                 <Route path="/admin/portal-tokens" element={<PortalTokensPage />} />
               </Route>
