@@ -1,4 +1,4 @@
-// Per-area staff roles — each of the 4 "lead" roles is scoped to exactly one
+// Per-area staff roles — each of the 5 "lead" roles is scoped to exactly one
 // functional area (see registration.controller.ts's ROLE_REGISTRATION_TYPES
 // and admin.routes.ts's per-route requireRole() calls). 'admin' has full
 // operational access everywhere except Users/Event Team/Integrations
@@ -8,6 +8,14 @@
 // with the unrelated existing uses of those words: RegistrationType's
 // 'innovator'/'exhibitor' values, EventTeamMember's free-text role field, and
 // ACCESS_CODE_TYPES' 'staff'.
+//
+// wai_health_lead is scoped differently from the other leads — it does NOT
+// get a row in ROLE_REGISTRATION_TYPES (no browse access to the main
+// Registrations page at all), since the WAI-Health Breakfast's own admin page
+// (waiHealth.controller.ts) already shows, per registrant, whether they also
+// hold a Summit Registration and that registration's status/ticket category —
+// giving this role the Registrations page too would expose every Summit
+// attendee, not just the ones linked from a Breakfast signup.
 export const ROLES = [
   'super_admin',
   'admin',
@@ -16,6 +24,7 @@ export const ROLES = [
   'exhibitor_lead',
   'abstract_lead',
   'rapporteur_lead',
+  'wai_health_lead',
   'viewer',
 ] as const;
 export type Role = (typeof ROLES)[number];

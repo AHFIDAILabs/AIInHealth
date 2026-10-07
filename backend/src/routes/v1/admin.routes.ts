@@ -83,7 +83,17 @@ router.use(requireAuth);
 
 // Every /admin/* role, listed once since several cross-cutting routes (dashboard,
 // search, analytics, notifications, push) are open to all of them.
-const allRoles = ['super_admin', 'admin', 'registrations_officer', 'innovator_lead', 'exhibitor_lead', 'abstract_lead', 'rapporteur_lead', 'viewer'] as const;
+const allRoles = [
+  'super_admin',
+  'admin',
+  'registrations_officer',
+  'innovator_lead',
+  'exhibitor_lead',
+  'abstract_lead',
+  'rapporteur_lead',
+  'wai_health_lead',
+  'viewer',
+] as const;
 
 router.get('/dashboard', requireRole(...allRoles), adminController.dashboardStats);
 
@@ -172,15 +182,40 @@ router.patch(
 );
 
 // Women in AI & Health Breakfast — a new, separate event-registration area,
-// not folded into the core registrations_officer scope.
-router.get('/wai-health', requireRole('super_admin', 'admin'), waiHealthController.adminList);
-router.get('/wai-health/export', requireRole('super_admin', 'admin'), waiHealthController.adminExport);
-router.get('/wai-health/settings', requireRole('super_admin', 'admin'), waiHealthController.adminGetSettings);
+// not folded into the core registrations_officer scope. wai_health_lead owns
+// this area fully (same "full control of their own area" shape as
+// innovator_lead/exhibitor_lead), but — unlike those two — gets no admittance
+// to the main Registrations page; see types/enums.ts's comment for why.
+// registrations_officer gets VIEW access only (list/export/capacity reading)
+// — not the capacity PUT or either notify-not-eligible action below, same
+// "visibility without the sensitive write actions" split this role already
+// has elsewhere (e.g. Payments' adminStats vs its mutations).
+router.get('/wai-health', requireRole('super_admin', 'admin', 'wai_health_lead', 'registrations_officer'), waiHealthController.adminList);
+router.get(
+  '/wai-health/export',
+  requireRole('super_admin', 'admin', 'wai_health_lead', 'registrations_officer'),
+  waiHealthController.adminExport
+);
+router.get(
+  '/wai-health/settings',
+  requireRole('super_admin', 'admin', 'wai_health_lead', 'registrations_officer'),
+  waiHealthController.adminGetSettings
+);
 router.put(
   '/wai-health/settings',
-  requireRole('super_admin', 'admin'),
+  requireRole('super_admin', 'admin', 'wai_health_lead'),
   validate(setWaiHealthCapacitySchema),
   waiHealthController.adminSetCapacity
+);
+router.post(
+  '/wai-health/:id/notify-not-eligible',
+  requireRole('super_admin', 'admin', 'wai_health_lead'),
+  waiHealthController.adminNotifyNotEligible
+);
+router.post(
+  '/wai-health/notify-not-eligible/bulk',
+  requireRole('super_admin', 'admin', 'wai_health_lead'),
+  waiHealthController.adminBulkNotifyNotEligible
 );
 
 // WhatsApp Concierge — new area, not registrations_officer's territory,

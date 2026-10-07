@@ -299,19 +299,70 @@ export const sendSponsorshipReceivedEmail = async (to: string, fullName: string)
   });
 };
 
-// waiHealth.controller.ts's register() — the Breakfast's own confirmation,
-// separate from (and sent regardless of) whether the registrant also opted
-// into a full Summit registration through the same form; that opt-in, if
-// taken, gets its own normal confirmation/payment-link email unchanged.
-export const sendWaiHealthConfirmationEmail = async (to: string, fullName: string): Promise<void> => {
+// Table-based, inline-styled "button" — same email-client-safety reasoning as
+// wrapEmailBody's header/footer above (no flexbox/gradients, Outlook's
+// Word-engine renders plain table+bgcolor reliably). Shared by every CTA
+// email below that wants something more prominent than a bare <a> link.
+const emailButton = (href: string, label: string): string => `
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px 0;">
+    <tr>
+      <td bgcolor="#E8792C" style="border-radius:8px;">
+        <a href="${href}" style="display:inline-block;padding:12px 26px;color:#ffffff;font-size:14px;font-weight:bold;text-decoration:none;border-radius:8px;">${label}</a>
+      </td>
+    </tr>
+  </table>
+`;
+
+// waiHealth.controller.ts's register() — sent on SIGNUP, separate from (and
+// regardless of) whether the registrant also opted into a full Summit
+// registration through the same form; that opt-in, if taken, gets its own
+// normal confirmation/payment-link email unchanged. Deliberately does NOT
+// promise a seat — signup is uncapped; this just asks them to confirm via the
+// RSVP link, which is what actually reserves one (see rsvp()'s own
+// sendWaiHealthRsvpConfirmedEmail below for the "you're confirmed" follow-up).
+export const sendWaiHealthConfirmationEmail = async (to: string, fullName: string, rsvpToken: string): Promise<void> => {
+  const rsvpUrl = `${env.FRONTEND_ORIGIN}/wai-health-breakfast/rsvp/${rsvpToken}`;
   await sendEmail({
     to,
-    subject: "You're on the list: Women in AI & Health Breakfast",
+    subject: 'Please confirm: Women in AI & Health Breakfast',
     html: `
       <p>Hi ${fullName},</p>
-      <p>Thanks for registering for the Women in AI & Health Breakfast, the opening session of Day 1 of the AI in Health Summit 2026.</p>
+      <p>Thanks for your interest in the Women in AI & Health Breakfast Session, the opening session of Day 1 of the AI in Health Summit 2026.</p>
+      <p>Seats are limited and given on a first-confirmed basis — click below to confirm you'll attend and reserve your seat.</p>
+      ${emailButton(rsvpUrl, "Confirm my seat")}
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
+// rsvp() — sent only once a seat is actually reserved (RSVP link redeemed).
+export const sendWaiHealthRsvpConfirmedEmail = async (to: string, fullName: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "You're confirmed: Women in AI & Health Breakfast",
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>You're confirmed for the Women in AI & Health Breakfast Session, the opening session of Day 1 of the AI in Health Summit 2026.</p>
       <p><strong>When:</strong> 08:00&ndash;09:00, Day 1 (19 October 2026)<br /><strong>Where:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
       <p>We look forward to seeing you there. Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
+// adminNotifyNotEligible/adminBulkNotifyNotEligible (waiHealth.controller.ts)
+// — the Breakfast session is reserved for women leaders; this only ever goes
+// to a registrant whose gender was recorded as 'male'. Explicitly says any
+// separate Summit registration is unaffected — this is a Breakfast-only
+// decision, not a Summit one.
+export const sendWaiHealthNotEligibleEmail = async (to: string, fullName: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Women in AI & Health Breakfast — update on your registration',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Thank you for your interest in the Women in AI & Health Breakfast Session. This session is reserved exclusively for women leaders across health, technology, research, and innovation, so we're unable to admit you to it.</p>
+      <p>If you've also registered for the AI in Health Summit 2026 itself, that registration is unaffected — we look forward to seeing you there.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });
 };

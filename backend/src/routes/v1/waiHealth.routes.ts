@@ -2,7 +2,11 @@ import { Router } from 'express';
 import * as waiHealthController from '../../controllers/waiHealth.controller.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { waiHealthLimiter, apiLimiter } from '../../middlewares/rateLimiter.middleware.js';
-import { createWaiHealthRegistrationSchema, linkWaiHealthRegistrationSchema } from '../../validations/waiHealth.validation.js';
+import {
+  createWaiHealthRegistrationSchema,
+  linkWaiHealthRegistrationSchema,
+  rsvpParamsSchema,
+} from '../../validations/waiHealth.validation.js';
 
 const router = Router();
 
@@ -20,5 +24,8 @@ router.post(
   validate(linkWaiHealthRegistrationSchema),
   waiHealthController.linkRegistration
 );
+
+// The actual seat reservation — see waiHealth.controller.ts's rsvp().
+router.post('/rsvp/:token', waiHealthLimiter, validate(rsvpParamsSchema), waiHealthController.rsvp);
 
 export default router;

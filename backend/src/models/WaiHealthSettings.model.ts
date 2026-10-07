@@ -2,11 +2,13 @@ import { Schema, model, type InferSchemaType } from 'mongoose';
 
 // Singleton, same "findOne-or-create" convention as VolunteerSettings.model.ts
 // / PromoSettings.model.ts — exactly one capacity counter for the Women in AI
-// & Health Breakfast. confirmedCount is reserved atomically BEFORE a
-// WaiHealthRegistration doc is created (waiHealth.controller.ts's register),
-// and rolled back if that create then fails — see that handler's comment for
-// why this needs to be a counter here rather than a raw countDocuments() race
-// check against the registrations collection itself.
+// & Health Breakfast. confirmedCount is reserved atomically when a
+// registrant redeems their RSVP link (waiHealth.controller.ts's rsvp()), NOT
+// when they first sign up — signup itself is uncapped. It's decremented again
+// if an admin later declines that registrant via adminNotifyNotEligible. A
+// counter here (rather than a raw countDocuments() race check against the
+// registrations collection) is what makes the reservation atomic under
+// concurrent RSVP clicks.
 const waiHealthSettingsSchema = new Schema(
   {
     capacity: { type: Number, default: 100, min: 1 },
