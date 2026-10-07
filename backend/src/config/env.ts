@@ -139,6 +139,31 @@ const envSchema = z.object({
   WHISPER_HOURLY_BUDGET: z.coerce.number().int().positive().optional().default(150),
   WHISPER_DAILY_BUDGET: z.coerce.number().int().positive().optional().default(600),
 
+  // WhatsApp bot (whatsapp.controller.ts) — its free-text fallback reuses
+  // rag.service.ts's askConceptNote(), but passes this model instead of that
+  // function's own default (GROQ_MODEL_ADVANCED, what the website widget
+  // uses), and gates calls via aiBudget.service.ts's checkDailyBudget() under
+  // its own 'whatsapp-bot' key rather than a dedicated budget file — that
+  // function is already generic by string key, so a second copy of
+  // whisperBudget.service.ts's shape would just be duplication. This still
+  // only isolates app-level counting, not Groq's own per-model daily ceiling,
+  // which is shared by every caller of that same literal model id regardless
+  // of our bookkeeping — a genuinely separate model id is what actually buys
+  // a separate Groq-side quota. Only gpt-oss-20b/120b are verified live on
+  // this account — re-verify before ever pointing this at a third model.
+  GROQ_MODEL_WHATSAPP: z.string().optional().default('openai/gpt-oss-20b'),
+  AI_DAILY_BUDGET_WHATSAPP: z.coerce.number().int().positive().optional().default(300),
+
+  // Twilio WhatsApp Business API (whatsapp.controller.ts / twilio.service.ts).
+  // Optional/blank-tolerant like every other integration here — the webhook
+  // route itself 503s with a clear message rather than crashing boot if these
+  // are unset (no safe fake fallback exists for an inbound messaging webhook
+  // the way e.g. Paystack's dev no-op has one).
+  TWILIO_ACCOUNT_SID: z.string().optional().default(''),
+  TWILIO_AUTH_TOKEN: z.string().optional().default(''),
+  // Twilio's own 'whatsapp:+1415XXXXXXX' sender format, not a bare number.
+  TWILIO_WHATSAPP_FROM: z.string().optional().default(''),
+
   // Cloudinary — every profile/logo photo upload (admin settings, delegate portal,
   // speakers, partners, innovations) goes here; there's no local-disk fallback.
   // Empty in dev returns a clear 503 from the upload endpoint rather than silently

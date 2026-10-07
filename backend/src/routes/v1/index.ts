@@ -30,6 +30,7 @@ import rapporteurRoutes from './rapporteur.routes.js';
 import knowledgeProductRoutes from './knowledgeProduct.routes.js';
 import formsRoutes from './forms.routes.js';
 import waiHealthRoutes from './waiHealth.routes.js';
+import whatsappRoutes from './whatsapp.routes.js';
 
 const router = Router();
 
@@ -64,5 +65,6 @@ router.use('/rapporteur', rapporteurRoutes);
 router.use('/knowledge-products', knowledgeProductRoutes);
 router.use('/forms', formsRoutes);
 router.use('/wai-health', waiHealthRoutes);
+router.use('/whatsapp', whatsappRoutes);
 
 export default router;

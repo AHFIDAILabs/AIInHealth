@@ -15,6 +15,7 @@ import * as jobController from '../../controllers/job.controller.js';
 import * as accessCodeController from '../../controllers/accessCode.controller.js';
 import * as scholarshipApplicationController from '../../controllers/scholarshipApplication.controller.js';
 import * as waiHealthController from '../../controllers/waiHealth.controller.js';
+import * as whatsappController from '../../controllers/whatsapp.controller.js';
 import * as promoController from '../../controllers/promo.controller.js';
 import * as innovationController from '../../controllers/innovation.controller.js';
 import * as checkinController from '../../controllers/checkin.controller.js';
@@ -181,6 +182,12 @@ router.put(
   validate(setWaiHealthCapacitySchema),
   waiHealthController.adminSetCapacity
 );
+
+// WhatsApp Concierge — new area, not registrations_officer's territory,
+// consistent with how WAI-Health/Access Codes/Payments were scoped above.
+router.get('/whatsapp/conversations', requireRole('super_admin', 'admin'), whatsappController.adminList);
+router.get('/whatsapp/conversations/:id', requireRole('super_admin', 'admin'), whatsappController.adminGet);
+router.post('/whatsapp/conversations/:id/reply', requireRole('super_admin', 'admin'), whatsappController.adminReply);
 
 router.get('/payments-stats', requireRole('super_admin', 'admin', 'viewer'), paymentController.adminStats);
 router.get('/payments/reconciliations', requireRole('super_admin', 'admin'), reconciliationController.list);

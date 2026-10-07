@@ -69,6 +69,11 @@ app.use(
     },
   })
 );
+// Twilio's WhatsApp webhook posts form-encoded, not JSON — its signature
+// scheme (twilio.service.ts) validates the PARSED params against the
+// configured webhook URL, not raw bytes, so this needs no verify callback
+// the way the Paystack json parser above does.
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 app.use(cookieParser());
 app.use(hpp());
 // Every route already validates req.body/req.query through a zod schema before

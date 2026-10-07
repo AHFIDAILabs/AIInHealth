@@ -61,14 +61,24 @@ export interface AskResult {
 const cache = new Map<string, { answer: AskResult; expiresAt: number }>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-const cacheKey = (question: string, lang: AskLang): string =>
+// `discriminator` keeps a caller using a different feature/model (the
+// WhatsApp bot, see whatsapp.controller.ts) from silently reading back an
+// answer the website widget already cached under its own model/budget — the
+// exact same question asked through each path gets its own cache slot.
+const cacheKey = (question: string, lang: AskLang, discriminator: string): string =>
   crypto
     .createHash('sha256')
-    .update(`${lang}:${question.trim().toLowerCase().replace(/\s+/g, ' ')}`)
+    .update(`${discriminator}:${lang}:${question.trim().toLowerCase().replace(/\s+/g, ' ')}`)
     .digest('hex');
 
-export const askConceptNote = async (question: string, lang: AskLang = 'en'): Promise<AskResult> => {
-  const key = cacheKey(question, lang);
+export const askConceptNote = async (
+  question: string,
+  lang: AskLang = 'en',
+  options?: { feature?: string; model?: string }
+): Promise<AskResult> => {
+  const feature = options?.feature ?? 'ask-concept-note';
+  const model = options?.model ?? env.GROQ_MODEL_ADVANCED;
+  const key = cacheKey(question, lang, feature);
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.answer;
 
@@ -121,8 +131,8 @@ export const askConceptNote = async (question: string, lang: AskLang = 'en'): Pr
       .join('\n\n---\n\n');
 
     const answer = await complete({
-      feature: 'ask-concept-note',
-      model: env.GROQ_MODEL_ADVANCED,
+      feature,
+      model,
       messages: [
         { role: 'system', content: systemPrompt(lang) },
         { role: 'user', content: `Context:\n${context}\n\nQuestion: ${question}` },
