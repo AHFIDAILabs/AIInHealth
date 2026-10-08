@@ -148,3 +148,46 @@ export const adminGetOne = catchAsync(async (req: Request, res: Response) => {
 
   res.json(new ApiResponse({ ...batch, codes }));
 });
+
+// POST /admin/access-code-batches/:id/resend — re-sends the same batch email
+// (current template) to the same distributorEmail, for every code originally
+// minted in the batch, unfiltered by status (used/revoked/expired codes are
+// included exactly as first generated — this is a re-delivery of the batch's
+// own email, not a reissue of new codes or an expiry extension). Useful after
+// an email-template change, or if the original send was lost/missed.
+export const adminResend = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Batch not found', 'NOT_FOUND');
+  const batch = await AccessCodeBatch.findById(req.params.id);
+  if (!batch) throw new ApiError(404, 'Batch not found', 'NOT_FOUND');
+
+  const codes = await AccessCode.find({ batch: batch._id }).sort({ createdAt: 1 }).select('code').lean();
+  if (codes.length === 0) throw new ApiError(422, 'This batch has no codes to resend.', 'BATCH_EMPTY');
+
+  // Awaited (unlike adminGenerate's fire-and-forget send) — this is an
+  // explicit, one-off admin action, so they should see a real pass/fail
+  // result rather than a 201 that might silently fail to deliver.
+  try {
+    await sendBulkAccessCodeBatchEmail(
+      batch.distributorEmail,
+      codes.map((c) => c.code),
+      batch.expiresAt,
+      batch.label ?? undefined
+    );
+  } catch (err) {
+    logger.error({ err, batchId: batch.id }, 'Failed to resend access code batch email');
+    throw new ApiError(502, 'Failed to send the email. Please try again.', 'EMAIL_SEND_FAILED');
+  }
+
+  batch.sentAt = new Date();
+  await batch.save();
+
+  await recordAudit({
+    req,
+    action: 'access_code_batch.resent',
+    resourceType: 'AccessCodeBatch',
+    resourceId: batch.id,
+    after: { distributorEmail: batch.distributorEmail, quantity: codes.length },
+  });
+
+  res.json(new ApiResponse({ id: batch.id, sentAt: batch.sentAt }));
+});

@@ -439,19 +439,21 @@ export const sendPromoCodeEmail = async (to: string, code: string): Promise<void
 export const sendBulkAccessCodeBatchEmail = async (to: string, codes: string[], expiresAt: Date, label?: string): Promise<void> => {
   const expiresLabel = expiresAt.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Lagos' });
   const cards = codes
-    .map(
-      (code) => `
+    .map((code) => {
+      const registerUrl = `${env.FRONTEND_ORIGIN}/sponsored-delegates?code=${code}`;
+      return `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;">
           <tr>
             <td style="border:1px solid #E2E8F0;border-radius:10px;padding:16px 18px;">
               <p style="margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#94A3B8;">Registration Code</p>
               <p style="margin:0 0 12px;font-size:20px;font-weight:bold;letter-spacing:1px;color:#0F172A;">${code}</p>
-              ${emailButton(`${env.FRONTEND_ORIGIN}/sponsored-delegates?code=${code}`, 'Register Now')}
+              ${emailButton(registerUrl, 'Register Now')}
+              <p style="margin:0;font-size:12px;color:#94A3B8;">Or copy and send this link: <a href="${registerUrl}" style="color:#E8792C;word-break:break-all;">${registerUrl}</a></p>
             </td>
           </tr>
         </table>
-      `
-    )
+      `;
+    })
     .join('');
 
   await sendEmail({

@@ -182,6 +182,7 @@ router.post('/access-codes/:id/send', requireRole('super_admin', 'admin'), acces
 router.get('/access-code-batches', requireRole('super_admin', 'admin'), accessCodeBatchController.adminList);
 router.post('/access-code-batches', requireRole('super_admin', 'admin'), accessCodeBatchController.adminGenerate);
 router.get('/access-code-batches/:id', requireRole('super_admin', 'admin'), accessCodeBatchController.adminGetOne);
+router.post('/access-code-batches/:id/resend', requireRole('super_admin', 'admin'), accessCodeBatchController.adminResend);
 
 router.get('/scholarship-applications', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipApplicationController.adminList);
 router.get('/scholarship-applications/export', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipApplicationController.adminExport);
