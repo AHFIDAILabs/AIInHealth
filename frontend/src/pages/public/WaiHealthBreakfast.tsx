@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import { Send } from 'lucide-react';
 import { PageHero } from '../../components/ui/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
@@ -68,6 +69,7 @@ type FormValues = z.infer<typeof schema>;
 // eligibility handling, just triggered from this form too. See
 // backend/src/models/WaiHealthRegistration.model.ts for the full rationale.
 export const WaiHealthBreakfast = () => {
+  const { t } = useTranslation();
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
@@ -139,7 +141,11 @@ export const WaiHealthBreakfast = () => {
         // Breakfast signup already went through at this point — don't lose
         // that just because the Summit opt-in failed.
         setServerError(
-          `You're on the list for the Breakfast. We couldn't complete your Summit registration: ${getApiErrorMessage(err)}. You can register separately any time at /register.`
+          t(
+            'waiHealth.breakfast.summitOptInFailed',
+            "You're on the list for the Breakfast. We couldn't complete your Summit registration: {{error}}. You can register separately any time at /register.",
+            { error: getApiErrorMessage(err) }
+          )
         );
       }
     } catch (err) {
@@ -160,9 +166,9 @@ export const WaiHealthBreakfast = () => {
         path="/wai-health-breakfast"
       />
       <PageHero
-        eyebrow="Day 1 · 08:00–09:00 · Working Breakfast"
-        title="Women in AI & Health Breakfast"
-        subtitle="Leading the Future: Women's Voices Shaping AI and Health in Africa"
+        eyebrow={t('waiHealth.breakfast.heroEyebrow', 'Day 1 · 08:00–09:00 · Working Breakfast')}
+        title={t('waiHealth.breakfast.heroTitle', 'Women in AI & Health Breakfast')}
+        subtitle={t('waiHealth.breakfast.heroSubtitle', "Leading the Future: Women's Voices Shaping AI and Health in Africa")}
       />
 
       <section className="bg-offwhite pb-16 pt-16 sm:pt-20">
@@ -176,38 +182,45 @@ export const WaiHealthBreakfast = () => {
                 {serverError && <Banner variant="error">{serverError}</Banner>}
 
                 <p className="rounded-xl border border-orange/20 bg-orange/5 px-4 py-3 text-sm text-navy">
-                  This session is an in-person, closed-door, invite-only, special breakfast session. It  is reserved for women leaders across health, technology, research, and innovation.
+                  {t(
+                    'waiHealth.breakfast.intro',
+                    'This session is an in-person, closed-door, invite-only, special breakfast session. It is reserved for women leaders across health, technology, research, and innovation.'
+                  )}
                 </p>
 
-                <LightField label="Full Name" error={errors.fullName?.message} {...register('fullName')} />
+                <LightField label={t('waiHealth.breakfast.form.fullName', 'Full Name')} error={errors.fullName?.message} {...register('fullName')} />
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <LightField label="Email" type="email" error={errors.email?.message} {...register('email')} />
-                  <LightField label="Phone" type="tel" error={errors.phone?.message} {...register('phone')} />
+                  <LightField label={t('waiHealth.breakfast.form.email', 'Email')} type="email" error={errors.email?.message} {...register('email')} />
+                  <LightField label={t('waiHealth.breakfast.form.phone', 'Phone')} type="tel" error={errors.phone?.message} {...register('phone')} />
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <LightField label="Organization" error={errors.organization?.message} {...register('organization')} />
-                  <LightField label="Job Title" error={errors.jobTitle?.message} {...register('jobTitle')} />
-                </div>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <LightField label="Country" error={errors.country?.message} {...register('country')} />
                   <LightField
-                    label="Women's Network"
-                    placeholder="e.g. a co-host network, or 'None'"
+                    label={t('waiHealth.breakfast.form.organization', 'Organization')}
+                    error={errors.organization?.message}
+                    {...register('organization')}
+                  />
+                  <LightField label={t('waiHealth.breakfast.form.jobTitle', 'Job Title')} error={errors.jobTitle?.message} {...register('jobTitle')} />
+                </div>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <LightField label={t('waiHealth.breakfast.form.country', 'Country')} error={errors.country?.message} {...register('country')} />
+                  <LightField
+                    label={t('waiHealth.breakfast.form.network', "Women's Network")}
+                    placeholder={t('waiHealth.breakfast.form.networkPlaceholder', "e.g. a co-host network, or 'None'")}
                     error={errors.coHostNetwork?.message}
                     {...register('coHostNetwork')}
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-semibold text-navy">Gender</label>
+                  <label className="mb-1.5 block text-[13px] font-semibold text-navy">{t('waiHealth.breakfast.form.gender', 'Gender')}</label>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3.5">
                       <input type="radio" value="female" className="h-4 w-4 accent-orange" {...register('gender')} />
-                      <span className="text-sm text-navy">Female</span>
+                      <span className="text-sm text-navy">{t('waiHealth.breakfast.form.genderFemale', 'Female')}</span>
                     </label>
                     <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3.5">
                       <input type="radio" value="male" className="h-4 w-4 accent-orange" {...register('gender')} />
-                      <span className="text-sm text-navy">Male</span>
+                      <span className="text-sm text-navy">{t('waiHealth.breakfast.form.genderMale', 'Male')}</span>
                     </label>
                   </div>
                   {errors.gender && <p className="mt-1.5 text-xs text-danger">{errors.gender.message}</p>}
@@ -216,23 +229,27 @@ export const WaiHealthBreakfast = () => {
                 <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-offwhite px-4 py-3.5">
                   <input type="checkbox" className="mt-0.5 h-4 w-4 accent-orange" {...register('alsoRegister')} />
                   <span className="text-sm text-navy">
-                    Also register me for the full AI in Health Summit 2026 (19&ndash;20 October). This selects a ticket
-                    category and follows the normal registration/payment process.
+                    {t(
+                      'waiHealth.breakfast.form.alsoRegister',
+                      'Also register me for the full AI in Health Summit 2026 (19–20 October). This selects a ticket category and follows the normal registration/payment process.'
+                    )}
                   </span>
                 </label>
 
                 {alsoRegister && (
                   <div className="space-y-5 rounded-xl border border-slate-200 p-4">
                     <div>
-                      <label className="mb-1.5 block text-[13px] font-semibold text-navy">Ticket Category</label>
+                      <label className="mb-1.5 block text-[13px] font-semibold text-navy">
+                        {t('waiHealth.breakfast.form.ticketCategory', 'Ticket Category')}
+                      </label>
                       <select
                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-navy focus:border-orange/40 focus:outline-none"
                         {...register('ticketCategory')}
                       >
-                        <option value="">Choose a ticket category…</option>
-                        {TICKET_OPTIONS.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
+                        <option value="">{t('waiHealth.breakfast.form.ticketCategoryPlaceholder', 'Choose a ticket category…')}</option>
+                        {TICKET_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
                           </option>
                         ))}
                       </select>
@@ -241,7 +258,7 @@ export const WaiHealthBreakfast = () => {
 
                     {ticketCategory && ID_VERIFICATION_TICKET_CATEGORIES.includes(ticketCategory) && (
                       <div>
-                        <p className="text-sm font-semibold text-navy">Official ID</p>
+                        <p className="text-sm font-semibold text-navy">{t('waiHealth.breakfast.form.officialId', 'Official ID')}</p>
                         <p className="mt-1 text-xs text-slate-500">
                           {idVerificationRequirementText(ticketCategory as 'student_researcher' | 'government_official' | 'accredited_media')}
                         </p>
@@ -252,8 +269,8 @@ export const WaiHealthBreakfast = () => {
                     )}
 
                     <LightField
-                      label="Access Code (optional)"
-                      placeholder="If you were sent a discount/scholarship code"
+                      label={t('waiHealth.breakfast.form.accessCode', 'Access Code (optional)')}
+                      placeholder={t('waiHealth.breakfast.form.accessCodePlaceholder', 'If you were sent a discount/scholarship code')}
                       error={errors.accessCode?.message}
                       {...register('accessCode')}
                     />
@@ -262,7 +279,8 @@ export const WaiHealthBreakfast = () => {
 
                 <div className="flex justify-end">
                   <Button type="submit" variant="primary" loading={isSubmitting || redirecting}>
-                    {redirecting ? 'Redirecting…' : 'Submit Registration'} <Send size={16} className="ml-1" />
+                    {redirecting ? t('waiHealth.breakfast.form.redirecting', 'Redirecting…') : t('waiHealth.breakfast.form.submit', 'Submit Registration')}{' '}
+                    <Send size={16} className="ml-1" />
                   </Button>
                 </div>
               </form>

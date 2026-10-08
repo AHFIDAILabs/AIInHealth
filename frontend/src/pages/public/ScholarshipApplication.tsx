@@ -157,14 +157,17 @@ export const ScholarshipApplication = () => {
     return (
       <>
         <SEO
-          title="You're Invited | AI in Health Summit 2026"
+          title="You're Invited"
           description="Complete your free registration for the AI in Health Summit 2026 in Abuja, Nigeria."
           path="/sponsored-delegates"
         />
         <PageHero
           eyebrow={t('sponsorship.eyebrow', 'Sponsorships')}
-          title="You're Invited"
-          subtitle="You've been sent a free registration code for the AI in Health Summit 2026 — complete the form below to claim your seat."
+          title={t('sponsorship.invite.title', "You're Invited")}
+          subtitle={t(
+            'sponsorship.invite.subtitle',
+            "You've been sent a free registration code for the AI in Health Summit 2026 — complete the form below to claim your seat."
+          )}
         />
         <section className="bg-offwhite pb-16 pt-16 sm:pt-20">
           <Reveal className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
@@ -180,7 +183,7 @@ export const ScholarshipApplication = () => {
   return (
     <>
       <SEO
-        title="Apply for a Sponsorship | AI in Health Summit 2026"
+        title="Apply for a Sponsorship"
         description="Apply for a sponsorship covering your registration fee for the AI in Health Summit 2026 in Abuja, Nigeria."
         path="/sponsored-delegates"
       />
