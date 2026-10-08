@@ -68,3 +68,11 @@ export const adminGenerateAccessCodeBatch = async (
   );
   return res.data.data;
 };
+
+// Re-sends the batch email (current template) to the same distributor, for
+// every code in the batch regardless of status — not a reissue, same codes
+// and same expiry, just a re-delivery (e.g. after an email-template change).
+export const adminResendAccessCodeBatch = async (id: string): Promise<{ id: string; sentAt: string }> => {
+  const res = await api.post<{ success: true; data: { id: string; sentAt: string } }>(`/admin/access-code-batches/${id}/resend`);
+  return res.data.data;
+};

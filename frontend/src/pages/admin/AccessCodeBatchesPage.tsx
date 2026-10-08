@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, X, Layers, Copy, Check, CheckCircle2, Clock, Ban } from 'lucide-react';
+import { Plus, X, Layers, Copy, Check, CheckCircle2, Clock, Ban, Send } from 'lucide-react';
 import {
   adminListAccessCodeBatches,
   adminGetAccessCodeBatch,
   adminGenerateAccessCodeBatch,
+  adminResendAccessCodeBatch,
   type AdminAccessCodeBatch,
   type AdminAccessCodeBatchDetail,
 } from '../../services/accessCodeBatch.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { AdminInput } from '../../components/ui/AdminField';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -42,6 +44,9 @@ export const AccessCodeBatchesPage = () => {
   const [active, setActive] = useState<AdminAccessCodeBatchDetail | null>(null);
   const [activeLoading, setActiveLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const [confirmResend, setConfirmResend] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -102,6 +107,22 @@ export const AccessCodeBatchesPage = () => {
       setFormError(getApiErrorMessage(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const confirmResendBatch = async () => {
+    if (!activeId) return;
+    setResending(true);
+    try {
+      const { sentAt } = await adminResendAccessCodeBatch(activeId);
+      toast('success', 'Batch email resent.');
+      setConfirmResend(false);
+      setActive((prev) => (prev ? { ...prev, sentAt } : prev));
+      setItems((prev) => prev.map((b) => (b._id === activeId ? { ...b, sentAt } : b)));
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setResending(false);
     }
   };
 
@@ -306,9 +327,20 @@ export const AccessCodeBatchesPage = () => {
             >
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <p className="font-display text-lg font-semibold text-navy">{active?.label || 'Batch'}</p>
-                <button onClick={() => setActiveId(null)} className="text-slate-400 hover:text-navy">
-                  <X size={18} />
-                </button>
+                <div className="flex items-center gap-1">
+                  {active && (
+                    <button
+                      onClick={() => setConfirmResend(true)}
+                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-navy hover:bg-offwhite"
+                      title="Resend the batch email with every code in this batch"
+                    >
+                      <Send size={13} /> Resend Email
+                    </button>
+                  )}
+                  <button onClick={() => setActiveId(null)} className="p-1.5 text-slate-400 hover:text-navy">
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto px-5 py-5 text-[13px]">
@@ -371,6 +403,17 @@ export const AccessCodeBatchesPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={confirmResend}
+        title="Resend this batch email?"
+        description={`Re-sends the email to ${active?.distributorEmail ?? 'the distributor'} with all ${active?.codes.length ?? 0} code${active?.codes.length === 1 ? '' : 's'} in this batch, using the current email template — including already-used or expired codes, exactly as first generated.`}
+        confirmLabel="Resend Email"
+        danger={false}
+        loading={resending}
+        onConfirm={confirmResendBatch}
+        onCancel={() => setConfirmResend(false)}
+      />
     </div>
   );
 };
