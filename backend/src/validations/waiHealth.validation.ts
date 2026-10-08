@@ -11,9 +11,11 @@ export const createWaiHealthRegistrationSchema = z.object({
     email: z.string().trim().toLowerCase().email('Enter a valid email'),
     phone: z.string().trim().min(6, 'Enter a valid phone number'),
     organization: z.string().trim().min(2, 'Enter your organization'),
-    jobTitle: z.string().trim().max(200).optional(),
+    jobTitle: z.string().trim().min(2, 'Enter your job title').max(200),
     country: z.string().trim().min(2, 'Enter your country'),
-    coHostNetwork: z.string().trim().max(200).optional(),
+    // Required, but a neutral value like "None" is a valid answer — this
+    // just makes sure the field was actually considered, not skipped.
+    coHostNetwork: z.string().trim().min(1, 'Enter a network, or "None" if not applicable').max(200),
     // Collected, NOT a submission gate — see WaiHealthRegistration.model.ts's
     // comment. Both values pass validation; enforcement is a manual admin
     // action (adminNotifyNotEligible) after the fact, not a rejection here.

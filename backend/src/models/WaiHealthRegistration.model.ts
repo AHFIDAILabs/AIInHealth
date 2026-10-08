@@ -18,11 +18,12 @@ const waiHealthRegistrationSchema = new Schema(
     email: { type: String, required: true, trim: true, lowercase: true },
     phone: { type: String, required: true, trim: true },
     organization: { type: String, required: true, trim: true },
-    jobTitle: { type: String, trim: true },
+    jobTitle: { type: String, required: true, trim: true },
     country: { type: String, required: true, trim: true },
-    // Free text — which women's leadership network they came through, if any.
+    // Free text, required — but "None" is a perfectly valid answer, so this
+    // isn't a real gate, just makes sure the question was actually answered.
     // Not a fixed list: co-host networks aren't known/finalized at build time.
-    coHostNetwork: { type: String, trim: true },
+    coHostNetwork: { type: String, required: true, trim: true },
     // Collected, NOT a submission gate — both values register and RSVP
     // completely unobstructed (see waiHealth.controller.ts's register()/rsvp()
     // comments). This session is reserved for women leaders, but enforcement
