@@ -86,6 +86,9 @@ export const AttendeesPage = () => {
   // second component.
   const [status, setStatus] = useState<RegistrationStatus | ''>(() => (searchParams.get('status') as RegistrationStatus | null) ?? '');
   const [paymentStatus, setPaymentStatus] = useState<AdminRegistration['paymentStatus'] | ''>('');
+  const [ticketCategory, setTicketCategory] = useState<TicketCategory | ''>(
+    () => (searchParams.get('ticketCategory') as TicketCategory | null) ?? ''
+  );
 
   const [stats, setStats] = useState<AttendeeStats | null>(null);
   const [active, setActive] = useState<AdminRegistration | null>(null);
@@ -108,6 +111,7 @@ export const AttendeesPage = () => {
       type: 'attendee',
       status: status || undefined,
       paymentStatus: paymentStatus || undefined,
+      ticketCategory: ticketCategory || undefined,
       q: q || undefined,
       page,
       limit: 20,
@@ -119,7 +123,7 @@ export const AttendeesPage = () => {
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [status, paymentStatus, q, page]);
+  }, [status, paymentStatus, ticketCategory, q, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
@@ -134,6 +138,7 @@ export const AttendeesPage = () => {
   const clearFilters = () => {
     setStatus('');
     setPaymentStatus('');
+    setTicketCategory('');
     setQ('');
     setPage(1);
   };
@@ -233,7 +238,13 @@ export const AttendeesPage = () => {
         </div>
         <div className="flex gap-2">
           <a
-            href={exportRegistrationsUrl({ type: 'attendee', status: status || undefined, paymentStatus: paymentStatus || undefined, q: q || undefined })}
+            href={exportRegistrationsUrl({
+              type: 'attendee',
+              status: status || undefined,
+              paymentStatus: paymentStatus || undefined,
+              ticketCategory: ticketCategory || undefined,
+              q: q || undefined,
+            })}
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy hover:border-orange/40"
           >
             <Download size={16} /> Export CSV
@@ -310,7 +321,22 @@ export const AttendeesPage = () => {
             </option>
           ))}
         </select>
-        {(status || paymentStatus || q) && (
+        <select
+          value={ticketCategory}
+          onChange={(e) => {
+            setPage(1);
+            setTicketCategory(e.target.value as TicketCategory | '');
+          }}
+          className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+        >
+          <option value="">All Tickets</option>
+          {TICKET_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {TICKET_LABEL[c]}
+            </option>
+          ))}
+        </select>
+        {(status || paymentStatus || ticketCategory || q) && (
           <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
             Clear
           </button>

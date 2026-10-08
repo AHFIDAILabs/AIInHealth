@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, X, GraduationCap, Paperclip, Check, Ban, Download } from 'lucide-react';
+import { Search, X, GraduationCap, Paperclip, Check, Ban, Download, Sparkles } from 'lucide-react';
 import {
   fetchScholarshipApplications,
   decideScholarshipApplication,
+  adminAnalyzeApplications,
   exportScholarshipApplicationsUrl,
   SCHOLARSHIP_APPLICATION_STATUSES,
   SCHOLARSHIP_DISCOUNTS,
@@ -32,6 +33,12 @@ const STUDY_LEVEL_LABEL: Record<ScholarshipStudyLevel, string> = {
   other: 'Other',
 };
 
+// Admin-only suggestion aid (scholarshipApplication.controller.ts's
+// adminAnalyze) — never affects decide(); purely a sort/annotate hint so the
+// strongest candidates in a large pending pool are easy to spot.
+const scoreBadgeClass = (score: number): string =>
+  score >= 70 ? 'bg-success/10 text-success' : score >= 40 ? 'bg-warning/10 text-warning' : 'bg-slate-100 text-slate-500';
+
 export const ScholarshipApplicationsPage = () => {
   const toast = useToast();
 
@@ -49,6 +56,7 @@ export const ScholarshipApplicationsPage = () => {
   const [discountPercent, setDiscountPercent] = useState<ScholarshipDiscount>(100);
   const [deciding, setDeciding] = useState<'approved' | 'rejected' | null>(null);
   const [decideError, setDecideError] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -67,6 +75,23 @@ export const ScholarshipApplicationsPage = () => {
     const id = setTimeout(load, q ? 350 : 0);
     return () => clearTimeout(id);
   }, [load, q]);
+
+  const analyzeWithAi = async () => {
+    setAnalyzing(true);
+    try {
+      const result = await adminAnalyzeApplications();
+      toast('success', `Scored ${result.scored} of ${result.items.length} application${result.items.length === 1 ? '' : 's'}.`);
+      load();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  // Display-only — sorts just the current page, highest-scored first;
+  // unscored applications (aiScore undefined) sort after every scored one.
+  const sortedItems = [...items].sort((a, b) => (b.aiScore ?? -1) - (a.aiScore ?? -1));
 
   const openReview = (item: AdminScholarshipApplication) => {
     setActive(item);
@@ -104,12 +129,22 @@ export const ScholarshipApplicationsPage = () => {
             {total} application{total === 1 ? '' : 's'}
           </p>
         </div>
-        <a
-          href={exportScholarshipApplicationsUrl({ status: statusFilter || undefined, q: q || undefined })}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy hover:border-orange/40"
-        >
-          <Download size={16} /> Export CSV
-        </a>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={analyzeWithAi}
+            disabled={analyzing}
+            title="Score every pending application so the strongest candidates are easy to spot — never auto-approves anyone"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy transition-colors hover:border-orange/40 disabled:opacity-60"
+          >
+            <Sparkles size={16} /> {analyzing ? 'Analyzing…' : 'Analyze with AI'}
+          </button>
+          <a
+            href={exportScholarshipApplicationsUrl({ status: statusFilter || undefined, q: q || undefined })}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy hover:border-orange/40"
+          >
+            <Download size={16} /> Export CSV
+          </a>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -150,7 +185,7 @@ export const ScholarshipApplicationsPage = () => {
 
       {loading ? (
         <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover">
-          <SkeletonRows rows={6} cols={5} />
+          <SkeletonRows rows={6} cols={6} />
         </div>
       ) : items.length === 0 ? (
         <div className="mt-4 flex flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white py-20 text-center shadow-card transition-shadow hover:shadow-card-hover">
@@ -168,12 +203,13 @@ export const ScholarshipApplicationsPage = () => {
                   <th className="px-4 py-3 font-semibold">Applicant</th>
                   <th className="px-3 py-3 font-semibold">Country</th>
                   <th className="px-3 py-3 font-semibold">Status</th>
+                  <th className="px-3 py-3 font-semibold">AI Score</th>
                   <th className="px-3 py-3 font-semibold">Submitted</th>
                   <th className="px-3 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {items.map((a) => (
+                {sortedItems.map((a) => (
                   <tr key={a._id}>
                     <td className="px-4 py-3">
                       <p className="font-medium text-navy">{a.fullName}</p>
@@ -184,6 +220,18 @@ export const ScholarshipApplicationsPage = () => {
                       <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${STATUS_STYLE[a.status]}`}>
                         {a.status}
                       </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      {a.aiScore !== undefined ? (
+                        <span
+                          title={a.aiRationale}
+                          className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${scoreBadgeClass(a.aiScore)}`}
+                        >
+                          {a.aiScore}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-300">—</span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-slate-500">{new Date(a.createdAt).toLocaleDateString()}</td>
                     <td className="px-3 py-3 text-right">
@@ -300,6 +348,18 @@ export const ScholarshipApplicationsPage = () => {
                   <p className="text-[11px] uppercase tracking-wide text-slate-400">Why they want to attend</p>
                   <p className="mt-1 whitespace-pre-wrap leading-relaxed text-navy">{active.reason}</p>
                 </div>
+
+                {active.aiScore !== undefined && (
+                  <div className="rounded-lg border border-slate-200 bg-offwhite/60 p-3">
+                    <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-400">
+                      <Sparkles size={12} /> AI Score
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal ${scoreBadgeClass(active.aiScore)}`}>
+                        {active.aiScore}/100
+                      </span>
+                    </p>
+                    {active.aiRationale && <p className="mt-1.5 text-navy">{active.aiRationale}</p>}
+                  </div>
+                )}
 
                 {active.supportingDocumentUrl && (
                   <a

@@ -49,7 +49,10 @@ self.addEventListener('notificationclick', (event) => {
 //   build hashes every asset filename, so a cached file is either identical
 //   to the current one or simply not requested anymore — there's no
 //   staleness risk in caching these aggressively.
-const CACHE_NAME = 'aihs-shell-v1';
+// Bumped to v2 — the navigate-cache keying changed below (was always '/',
+// regardless of the real request), so force every client onto a clean cache
+// rather than mixing old mis-keyed entries with the new per-route ones.
+const CACHE_NAME = 'aihs-shell-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -80,10 +83,16 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          caches.open(CACHE_NAME).then((cache) => cache.put('/', res.clone()));
+          // Keyed by the actual request, not a fixed '/' — each route now has
+          // its own distinct prerendered content (scripts/prerender.mjs), so
+          // caching every navigation under the same key would serve whichever
+          // page was last visited online for every other page once offline.
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, res.clone()));
           return res;
         })
-        .catch(() => caches.match('/'))
+        .catch(() =>
+          caches.open(CACHE_NAME).then(async (cache) => (await cache.match(request)) ?? cache.match('/'))
+        )
     );
     return;
   }

@@ -53,6 +53,11 @@ export interface AdminScholarshipApplication extends SubmitScholarshipApplicatio
   decidedAt?: string;
   issuedAccessCode?: string;
   createdAt: string;
+  // AI-assisted ranking (adminAnalyzeApplications below) — suggestion-only,
+  // never read by decideScholarshipApplication. Absent until analyzed.
+  aiScore?: number;
+  aiRationale?: string;
+  aiScoredAt?: string;
 }
 
 export interface Paginated<T> {
@@ -83,6 +88,19 @@ export const exportScholarshipApplicationsUrl = (params: { status?: ScholarshipA
   });
   const base = (import.meta.env.VITE_API_URL as string) ?? '/api/v1';
   return `${base}/admin/scholarship-applications/export?${search.toString()}`;
+};
+
+// Admin-triggered, suggestion-only AI scoring — ids omitted analyzes every
+// pending application. Never changes status; decideScholarshipApplication
+// below is still the only way an application gets approved/rejected.
+export const adminAnalyzeApplications = async (
+  ids?: string[]
+): Promise<{ scored: number; items: { _id: string; aiScore?: number; aiRationale?: string }[] }> => {
+  const res = await api.post<{
+    success: true;
+    data: { scored: number; items: { _id: string; aiScore?: number; aiRationale?: string }[] };
+  }>('/admin/scholarship-applications/analyze', { ids });
+  return res.data.data;
 };
 
 export const decideScholarshipApplication = async (

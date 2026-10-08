@@ -39,6 +39,7 @@ import {
   MessageCircle,
   Layers,
   UserCheck,
+  Send,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -96,6 +97,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Event Setup',
     items: [
       { label: 'Registrations', to: '/admin/registrations', icon: ClipboardList, roles: [...registrationRoles, 'viewer', 'innovator_lead', 'exhibitor_lead'] },
+      { label: 'RSVP Confirmations', to: '/admin/registrations?rsvpResponded=true', icon: Send, roles: registrationRoles },
       // Access Codes/Payments/Reconciliations/Portal Tokens are deliberately
       // narrowed off registrations_officer — admin/super_admin only.
       { label: 'Access Codes', to: '/admin/access-codes', icon: KeyRound, roles: adminOnlyRoles },

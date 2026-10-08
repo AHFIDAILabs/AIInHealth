@@ -57,6 +57,11 @@ export interface AdminRegistration {
   tshirtSize?: string;
   trackSelected?: string;
   trackAssigned?: string;
+  // Pending-attendee RSVP reconfirmation (RegistrationsPage.tsx's
+  // "RSVP'd — Awaiting Confirmation" filter) — set once the reminder's been
+  // sent / once they click it. rsvpRespondedAt alone never changes `status`.
+  rsvpRequestedAt?: string;
+  rsvpRespondedAt?: string;
   // Independent of status — see backend Registration.model.ts's isActive comment.
   isActive: boolean;
   // Spam hardening — see backend Registration.model.ts's flaggedSuspicious
@@ -104,6 +109,7 @@ export interface ListRegistrationsParams {
   paymentStatus?: AdminRegistration['paymentStatus'];
   ticketCategory?: TicketCategory;
   flagged?: 'true';
+  rsvpResponded?: 'true';
   q?: string;
   page?: number;
   limit?: number;
@@ -147,6 +153,16 @@ export const listRegistrations = async (params: ListRegistrationsParams): Promis
 
 export const updateRegistrationStatus = async (id: string, status: RegistrationStatus): Promise<AdminRegistration> => {
   const res = await api.patch<{ success: true; data: AdminRegistration }>(`/admin/registrations/${id}`, { status });
+  return res.data.data;
+};
+
+// Pending-attendee RSVP reconfirmation — registrationRsvp.controller.ts.
+// ids omitted -> every pending attendee, irrespective of ticketCategory.
+export const sendRsvpReminders = async (ids?: string[]): Promise<{ targeted: number; sent: number; failed: number }> => {
+  const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
+    '/admin/registrations/rsvp/send-reminders',
+    { ids }
+  );
   return res.data.data;
 };
 

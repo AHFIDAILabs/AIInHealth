@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Download, Upload, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard, ShieldAlert, ShieldOff } from 'lucide-react';
+import { Search, Download, Upload, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard, ShieldAlert, ShieldOff, Send } from 'lucide-react';
 import {
   listRegistrations,
   updateRegistrationStatus,
@@ -11,6 +11,7 @@ import {
   adminCreateRegistration,
   exportRegistrationsUrl,
   importVolunteersCsv,
+  sendRsvpReminders,
   type AdminRegistration,
   type RegistrationStatus,
   type RegistrationType,
@@ -170,6 +171,12 @@ export const RegistrationsPage = () => {
     lockedType ?? (FILTER_TYPE_OPTIONS.includes(initialType as TypeFilterValue) ? (initialType as TypeFilterValue) : '')
   );
   const [flaggedOnly, setFlaggedOnly] = useState(false);
+  // "RSVP'd — Awaiting Confirmation" view (sidebar deep link
+  // /admin/registrations?rsvpResponded=true) — always implies status:'pending'
+  // regardless of the status dropdown, same deep-link convention as
+  // AttendeesPage.tsx's ?status=confirmed.
+  const [rsvpResponded, setRsvpResponded] = useState(searchParams.get('rsvpResponded') === 'true');
+  const [sendingRsvpReminders, setSendingRsvpReminders] = useState(false);
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<AdminRegistration | null>(null);
@@ -275,6 +282,7 @@ export const RegistrationsPage = () => {
     const urlType = searchParams.get('type');
     const next = FILTER_TYPE_OPTIONS.includes(urlType as TypeFilterValue) ? (urlType as TypeFilterValue) : '';
     setType((prev) => (prev === next ? prev : next));
+    setRsvpResponded(searchParams.get('rsvpResponded') === 'true');
     setPage(1);
   }, [searchParams, lockedType]);
 
@@ -285,10 +293,11 @@ export const RegistrationsPage = () => {
     // literal type; it translates to the real attendee+staff-category shape
     // instead (see FILTER_TYPE_OPTIONS' comment above).
     listRegistrations({
-      status: status || undefined,
+      status: rsvpResponded ? 'pending' : status || undefined,
       type: type === 'organizer' ? 'attendee' : type || undefined,
       ticketCategory: type === 'organizer' ? 'staff' : undefined,
       flagged: flaggedOnly ? 'true' : undefined,
+      rsvpResponded: rsvpResponded ? 'true' : undefined,
       q: q || undefined,
       page,
       limit: 20,
@@ -300,7 +309,7 @@ export const RegistrationsPage = () => {
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [status, type, flaggedOnly, q, page]);
+  }, [status, type, flaggedOnly, rsvpResponded, q, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
@@ -345,8 +354,23 @@ export const RegistrationsPage = () => {
     setStatus('');
     if (!lockedType) setType('');
     setFlaggedOnly(false);
+    setRsvpResponded(false);
     setQ('');
     setPage(1);
+    setSearchParams({}, { replace: true });
+  };
+
+  const sendRsvpReminderBatch = async () => {
+    setSendingRsvpReminders(true);
+    try {
+      const result = await sendRsvpReminders();
+      toast('success', `Reminder sent to ${result.sent} of ${result.targeted} pending attendee${result.targeted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}.`);
+      if (rsvpResponded) load();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingRsvpReminders(false);
+    }
   };
 
   const clearFlag = async (registration: AdminRegistration) => {
@@ -512,19 +536,33 @@ export const RegistrationsPage = () => {
     <div className="mx-auto max-w-7xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-navy">{type ? TYPE_LABEL[type] : 'Registrations'}</h1>
+          <h1 className="font-display text-2xl font-semibold text-navy">
+            {rsvpResponded ? "RSVP'd — Awaiting Confirmation" : type ? TYPE_LABEL[type] : 'Registrations'}
+          </h1>
           <p className="text-sm text-slate-500">
-            {type
-              ? `${total} ${TYPE_LABEL[type].toLowerCase()} submission${total === 1 ? '' : 's'}.`
-              : `${total} total submission${total === 1 ? '' : 's'} across attendees, exhibitors, sponsors, volunteers, and team.`}
+            {rsvpResponded
+              ? `${total} pending attendee${total === 1 ? '' : 's'} confirmed they're still interested — review and confirm below.`
+              : type
+                ? `${total} ${TYPE_LABEL[type].toLowerCase()} submission${total === 1 ? '' : 's'}.`
+                : `${total} total submission${total === 1 ? '' : 's'} across attendees, exhibitors, sponsors, volunteers, and team.`}
           </p>
         </div>
-        <button
-          onClick={openAddForm}
-          className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:bg-orange-hover"
-        >
-          <Plus size={16} /> Add Registration
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={sendRsvpReminderBatch}
+            disabled={sendingRsvpReminders}
+            title="Email every pending attendee asking them to reconfirm they're still coming"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-sm transition-colors hover:border-orange/40 disabled:opacity-60"
+          >
+            <Send size={15} /> {sendingRsvpReminders ? 'Sending…' : 'Send RSVP Reminders'}
+          </button>
+          <button
+            onClick={openAddForm}
+            className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:bg-orange-hover"
+          >
+            <Plus size={16} /> Add Registration
+          </button>
+        </div>
       </div>
 
       {paymentLink && (
@@ -558,21 +596,27 @@ export const RegistrationsPage = () => {
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
           />
         </div>
-        <select
-          value={status}
-          onChange={(e) => {
-            setPage(1);
-            setStatus(e.target.value as RegistrationStatus | '');
-          }}
-          className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
-        >
-          <option value="">All Statuses</option>
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s[0].toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </select>
+        {rsvpResponded ? (
+          <span className="flex items-center gap-1.5 rounded-full border border-orange/30 bg-orange/5 px-3.5 py-2 text-xs font-semibold text-orange">
+            <Send size={13} /> Pending &middot; RSVP&rsquo;d
+          </span>
+        ) : (
+          <select
+            value={status}
+            onChange={(e) => {
+              setPage(1);
+              setStatus(e.target.value as RegistrationStatus | '');
+            }}
+            className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
+          >
+            <option value="">All Statuses</option>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s[0].toUpperCase() + s.slice(1)}
+              </option>
+            ))}
+          </select>
+        )}
         {!lockedType && (
           <select
             value={type}
@@ -601,7 +645,7 @@ export const RegistrationsPage = () => {
         >
           <ShieldAlert size={13} /> Flagged
         </button>
-        {(status || (!lockedType && type) || flaggedOnly || q) && (
+        {(status || (!lockedType && type) || flaggedOnly || rsvpResponded || q) && (
           <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
             Clear
           </button>

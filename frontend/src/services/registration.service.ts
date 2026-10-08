@@ -158,3 +158,16 @@ export const submitRegistration = async (payload: RegistrationPayload): Promise<
   const res = await api.post<{ success: true; data: SubmitRegistrationResult }>('/registrations', payload);
   return res.data.data;
 };
+
+// Pending-attendee RSVP reconfirmation link (AttendeeRsvpConfirm.tsx) — see
+// backend/src/controllers/registrationRsvp.controller.ts's redeem(). Records
+// interest only; it never confirms the registration or grants access.
+export type RsvpRedeemStatus = 'responded' | 'already_responded' | 'already_handled' | 'invalid';
+export interface RsvpRedeemResult {
+  status: RsvpRedeemStatus;
+  respondedAt?: string;
+}
+export const redeemRsvp = async (token: string): Promise<RsvpRedeemResult> => {
+  const res = await api.post<{ success: true; data: RsvpRedeemResult }>(`/registrations/rsvp/${token}`);
+  return res.data.data;
+};

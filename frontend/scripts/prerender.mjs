@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, copyFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
@@ -7,6 +7,21 @@ import { PUBLIC_ROUTES } from './publicRoutes.mjs';
 const PORT = 4173;
 const PREVIEW_URL = `http://localhost:${PORT}`;
 const distDir = path.resolve(fileURLToPath(import.meta.url), '../../dist');
+
+// Preserve the plain CSR shell `vite build` just produced, UNDER A SEPARATE
+// FILENAME, before anything below overwrites dist/index.html with the Home
+// page's own rendered snapshot. nginx.conf's SPA fallback (`try_files ... /
+// app-shell.html`) serves this neutral shell for every URL that isn't itself
+// a prerendered route — every /admin/* route (never prerendered at all,
+// see PUBLIC_ROUTES's own comment on why) and any edge case where a public
+// route's directory-index doesn't resolve. Without this, that fallback target
+// used to be dist/index.html itself — which this script also overwrites for
+// route.path === '/' below — so an admin route refresh would briefly paint a
+// stale snapshot of the public Homepage before client-side routing corrected
+// it to the real page. Done unconditionally, before the Playwright-missing
+// early return below, so app-shell.html always exists even on a deploy that
+// ships without prerendering at all.
+copyFileSync(path.join(distDir, 'index.html'), path.join(distDir, 'app-shell.html'));
 
 const waitForServer = async (url, timeoutMs = 20000) => {
   const start = Date.now();
