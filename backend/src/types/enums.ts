@@ -71,6 +71,16 @@ export const TICKET_CATEGORIES = [
   'staff',
   'abstract_presenter',
   'abstract_reviewer',
+  // Priced 0 (pricing.ts), code-gated both directions like
+  // 'abstract_presenter'/'abstract_reviewer' above — requires a redeemed
+  // 'bulk_invite' AccessCode (the "Sponsored Delegate" batch-code feature,
+  // accessCodeBatch.controller.ts), and that code only works for this
+  // category (see INVITED_DELEGATE_ACCESS_CODE_REQUIRED in
+  // registration.controller.ts). Deliberately excluded from the admin
+  // "Add Registration" dropdowns (AttendeesPage.tsx/RegistrationsPage.tsx)
+  // so admins aren't tempted to hand-pick it, even though the admin-create
+  // path technically allows any category here with no code check.
+  'invited_delegate',
   // Admin-only, like 'staff' — never self-selectable on the public Attendee
   // form (registration.controller.ts's create() rejects it outright; the
   // only path that ever sets this is speaker.controller.ts's adminRegister,

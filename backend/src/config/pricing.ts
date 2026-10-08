@@ -13,6 +13,7 @@ export const TICKET_PRICE_NGN: Record<TicketCategory, number> = {
   staff: 0,
   abstract_presenter: 0,
   abstract_reviewer: 0,
+  invited_delegate: 0,
   speaker: 0,
 };
 

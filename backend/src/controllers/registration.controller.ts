@@ -540,6 +540,23 @@ export const create = catchAsync(async (req: Request, res: Response) => {
         'ABSTRACT_REVIEWER_ACCESS_CODE_REQUIRED'
       );
     }
+
+    // 'invited_delegate' is the "Sponsored Delegate" free-seat category —
+    // same both-directions binding as abstract_presenter/reviewer above,
+    // bound to a redeemed 'bulk_invite' code (accessCodeBatch.controller.ts).
+    // Without the reverse check, a bulk_invite code holder could pick e.g.
+    // 'vip' instead and get a free paid-tier seat.
+    const pickedInvitedDelegate = input.ticketCategory === 'invited_delegate';
+    const usingBulkInviteCode = redeemedCode?.type === 'bulk_invite';
+    if (pickedInvitedDelegate !== usingBulkInviteCode) {
+      throw new ApiError(
+        422,
+        pickedInvitedDelegate
+          ? "The Invited Delegate ticket category requires a valid invitation access code. Contact the organizing team if you don't have one."
+          : 'This access code only works for the Invited Delegate ticket category.',
+        'INVITED_DELEGATE_ACCESS_CODE_REQUIRED'
+      );
+    }
   }
 
   // The QR-banner promo giveaway is deliberately excluded from VIP —
@@ -661,30 +678,20 @@ export const create = catchAsync(async (req: Request, res: Response) => {
 
 // Per-area staff roles (see types/enums.ts's ROLES comment) — innovator_lead/
 // exhibitor_lead are scoped to exactly their own registration type, both for
-// reads (buildAdminFilter below) and writes (adminCreate/adminUpdate). Not an
-// exclude-list like registrations_officer's below, since these two roles have
-// nothing else to fall back to if the type doesn't match.
+// reads (buildAdminFilter below) and writes (adminCreate/adminUpdate).
+// registrations_officer deliberately has NO entry here — it has full access
+// to every registration type, including exhibitor/innovator, same as
+// admin/viewer (see isTypeAllowedForRole's default `return true`).
 const ROLE_REGISTRATION_TYPES: Partial<Record<Role, RegistrationType[]>> = {
   innovator_lead: ['innovator'],
   exhibitor_lead: ['exhibitor'],
 };
-
-// registrations_officer keeps everything it already had EXCEPT exhibitor/
-// innovator — those moved to their own leads above. An exclude-list rather
-// than an entry in ROLE_REGISTRATION_TYPES since 'everything but these two'
-// isn't expressible as a fixed allow-list of types. Applies to reads
-// (buildAdminFilter) AND writes (adminCreate/adminUpdate) — not just the list
-// view — so a registrations_officer can't create an exhibitor/innovator record
-// through the admin-trusted path either, only to have it vanish from their own
-// list afterward.
-const REGISTRATIONS_OFFICER_EXCLUDED_TYPES: RegistrationType[] = ['exhibitor', 'innovator'];
 
 const allowedTypesForRole = (role: Role): RegistrationType[] | undefined => ROLE_REGISTRATION_TYPES[role];
 
 const isTypeAllowedForRole = (role: Role, type: RegistrationType): boolean => {
   const allowed = allowedTypesForRole(role);
   if (allowed) return allowed.includes(type);
-  if (role === 'registrations_officer') return !REGISTRATIONS_OFFICER_EXCLUDED_TYPES.includes(type);
   return true;
 };
 
@@ -848,17 +855,6 @@ const buildAdminFilter = (query: ListRegistrationsQuery, req: Request): FilterQu
   const allowedTypes = allowedTypesForRole(req.user!.role);
   if (allowedTypes) {
     filter.type = allowedTypes.length === 1 ? allowedTypes[0] : { $in: allowedTypes };
-  } else if (req.user!.role === 'registrations_officer') {
-    // Exhibitor/innovator rows moved to their own leads — still honor an
-    // explicit ?type= for whatever this role IS still allowed to see, rather
-    // than silently overriding it the way the allow-list roles above do.
-    if (query.type && !REGISTRATIONS_OFFICER_EXCLUDED_TYPES.includes(query.type)) {
-      filter.type = query.type;
-    } else if (!query.type) {
-      filter.type = { $nin: REGISTRATIONS_OFFICER_EXCLUDED_TYPES };
-    } else {
-      filter.type = { $in: [] }; // explicitly asked for an excluded type — return nothing, not everything
-    }
   } else if (query.type) {
     filter.type = query.type;
   }

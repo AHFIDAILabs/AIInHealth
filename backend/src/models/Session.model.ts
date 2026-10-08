@@ -18,12 +18,14 @@ const sessionSchema = new Schema(
     startTime: { type: String, required: true, trim: true }, // "09:00", 24h — validated in Zod
     endTime: { type: String, required: true, trim: true },
     title: { type: String, required: true, trim: true },
-    // References Track.model.ts by id. Speaker/Abstract/Innovation also
-    // source their track from this same collection now, just by name (a
+    // References Track.model.ts by id — a session can belong to several
+    // tracks at once (real sessions span more than one), or none ("No
+    // track"/empty array in the admin form). Speaker/Abstract/Innovation
+    // also source their track from this same collection, just by name (a
     // plain validated string, not an ObjectId ref) rather than a populated
-    // relation — see Speaker.model.ts's track field comment. Optional — a
-    // session can sit outside any track ("No track" in the admin form).
-    track: { type: Schema.Types.ObjectId, ref: 'Track' },
+    // relation — see Speaker.model.ts's track field comment; unaffected by
+    // this being an array here.
+    tracks: { type: [{ type: Schema.Types.ObjectId, ref: 'Track' }], default: [] },
     // Free text, validated against the live SessionType collection in
     // session.controller.ts — same by-name pattern as Speaker/Abstract's
     // track field, not an ObjectId ref. See SessionType.model.ts.
@@ -89,7 +91,7 @@ const sessionSchema = new Schema(
 // The agenda page's two constant queries: "give me day X sorted by time" and
 // "give me day X filtered by track" — both covered by one compound index.
 sessionSchema.index({ day: 1, startTime: 1 });
-sessionSchema.index({ track: 1, day: 1 });
+sessionSchema.index({ tracks: 1, day: 1 });
 // Conflict detection queries by day + room directly.
 sessionSchema.index({ day: 1, room: 1 });
 

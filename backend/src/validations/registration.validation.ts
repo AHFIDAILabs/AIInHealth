@@ -164,6 +164,16 @@ const registrationUnion = z
         message: 'Enter the organizer access code you were sent to register with this ticket category.',
       });
     }
+    // Same shape-only mirror as 'staff' above, for the 'bulk_invite'-bound
+    // 'invited_delegate' category — real enforcement (both directions) is
+    // registration.controller.ts's INVITED_DELEGATE_ACCESS_CODE_REQUIRED guard.
+    if (data.type === 'attendee' && data.ticketCategory === 'invited_delegate' && !data.accessCode) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['accessCode'],
+        message: 'Enter the invitation access code you were sent to register with this ticket category.',
+      });
+    }
     // 'speaker' is never self-selectable — admins register speakers directly
     // (speaker.controller.ts's adminRegister), with no access-code redemption
     // step at all. Rejected here (shape-level) rather than only in the

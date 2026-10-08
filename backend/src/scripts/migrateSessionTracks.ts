@@ -57,7 +57,10 @@ async function main() {
   // Any Session whose `track` is still a plain string (pre-migration) needs
   // resolving to the matching Track's ObjectId — a raw/lean read bypasses
   // Mongoose's schema-level cast, so this sees the true stored value.
-  const sessions = await Session.find().select('title track').lean();
+  // Historical: `track` was superseded by `tracks` (migrateSessionTrackToTracks.ts)
+  // after this script already ran against real data — cast since the current
+  // schema type no longer declares the old field at all.
+  const sessions = await Session.find().select('title track').lean() as unknown as { _id: unknown; title: string; track?: unknown }[];
   const toMigrate = sessions.filter((s) => typeof s.track === 'string');
   console.log(`\nSessions with a plain-string track: ${toMigrate.length}`);
 

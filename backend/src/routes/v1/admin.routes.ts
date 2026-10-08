@@ -295,9 +295,10 @@ router.get('/volunteer-settings', requireRole('super_admin', 'admin', 'registrat
 router.put('/volunteer-settings', requireRole('super_admin', 'admin', 'registrations_officer'), validate(setVolunteerSettingsSchema), volunteerSettingsController.adminSet);
 
 // innovator_lead owns this (same "full control of their own area" shape as
-// elsewhere in this file) rather than registrations_officer — Innovator
-// registrations were deliberately carved out of that role's scope already
-// (see ROLE_REGISTRATION_TYPES in registration.controller.ts).
+// elsewhere in this file) — opening/closing applications is a distinct,
+// narrower decision from registrations_officer's full registration-pipeline
+// access (which does include Innovator registrations — see
+// ROLE_REGISTRATION_TYPES in registration.controller.ts).
 router.get('/innovator-settings', requireRole('super_admin', 'admin', 'innovator_lead'), innovatorSettingsController.adminGet);
 router.put(
   '/innovator-settings',

@@ -47,7 +47,7 @@ const upsertSessionType = async (format: string | undefined): Promise<void> => {
 export const list = catchAsync(async (req: Request, res: Response) => {
   const day = typeof req.query.day === 'string' ? req.query.day : undefined;
   const track = typeof req.query.track === 'string' ? req.query.track : undefined;
-  const filter: FilterQuery<SessionDoc> = { isPublished: true, ...(day ? { day } : {}), ...(track ? { track } : {}) };
+  const filter: FilterQuery<SessionDoc> = { isPublished: true, ...(day ? { day } : {}), ...(track ? { tracks: track } : {}) };
   // match: isPublished:true on the speakers populate — without it, a session
   // correctly gated on its OWN isPublished still exposed every attached
   // speaker's name/photo regardless of that speaker's own publish state (a
@@ -59,7 +59,7 @@ export const list = catchAsync(async (req: Request, res: Response) => {
     .populate({ path: 'speakers', select: SPEAKER_FIELDS, match: { isPublished: true } })
     .populate({ path: 'moderator', select: SPEAKER_FIELDS, match: { isPublished: true } })
     .populate({ path: 'partners', select: PARTNER_FIELDS, match: { isPublished: true } })
-    .populate('track', 'name color');
+    .populate('tracks', 'name color');
   const sanitized = sessions.map((s) => ({ ...s.toObject(), translations: publicTranslations(s.translations) }));
   res.json(new ApiResponse(sanitized));
 });
@@ -86,7 +86,7 @@ export const recommend = catchAsync(async (req: Request, res: Response) => {
 const buildAdminFilter = (query: ListSessionsQuery): FilterQuery<SessionDoc> => {
   const filter: FilterQuery<SessionDoc> = {};
   if (query.day) filter.day = query.day;
-  if (query.track) filter.track = query.track;
+  if (query.track) filter.tracks = query.track;
   if (query.published) filter.isPublished = query.published === 'true';
   if (query.q) {
     const rx = new RegExp(query.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -108,7 +108,7 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
       .populate('speakers', SPEAKER_FIELDS)
       .populate('moderator', SPEAKER_FIELDS)
       .populate('partners', PARTNER_FIELDS)
-      .populate('track', 'name color'),
+      .populate('tracks', 'name color'),
     Session.countDocuments(filter),
   ]);
 
@@ -143,7 +143,7 @@ export const adminCreate = catchAsync(async (req: Request, res: Response) => {
   await session.populate('speakers', SPEAKER_FIELDS);
   await session.populate('moderator', SPEAKER_FIELDS);
   await session.populate('partners', PARTNER_FIELDS);
-  const populated = await session.populate('track', 'name color');
+  const populated = await session.populate('tracks', 'name color');
   await recordAudit({ req, action: 'session.created', resourceType: 'Session', resourceId: session.id, after: session.toObject() });
   res.status(201).json(new ApiResponse(populated, { conflicts }));
 });
@@ -175,7 +175,7 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
     .populate('speakers', SPEAKER_FIELDS)
     .populate('moderator', SPEAKER_FIELDS)
     .populate('partners', PARTNER_FIELDS)
-    .populate('track', 'name color');
+    .populate('tracks', 'name color');
   if (!session) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
   await recordAudit({
     req,
@@ -223,7 +223,7 @@ export const adminAddRsvp = catchAsync(async (req: Request, res: Response) => {
   await before.populate('speakers', SPEAKER_FIELDS);
   await before.populate('moderator', SPEAKER_FIELDS);
   await before.populate('partners', PARTNER_FIELDS);
-  const session = await before.populate('track', 'name color');
+  const session = await before.populate('tracks', 'name color');
   res.status(201).json(new ApiResponse(session));
 });
 
@@ -238,7 +238,7 @@ export const adminRemoveRsvp = catchAsync(async (req: Request, res: Response) =>
     .populate('speakers', SPEAKER_FIELDS)
     .populate('moderator', SPEAKER_FIELDS)
     .populate('partners', PARTNER_FIELDS)
-    .populate('track', 'name color');
+    .populate('tracks', 'name color');
   if (!session) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
   await recordAudit({ req, action: 'session.rsvp_removed', resourceType: 'Session', resourceId: session.id, before: { email: params.email } });
   res.json(new ApiResponse(session));

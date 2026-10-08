@@ -9,9 +9,10 @@ const baseSessionShape = {
   startTime: timeString,
   endTime: timeString,
   title: z.string().trim().min(2, 'Enter a title'),
-  // Nullable (not just optional) — a PATCH must be able to explicitly clear
-  // an existing session back to "No track", not just leave it unmentioned.
-  track: objectId.nullable().optional(),
+  // A session can belong to several tracks — same shape as speakers/partners
+  // below. An empty array IS the "No track" clear value (there's no separate
+  // null sentinel to special-case).
+  tracks: z.array(objectId).max(20).optional(),
   // Checked against the live SessionType collection in session.controller.ts.
   format: z.string().trim().min(1, 'Choose a session type'),
   room: z.string().trim().min(1, 'Enter a room'),

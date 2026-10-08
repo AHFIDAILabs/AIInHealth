@@ -23,15 +23,17 @@ export const list = catchAsync(async (_req: Request, res: Response) => {
 export const adminList = catchAsync(async (_req: Request, res: Response) => {
   const [tracks, sessions] = await Promise.all([
     Track.find().sort({ order: 1, name: 1 }),
-    Session.find().select('track speakers').lean(),
+    Session.find().select('tracks speakers').lean(),
   ]);
 
   const sessionsByTrack = new Map<string, typeof sessions>();
   for (const s of sessions) {
-    if (!s.track) continue; // "No track" sessions never count toward any track's totals
-    const key = s.track.toString();
-    if (!sessionsByTrack.has(key)) sessionsByTrack.set(key, []);
-    sessionsByTrack.get(key)!.push(s);
+    // A session in 2+ tracks counts toward every one of them, not just the first.
+    for (const trackId of s.tracks ?? []) {
+      const key = trackId.toString();
+      if (!sessionsByTrack.has(key)) sessionsByTrack.set(key, []);
+      sessionsByTrack.get(key)!.push(s);
+    }
   }
 
   res.json(
@@ -95,7 +97,7 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
 // track reference.
 export const adminDelete = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Track not found', 'NOT_FOUND');
-  const inUse = await Session.countDocuments({ track: req.params.id });
+  const inUse = await Session.countDocuments({ tracks: req.params.id });
   if (inUse > 0) {
     throw new ApiError(409, `${inUse} session(s) still use this track — reassign them first`, 'TRACK_IN_USE');
   }

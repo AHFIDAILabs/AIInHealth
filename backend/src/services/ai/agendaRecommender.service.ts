@@ -12,7 +12,9 @@ import { Session, type SessionDoc } from '../../models/Session.model.js';
 // account actually has: a public, potentially high-traffic endpoint is
 // exactly the one place that quota can't be spent freely.
 
-type PopulatedSession = HydratedDocument<SessionDoc> & { track?: { _id: unknown; name: string; color: string } | null };
+// Omit first — SessionDoc's own inferred `tracks: ObjectId[]` would otherwise
+// conflict with (not replace) this override when intersected directly.
+type PopulatedSession = Omit<HydratedDocument<SessionDoc>, 'tracks'> & { tracks?: { _id: unknown; name: string; color: string }[] };
 
 export interface RecommendedSession {
   session: PopulatedSession;
@@ -34,16 +36,15 @@ export const buildMyDay = async (interests: string[], day?: 'day1' | 'day2'): Pr
     .sort({ day: 1, startTime: 1 })
     .populate({ path: 'speakers', select: SPEAKER_FIELDS, match: { isPublished: true } })
     .populate({ path: 'partners', select: PARTNER_FIELDS, match: { isPublished: true } })
-    .populate('track', 'name color')) as unknown as PopulatedSession[];
+    .populate('tracks', 'name color')) as unknown as PopulatedSession[];
 
-  // Score: a session matches if its track name is one of the selected
-  // interests — a session only ever has one track, so this is 0 or 1 today,
-  // but written as an array so a future multi-tag session doesn't need a
-  // rewrite here.
+  // Score: a session matches on EVERY one of its tracks that's also a
+  // selected interest — a session can now belong to several tracks at once.
   const scored = sessions
     .map((session) => {
-      const trackName = session.track?.name?.toLowerCase();
-      const matchedInterests = trackName && normalizedInterests.has(trackName) ? [session.track!.name] : [];
+      const matchedInterests = (session.tracks ?? [])
+        .filter((tr) => normalizedInterests.has(tr.name.toLowerCase()))
+        .map((tr) => tr.name);
       return { session, matchedInterests };
     })
     .filter((s) => s.matchedInterests.length > 0);
