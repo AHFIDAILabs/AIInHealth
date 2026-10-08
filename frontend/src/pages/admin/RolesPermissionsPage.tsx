@@ -15,7 +15,7 @@ type Role =
 const ROLES: { key: Role; label: string; blurb: string }[] = [
   { key: 'super_admin', label: 'Super Admin', blurb: 'Full access — the only role that manages staff accounts, integrations, and the Security Command Center.' },
   { key: 'admin', label: 'Admin', blurb: 'Full operational access to every area except staff/integrations management.' },
-  { key: 'registrations_officer', label: 'Registrations Officer', blurb: 'Owns the registration & payment pipeline (excl. Exhibitors/Innovators) and event-day check-in.' },
+  { key: 'registrations_officer', label: 'Registrations Officer', blurb: 'Owns the registration & payment pipeline, including Exhibitors/Innovators, and event-day check-in.' },
   { key: 'innovator_lead', label: 'Innovator Lead', blurb: 'Reviews and manages Innovator registrations only.' },
   { key: 'exhibitor_lead', label: 'Exhibitor Lead', blurb: 'Reviews and manages Exhibitor registrations, stats, and leads only.' },
   { key: 'abstract_lead', label: 'Abstract Lead', blurb: 'Owns abstract review, the rubric, reviewers, and confirmed abstracts.' },
@@ -50,7 +50,7 @@ const SECTIONS: { section: string; rows: Row[] }[] = [
     section: 'Event Setup',
     rows: [
       {
-        area: 'Registrations (row-scoped to own type for Innovator/Exhibitor Lead; excludes Exhibitor/Innovator for Registrations Officer)',
+        area: 'Registrations (row-scoped to own type for Innovator/Exhibitor Lead; Registrations Officer sees every type)',
         access: { super_admin: 'full', admin: 'full', registrations_officer: 'full', innovator_lead: 'full', exhibitor_lead: 'full', viewer: 'view' },
       },
       { area: 'Access Codes', access: { super_admin: 'full', admin: 'full' } },

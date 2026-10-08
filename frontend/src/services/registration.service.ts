@@ -11,7 +11,8 @@ export type TicketCategory =
   | 'accredited_media'
   | 'staff'
   | 'abstract_presenter'
-  | 'abstract_reviewer';
+  | 'abstract_reviewer'
+  | 'invited_delegate';
 
 export type BoothSize = 'small' | 'medium' | 'large';
 

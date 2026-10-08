@@ -31,7 +31,7 @@ interface DisplaySession {
   endTime: string;
   title: string;
   format: string;
-  track: { name: string; color: string } | null;
+  tracks: { name: string; color: string }[];
   room?: string;
   speakers: DisplaySpeaker[];
   moderator?: DisplaySpeaker;
@@ -53,7 +53,7 @@ const fromRealSession = (s: AdminSession, lang: SiteLanguage): DisplaySession =>
     endTime: s.endTime,
     title: t?.title || s.title,
     format: s.format,
-    track: s.track ? { name: s.track.name, color: s.track.color } : null,
+    tracks: s.tracks.map((tr) => ({ name: tr.name, color: tr.color })),
     room: s.room,
     speakers: s.speakers,
     moderator: s.moderator ?? undefined,
@@ -175,29 +175,29 @@ const STATIC_DAYS: { key: SessionDay; sessions: DisplaySession[] }[] = [
   {
     key: 'day1',
     sessions: [
-      { key: 's1-1', startTime: '08:00', endTime: '09:00', title: 'Registration & Welcome Coffee', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
-      { key: 's1-2', startTime: '09:00', endTime: '10:00', title: 'Opening Ceremony & Keynote Addresses', format: 'Keynote', track: { name: 'Plenary', color: '#E8792C' }, speakers: [], partners: [], cardStyle: 'featured' },
-      { key: 's1-3', startTime: '10:00', endTime: '11:00', title: 'Political Engagements: National Commitments to AI in Health', format: 'Political Engagement', track: { name: 'Plenary', color: '#E8792C' }, speakers: [], partners: [], cardStyle: 'standard' },
-      { key: 's1-4', startTime: '11:00', endTime: '11:30', title: 'Networking Break', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
-      { key: 's1-5', startTime: '11:30', endTime: '13:00', title: 'Panel: AI in Health Policy & Regulation', format: 'Panel Discussion', track: { name: 'Policy & Governance', color: '#14213D' }, speakers: [], partners: [], cardStyle: 'standard' },
-      { key: 's1-6', startTime: '13:00', endTime: '14:00', title: 'Lunch', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
-      { key: 's1-7', startTime: '14:00', endTime: '15:30', title: 'Panel: AI for Resource-Limited Settings', format: 'Panel Discussion', track: { name: 'Clinical AI & Diagnostics', color: '#0F172A' }, speakers: [], partners: [], cardStyle: 'standard' },
-      { key: 's1-8', startTime: '15:30', endTime: '17:00', title: 'Poster & Abstract Presentations', format: 'Poster & Abstract', track: { name: 'Research', color: '#64748B' }, speakers: [], partners: [], cardStyle: 'standard' },
-      { key: 's1-9', startTime: '17:00', endTime: '18:30', title: 'Welcome Reception & Networking', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's1-1', startTime: '08:00', endTime: '09:00', title: 'Registration & Welcome Coffee', format: 'Networking', tracks: [], speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's1-2', startTime: '09:00', endTime: '10:00', title: 'Opening Ceremony & Keynote Addresses', format: 'Keynote', tracks: [{ name: 'Plenary', color: '#E8792C' }], speakers: [], partners: [], cardStyle: 'featured' },
+      { key: 's1-3', startTime: '10:00', endTime: '11:00', title: 'Political Engagements: National Commitments to AI in Health', format: 'Political Engagement', tracks: [{ name: 'Plenary', color: '#E8792C' }], speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's1-4', startTime: '11:00', endTime: '11:30', title: 'Networking Break', format: 'Networking', tracks: [], speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's1-5', startTime: '11:30', endTime: '13:00', title: 'Panel: AI in Health Policy & Regulation', format: 'Panel Discussion', tracks: [{ name: 'Policy & Governance', color: '#14213D' }], speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's1-6', startTime: '13:00', endTime: '14:00', title: 'Lunch', format: 'Networking', tracks: [], speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's1-7', startTime: '14:00', endTime: '15:30', title: 'Panel: AI for Resource-Limited Settings', format: 'Panel Discussion', tracks: [{ name: 'Clinical AI & Diagnostics', color: '#0F172A' }], speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's1-8', startTime: '15:30', endTime: '17:00', title: 'Poster & Abstract Presentations', format: 'Poster & Abstract', tracks: [{ name: 'Research', color: '#64748B' }], speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's1-9', startTime: '17:00', endTime: '18:30', title: 'Welcome Reception & Networking', format: 'Networking', tracks: [], speakers: [], partners: [], cardStyle: 'break' },
     ],
   },
   {
     key: 'day2',
     sessions: [
-      { key: 's2-1', startTime: '08:30', endTime: '09:00', title: 'Morning Coffee', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
-      { key: 's2-2', startTime: '09:00', endTime: '10:30', title: 'Startup Showcase: Live Demonstrations', format: 'Startup Showcase', track: { name: 'Venture & Investment', color: '#E8792C' }, speakers: [], partners: [], cardStyle: 'featured' },
-      { key: 's2-3', startTime: '10:30', endTime: '11:00', title: 'Networking Break', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
-      { key: 's2-4', startTime: '11:00', endTime: '13:00', title: 'Startup Pod & Deal Room: Investor Matchmaking', format: 'Startup Showcase', track: { name: 'Venture & Investment', color: '#E8792C' }, speakers: [], partners: [], cardStyle: 'standard' },
-      { key: 's2-5', startTime: '13:00', endTime: '14:00', title: 'Lunch', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
-      { key: 's2-6', startTime: '14:00', endTime: '15:30', title: 'Panel: Data Interoperability & Infrastructure', format: 'Panel Discussion', track: { name: 'Infrastructure & Data', color: '#14213D' }, speakers: [], partners: [], cardStyle: 'standard' },
-      { key: 's2-7', startTime: '15:30', endTime: '16:30', title: 'Working Session: Draft National Policy Brief', format: 'Poster & Abstract', track: { name: 'Policy & Governance', color: '#64748B' }, speakers: [], partners: [], cardStyle: 'standard' },
-      { key: 's2-8', startTime: '16:30', endTime: '17:15', title: 'Closing Plenary & Summit Communiqué', format: 'Keynote', track: { name: 'Plenary', color: '#E8792C' }, speakers: [], partners: [], cardStyle: 'featured' },
-      { key: 's2-9', startTime: '17:15', endTime: '18:00', title: 'Closing Reception', format: 'Networking', track: null, speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's2-1', startTime: '08:30', endTime: '09:00', title: 'Morning Coffee', format: 'Networking', tracks: [], speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's2-2', startTime: '09:00', endTime: '10:30', title: 'Startup Showcase: Live Demonstrations', format: 'Startup Showcase', tracks: [{ name: 'Venture & Investment', color: '#E8792C' }], speakers: [], partners: [], cardStyle: 'featured' },
+      { key: 's2-3', startTime: '10:30', endTime: '11:00', title: 'Networking Break', format: 'Networking', tracks: [], speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's2-4', startTime: '11:00', endTime: '13:00', title: 'Startup Pod & Deal Room: Investor Matchmaking', format: 'Startup Showcase', tracks: [{ name: 'Venture & Investment', color: '#E8792C' }], speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's2-5', startTime: '13:00', endTime: '14:00', title: 'Lunch', format: 'Networking', tracks: [], speakers: [], partners: [], cardStyle: 'break' },
+      { key: 's2-6', startTime: '14:00', endTime: '15:30', title: 'Panel: Data Interoperability & Infrastructure', format: 'Panel Discussion', tracks: [{ name: 'Infrastructure & Data', color: '#14213D' }], speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's2-7', startTime: '15:30', endTime: '16:30', title: 'Working Session: Draft National Policy Brief', format: 'Poster & Abstract', tracks: [{ name: 'Policy & Governance', color: '#64748B' }], speakers: [], partners: [], cardStyle: 'standard' },
+      { key: 's2-8', startTime: '16:30', endTime: '17:15', title: 'Closing Plenary & Summit Communiqué', format: 'Keynote', tracks: [{ name: 'Plenary', color: '#E8792C' }], speakers: [], partners: [], cardStyle: 'featured' },
+      { key: 's2-9', startTime: '17:15', endTime: '18:00', title: 'Closing Reception', format: 'Networking', tracks: [], speakers: [], partners: [], cardStyle: 'break' },
     ],
   },
 ];
@@ -261,7 +261,7 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker, onCardClick }:
       className={`flex-1 cursor-pointer rounded-xl p-5 shadow-sm transition-shadow hover:shadow-md ${
         s.cardStyle === 'standard' ? `${CARD_STYLE_CLASSES.standard} border-l-4` : CARD_STYLE_CLASSES[s.cardStyle]
       }`}
-      style={s.cardStyle === 'standard' ? { borderLeftColor: s.track?.color ?? '#E8792C' } : undefined}
+      style={s.cardStyle === 'standard' ? { borderLeftColor: s.tracks[0]?.color ?? '#E8792C' } : undefined}
     >
       {/* flex-col by default — min-w-0 on the content column lets it shrink
           arbitrarily, so a plain flex-wrap row never actually wraps (both
@@ -280,15 +280,16 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker, onCardClick }:
             >
               {s.format}
             </span>
-            {s.track && (
+            {s.tracks.map((tr) => (
               <span
+                key={tr.name}
                 className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
                   s.cardStyle === 'standard' ? 'bg-offwhite text-slate-500' : 'bg-white/10 text-slate-200'
                 }`}
               >
-                {s.track.name}
+                {tr.name}
               </span>
-            )}
+            ))}
             {s.requiresRsvp && (
               <button
                 type="button"
@@ -350,7 +351,7 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker, onCardClick }:
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onSpeakerClick(resolveSpeaker(sp, s.track?.name ?? t('agenda.card.generalSession', 'General Session')));
+                    onSpeakerClick(resolveSpeaker(sp, s.tracks[0]?.name ?? t('agenda.card.generalSession', 'General Session')));
                   }}
                   className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-left transition-colors ${
                     s.cardStyle === 'standard'
@@ -439,7 +440,7 @@ interface SessionDetailModalProps {
 const SessionDetailModal = ({ session, dayKey, dayHeading, onClose, onRsvp, onSpeakerClick, resolveSpeaker }: SessionDetailModalProps) => {
   const { t } = useTranslation();
   const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
-  const metaLine = [session?.track?.name, session?.room ? `${t('agenda.detail.room', 'Room')}: ${session.room}` : null]
+  const metaLine = [session?.tracks.map((tr) => tr.name).join(', ') || null, session?.room ? `${t('agenda.detail.room', 'Room')}: ${session.room}` : null]
     .filter(Boolean)
     .join(' · ');
 
@@ -502,7 +503,7 @@ const SessionDetailModal = ({ session, dayKey, dayHeading, onClose, onRsvp, onSp
                     <PersonRow
                       person={session.moderator}
                       onClick={() =>
-                        onSpeakerClick(resolveSpeaker(session.moderator!, session.track?.name ?? t('agenda.card.generalSession', 'General Session')))
+                        onSpeakerClick(resolveSpeaker(session.moderator!, session.tracks[0]?.name ?? t('agenda.card.generalSession', 'General Session')))
                       }
                     />
                   </div>
@@ -519,7 +520,7 @@ const SessionDetailModal = ({ session, dayKey, dayHeading, onClose, onRsvp, onSp
                       <PersonRow
                         key={sp._id}
                         person={sp}
-                        onClick={() => onSpeakerClick(resolveSpeaker(sp, session.track?.name ?? t('agenda.card.generalSession', 'General Session')))}
+                        onClick={() => onSpeakerClick(resolveSpeaker(sp, session.tracks[0]?.name ?? t('agenda.card.generalSession', 'General Session')))}
                       />
                     ))}
                   </div>
@@ -672,7 +673,7 @@ export const Agenda = () => {
   const trackOptions = useMemo(() => {
     const map = new Map<string, string>();
     allRealSessions.forEach((s) => {
-      if (s.track) map.set(s.track.name, s.track.color);
+      s.tracks.forEach((tr) => map.set(tr.name, tr.color));
     });
     return Array.from(map.entries());
   }, [allRealSessions]);
@@ -714,7 +715,7 @@ export const Agenda = () => {
   const filteredSessions = day.sessions.filter(
     (s) =>
       (!formatFilter || s.format === formatFilter) &&
-      (!trackFilter || s.track?.name === trackFilter) &&
+      (!trackFilter || s.tracks.some((tr) => tr.name === trackFilter)) &&
       (!roomFilter || s.room === roomFilter)
   );
 
@@ -981,7 +982,7 @@ export const Agenda = () => {
                           <span className="text-[13px] font-bold text-navy sm:text-sm">{first.startTime}</span>
                           <span
                             className="my-1.5 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-offwhite"
-                            style={{ backgroundColor: first.track?.color ?? '#E8792C' }}
+                            style={{ backgroundColor: first.tracks[0]?.color ?? '#E8792C' }}
                           />
                           <span className="w-px flex-1 bg-slate-200" />
                           {!isConcurrent && <span className="text-[11px] font-medium text-slate-400">{first.endTime}</span>}

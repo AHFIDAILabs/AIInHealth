@@ -41,7 +41,7 @@ const EMPTY_FORM: SessionInput = {
   startTime: '09:00',
   endTime: '10:00',
   title: '',
-  track: null,
+  tracks: [],
   format: '',
   room: '',
   description: '',
@@ -204,7 +204,7 @@ export const SessionsListTab = () => {
       startTime: session.startTime,
       endTime: session.endTime,
       title: session.title,
-      track: session.track?._id ?? null,
+      tracks: session.tracks.map((t) => t._id),
       format: session.format,
       room: session.room,
       description: session.description ?? '',
@@ -263,6 +263,13 @@ export const SessionsListTab = () => {
     } finally {
       setTranslationSaving((prev) => ({ ...prev, [lang]: false }));
     }
+  };
+
+  const toggleTrack = (id: string) => {
+    setForm((prev) => {
+      const current = prev.tracks ?? [];
+      return { ...prev, tracks: current.includes(id) ? current.filter((t) => t !== id) : [...current, id] };
+    });
   };
 
   const toggleSpeaker = (id: string) => {
@@ -472,14 +479,17 @@ export const SessionsListTab = () => {
                           <td className="px-3 py-3">
                             <p className="font-medium text-navy">{s.title}</p>
                             <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                              {s.track ? (
-                                <span
-                                  className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                                  style={{ backgroundColor: `${s.track.color}1A`, color: s.track.color }}
-                                >
-                                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: s.track.color }} />
-                                  {s.track.name}
-                                </span>
+                              {s.tracks.length > 0 ? (
+                                s.tracks.map((tr) => (
+                                  <span
+                                    key={tr._id}
+                                    className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                                    style={{ backgroundColor: `${tr.color}1A`, color: tr.color }}
+                                  >
+                                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: tr.color }} />
+                                    {tr.name}
+                                  </span>
+                                ))
                               ) : (
                                 <span className="rounded-full bg-offwhite px-2 py-0.5 text-[10px] font-medium text-slate-400">No track</span>
                               )}
@@ -588,15 +598,42 @@ export const SessionsListTab = () => {
 
                 <AdminInput label="Session Title *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Opening Keynote" />
 
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <p className="text-[13px] font-semibold text-navy">Tracks</p>
+                    <div className="flex gap-2.5 text-xs font-semibold">
+                      <button type="button" onClick={() => setForm({ ...form, tracks: tracks.map((t) => t._id) })} className="text-orange hover:underline">
+                        Select All
+                      </button>
+                      <button type="button" onClick={() => setForm({ ...form, tracks: [] })} className="text-slate-400 hover:underline">
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200">
+                    {tracks.map((t) => {
+                      const selected = form.tracks?.includes(t._id);
+                      return (
+                        <button
+                          key={t._id}
+                          type="button"
+                          onClick={() => toggleTrack(t._id)}
+                          className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-offwhite ${selected ? 'bg-orange/5' : ''}`}
+                        >
+                          <span className="flex min-w-0 items-center gap-1.5 truncate text-navy">
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: t.color }} />
+                            {t.name}
+                          </span>
+                          {selected && <span className="shrink-0 text-orange">✓</span>}
+                        </button>
+                      );
+                    })}
+                    {tracks.length === 0 && <p className="px-3 py-3 text-xs text-slate-400">No tracks yet — add one from the Tracks tab.</p>}
+                  </div>
+                  {(form.tracks?.length ?? 0) === 0 && <p className="mt-1.5 text-xs text-slate-400">No track selected.</p>}
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
-                  <AdminSelect label="Track" value={form.track ?? ''} onChange={(e) => setForm({ ...form, track: e.target.value || null })}>
-                    <option value="">No track</option>
-                    {tracks.map((t) => (
-                      <option key={t._id} value={t._id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </AdminSelect>
                   <CreatableCombobox
                     label="Session Type"
                     value={form.format}
@@ -608,19 +645,18 @@ export const SessionsListTab = () => {
                     }}
                     placeholder="e.g. Keynote"
                   />
+                  <AdminSelect
+                    label="Agenda Card Style"
+                    value={form.cardStyle ?? 'standard'}
+                    onChange={(e) => setForm({ ...form, cardStyle: e.target.value as SessionInput['cardStyle'] })}
+                  >
+                    {SESSION_CARD_STYLES.map((style) => (
+                      <option key={style} value={style}>
+                        {CARD_STYLE_LABEL[style]}
+                      </option>
+                    ))}
+                  </AdminSelect>
                 </div>
-
-                <AdminSelect
-                  label="Agenda Card Style"
-                  value={form.cardStyle ?? 'standard'}
-                  onChange={(e) => setForm({ ...form, cardStyle: e.target.value as SessionInput['cardStyle'] })}
-                >
-                  {SESSION_CARD_STYLES.map((style) => (
-                    <option key={style} value={style}>
-                      {CARD_STYLE_LABEL[style]}
-                    </option>
-                  ))}
-                </AdminSelect>
 
                 <AdminInput label="Room" value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="e.g. Ballroom A" />
 

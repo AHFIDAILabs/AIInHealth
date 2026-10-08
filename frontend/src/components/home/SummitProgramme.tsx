@@ -40,10 +40,10 @@ export const SummitProgramme = () => {
                 <Reveal key={s._id} delay={i * 0.04}>
                   <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
-                      {s.track?.color && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: s.track.color }} />}
+                      {s.tracks[0]?.color && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: s.tracks[0].color }} />}
                       <div>
                         <p className="font-display text-[15px] font-semibold text-navy">{title}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">{s.track?.name ?? s.format}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{s.tracks[0]?.name ?? s.format}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4 text-xs font-medium text-slate-500">

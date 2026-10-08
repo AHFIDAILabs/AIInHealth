@@ -35,6 +35,7 @@ const TICKET_LABEL: Record<TicketCategory, string> = {
   staff: 'Organizer',
   abstract_presenter: 'Abstract Presenter',
   abstract_reviewer: 'Abstract Reviewer',
+  invited_delegate: 'Invited Delegate',
 };
 const SCHOLARSHIP_OPTIONS = [10, 25, 50, 100] as const;
 const STATUS_OPTIONS: RegistrationStatus[] = ['pending', 'reviewed', 'confirmed', 'declined'];
@@ -557,7 +558,7 @@ export const AttendeesPage = () => {
                   value={form.ticketCategory}
                   onChange={(e) => setForm({ ...form, ticketCategory: e.target.value as TicketCategory, scholarshipDiscount: '' })}
                 >
-                  {TICKET_CATEGORIES.map((c) => (
+                  {TICKET_CATEGORIES.filter((c) => c !== 'invited_delegate').map((c) => (
                     <option key={c} value={c}>
                       {TICKET_LABEL[c]} — {formatNaira(TICKET_PRICE_NGN[c])}
                     </option>

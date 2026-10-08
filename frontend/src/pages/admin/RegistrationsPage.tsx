@@ -42,6 +42,7 @@ const TICKET_LABEL: Record<TicketCategory, string> = {
   staff: 'Organizer',
   abstract_presenter: 'Abstract Presenter',
   abstract_reviewer: 'Abstract Reviewer',
+  invited_delegate: 'Invited Delegate',
 };
 const BOOTH_SIZES: BoothSize[] = ['small', 'medium', 'large'];
 const SCHOLARSHIP_OPTIONS = [10, 25, 50, 100] as const;
@@ -104,13 +105,10 @@ const EMPTY_ADD_FORM: AddFormState = {
 
 const STATUS_OPTIONS: RegistrationStatus[] = ['pending', 'reviewed', 'confirmed', 'declined'];
 const TYPE_OPTIONS: RegistrationType[] = ['attendee', 'exhibitor', 'sponsor', 'volunteer', 'team', 'innovator'];
-// registrations_officer no longer sees exhibitor/innovator rows at all (those
-// moved to their own leads) — drop them from that role's own type picker so
-// picking one doesn't just show an empty list. admin/super_admin/viewer keep
-// every option.
-const REGISTRATIONS_OFFICER_TYPE_OPTIONS: RegistrationType[] = TYPE_OPTIONS.filter(
-  (t) => t !== 'exhibitor' && t !== 'innovator'
-);
+// registrations_officer has full access to every registration type, including
+// exhibitor/innovator — same type picker as admin/super_admin/viewer (mirrors
+// registration.controller.ts's isTypeAllowedForRole, which has no exclusion
+// for this role).
 
 // 'organizer' is a UI-only sentinel for the list's own type FILTER dropdown —
 // never a real RegistrationType, never sent to the backend as a literal
@@ -123,7 +121,6 @@ const REGISTRATIONS_OFFICER_TYPE_OPTIONS: RegistrationType[] = TYPE_OPTIONS.filt
 // 'team' pool-widening on the backend).
 type TypeFilterValue = RegistrationType | 'organizer';
 const FILTER_TYPE_OPTIONS: TypeFilterValue[] = [...TYPE_OPTIONS, 'organizer'];
-const REGISTRATIONS_OFFICER_FILTER_TYPE_OPTIONS: TypeFilterValue[] = [...REGISTRATIONS_OFFICER_TYPE_OPTIONS, 'organizer'];
 // innovator_lead/exhibitor_lead are locked to exactly their own type — mirrors
 // the backend's ROLE_REGISTRATION_TYPES in registration.controller.ts.
 const ROLE_LOCKED_TYPE: Partial<Record<Role, RegistrationType>> = {
@@ -588,7 +585,7 @@ export const RegistrationsPage = () => {
             className="rounded-lg border border-slate-200 bg-white py-2 px-3 text-[13px] text-navy focus:border-orange/40 focus:outline-none"
           >
             <option value="">All Types</option>
-            {(user?.role === 'registrations_officer' ? REGISTRATIONS_OFFICER_FILTER_TYPE_OPTIONS : FILTER_TYPE_OPTIONS).map((t) => (
+            {FILTER_TYPE_OPTIONS.map((t) => (
               <option key={t} value={t}>
                 {t[0].toUpperCase() + t.slice(1)}
               </option>
@@ -1050,7 +1047,7 @@ export const RegistrationsPage = () => {
 
                 {!lockedType && (
                   <div className="grid grid-cols-3 gap-2">
-                    {(user?.role === 'registrations_officer' ? REGISTRATIONS_OFFICER_TYPE_OPTIONS : TYPE_OPTIONS).map((t) => (
+                    {TYPE_OPTIONS.map((t) => (
                       <button
                         key={t}
                         onClick={() => setAddForm({ ...EMPTY_ADD_FORM, type: t })}
@@ -1071,7 +1068,7 @@ export const RegistrationsPage = () => {
                       value={addForm.ticketCategory}
                       onChange={(e) => setAddForm({ ...addForm, ticketCategory: e.target.value as TicketCategory, scholarshipDiscount: '' })}
                     >
-                      {TICKET_CATEGORIES.map((c) => (
+                      {TICKET_CATEGORIES.filter((c) => c !== 'invited_delegate').map((c) => (
                         <option key={c} value={c}>
                           {TICKET_LABEL[c]} — {formatNaira(TICKET_PRICE_NGN[c])}
                         </option>

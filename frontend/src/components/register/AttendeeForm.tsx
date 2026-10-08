@@ -28,6 +28,10 @@ const TICKET_OPTIONS: { value: TicketCategory; label: string; icon: typeof Globe
   { value: 'abstract_reviewer', label: 'Abstract Reviewer', icon: ClipboardCheck },
 ];
 const TICKET_VALUES = TICKET_OPTIONS.map((t) => t.value) as [TicketCategory, ...TicketCategory[]];
+// 'invited_delegate' is deliberately NOT in TICKET_OPTIONS (never shown in the
+// grid, never self-selectable) but must still pass the schema below when
+// forced programmatically by the invite flow (defaultAccessCode).
+const ALL_TICKET_VALUES = [...TICKET_VALUES, 'invited_delegate'] as [TicketCategory, ...TicketCategory[]];
 
 // Categories bound one-to-one with an access code type, both directions
 // (registration.controller.ts) — an access code is required (not optional)
@@ -51,7 +55,7 @@ const groupAttendeeSchema = z.object({
 const schema = z
   .object({
     registrationMode: z.enum(['individual', 'group']),
-    ticketCategory: z.enum(TICKET_VALUES, { errorMap: () => ({ message: 'Choose a ticket category' }) }),
+    ticketCategory: z.enum(ALL_TICKET_VALUES, { errorMap: () => ({ message: 'Choose a ticket category' }) }),
     fullName: z.string().trim().min(2, 'Enter your full name'),
     email: z.string().trim().toLowerCase().email('Enter a valid email'),
     phone: z.string().trim().min(6, 'Enter a valid phone number'),
@@ -98,7 +102,11 @@ interface AttendeeFormProps {
 }
 
 export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
-  const [step, setStep] = useState<0 | 1>(0);
+  // The "Sponsored Delegate" invite flow (ScholarshipApplication.tsx's
+  // /sponsored-delegates?code=... branch) — skips the mode picker and the
+  // ticket-category decision entirely; see the simplified render below.
+  const isInviteMode = Boolean(defaultAccessCode);
+  const [step, setStep] = useState<0 | 1>(isInviteMode ? 1 : 0);
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
@@ -115,7 +123,11 @@ export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { groupAttendees: [], accessCode: defaultAccessCode ?? '' },
+    defaultValues: {
+      groupAttendees: [],
+      accessCode: defaultAccessCode ?? '',
+      ...(isInviteMode ? { registrationMode: 'individual' as const, ticketCategory: 'invited_delegate' as const } : {}),
+    },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'groupAttendees' });
@@ -152,10 +164,15 @@ export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
   };
 
   const resetAll = () => {
-    reset({ groupAttendees: [] });
+    reset({
+      groupAttendees: [],
+      ...(isInviteMode
+        ? { accessCode: defaultAccessCode, registrationMode: 'individual' as const, ticketCategory: 'invited_delegate' as const }
+        : {}),
+    });
     setConfirmation(null);
     setDiscountApplied(null);
-    setStep(0);
+    setStep(isInviteMode ? 1 : 0);
   };
 
   if (confirmation) return <RegisterSuccess message={confirmation} onReset={resetAll} />;
@@ -179,11 +196,13 @@ export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-center gap-2">
-        {[0, 1].map((s) => (
-          <span key={s} className={`h-1.5 rounded-full transition-all ${step === s ? 'w-8 bg-orange' : 'w-1.5 bg-slate-200'}`} />
-        ))}
-      </div>
+      {!isInviteMode && (
+        <div className="mb-8 flex items-center justify-center gap-2">
+          {[0, 1].map((s) => (
+            <span key={s} className={`h-1.5 rounded-full transition-all ${step === s ? 'w-8 bg-orange' : 'w-1.5 bg-slate-200'}`} />
+          ))}
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         {step === 0 ? (
@@ -229,81 +248,93 @@ export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
             className="space-y-7"
           >
             <HoneypotField {...register('middleName')} />
-            <button
-              type="button"
-              onClick={() => setStep(0)}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-navy"
-            >
-              <ArrowLeft size={15} /> Back
-            </button>
+            {!isInviteMode && (
+              <button
+                type="button"
+                onClick={() => setStep(0)}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-navy"
+              >
+                <ArrowLeft size={15} /> Back
+              </button>
+            )}
 
             {serverError && <Banner variant="error">{serverError}</Banner>}
 
-            <div>
-              <p className="text-sm font-semibold text-navy">Ticket Category</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {TICKET_OPTIONS.map((opt) => {
-                  const isActive = ticketCategory === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setValue('ticketCategory', opt.value, { shouldValidate: true })}
-                      className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
-                        isActive ? 'border-orange bg-orange/5 shadow-sm shadow-orange/10' : 'border-slate-200 bg-white hover:border-orange/40'
-                      }`}
-                    >
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isActive ? 'bg-orange text-white' : 'bg-navy-secondary text-orange'}`}>
-                        <opt.icon size={16} />
-                      </span>
-                      <span>
-                        <span className="block text-sm font-semibold text-navy">{opt.label}</span>
-                        <span className="block text-xs text-slate-500">{formatNaira(TICKET_PRICE_NGN[opt.value])}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {errors.ticketCategory && <p className="mt-2 text-xs font-medium text-danger">{errors.ticketCategory.message}</p>}
-            </div>
-
-            {ID_VERIFICATION_TICKET_CATEGORIES.includes(ticketCategory) && (
-              <div>
-                <p className="text-sm font-semibold text-navy">Official ID</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {idVerificationRequirementText(ticketCategory as 'student_researcher' | 'government_official' | 'accredited_media')}
-                </p>
-                <div className="mt-3">
-                  <IdCardUpload
-                    value={watch('idCardUrl')}
-                    onChange={(url) => setValue('idCardUrl', url, { shouldValidate: true })}
-                    error={errors.idCardUrl?.message}
-                  />
-                </div>
-              </div>
+            {isInviteMode && (
+              <Banner variant="info">
+                You&rsquo;re registering as an Invited Delegate — your registration is fully covered by your invitation code.
+              </Banner>
             )}
 
-            <div>
-              <LightField
-                label={REQUIRED_CODE_CATEGORY[ticketCategory] ? 'Access Code' : 'Access Code (optional)'}
-                placeholder={
-                  REQUIRED_CODE_PLACEHOLDER[ticketCategory] ?? "e.g. SCH-XXXXXX (leave blank if you don't have one)"
-                }
-                error={errors.accessCode?.message}
-                {...register('accessCode')}
-                className="uppercase tracking-wider"
-              />
-              <p className="mt-1.5 text-xs text-slate-400">
-                {REQUIRED_CODE_CATEGORY[ticketCategory]
-                  ? `Enter the ${REQUIRED_CODE_CATEGORY[ticketCategory]} code the organizing team sent you — it's tied to this exact email address.`
-                  : "Have a scholarship, keynote speaker, complimentary, abstract presenter, or promo code? Enter it here. It's checked and applied automatically before you're sent to payment."}
-              </p>
-              {ticketCategory === 'vip' && (
-                <p className="mt-1 text-xs text-slate-400">
-                  Note: a promo (QR-banner) code can't be used for the VIP category — it works for every other category.
-                </p>
-              )}
-            </div>
+            {!isInviteMode && (
+              <>
+                <div>
+                  <p className="text-sm font-semibold text-navy">Ticket Category</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {TICKET_OPTIONS.map((opt) => {
+                      const isActive = ticketCategory === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setValue('ticketCategory', opt.value, { shouldValidate: true })}
+                          className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
+                            isActive ? 'border-orange bg-orange/5 shadow-sm shadow-orange/10' : 'border-slate-200 bg-white hover:border-orange/40'
+                          }`}
+                        >
+                          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isActive ? 'bg-orange text-white' : 'bg-navy-secondary text-orange'}`}>
+                            <opt.icon size={16} />
+                          </span>
+                          <span>
+                            <span className="block text-sm font-semibold text-navy">{opt.label}</span>
+                            <span className="block text-xs text-slate-500">{formatNaira(TICKET_PRICE_NGN[opt.value])}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {errors.ticketCategory && <p className="mt-2 text-xs font-medium text-danger">{errors.ticketCategory.message}</p>}
+                </div>
+
+                {ID_VERIFICATION_TICKET_CATEGORIES.includes(ticketCategory) && (
+                  <div>
+                    <p className="text-sm font-semibold text-navy">Official ID</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {idVerificationRequirementText(ticketCategory as 'student_researcher' | 'government_official' | 'accredited_media')}
+                    </p>
+                    <div className="mt-3">
+                      <IdCardUpload
+                        value={watch('idCardUrl')}
+                        onChange={(url) => setValue('idCardUrl', url, { shouldValidate: true })}
+                        error={errors.idCardUrl?.message}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <LightField
+                    label={REQUIRED_CODE_CATEGORY[ticketCategory] ? 'Access Code' : 'Access Code (optional)'}
+                    placeholder={
+                      REQUIRED_CODE_PLACEHOLDER[ticketCategory] ?? "e.g. SCH-XXXXXX (leave blank if you don't have one)"
+                    }
+                    error={errors.accessCode?.message}
+                    {...register('accessCode')}
+                    className="uppercase tracking-wider"
+                  />
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    {REQUIRED_CODE_CATEGORY[ticketCategory]
+                      ? `Enter the ${REQUIRED_CODE_CATEGORY[ticketCategory]} code the organizing team sent you — it's tied to this exact email address.`
+                      : "Have a scholarship, keynote speaker, complimentary, abstract presenter, or promo code? Enter it here. It's checked and applied automatically before you're sent to payment."}
+                  </p>
+                  {ticketCategory === 'vip' && (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Note: a promo (QR-banner) code can't be used for the VIP category — it works for every other category.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
 
             <div>
               <p className="text-sm font-semibold text-navy">
