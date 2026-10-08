@@ -11,12 +11,16 @@ import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadAdminImage } from '../../services/upload.service';
 import { fetchAdminVolunteerSettings, setVolunteerApplicationsOpen } from '../../services/volunteerSettings.service';
+import { fetchAdminInnovatorSettings, setInnovatorApplicationsOpen } from '../../services/innovatorSettings.service';
 import { adminFetchPromoStatus, adminLaunchPromoCampaign, adminSetPromoActive, type PromoStatus } from '../../services/promo.service';
 
 // Same roles that manage Volunteers elsewhere (Registrations' Volunteers
 // filter, Volunteer Tracks) — not the personal-account roles above, this is
 // the one event-wide setting on an otherwise per-admin page.
 const VOLUNTEER_SETTINGS_ROLES = ['super_admin', 'admin', 'registrations_officer'];
+// innovator_lead owns this area (not registrations_officer — Innovator was
+// deliberately carved out of that role's scope elsewhere in this app).
+const INNOVATOR_SETTINGS_ROLES = ['super_admin', 'admin', 'innovator_lead'];
 
 const EVENT_LABEL: Record<NotificationEvent, string> = {
   'registration.new': 'New registration submitted',
@@ -139,6 +143,10 @@ export const SettingsPage = () => {
   const [volunteerOpen, setVolunteerOpenState] = useState<boolean | null>(null);
   const [volunteerBusy, setVolunteerBusy] = useState(false);
 
+  const canManageInnovatorSettings = !!user && INNOVATOR_SETTINGS_ROLES.includes(user.role);
+  const [innovatorOpen, setInnovatorOpenState] = useState<boolean | null>(null);
+  const [innovatorBusy, setInnovatorBusy] = useState(false);
+
   // A real, uncapped-quantity 100%-off giveaway running for a fixed 10 days
   // once launched — restricted to super_admin, distinct from the broader
   // registrations_officer/admin scope every other card above allows.
@@ -167,6 +175,28 @@ export const SettingsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setVolunteerBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!canManageInnovatorSettings) return;
+    fetchAdminInnovatorSettings()
+      .then((s) => setInnovatorOpenState(s.open))
+      .catch((err) => toast('error', getApiErrorMessage(err)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManageInnovatorSettings]);
+
+  const toggleInnovatorApplications = async (next: boolean) => {
+    const reason = !next ? window.prompt('Optional: reason shown to admins (and visitors) — e.g. "Innovator slots are full."') ?? undefined : undefined;
+    setInnovatorBusy(true);
+    try {
+      const settings = await setInnovatorApplicationsOpen(next, reason);
+      setInnovatorOpenState(settings.open);
+      toast('success', next ? 'Innovator applications reopened' : 'Innovator applications closed');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setInnovatorBusy(false);
     }
   };
 
@@ -325,6 +355,29 @@ export const SettingsPage = () => {
             <p className="mt-2 text-xs text-slate-400">
               Turn this off to stop new volunteer applications on the public Register page — anyone who already has an
               access code can still confirm their spot either way.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Same shape as the Volunteer Applications card above, for the
+          Innovator registration type — see INNOVATOR_SETTINGS_ROLES. */}
+      {canManageInnovatorSettings && (
+        <div className="mt-6 rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Innovator Applications</p>
+          <div className="mt-4">
+            {innovatorOpen === null ? (
+              <p className="text-sm text-slate-400">Loading…</p>
+            ) : (
+              <AdminToggle
+                label={innovatorBusy ? 'Accepting new applications (updating…)' : 'Accepting new applications'}
+                checked={innovatorOpen}
+                onChange={toggleInnovatorApplications}
+              />
+            )}
+            <p className="mt-2 text-xs text-slate-400">
+              Turn this off to stop new Innovator applications on the public Register page — anyone already
+              pre-approved with an access code can still confirm immediately either way.
             </p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import { RegisterSuccess } from './RegisterSuccess';
 import { submitRegistration } from '../../services/registration.service';
 import { getApiErrorMessage } from '../../services/api';
 import { optionalUrlField } from '../../lib/validation';
+import { fetchInnovatorApplicationsStatus } from '../../services/innovatorSettings.service';
 import { useFormToken } from '../../hooks/useFormToken';
 
 const schema = z.object({
@@ -28,13 +29,30 @@ export const InnovatorForm = () => {
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const formToken = useFormToken();
+  // null while loading — treated as "open" (don't flash a false "closed"
+  // notice before the real status arrives); an already-issued access code is
+  // never blocked by this either way, only a fresh application is.
+  const [applicationsOpen, setApplicationsOpen] = useState<boolean | null>(null);
+  const [closedReason, setClosedReason] = useState<string | undefined>();
+
+  useEffect(() => {
+    fetchInnovatorApplicationsStatus()
+      .then((status) => {
+        setApplicationsOpen(status.open);
+        setClosedReason(status.reason);
+      })
+      .catch(() => setApplicationsOpen(true));
+  }, []);
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  const hasCode = !!watch('accessCode')?.trim();
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
@@ -59,13 +77,25 @@ export const InnovatorForm = () => {
 
   if (confirmation) return <RegisterSuccess message={confirmation} onReset={resetAll} />;
 
+  // Applications closed blocks only a fresh submission (no code) — someone
+  // already pre-approved is someone staff already vetted, so the form and
+  // its Access Code field stay fully usable either way.
+  const applicationsClosed = applicationsOpen === false;
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       <HoneypotField {...register('middleName')} />
       <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-        Showcasing an AI-in-health solution? Fill out the form below and our team will follow up with demo table
-        options and logistics.
+        {applicationsClosed
+          ? "We're not accepting new Innovator applications right now — if you already have an access code from us, enter it below to confirm immediately."
+          : "Showcasing an AI-in-health solution? Fill out the form below and our team will follow up with demo table options and logistics."}
       </p>
+
+      {applicationsClosed && !hasCode && (
+        <Banner variant="warning">
+          {closedReason || 'Innovator applications are closed right now.'} You can still confirm below if you already have an access code.
+        </Banner>
+      )}
 
       {serverError && <Banner variant="error">{serverError}</Banner>}
 
@@ -102,8 +132,8 @@ export const InnovatorForm = () => {
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit" variant="primary" loading={isSubmitting}>
-          Submit Innovator Application
+        <Button type="submit" variant="primary" loading={isSubmitting} disabled={applicationsClosed && !hasCode}>
+          {hasCode ? 'Confirm Innovator Registration' : applicationsClosed ? 'Applications Closed' : 'Submit Innovator Application'}
         </Button>
       </div>
     </form>

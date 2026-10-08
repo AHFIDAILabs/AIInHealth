@@ -10,7 +10,7 @@ import { LightField } from '../ui/LightField';
 import { HoneypotField } from '../ui/HoneypotField';
 import { RegisterSuccess } from './RegisterSuccess';
 import { IdCardUpload } from './IdCardUpload';
-import { submitRegistration, ID_VERIFICATION_TICKET_CATEGORIES, type TicketCategory } from '../../services/registration.service';
+import { submitRegistration, ID_VERIFICATION_TICKET_CATEGORIES, idVerificationRequirementText, type TicketCategory } from '../../services/registration.service';
 import { initializePayment } from '../../services/payment.service';
 import { getApiErrorMessage } from '../../services/api';
 import { useFormToken } from '../../hooks/useFormToken';
@@ -271,13 +271,7 @@ export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
               <div>
                 <p className="text-sm font-semibold text-navy">Official ID</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  This ticket category requires a quick verification — upload a clear photo of your{' '}
-                  {ticketCategory === 'student_researcher'
-                    ? 'student ID card'
-                    : ticketCategory === 'government_official'
-                      ? 'government-issued ID'
-                      : 'press/media accreditation card'}
-                  . Our team reviews it before your registration is confirmed.
+                  {idVerificationRequirementText(ticketCategory as 'student_researcher' | 'government_official' | 'accredited_media')}
                 </p>
                 <div className="mt-3">
                   <IdCardUpload

@@ -12,7 +12,7 @@ import {
   type AdminRegistration,
   type RegistrationStatus,
 } from '../../services/admin.service';
-import type { TicketCategory } from '../../services/registration.service';
+import { idVerificationRequirementText, type TicketCategory } from '../../services/registration.service';
 import { TICKET_PRICE_NGN, isFreeTicketCategory, formatNaira } from '../../lib/pricing';
 import { fetchAttendeeStats, type AttendeeStats } from '../../services/attendee.service';
 import { getApiErrorMessage } from '../../services/api';
@@ -451,6 +451,13 @@ export const AttendeesPage = () => {
                     <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-warning">
                       <IdCard size={13} /> Official ID — review before confirming
                     </p>
+                    {(active.ticketCategory === 'student_researcher' ||
+                      active.ticketCategory === 'government_official' ||
+                      active.ticketCategory === 'accredited_media') && (
+                      <p className="mt-1.5 text-xs text-slate-500">
+                        Required: {idVerificationRequirementText(active.ticketCategory)}
+                      </p>
+                    )}
                     <a href={active.idCardUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block">
                       <img
                         src={active.idCardUrl}

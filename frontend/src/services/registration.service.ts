@@ -22,6 +22,23 @@ export type BoothSize = 'small' | 'medium' | 'large';
 // auto-confirms anymore either (an admin must review the ID first).
 export const ID_VERIFICATION_TICKET_CATEGORIES: TicketCategory[] = ['student_researcher', 'government_official', 'accredited_media'];
 
+// What counts as a valid upload for each ID-verification category — shown on
+// every form that renders IdCardUpload.tsx (AttendeeForm.tsx,
+// WaiHealthBreakfast.tsx's "also register" opt-in) so the requirement reads
+// the same wherever it appears, rather than drifting across two copies of
+// similar-but-not-identical wording. A selfie/photo of the applicant or an
+// expired document is never acceptable for any of these — called out once,
+// generically, by the shared sentence that wraps this map (see
+// idVerificationRequirementText below) rather than repeated per category.
+export const ID_VERIFICATION_REQUIREMENT: Record<'student_researcher' | 'government_official' | 'accredited_media', string> = {
+  student_researcher: "a current, active student ID card that clearly shows your school's name",
+  government_official: 'a valid, current workplace/staff ID',
+  accredited_media: 'a valid, current press/media accreditation card',
+};
+
+export const idVerificationRequirementText = (category: 'student_researcher' | 'government_official' | 'accredited_media'): string =>
+  `Upload ${ID_VERIFICATION_REQUIREMENT[category]} — a photo of yourself or an expired ID won't be accepted. Our team reviews it before your registration is confirmed.`;
+
 export interface GroupAttendee {
   fullName: string;
   email: string;

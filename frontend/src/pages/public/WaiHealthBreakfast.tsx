@@ -12,7 +12,7 @@ import { HoneypotField } from '../../components/ui/HoneypotField';
 import { RegisterSuccess } from '../../components/register/RegisterSuccess';
 import { IdCardUpload } from '../../components/register/IdCardUpload';
 import { submitWaiHealthRegistration, linkWaiHealthRegistration } from '../../services/waiHealth.service';
-import { submitRegistration, ID_VERIFICATION_TICKET_CATEGORIES, type TicketCategory } from '../../services/registration.service';
+import { submitRegistration, ID_VERIFICATION_TICKET_CATEGORIES, idVerificationRequirementText, type TicketCategory } from '../../services/registration.service';
 import { initializePayment } from '../../services/payment.service';
 import { getApiErrorMessage } from '../../services/api';
 import { useFormToken } from '../../hooks/useFormToken';
@@ -238,7 +238,15 @@ export const WaiHealthBreakfast = () => {
                     </div>
 
                     {ticketCategory && ID_VERIFICATION_TICKET_CATEGORIES.includes(ticketCategory) && (
-                      <IdCardUpload value={idCardUrl} onChange={(url) => setValue('idCardUrl', url)} error={errors.idCardUrl?.message} />
+                      <div>
+                        <p className="text-sm font-semibold text-navy">Official ID</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {idVerificationRequirementText(ticketCategory as 'student_researcher' | 'government_official' | 'accredited_media')}
+                        </p>
+                        <div className="mt-3">
+                          <IdCardUpload value={idCardUrl} onChange={(url) => setValue('idCardUrl', url)} error={errors.idCardUrl?.message} />
+                        </div>
+                      </div>
                     )}
 
                     <LightField
