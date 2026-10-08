@@ -18,9 +18,9 @@ export interface SubmitWaiHealthRegistrationPayload {
   email: string;
   phone: string;
   organization: string;
-  jobTitle?: string;
+  jobTitle: string;
   country: string;
-  coHostNetwork?: string;
+  coHostNetwork: string;
   gender: WaiHealthGender;
   middleName?: string; // honeypot
   formToken?: string;

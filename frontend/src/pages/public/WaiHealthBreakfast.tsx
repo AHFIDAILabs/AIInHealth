@@ -34,9 +34,11 @@ const schema = z
     email: z.string().trim().toLowerCase().email('Enter a valid email'),
     phone: z.string().trim().min(6, 'Enter a valid phone number'),
     organization: z.string().trim().min(2, 'Enter your organization'),
-    jobTitle: z.string().trim().max(200).optional(),
+    jobTitle: z.string().trim().min(2, 'Enter your job title').max(200),
     country: z.string().trim().min(2, 'Enter your country'),
-    coHostNetwork: z.string().trim().max(200).optional(),
+    // Required, but a neutral value like "None" is a perfectly valid answer —
+    // this just makes sure the field was actually considered, not skipped.
+    coHostNetwork: z.string().trim().min(1, 'Enter a network, or "None" if not applicable').max(200),
     gender: z.enum(['female', 'male'], { errorMap: () => ({ message: 'Select Male or Female.' }) }),
     middleName: z.string().max(0).optional(),
     // Summit opt-in — only required/validated when alsoRegister is checked.
@@ -174,7 +176,7 @@ export const WaiHealthBreakfast = () => {
                 {serverError && <Banner variant="error">{serverError}</Banner>}
 
                 <p className="rounded-xl border border-orange/20 bg-orange/5 px-4 py-3 text-sm text-navy">
-                  This session is an in-person, closed door, invite-only, special breakfast session. It  is reserved for women leaders across health, technology, research, and innovation.
+                  This session is an in-person, closed-door, invite-only, special breakfast session. It  is reserved for women leaders across health, technology, research, and innovation.
                 </p>
 
                 <LightField label="Full Name" error={errors.fullName?.message} {...register('fullName')} />
@@ -184,13 +186,13 @@ export const WaiHealthBreakfast = () => {
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <LightField label="Organization" error={errors.organization?.message} {...register('organization')} />
-                  <LightField label="Job Title (optional)" error={errors.jobTitle?.message} {...register('jobTitle')} />
+                  <LightField label="Job Title" error={errors.jobTitle?.message} {...register('jobTitle')} />
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <LightField label="Country" error={errors.country?.message} {...register('country')} />
                   <LightField
-                    label="Women's Network (optional)"
-                    placeholder="If a co-host network invited you"
+                    label="Women's Network"
+                    placeholder="e.g. a co-host network, or 'None'"
                     error={errors.coHostNetwork?.message}
                     {...register('coHostNetwork')}
                   />
