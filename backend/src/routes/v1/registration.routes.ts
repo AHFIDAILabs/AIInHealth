@@ -1,14 +1,19 @@
 import { Router } from 'express';
 import * as registrationController from '../../controllers/registration.controller.js';
+import * as registrationRsvpController from '../../controllers/registrationRsvp.controller.js';
 import * as uploadController from '../../controllers/upload.controller.js';
 import { validate } from '../../middlewares/validate.middleware.js';
-import { registrationLimiter, idCardUploadLimiter } from '../../middlewares/rateLimiter.middleware.js';
+import { registrationLimiter, idCardUploadLimiter, rsvpRedeemLimiter } from '../../middlewares/rateLimiter.middleware.js';
 import { uploadImage } from '../../middlewares/upload.middleware.js';
-import { createRegistrationSchema } from '../../validations/registration.validation.js';
+import { createRegistrationSchema, redeemRsvpSchema } from '../../validations/registration.validation.js';
 
 const router = Router();
 
 router.post('/', registrationLimiter, validate(createRegistrationSchema), registrationController.create);
+
+// The pending-attendee RSVP reconfirmation link — registrationRsvp.controller.ts's
+// redeem(). Records interest only; an admin still confirms afterward.
+router.post('/rsvp/:token', rsvpRedeemLimiter, validate(redeemRsvpSchema), registrationRsvpController.redeem);
 
 // Public — the attendee form's ID_VERIFICATION_TICKET_CATEGORIES gate uploads
 // the photo here first (upload-then-submit, same pattern the admin

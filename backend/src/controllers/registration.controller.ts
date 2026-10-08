@@ -873,6 +873,14 @@ const buildAdminFilter = (query: ListRegistrationsQuery, req: Request): FilterQu
   if (query.paymentStatus) filter.paymentStatus = query.paymentStatus;
   if (query.ticketCategory) filter.ticketCategory = query.ticketCategory;
   if (query.flagged === 'true') filter.flaggedSuspicious = true;
+  // "RSVP'd — Awaiting Confirmation" — defaults to status:'pending' (what the
+  // name implies) unless the caller explicitly asked for a different status;
+  // otherwise a since-confirmed/declined registration that responded before
+  // its decision would stay on this list forever.
+  if (query.rsvpResponded === 'true') {
+    filter.rsvpRespondedAt = { $exists: true };
+    if (!query.status) filter.status = 'pending';
+  }
 
   const teamPoolOr = teamPoolRequested ? [{ type: 'team' }, { type: 'attendee', ticketCategory: 'staff' }] : null;
   const searchOr = query.q

@@ -58,6 +58,17 @@ export const decideScholarshipApplicationSchema = z.object({
 });
 export type DecideScholarshipApplicationInput = z.infer<typeof decideScholarshipApplicationSchema>['body'];
 
+// POST /admin/scholarship-applications/analyze — scholarshipApplication.
+// controller.ts's adminAnalyze. ids omitted -> every pending application
+// (capped at 200), same ids-or-filter shape as abstract.validation.ts's
+// adminTriageAbstractsSchema.
+export const adminAnalyzeApplicationsSchema = z.object({
+  body: z.object({
+    ids: z.array(z.string().trim()).max(200).optional(),
+  }),
+});
+export type AdminAnalyzeApplicationsInput = z.infer<typeof adminAnalyzeApplicationsSchema>['body'];
+
 export const listScholarshipApplicationsQuerySchema = z.object({
   status: z.enum(SCHOLARSHIP_APPLICATION_STATUSES).optional(),
   q: z.string().trim().max(200).optional(),

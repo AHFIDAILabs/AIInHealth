@@ -149,6 +149,18 @@ const registrationSchema = new Schema(
     checkedIn: { type: Boolean, default: false },
     checkedInAt: { type: Date },
 
+    // Pending-attendee RSVP reconfirmation (registrationRsvp.controller.ts) —
+    // a nudge email asking "still coming?", irrespective of ticketCategory.
+    // Deliberately does NOT confirm or grant access by itself: clicking the
+    // link only sets rsvpRespondedAt (status stays 'pending'); an admin must
+    // still explicitly confirm (singly or in bulk) from the resulting list,
+    // preserving the ID-verification review step for the categories that
+    // require it. Same crypto.randomBytes(24).toString('base64url') idiom as
+    // qr.service.ts's generateQrToken / waiHealth.controller.ts's rsvpToken.
+    rsvpToken: { type: String, unique: true, sparse: true },
+    rsvpRequestedAt: { type: Date }, // last time the reminder email was sent
+    rsvpRespondedAt: { type: Date }, // set once they click — the list's own filter
+
     // Deal-room — off by default; a delegate opts in from the portal before they
     // appear in the cross-registration directory other delegates can browse.
     directoryOptIn: { type: Boolean, default: false },

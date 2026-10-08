@@ -468,6 +468,25 @@ export const sendBulkAccessCodeBatchEmail = async (to: string, codes: string[], 
   });
 };
 
+// registrationRsvp.controller.ts's adminSendReminders — a nudge to every
+// pending attendee regardless of ticketCategory, asking them to confirm
+// they're still coming. Clicking the button only records interest (see that
+// controller's redeem()); it does NOT confirm the registration or send a
+// ticket — an admin still does that afterward, singly or in bulk.
+export const sendPendingRsvpReminderEmail = async (to: string, fullName: string, rsvpUrl: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Still joining us? Confirm your spot — AI in Health Summit 2026',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Your registration for the AI in Health Summit 2026 is still showing as pending on our end. We'd love to have you with us — if you're still planning to attend, please confirm below.</p>
+      ${emailButton(rsvpUrl, "Yes, I'll be there — RSVP now")}
+      <p>Clicking the button lets our team know you're still interested — we'll follow up by email to finalize your registration.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 export const sendPasswordResetEmail = async (to: string, resetUrl: string): Promise<void> => {
   await sendEmail({
     to,

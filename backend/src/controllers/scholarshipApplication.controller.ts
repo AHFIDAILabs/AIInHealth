@@ -13,7 +13,14 @@ import { cloudinaryConfigured } from '../config/cloudinary.js';
 import { uploadRawToCloudinary } from '../services/cloudinary.service.js';
 import { logger } from '../config/logger.js';
 import { emitAdminNotification } from '../services/notification.service.js';
-import type { SubmitScholarshipApplicationInput, DecideScholarshipApplicationInput, ListScholarshipApplicationsQuery } from '../validations/scholarshipApplication.validation.js';
+import { scoreApplication } from '../services/ai/scholarshipTriage.service.js';
+import { runInBatches } from '../utils/batch.js';
+import type {
+  SubmitScholarshipApplicationInput,
+  DecideScholarshipApplicationInput,
+  ListScholarshipApplicationsQuery,
+  AdminAnalyzeApplicationsInput,
+} from '../validations/scholarshipApplication.validation.js';
 
 const SUBMISSION_MESSAGE = "Thanks for applying — our team will review your application and follow up by email.";
 
@@ -115,6 +122,40 @@ export const adminExport = catchAsync(async (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="sponsorship-applications-${Date.now()}.csv"`);
   res.send(csv);
+});
+
+// POST /admin/scholarship-applications/analyze — admin-triggered, suggestion-
+// only AI scoring over the pending pool (ids omitted) or a specific subset
+// (ids given). Never touches `status` — adminDecide below is still the only
+// way an application gets approved/rejected.
+export const adminAnalyze = catchAsync(async (req: Request, res: Response) => {
+  const { ids }: AdminAnalyzeApplicationsInput = req.body;
+
+  const filter: FilterQuery<ScholarshipApplicationDoc> = ids && ids.length > 0 ? { _id: { $in: ids } } : { status: 'pending' };
+  const applications = await ScholarshipApplication.find(filter);
+  if (applications.length === 0) throw new ApiError(404, 'No applications to analyze', 'NOT_FOUND');
+  if (applications.length > 200) throw new ApiError(422, 'Narrow the selection to 200 or fewer applications', 'TOO_MANY');
+
+  await runInBatches(applications, 3, async (application) => {
+    const result = await scoreApplication({
+      organization: application.organization,
+      applicantType: application.applicantType,
+      level: application.level ?? undefined,
+      reason: application.reason,
+    });
+    if (!result) return;
+    application.aiScore = result.score;
+    application.aiRationale = result.rationale;
+    application.aiScoredAt = new Date();
+    await application.save();
+  });
+
+  res.json(
+    new ApiResponse({
+      scored: applications.filter((a) => a.aiScoredAt).length,
+      items: applications.map((a) => ({ _id: a.id, aiScore: a.aiScore, aiRationale: a.aiRationale })),
+    })
+  );
 });
 
 // PATCH /admin/scholarship-applications/:id/decide

@@ -38,6 +38,13 @@ const scholarshipApplicationSchema = new Schema(
     // generated, so "what code did we give this person" is always answerable
     // from the application itself, not just from AccessCode's own list.
     issuedAccessCode: { type: Schema.Types.ObjectId, ref: 'AccessCode' },
+    // AI-assisted ranking (scholarshipApplication.controller.ts's adminAnalyze,
+    // services/ai/scholarshipTriage.service.ts) — admin-triggered, suggestion-
+    // only. Never read by adminDecide; purely a sort/annotate aid so the admin
+    // can spot the strongest candidates in a large pending pool faster.
+    aiScore: { type: Number, min: 0, max: 100 },
+    aiRationale: { type: String, trim: true, maxlength: 500 },
+    aiScoredAt: { type: Date },
   },
   { timestamps: true }
 );

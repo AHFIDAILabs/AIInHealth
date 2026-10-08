@@ -304,6 +304,19 @@ export const formTokenLimiter = rateLimit({
   handler: onLimitExceeded('formTokenLimiter', 'low'),
 });
 
+// Pending-attendee RSVP link — registrationRsvp.controller.ts's redeem().
+// IP-only like formTokenLimiter above: there's no email in this request (just
+// an opaque token in the URL), and the action itself is low-stakes (records
+// interest only, never confirms/grants anything — see that controller).
+export const rsvpRedeemLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please try again shortly.' } },
+  handler: onLimitExceeded('rsvpRedeemLimiter', 'low'),
+});
+
 // Women in AI & Health Breakfast — same email+IP keying/window as
 // registrationLimiter/abstractLimiter above.
 export const waiHealthLimiter = rateLimit({

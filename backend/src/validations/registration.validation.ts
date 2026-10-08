@@ -205,6 +205,9 @@ export const listRegistrationsQuerySchema = z.object({
   // buildAdminFilter. Unlike spam's `spam=true` filter, this is additive to
   // whatever else is filtered, never hides anything by default.
   flagged: z.enum(['true']).optional(),
+  // Present -> list ONLY pending attendees who've clicked their RSVP
+  // reconfirmation link (RsvpConfirmationsPage.tsx) — see buildAdminFilter.
+  rsvpResponded: z.enum(['true']).optional(),
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -322,4 +325,25 @@ export const markRegistrationPaidSchema = z.object({
   params: z.object({ id: objectId }),
   body: z.object({ paymentNote: z.string().trim().max(500).optional() }),
 });
+
+// POST /admin/registrations/rsvp/send-reminders — registrationRsvp.controller.ts's
+// adminSendReminders. ids omitted -> every pending attendee, irrespective of
+// ticketCategory (the explicit ask); same ids-or-filter shape as
+// abstract.validation.ts's adminTriageAbstractsSchema.
+export const sendRsvpRemindersSchema = z.object({
+  body: z.object({
+    ids: z.array(z.string().trim()).max(200).optional(),
+  }),
+});
+export type SendRsvpRemindersInput = z.infer<typeof sendRsvpRemindersSchema>['body'];
+
+// POST /registrations/rsvp/:token — public redemption link. Params only —
+// rsvpToken is an opaque random string, not a shape worth validating beyond
+// "long enough to plausibly be one" (mirrors waiHealth.validation.ts's
+// rsvpParamsSchema) — a garbage/missing token falls through to the
+// controller's ordinary findOne-returns-null 404 path.
+export const redeemRsvpSchema = z.object({
+  params: z.object({ token: z.string().trim().min(10) }),
+});
+export type RedeemRsvpParams = z.infer<typeof redeemRsvpSchema>['params'];
 export type MarkRegistrationPaidInput = z.infer<typeof markRegistrationPaidSchema>['body'];

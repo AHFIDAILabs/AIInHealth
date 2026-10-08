@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as adminController from '../../controllers/admin.controller.js';
 import * as registrationController from '../../controllers/registration.controller.js';
+import * as registrationRsvpController from '../../controllers/registrationRsvp.controller.js';
 import * as knowledgeChunkController from '../../controllers/knowledgeChunk.controller.js';
 import * as speakerController from '../../controllers/speaker.controller.js';
 import * as sessionController from '../../controllers/session.controller.js';
@@ -77,7 +78,7 @@ import { setVolunteerSettingsSchema } from '../../validations/volunteerSettings.
 import { setInnovatorSettingsSchema } from '../../validations/innovatorSettings.validation.js';
 import { setPromoActiveSchema } from '../../validations/promo.validation.js';
 import { setWaiHealthCapacitySchema } from '../../validations/waiHealth.validation.js';
-import { decideScholarshipApplicationSchema } from '../../validations/scholarshipApplication.validation.js';
+import { decideScholarshipApplicationSchema, adminAnalyzeApplicationsSchema } from '../../validations/scholarshipApplication.validation.js';
 
 const router = Router();
 
@@ -159,6 +160,15 @@ router.post(
   requireRole('super_admin', 'admin', 'registrations_officer'),
   registrationController.adminMarkPaid
 );
+// Pending-attendee RSVP reconfirmation — sending the nudge is the only new
+// endpoint; actually confirming (singly or in bulk) reuses the existing
+// PATCH /registrations/:id above (RegistrationsPage.tsx's own bulk "Confirm"
+// action already covers it, no duplicate endpoint needed).
+router.post(
+  '/registrations/rsvp/send-reminders',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  registrationRsvpController.adminSendReminders
+);
 router.post(
   '/registrations/import-volunteers',
   requireRole('super_admin', 'admin', 'registrations_officer'),
@@ -186,6 +196,12 @@ router.post('/access-code-batches/:id/resend', requireRole('super_admin', 'admin
 
 router.get('/scholarship-applications', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipApplicationController.adminList);
 router.get('/scholarship-applications/export', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipApplicationController.adminExport);
+router.post(
+  '/scholarship-applications/analyze',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  validate(adminAnalyzeApplicationsSchema),
+  scholarshipApplicationController.adminAnalyze
+);
 router.patch(
   '/scholarship-applications/:id/decide',
   requireRole('super_admin', 'admin', 'registrations_officer'),
