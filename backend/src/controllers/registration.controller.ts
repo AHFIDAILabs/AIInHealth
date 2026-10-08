@@ -31,6 +31,7 @@ import { initializePaymentForRegistration } from './payment.controller.js';
 import { sendRegistrationPaymentLinkEmail } from '../services/email.service.js';
 import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
 import { getOrCreateVolunteerSettings } from '../models/VolunteerSettings.model.js';
+import { getOrCreateInnovatorSettings } from '../models/InnovatorSettings.model.js';
 import { logger } from '../config/logger.js';
 import type { TicketCategory, RegistrationStatus } from '../types/enums.js';
 import type { HydratedDocument } from 'mongoose';
@@ -408,6 +409,20 @@ export const create = catchAsync(async (req: Request, res: Response) => {
       .status(existingApplication ? 200 : 201)
       .json(new ApiResponse({ id: registration.id, requiresPayment: false, message: EXHIBITOR_OR_INNOVATOR_CODE_CONFIRMED_MESSAGE }));
     return;
+  }
+
+  // Innovator only (not Exhibitor — nobody's asked to close that one) — same
+  // "gates a genuinely NEW application, an access code still works either
+  // way" shape as the volunteer gate above.
+  if (input.type === 'innovator' && !input.accessCode?.trim()) {
+    const innovatorSettings = await getOrCreateInnovatorSettings();
+    if (!innovatorSettings.applicationsOpen) {
+      throw new ApiError(
+        422,
+        innovatorSettings.closedReason || 'Innovator applications are closed right now. Please check back later.',
+        'INNOVATOR_APPLICATIONS_CLOSED'
+      );
+    }
   }
 
   // Idempotency: a double-click or a network-retried submit shouldn't create a
