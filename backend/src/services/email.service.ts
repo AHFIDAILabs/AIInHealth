@@ -385,6 +385,7 @@ export const sendSponsorshipApprovedEmail = async (
     html: `
       <p>Hi ${fullName},</p>
       <p>Good news — your sponsorship application has been approved, covering <strong>${discountPercent}%</strong> of your attendee registration fee for the AI in Health Summit 2026.</p>
+      <p><strong>Please note:</strong> this covers the Summit registration fee only. Accommodation, flights/transport, and meals outside the event are not included and remain the delegate's own responsibility.</p>
       <p>Your access code is: <strong style="font-size: 18px; letter-spacing: 1px;">${code}</strong></p>
       <p>Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, ${openCategoryGuidance(false)}, and enter this code${
         discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'
@@ -482,6 +483,7 @@ export const sendPendingRsvpReminderEmail = async (to: string, fullName: string,
       <p>Your registration for the AI in Health Summit 2026 is still showing as pending on our end. We'd love to have you with us — if you're still planning to attend, please confirm below.</p>
       ${emailButton(rsvpUrl, "Yes, I'll be there — RSVP now")}
       <p>Clicking the button lets our team know you're still interested — we'll follow up by email to finalize your registration.</p>
+      <p><strong>Please note:</strong> this relates to your Summit registration only. Accommodation, flights/transport, and meals outside the event are not included and remain your own responsibility.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });
@@ -661,6 +663,7 @@ export const sendRegistrationConfirmedEmail = async (
     html: `
       <p>Hi ${fullName},</p>
       <p>Your registration${data.ticketCategory ? ` (${data.ticketCategory.replace(/_/g, ' ')})` : ''} for the AI in Health Summit 2026 is confirmed — no payment is required.</p>
+      <p><strong>Please note:</strong> this covers the Summit registration fee only. Accommodation, flights/transport, and meals outside the event are not included and remain your own responsibility.</p>
       <p>Your delegate portal access code is: <strong style="font-size:18px;letter-spacing:1px;">${data.accessCode}</strong></p>
       <p><a href="${portalUrl}">Visit the delegate portal</a> and enter your email and this code to sign in — it's yours to reuse anytime through ${delegateAccessCodeExpiresLabel}, no rush and no re-requesting needed. From there you can access your e-ticket / QR check-in code.</p>
       <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
