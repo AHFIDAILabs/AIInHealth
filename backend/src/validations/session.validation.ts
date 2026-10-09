@@ -93,6 +93,18 @@ export const adminTranslateSessionSchema = z.object({
   body: z.object({ lang: z.enum(SUPPORTED_TRANSLATION_LANGS) }),
 });
 
+// POST /admin/sessions/translate-missing — bulk-drafts a translation for
+// every session missing one (ids omitted), or a specific subset (ids given —
+// in which case it re-drafts regardless of current status, an explicit
+// admin override). Same ids-or-filter shape as the other batch AI actions
+// (abstractTriage/scholarshipTriage) in this codebase.
+export const adminTranslateMissingSessionsSchema = z.object({
+  body: z.object({
+    lang: z.enum(SUPPORTED_TRANSLATION_LANGS),
+    ids: z.array(objectId).max(200).optional(),
+  }),
+});
+
 // PATCH /admin/sessions/:id/translations/:lang — an admin editing and/or
 // approving a draft.
 export const adminUpdateSessionTranslationSchema = z.object({
@@ -106,6 +118,7 @@ export const adminUpdateSessionTranslationSchema = z.object({
 
 export type CreateSessionInput = z.infer<typeof createSessionSchema>['body'];
 export type AdminTranslateSessionInput = z.infer<typeof adminTranslateSessionSchema>;
+export type AdminTranslateMissingSessionsInput = z.infer<typeof adminTranslateMissingSessionsSchema>['body'];
 export type AdminUpdateSessionTranslationInput = z.infer<typeof adminUpdateSessionTranslationSchema>;
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema>['body'];
 export type ListSessionsQuery = z.infer<typeof listSessionsQuerySchema>;

@@ -288,6 +288,7 @@ router.delete('/sessions/:id', requireRole(...adminOnlyRoles), sessionController
 router.post('/sessions/:id/rsvp', requireRole(...adminOnlyRoles), sessionController.adminAddRsvp);
 router.delete('/sessions/:id/rsvp/:email', requireRole(...adminOnlyRoles), sessionController.adminRemoveRsvp);
 router.post('/sessions/:id/translate', requireRole(...adminOnlyRoles), sessionController.translate);
+router.post('/sessions/translate-missing', requireRole(...adminOnlyRoles), sessionController.translateMissing);
 router.patch('/sessions/:id/translations/:lang', requireRole(...adminOnlyRoles), sessionController.updateTranslation);
 
 router.get('/translations/pending', requireRole(...adminOnlyRoles), translationReviewController.adminListPending);

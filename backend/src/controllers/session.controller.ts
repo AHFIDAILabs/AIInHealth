@@ -15,13 +15,16 @@ import {
   removeRsvpParamsSchema,
   publicRsvpSchema,
   adminTranslateSessionSchema,
+  adminTranslateMissingSessionsSchema,
   adminUpdateSessionTranslationSchema,
   type ListSessionsQuery,
+  type AdminTranslateMissingSessionsInput,
 } from '../validations/session.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { buildMyDay } from '../services/ai/agendaRecommender.service.js';
 import { translateText } from '../services/ai/translate.service.js';
 import { publicTranslations } from '../utils/translations.js';
+import { runInBatches } from '../utils/batch.js';
 
 const SPEAKER_FIELDS = 'fullName title photoUrl';
 const PARTNER_FIELDS = 'name logoUrl website';
@@ -320,6 +323,47 @@ export const translate = catchAsync(async (req: Request, res: Response) => {
   await session.save();
 
   res.json(new ApiResponse(session));
+});
+
+// POST /admin/sessions/translate-missing — same per-session draft as
+// translate() above, batched over every session missing a translation for
+// this language (ids omitted), or a specific subset (ids given — re-drafts
+// those regardless of current status, an explicit override). Still only
+// ever produces a 'draft' — an admin reviews and approves each one from the
+// Sessions tab exactly as today, this just removes the one-by-one "Generate
+// with AI" click for a large backlog (e.g. right after a bulk agenda import).
+export const translateMissing = catchAsync(async (req: Request, res: Response) => {
+  const { lang, ids }: AdminTranslateMissingSessionsInput = adminTranslateMissingSessionsSchema.parse({ body: req.body }).body;
+
+  // Narrower default (only truly never-attempted ones) so a backlog run
+  // never clobbers a draft an admin may already be mid-review/hand-editing —
+  // explicit ids override that and re-draft regardless of current status.
+  const hasIds = Array.isArray(ids) && ids.length > 0;
+  const filter: FilterQuery<SessionDoc> = hasIds
+    ? { _id: { $in: ids } }
+    : { [`translations.${lang}.status`]: { $in: [undefined, 'none'] } };
+
+  const sessions = await Session.find(filter);
+  if (sessions.length === 0) {
+    res.json(new ApiResponse({ drafted: 0, failed: 0 }));
+    return;
+  }
+  if (sessions.length > 200) throw new ApiError(422, 'Narrow the selection to 200 or fewer sessions', 'TOO_MANY');
+
+  const { succeeded, failed } = await runInBatches(sessions, 3, async (session) => {
+    const [title, description] = await Promise.all([
+      translateText({ text: session.title, targetLang: lang, contentLabel: 'conference session title' }),
+      session.description
+        ? translateText({ text: session.description, targetLang: lang, contentLabel: 'conference session description' })
+        : Promise.resolve(''),
+    ]);
+    session.set(`translations.${lang}.title`, title);
+    session.set(`translations.${lang}.description`, description || undefined);
+    session.set(`translations.${lang}.status`, 'draft');
+    await session.save();
+  });
+
+  res.json(new ApiResponse({ drafted: succeeded, failed: failed.length }));
 });
 
 // PATCH /admin/sessions/:id/translations/:lang — an admin editing and/or
