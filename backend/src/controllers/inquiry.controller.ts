@@ -26,7 +26,7 @@ const triageInput = (data: {
 
 // POST /inquiries/partnership — public
 export const create = catchAsync(async (req: Request, res: Response) => {
-  const { website: _honeypot, formToken, ...input } = req.body as CreateInquiryInput & { website?: string };
+  const { formMeta: _honeypot, formToken, ...input } = req.body as CreateInquiryInput & { formMeta?: string };
   if (!verifyFormToken(formToken)) {
     throw new ApiError(400, 'Verification failed, please try again.', 'FORM_VERIFICATION_FAILED');
   }

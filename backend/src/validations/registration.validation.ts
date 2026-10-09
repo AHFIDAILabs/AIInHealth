@@ -19,11 +19,16 @@ const groupAttendeeSchema = z.object({
 
 // Public form spam hardening — spread into every PUBLIC registration schema
 // below (not the admin-only create variants, which are a trusted/authenticated
-// action with nothing to trap). `website` is already a real field on
-// exhibitor/sponsor/innovator, so this honeypot uses a different, non-colliding
-// name — `middleName`, never asked for or rendered by any real form here.
+// action with nothing to trap). Deliberately named `formMeta`, not something
+// real-sounding like "middleName" — a prior name choice (middleName) turned
+// out to collide with Chrome/Safari's address/contact AutoFill on macOS,
+// which would silently fill the hidden field from a saved profile on page
+// load, tripping this max(0) check with NO visible error (handleSubmit just
+// never calls onSubmit) — every affected visitor's submission silently went
+// nowhere. `formMeta` isn't a recognized autocomplete field of any kind, so
+// no browser's autofill heuristics will ever target it.
 const honeypotAndTimeTrap = {
-  middleName: z.string().max(0).optional(), // honeypot
+  formMeta: z.string().max(0).optional(), // honeypot
   formToken: z.string().optional(), // see formToken.service.ts
 };
 

@@ -20,8 +20,10 @@ export const submitScholarshipApplicationSchema = z.object({
       level: z.enum(SCHOLARSHIP_STUDY_LEVELS).optional(),
       reason: z.string().trim().min(50, 'Tell us a bit more — at least 50 characters').max(2000),
       supportingDocumentUrl: z.string().trim().url().optional(),
-      // honeypot — real applicants never see or fill this field
-      website: z.string().max(0).optional(),
+      // honeypot — real applicants never see or fill this field. Not named
+      // "website"/"middleName" — see registration.validation.ts's comment on
+      // why a real-sounding honeypot name risks silent autofill poisoning.
+      formMeta: z.string().max(0).optional(),
     })
     .superRefine((body, ctx) => {
       if ((body.applicantType === 'employee' || body.applicantType === 'other') && !body.designation) {

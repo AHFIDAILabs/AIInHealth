@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
+// See registration.validation.ts's matching comment — `formMeta`, not a
+// real-sounding name like the old "middleName", so no browser autofill
+// heuristic can ever poison it from a saved address/contact profile.
 const honeypotAndTimeTrap = {
-  middleName: z.string().max(0).optional(), // honeypot
+  formMeta: z.string().max(0).optional(), // honeypot
   formToken: z.string().optional(), // see formToken.service.ts
 };
 

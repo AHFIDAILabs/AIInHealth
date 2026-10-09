@@ -7,7 +7,11 @@ export const createContactMessageSchema = z.object({
     email: z.string().trim().toLowerCase().email('Enter a valid email'),
     category: z.enum(CONTACT_CATEGORIES),
     message: z.string().trim().min(10, 'Message should be at least 10 characters').max(3000),
-    website: z.string().max(0).optional(), // honeypot
+    // Not named "website"/"middleName" — a real-sounding honeypot name can get
+    // silently autofilled from a saved browser profile (Chrome/Safari address
+    // autofill on macOS), tripping this max(0) check with no visible error.
+    // See registration.validation.ts's matching comment.
+    formMeta: z.string().max(0).optional(), // honeypot
     // Spam hardening's time-trap — see formToken.service.ts. Optional at the
     // shape level (verifyFormToken itself decides whether a missing/invalid
     // token is actually enforced, based on whether FORM_TOKEN_SECRET is set).

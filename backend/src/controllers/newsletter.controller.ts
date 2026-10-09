@@ -18,7 +18,7 @@ const SOURCE_LABEL: Record<SubscribeNewsletterInput['source'], string> = {
 // signed up. The unique (email, source) index is what actually enforces that; a
 // duplicate-key error here just means someone else's request beat this one to it.
 export const subscribe = catchAsync(async (req: Request, res: Response) => {
-  const { website: _honeypot, ...input } = req.body as SubscribeNewsletterInput & { website?: string };
+  const { formMeta: _honeypot, ...input } = req.body as SubscribeNewsletterInput & { formMeta?: string };
 
   try {
     const subscriber = await NewsletterSubscriber.create(input);

@@ -1,10 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app, useTestDb } from './helpers.js';
 import { NewsletterSubscriber } from '../models/NewsletterSubscriber.model.js';
 
 describe('POST /api/v1/newsletter/subscribe — idempotency', () => {
   useTestDb();
+
+  // Mongoose builds indexes asynchronously after a model's first use —
+  // without waiting for this, the very first test to touch this collection
+  // in a cold process can race ahead of the unique (email, source) index
+  // actually existing yet, silently allowing the "duplicate" write through.
+  beforeEach(() => NewsletterSubscriber.init());
 
   it('subscribing the same email to the same source twice creates only one record', async () => {
     const payload = { email: 'reader@example.com', firstName: 'Reader', source: 'updates' as const };
@@ -28,7 +34,7 @@ describe('POST /api/v1/newsletter/subscribe — idempotency', () => {
   it('rejects a submission where the honeypot field is filled in', async () => {
     const res = await request(app)
       .post('/api/v1/newsletter/subscribe')
-      .send({ email: 'bot@example.com', firstName: 'Bot', source: 'updates', website: 'http://spam.example' });
+      .send({ email: 'bot@example.com', firstName: 'Bot', source: 'updates', formMeta: 'http://spam.example' });
     expect(res.status).toBe(422);
   });
 });

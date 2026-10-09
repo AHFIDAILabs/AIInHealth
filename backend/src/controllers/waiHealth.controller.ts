@@ -53,7 +53,7 @@ export const status = catchAsync(async (_req: Request, res: Response) => {
 // happens at rsvp() below, not here. This just records interest and emails
 // the RSVP link.
 export const register = catchAsync(async (req: Request, res: Response) => {
-  const { middleName: _honeypot, formToken, ...input } = req.body as CreateWaiHealthRegistrationInput;
+  const { formMeta: _honeypot, formToken, ...input } = req.body as CreateWaiHealthRegistrationInput;
   if (!verifyFormToken(formToken)) {
     throw new ApiError(400, 'Verification failed, please try again.', 'FORM_VERIFICATION_FAILED');
   }

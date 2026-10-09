@@ -8,8 +8,10 @@ export const createInquirySchema = z.object({
     contactEmail: z.string().trim().toLowerCase().email('Enter a valid email'),
     tierInterested: z.string().trim().max(200).optional(),
     message: z.string().trim().max(2000).optional(),
-    // honeypot — real visitors never see or fill this field
-    website: z.string().max(0).optional(),
+    // honeypot — real visitors never see or fill this field. Not named
+    // "website"/"middleName" — see registration.validation.ts's comment on
+    // why a real-sounding honeypot name risks silent autofill poisoning.
+    formMeta: z.string().max(0).optional(),
     // Spam hardening's time-trap — see formToken.service.ts.
     formToken: z.string().optional(),
   }),

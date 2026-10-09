@@ -13,8 +13,10 @@ export const createAbstractSchema = z.object({
     // reasoning as everywhere else the fixed TRACKS enum was retired.
     track: z.string().trim().min(1, 'Choose a track'),
     abstractText: z.string().trim().min(100, 'Abstract should be at least 100 characters').max(3000),
-    // honeypot — real visitors never see or fill this field
-    website: z.string().max(0).optional(),
+    // honeypot — real visitors never see or fill this field. Not named
+    // "website"/"middleName" — see registration.validation.ts's comment on
+    // why a real-sounding honeypot name risks silent autofill poisoning.
+    formMeta: z.string().max(0).optional(),
   }),
 });
 export type CreateAbstractInput = z.infer<typeof createAbstractSchema>['body'];

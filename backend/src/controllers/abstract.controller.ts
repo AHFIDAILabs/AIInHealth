@@ -48,7 +48,7 @@ const SUBMISSION_MESSAGE = "Thanks for your submission — our programme committ
 
 // POST /abstracts — public
 export const create = catchAsync(async (req: Request, res: Response) => {
-  const { website: _honeypot, ...input } = req.body as CreateAbstractInput & { website?: string };
+  const { formMeta: _honeypot, ...input } = req.body as CreateAbstractInput & { formMeta?: string };
 
   const trackExists = await Track.exists({ name: input.track });
   if (!trackExists) throw new ApiError(422, 'Select a valid track.', 'INVALID_TRACK');
