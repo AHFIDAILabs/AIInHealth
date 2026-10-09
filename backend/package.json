@@ -38,6 +38,7 @@
     "jsonwebtoken": "^9.0.2",
     "libphonenumber-js": "^1.13.13",
     "mammoth": "^1.12.3",
+    "minisearch": "^7.2.0",
     "mongoose": "^8.8.3",
     "multer": "^2.3.0",
     "node-cron": "^4.6.0",

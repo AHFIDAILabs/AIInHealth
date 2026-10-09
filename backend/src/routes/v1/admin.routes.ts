@@ -400,6 +400,13 @@ router.get('/confirmed-abstracts', requireRole(...abstractRoles), confirmedAbstr
 router.post('/confirmed-abstracts', requireRole(...abstractRoles), confirmedAbstractController.adminCreate);
 router.patch('/confirmed-abstracts/:id', requireRole(...abstractRoles), confirmedAbstractController.adminUpdate);
 router.delete('/confirmed-abstracts/:id', requireRole(...abstractRoles), confirmedAbstractController.adminDelete);
+router.patch('/confirmed-abstracts/:id/consent', requireRole(...abstractRoles), confirmedAbstractController.adminRecordConsent);
+router.post('/confirmed-abstracts/consent/bulk', requireRole(...abstractRoles), confirmedAbstractController.adminBulkRecordConsent);
+router.patch(
+  '/confirmed-abstracts/:id/compendium-status',
+  requireRole(...abstractRoles),
+  confirmedAbstractController.adminSetCompendiumStatus
+);
 
 router.get('/innovation-showcase-entries', requireRole(...adminOnlyRoles), innovationShowcaseEntryController.adminList);
 router.post('/innovation-showcase-entries', requireRole(...adminOnlyRoles), innovationShowcaseEntryController.adminCreate);

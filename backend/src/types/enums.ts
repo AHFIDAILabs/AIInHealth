@@ -453,3 +453,14 @@ export type SecurityEventType = (typeof SECURITY_EVENT_TYPES)[number];
 
 export const SECURITY_EVENT_SEVERITIES = ['low', 'medium', 'high'] as const;
 export type SecurityEventSeverity = (typeof SECURITY_EVENT_SEVERITIES)[number];
+
+// Open-access compendium — see ConfirmedAbstract.model.ts's compendium sub-
+// document comment. 'none' is the import default; nothing here ever auto-
+// advances past it — every transition is an explicit admin action.
+export const COMPENDIUM_PUBLICATION_STATUSES = ['none', 'draft', 'ready', 'published', 'withdrawn'] as const;
+export type CompendiumPublicationStatus = (typeof COMPENDIUM_PUBLICATION_STATUSES)[number];
+
+// How consent-to-publish was recorded — an admin always picks one explicitly
+// alongside a required evidenceNote; there is no default.
+export const COMPENDIUM_CONSENT_METHODS = ['submission_terms', 'email', 'form', 'other'] as const;
+export type CompendiumConsentMethod = (typeof COMPENDIUM_CONSENT_METHODS)[number];

@@ -343,7 +343,7 @@ export const sendWaiHealthRsvpConfirmedEmail = async (to: string, fullName: stri
     html: `
       <p>Hi ${fullName},</p>
       <p>You're confirmed for the Women in AI & Health Breakfast Session, the opening session of Day 1 of the AI in Health Summit 2026.</p>
-      <p><strong>When:</strong> 08:00&ndash;09:00, Day 1 (19 October 2026)<br /><strong>Where:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
+      <p><strong>When:</strong> 08:00&ndash;09:30, Day 1 (19 October 2026)<br /><strong>Where:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
       <p>We look forward to seeing you there. Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });

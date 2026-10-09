@@ -9,9 +9,14 @@ import {
   createConfirmedAbstractSchema,
   updateConfirmedAbstractSchema,
   listConfirmedAbstractsQuerySchema,
+  adminRecordConsentSchema,
+  adminBulkRecordConsentSchema,
+  adminSetCompendiumStatusSchema,
   type ListConfirmedAbstractsQuery,
 } from '../validations/confirmedAbstract.validation.js';
 import { recordAudit } from '../services/audit.service.js';
+import { runInBatches } from '../utils/batch.js';
+import type { CompendiumPublicationStatus } from '../types/enums.js';
 
 // Same pattern as innovation.controller.ts's assertValidTrack — checks the
 // live Track collection rather than a fixed enum. Unset track is allowed
@@ -111,4 +116,122 @@ export const adminDelete = catchAsync(async (req: Request, res: Response) => {
     before: abstract.toObject(),
   });
   res.json(new ApiResponse({ id: req.params.id }));
+});
+
+// --- Open-access compendium (Phase 4: readiness, consent, status) ---
+
+// Whether a record has everything the compendium needs besides consent —
+// title and track always pass in practice (both are populated by the import
+// script or the edit drawer), but this is computed for real rather than
+// hardcoded so a future record that's genuinely incomplete is caught.
+// Authors' affiliations are deliberately NOT part of this check — the source
+// document never carried per-author affiliation data, so requiring it would
+// permanently block every record.
+const isCompendiumReady = (doc: ConfirmedAbstractDoc): boolean =>
+  !!doc.title?.trim() &&
+  Array.isArray(doc.authors) &&
+  doc.authors.length > 0 &&
+  !!doc.abstractText?.trim() &&
+  !!doc.track?.trim();
+
+const recordConsent = (
+  doc: InstanceType<typeof ConfirmedAbstract>,
+  input: { method: string; evidenceNote: string },
+  recordedBy: string
+): void => {
+  doc.set('compendium.consentToPublish', {
+    granted: true,
+    grantedAt: new Date(),
+    method: input.method,
+    evidenceNote: input.evidenceNote,
+    recordedBy,
+  });
+};
+
+// PATCH /admin/confirmed-abstracts/:id/consent
+export const adminRecordConsent = catchAsync(async (req: Request, res: Response) => {
+  const { params, body } = adminRecordConsentSchema.parse({ params: req.params, body: req.body });
+  const before = await ConfirmedAbstract.findById(params.id);
+  if (!before) throw new ApiError(404, 'Confirmed abstract not found', 'NOT_FOUND');
+
+  const abstract = before;
+  recordConsent(abstract, body, req.user!.sub);
+  await abstract.save();
+
+  await recordAudit({
+    req,
+    action: 'confirmedAbstract.consentRecorded',
+    resourceType: 'ConfirmedAbstract',
+    resourceId: abstract.id,
+    before: { consentToPublish: before.get('compendium.consentToPublish') },
+    after: { consentToPublish: abstract.get('compendium.consentToPublish') },
+  });
+  res.json(new ApiResponse(abstract));
+});
+
+// POST /admin/confirmed-abstracts/consent/bulk
+export const adminBulkRecordConsent = catchAsync(async (req: Request, res: Response) => {
+  const { ids, method, evidenceNote } = adminBulkRecordConsentSchema.parse({ body: req.body }).body;
+  const docs = await ConfirmedAbstract.find({ _id: { $in: ids } });
+
+  const { succeeded, failed } = await runInBatches(docs, 5, async (doc) => {
+    recordConsent(doc, { method, evidenceNote }, req.user!.sub);
+    await doc.save();
+    await recordAudit({
+      req,
+      action: 'confirmedAbstract.consentRecorded',
+      resourceType: 'ConfirmedAbstract',
+      resourceId: doc.id,
+      after: { consentToPublish: doc.get('compendium.consentToPublish') },
+    });
+  });
+
+  res.json(new ApiResponse({ requested: ids.length, recorded: succeeded, failed: failed.length }));
+});
+
+// Which transitions are legal from which current state, and what each one
+// additionally requires. 'none' isn't a reachable target here — there's no
+// "revert to none" action yet (additive later if ever needed).
+const ALLOWED_FROM: Record<CompendiumPublicationStatus, CompendiumPublicationStatus[]> = {
+  none: [],
+  draft: ['none'],
+  ready: ['none', 'draft'],
+  published: ['ready'],
+  withdrawn: ['ready', 'published'],
+};
+
+// PATCH /admin/confirmed-abstracts/:id/compendium-status
+export const adminSetCompendiumStatus = catchAsync(async (req: Request, res: Response) => {
+  const { params, body } = adminSetCompendiumStatusSchema.parse({ params: req.params, body: req.body });
+  const abstract = await ConfirmedAbstract.findById(params.id);
+  if (!abstract) throw new ApiError(404, 'Confirmed abstract not found', 'NOT_FOUND');
+
+  const current: CompendiumPublicationStatus = (abstract.get('compendium.publicationStatus') as CompendiumPublicationStatus) ?? 'none';
+  const target = body.status;
+
+  if (!ALLOWED_FROM[target].includes(current)) {
+    throw new ApiError(422, `Can't move from "${current}" to "${target}" directly.`, 'INVALID_TRANSITION');
+  }
+  if (target === 'ready') {
+    if (!isCompendiumReady(abstract)) {
+      throw new ApiError(422, 'This abstract is missing required fields (authors, body text, or track).', 'NOT_READY');
+    }
+    if (!abstract.get('compendium.consentToPublish.granted')) {
+      throw new ApiError(422, 'Consent to publish must be recorded before marking this ready.', 'CONSENT_REQUIRED');
+    }
+  }
+
+  const before = current;
+  abstract.set('compendium.publicationStatus', target);
+  await abstract.save();
+
+  await recordAudit({
+    req,
+    action: 'confirmedAbstract.compendiumStatusChanged',
+    resourceType: 'ConfirmedAbstract',
+    resourceId: abstract.id,
+    before: { publicationStatus: before },
+    after: { publicationStatus: target },
+  });
+  res.json(new ApiResponse(abstract));
 });

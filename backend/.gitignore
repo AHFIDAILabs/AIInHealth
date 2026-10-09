@@ -4,3 +4,9 @@ dist/
 *.log
 .mongo-data/
 backups/
+
+# Compendium abstracts import — contains personal data (author names,
+# affiliations). The parser script itself (src/scripts/compendium/*.ts) IS
+# tracked; only its data input/output is excluded here.
+/compendium/
+src/scripts/compendium/data/
