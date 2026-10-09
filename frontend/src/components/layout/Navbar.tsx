@@ -126,7 +126,7 @@ export const Navbar = () => {
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
-        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
+        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 print:hidden ${
           scrolled ? 'bg-navy-nav/95 shadow-xl backdrop-blur-md' : 'bg-navy-nav/75 backdrop-blur-sm'
         }`}
       >

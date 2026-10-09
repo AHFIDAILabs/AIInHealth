@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,6 +33,11 @@ export const Contact = () => {
   const { t } = useTranslation();
   const [submitError, setSubmitError] = useState('');
   const formToken = useFormToken();
+  // Deep-linked from a compendium abstract page's "Contact the secretariat"
+  // link (?abstract=CODE) — pre-fills the message so the admin reading it
+  // immediately knows which abstract it's about.
+  const [searchParams] = useSearchParams();
+  const abstractCode = searchParams.get('abstract');
 
   // `id` is the stable, untranslated identifier used for the React key —
   // `label` is display-only translated text (same split as Navbar.tsx's
@@ -46,7 +52,13 @@ export const Contact = () => {
     handleSubmit,
     reset,
     formState: { errors, isSubmitSuccessful, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { category: 'General' } });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      category: 'General',
+      message: abstractCode ? `Regarding compendium abstract ${abstractCode}: ` : '',
+    },
+  });
 
   const onSubmit = async (values: FormValues) => {
     setSubmitError('');

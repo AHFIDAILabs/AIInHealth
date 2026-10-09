@@ -4,6 +4,41 @@ import { api } from './api';
 export const PRESENTATION_TYPES = ['oral', 'poster'] as const;
 export type PresentationType = (typeof PRESENTATION_TYPES)[number];
 
+// Kept in sync with backend/src/types/enums.ts's COMPENDIUM_* enums.
+export const COMPENDIUM_PUBLICATION_STATUSES = ['none', 'draft', 'ready', 'published', 'withdrawn'] as const;
+export type CompendiumPublicationStatus = (typeof COMPENDIUM_PUBLICATION_STATUSES)[number];
+
+export const COMPENDIUM_CONSENT_METHODS = ['submission_terms', 'email', 'form', 'other'] as const;
+export type CompendiumConsentMethod = (typeof COMPENDIUM_CONSENT_METHODS)[number];
+
+export interface CompendiumAuthor {
+  name: string;
+  affiliation?: string;
+  isCorresponding?: boolean;
+  orcid?: string;
+}
+
+export interface CompendiumConsent {
+  granted: boolean;
+  grantedAt?: string;
+  method?: CompendiumConsentMethod;
+  evidenceNote?: string;
+  recordedBy?: string;
+}
+
+export interface CompendiumCorrection {
+  date: string;
+  note: string;
+  recordedBy?: string;
+}
+
+export interface CompendiumFields {
+  consentToPublish?: CompendiumConsent;
+  publicationStatus: CompendiumPublicationStatus;
+  corrections?: CompendiumCorrection[];
+  publishedInVersion?: string;
+}
+
 // The public-safe subset — no email/phone/visa-or-funding-ask fields exist
 // on this model at all (see backend ConfirmedAbstract.model.ts), so there is
 // nothing further to strip here the way admin-only fields are stripped
@@ -20,11 +55,19 @@ export interface ConfirmedAbstract {
   order: number;
 }
 
-// Admin view adds the publish flag and the admin-only internal notes field.
+// Admin view adds the publish flag, the admin-only internal notes field, and
+// the additive open-access compendium fields (see Phase 3/4 of the
+// compendium project — abstractText/authors/keywords never existed on legacy
+// records until the import script backfilled them).
 export interface AdminConfirmedAbstract extends ConfirmedAbstract {
   isPublished: boolean;
   internalNotes?: string;
   createdAt: string;
+  abstractText?: string;
+  authors?: CompendiumAuthor[];
+  keywords?: string[];
+  language?: string;
+  compendium?: CompendiumFields;
 }
 
 export interface ConfirmedAbstractInput {
@@ -38,6 +81,10 @@ export interface ConfirmedAbstractInput {
   order?: number;
   isPublished?: boolean;
   internalNotes?: string;
+  abstractText?: string;
+  authors?: CompendiumAuthor[];
+  keywords?: string[];
+  language?: string;
 }
 
 export interface Paginated<T> {
@@ -83,4 +130,36 @@ export const adminUpdateConfirmedAbstract = async (
 
 export const adminDeleteConfirmedAbstract = async (id: string): Promise<void> => {
   await api.delete(`/admin/confirmed-abstracts/${id}`);
+};
+
+// --- Open-access compendium (Phase 4) ---
+
+export const adminRecordConsent = async (
+  id: string,
+  input: { method: CompendiumConsentMethod; evidenceNote: string }
+): Promise<AdminConfirmedAbstract> => {
+  const res = await api.patch<{ success: true; data: AdminConfirmedAbstract }>(`/admin/confirmed-abstracts/${id}/consent`, input);
+  return res.data.data;
+};
+
+export const adminBulkRecordConsent = async (input: {
+  ids: string[];
+  method: CompendiumConsentMethod;
+  evidenceNote: string;
+}): Promise<{ requested: number; recorded: number; failed: number }> => {
+  const res = await api.post<{ success: true; data: { requested: number; recorded: number; failed: number } }>(
+    '/admin/confirmed-abstracts/consent/bulk',
+    input
+  );
+  return res.data.data;
+};
+
+export const adminSetCompendiumStatus = async (
+  id: string,
+  status: CompendiumPublicationStatus
+): Promise<AdminConfirmedAbstract> => {
+  const res = await api.patch<{ success: true; data: AdminConfirmedAbstract }>(`/admin/confirmed-abstracts/${id}/compendium-status`, {
+    status,
+  });
+  return res.data.data;
 };

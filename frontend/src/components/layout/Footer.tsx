@@ -7,7 +7,7 @@ import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../lib/siteInfo';
 export const Footer = () => {
   const { t } = useTranslation();
   return (
-  <footer className="w-full justify-between border-t border-slate-800 bg-navy-nav">
+  <footer className="w-full justify-between border-t border-slate-800 bg-navy-nav print:hidden">
     <div className="flex w-full flex-col gap-10 px-4 py-5 sm:flex-row sm:justify-between sm:px-6">
       <div className="flex flex-col items-start gap-2.5">
         <img src={summitMark} alt="" aria-hidden="true" className="h-9 w-9 rounded-md" />

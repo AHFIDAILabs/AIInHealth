@@ -5,3 +5,4 @@ Disallow: /portal
 Disallow: /review
 
 Sitemap: https://aiinhealthsummit.org/sitemap.xml
+Sitemap: https://aiinhealthsummit.org/sitemap-compendium.xml

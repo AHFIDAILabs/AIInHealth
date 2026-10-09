@@ -50,7 +50,14 @@ export const SEO = ({ title, description, path, image, noindex, structuredData, 
 
       {jsonLdBlocks.map((block, i) => (
         <script key={i} type="application/ld+json">
-          {JSON.stringify(block)}
+          {/* A raw "<" (e.g. from a "</script>" substring inside free-text
+              content like a user-submitted title) would prematurely close
+              this element when the DOM is serialized back to an HTML string
+              (prerendering, "View Source") — <script> is a raw-text element,
+              so that serialization doesn't re-escape "<" the way normal text
+              does. <-encoding it is valid inside a JSON string and
+              inert to JSON.parse either way. */}
+          {JSON.stringify(block).replace(/</g, '\\u003c')}
         </script>
       ))}
     </Helmet>

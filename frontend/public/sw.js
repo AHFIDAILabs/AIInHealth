@@ -97,6 +97,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Narrow exclusion, not the whole /compendium/ prefix — current.json is a
+  // small pointer file (compendium.service.ts's loadCompendium() reads it to
+  // discover the latest version) that changes every time a new edition is
+  // exported, so it must never be served stale from cache. The versioned
+  // files it points to (compendium-<version>.json, search-index-<version>.json)
+  // are content-addressed by that same version number and never change once
+  // published, so cache-first for those (and everything else here) is safe.
+  if (url.pathname === '/compendium/current.json') {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       const cached = await cache.match(request);

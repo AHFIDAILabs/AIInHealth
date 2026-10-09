@@ -44,6 +44,11 @@ import { Contact } from './pages/public/Contact';
 import { Privacy } from './pages/public/Privacy';
 import { Terms } from './pages/public/Terms';
 import { NotFound } from './pages/public/NotFound';
+import { CompendiumHome } from './pages/public/compendium/CompendiumHome';
+import { CompendiumAbstract } from './pages/public/compendium/CompendiumAbstract';
+import { CompendiumAuthors } from './pages/public/compendium/CompendiumAuthors';
+import { CompendiumKeywords } from './pages/public/compendium/CompendiumKeywords';
+import { CompendiumAbout } from './pages/public/compendium/CompendiumAbout';
 import { LoginPage } from './pages/admin/LoginPage';
 import { ForgotPasswordPage } from './pages/admin/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/admin/ResetPasswordPage';
@@ -98,6 +103,11 @@ const ADMIN_ONLY_ROLES = ['super_admin', 'admin'] as const;
 const REGISTRATION_ROLES = ['super_admin', 'admin', 'registrations_officer'] as const;
 const ABSTRACT_ROLES = ['super_admin', 'admin', 'abstract_lead'] as const;
 const RAPPORTEUR_ROLES = ['super_admin', 'admin', 'rapporteur_lead'] as const;
+// Dark by default — see docs/compendium brief. Flip on in .env with
+// VITE_COMPENDIUM_ENABLED=true. When off, these routes simply aren't
+// registered, so /compendium/* falls through to the existing `*` NotFound
+// catch-all with zero special-case logic.
+const COMPENDIUM_ENABLED = import.meta.env.VITE_COMPENDIUM_ENABLED === 'true';
 
 function App() {
   return (
@@ -137,6 +147,15 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
+            {COMPENDIUM_ENABLED && (
+              <>
+                <Route path="/compendium" element={<CompendiumHome />} />
+                <Route path="/compendium/authors" element={<CompendiumAuthors />} />
+                <Route path="/compendium/keywords" element={<CompendiumKeywords />} />
+                <Route path="/compendium/about" element={<CompendiumAbout />} />
+                <Route path="/compendium/:code" element={<CompendiumAbstract />} />
+              </>
+            )}
             <Route path="*" element={<NotFound />} />
           </Route>
 
