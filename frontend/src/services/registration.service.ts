@@ -45,12 +45,15 @@ export interface GroupAttendee {
   email: string;
 }
 
-// Spam hardening — intersected into every payload type below. `middleName` is
-// a honeypot (HoneypotField) — `website` is already a real field on
-// Exhibitor/Sponsor/Innovator, so registration uses a different, non-colliding
-// name. `formToken` is the time-trap token from useFormToken().
+// Spam hardening — intersected into every payload type below. `formMeta` is
+// a honeypot (HoneypotField) — deliberately not a real-sounding name like the
+// old "middleName"/"website": Chrome/Safari's address/contact AutoFill on
+// macOS would silently fill a hidden field with a real-world name from a
+// saved profile, tripping the backend's max(0) check with no visible error
+// at all (handleSubmit just never calls onSubmit). `formToken` is the
+// time-trap token from useFormToken().
 interface SpamHardeningFields {
-  middleName?: string;
+  formMeta?: string;
   formToken?: string;
 }
 

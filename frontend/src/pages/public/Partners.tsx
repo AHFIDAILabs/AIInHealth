@@ -18,6 +18,7 @@ import { useFormToken } from '../../hooks/useFormToken';
 import { listPublicPartners, type AdminPartner } from '../../services/partner.service';
 import { listPublicPackages, type PublicSponsorshipPackage } from '../../services/sponsorshipPackage.service';
 import { SEO } from '../../components/seo/SEO';
+import { GENERIC_FORM_INVALID_MESSAGE } from '../../lib/siteInfo';
 
 // Purely decorative — cycles across however many real packages come back,
 // so the card grid still reads well regardless of how many an admin defines.
@@ -62,7 +63,10 @@ export const Partners = () => {
     contactEmail: z.string().trim().toLowerCase().email(t('partners.form.validation.contactEmail', 'Enter a valid email')),
     tierInterested: z.string().trim().optional(),
     message: z.string().trim().max(2000).optional(),
-    website: z.string().max(0).optional(),
+    // Honeypot — see registration.service.ts's comment on why this is named
+    // `formMeta`, not something real-sounding that browser autofill could
+    // silently poison.
+    formMeta: z.string().max(0).optional(),
   });
   type InquiryValues = z.infer<typeof inquirySchema>;
 
@@ -105,6 +109,10 @@ export const Partners = () => {
       setSubmitError(getApiErrorMessage(err));
     }
   };
+
+  // Safety net for react-hook-form's own silent failure mode — see
+  // siteInfo.ts's comment on GENERIC_FORM_INVALID_MESSAGE.
+  const onInvalid = () => setSubmitError(GENERIC_FORM_INVALID_MESSAGE);
 
   return (
   <>
@@ -259,8 +267,8 @@ export const Partners = () => {
                 {submitError}
               </p>
             )}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-              <HoneypotField {...register('website')} />
+            <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-5" noValidate>
+              <HoneypotField {...register('formMeta')} />
               <div className="grid gap-5 sm:grid-cols-2">
                 <LightField label={t('partners.form.organizationName', 'Organization Name')} error={errors.organizationName?.message} {...register('organizationName')} />
                 <LightField label={t('partners.form.contactName', 'Contact Name')} error={errors.contactName?.message} {...register('contactName')} />

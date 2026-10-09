@@ -158,7 +158,10 @@ const downloadSessionIcs = (session: DisplaySession, dayKey: SessionDay) => {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Safari starts a blob download asynchronously — revoking in the same tick
+  // sometimes wins the race and silently cancels the download there. See
+  // lib/calendar.ts's downloadSummitIcs for the same fix.
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 };
 
 const dayTabParts = (date: Date) => ({

@@ -18,6 +18,7 @@ import { initializePayment } from '../../services/payment.service';
 import { getApiErrorMessage } from '../../services/api';
 import { useFormToken } from '../../hooks/useFormToken';
 import { SEO } from '../../components/seo/SEO';
+import { GENERIC_FORM_INVALID_MESSAGE } from '../../lib/siteInfo';
 
 const TICKET_OPTIONS: { value: TicketCategory; label: string }[] = [
   { value: 'international_delegate', label: 'International Delegate' },
@@ -41,10 +42,20 @@ const schema = z
     // this just makes sure the field was actually considered, not skipped.
     coHostNetwork: z.string().trim().min(1, 'Enter a network, or "None" if not applicable').max(200),
     gender: z.enum(['female', 'male'], { errorMap: () => ({ message: 'Select Male or Female.' }) }),
-    middleName: z.string().max(0).optional(),
+    // Honeypot — see registration.service.ts's comment on why this is named
+    // `formMeta`, not something real-sounding that browser autofill could
+    // silently poison.
+    formMeta: z.string().max(0).optional(),
     // Summit opt-in — only required/validated when alsoRegister is checked.
     alsoRegister: z.boolean(),
-    ticketCategory: z.enum(TICKET_VALUES).optional(),
+    // Accepts '' too (the select's own placeholder option, and what's left
+    // over if the Summit opt-in is unticked after a category was chosen —
+    // react-hook-form doesn't unregister a hidden field by default) — a bare
+    // `.optional()` here only accepts `undefined`, so either case left the
+    // actual DOM value '' silently failing validation with no visible error
+    // (the error only renders inside the now-hidden opt-in block). Same fix
+    // as ScholarshipApplication.tsx's applicantType/level.
+    ticketCategory: z.union([z.literal(''), z.enum(TICKET_VALUES)]).optional(),
     accessCode: z.string().trim().max(32).optional().or(z.literal('')),
     idCardUrl: z.string().optional(),
   })
@@ -100,7 +111,7 @@ export const WaiHealthBreakfast = () => {
         country: values.country,
         coHostNetwork: values.coHostNetwork,
         gender: values.gender,
-        middleName: values.middleName,
+        formMeta: values.formMeta,
         formToken,
       });
 
@@ -158,6 +169,14 @@ export const WaiHealthBreakfast = () => {
     setConfirmation(null);
   };
 
+  // Safety net for react-hook-form's own silent failure mode: if validation
+  // fails on a field that isn't currently rendered (a hidden honeypot an
+  // autofill poisoned, or a stale value left over from toggling a
+  // conditional section), handleSubmit just never calls onSubmit — no
+  // request, no thrown error, no visible change at all. This guarantees SOME
+  // visible feedback no matter which field actually failed.
+  const onInvalid = () => setServerError(GENERIC_FORM_INVALID_MESSAGE);
+
   return (
     <>
       <SEO
@@ -177,8 +196,8 @@ export const WaiHealthBreakfast = () => {
             {confirmation ? (
               <RegisterSuccess message={confirmation} onReset={resetAll} />
             ) : (
-              <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-                <HoneypotField {...register('middleName')} />
+              <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate className="space-y-5">
+                <HoneypotField {...register('formMeta')} />
                 {serverError && <Banner variant="error">{serverError}</Banner>}
 
                 <p className="rounded-xl border border-orange/20 bg-orange/5 px-4 py-3 text-sm text-navy">

@@ -12,6 +12,7 @@ import { getApiErrorMessage } from '../../services/api';
 import { optionalUrlField } from '../../lib/validation';
 import { fetchInnovatorApplicationsStatus } from '../../services/innovatorSettings.service';
 import { useFormToken } from '../../hooks/useFormToken';
+import { GENERIC_FORM_INVALID_MESSAGE } from '../../lib/siteInfo';
 
 const schema = z.object({
   companyName: z.string().trim().min(2, 'Enter your startup or project name'),
@@ -21,7 +22,10 @@ const schema = z.object({
   website: optionalUrlField,
   solutionDescription: z.string().trim().max(2000).optional(),
   accessCode: z.string().trim().max(32).optional().or(z.literal('')),
-  middleName: z.string().max(0).optional(),
+  // Honeypot — see registration.service.ts's comment on why this is named
+  // `formMeta`, not something real-sounding that browser autofill could
+  // silently poison.
+  formMeta: z.string().max(0).optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -70,6 +74,10 @@ export const InnovatorForm = () => {
     }
   };
 
+  // Safety net for react-hook-form's own silent failure mode — see
+  // siteInfo.ts's comment on GENERIC_FORM_INVALID_MESSAGE.
+  const onInvalid = () => setServerError(GENERIC_FORM_INVALID_MESSAGE);
+
   const resetAll = () => {
     reset();
     setConfirmation(null);
@@ -83,8 +91,8 @@ export const InnovatorForm = () => {
   const applicationsClosed = applicationsOpen === false;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-      <HoneypotField {...register('middleName')} />
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate className="space-y-5">
+      <HoneypotField {...register('formMeta')} />
       <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
         {applicationsClosed
           ? "We're not accepting new Innovator applications right now — if you already have an access code from us, enter it below to confirm immediately."

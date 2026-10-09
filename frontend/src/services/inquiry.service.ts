@@ -7,7 +7,7 @@ export interface PartnershipInquiryPayload {
   tierInterested?: string;
   message?: string;
   // Spam hardening — see contact.service.ts's identical comment.
-  website?: string;
+  formMeta?: string;
   formToken?: string;
 }
 

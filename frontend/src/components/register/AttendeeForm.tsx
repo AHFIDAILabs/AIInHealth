@@ -15,6 +15,7 @@ import { initializePayment } from '../../services/payment.service';
 import { getApiErrorMessage } from '../../services/api';
 import { useFormToken } from '../../hooks/useFormToken';
 import { TICKET_PRICE_NGN, formatNaira } from '../../lib/pricing';
+import { GENERIC_FORM_INVALID_MESSAGE } from '../../lib/siteInfo';
 
 const TICKET_OPTIONS: { value: TicketCategory; label: string; icon: typeof Globe2 }[] = [
   { value: 'international_delegate', label: 'International Delegate', icon: Globe2 },
@@ -66,7 +67,10 @@ const schema = z
     // Optional — see the note above the field for why.
     accessCode: z.string().trim().max(32).optional().or(z.literal('')),
     idCardUrl: z.string().optional(),
-    middleName: z.string().max(0).optional(),
+    // Honeypot — see registration.service.ts's comment on why this is named
+    // `formMeta`, not something real-sounding that browser autofill could
+    // silently poison.
+    formMeta: z.string().max(0).optional(),
   })
   // Required only for the categories people were abusing to skip/cut the fee —
   // see ID_VERIFICATION_TICKET_CATEGORIES's own comment. Mirrors the same
@@ -136,6 +140,12 @@ export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
 
   const chooseMode = (value: 'individual' | 'group') => {
     setValue('registrationMode', value);
+    // Clears any rows added while Group was previously selected — react-hook-
+    // form doesn't unregister a field array just because its section is no
+    // longer rendered, so stale empty { fullName:'', email:'' } rows would
+    // otherwise silently fail groupAttendeeSchema on submit with no visible
+    // error (the section they'd show an error in is gone).
+    if (value === 'individual') setValue('groupAttendees', []);
     setStep(1);
   };
 
@@ -162,6 +172,10 @@ export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
       setRedirecting(false);
     }
   };
+
+  // Safety net for react-hook-form's own silent failure mode — see
+  // siteInfo.ts's comment on GENERIC_FORM_INVALID_MESSAGE.
+  const onInvalid = () => setServerError(GENERIC_FORM_INVALID_MESSAGE);
 
   const resetAll = () => {
     reset({
@@ -243,11 +257,11 @@ export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -16 }}
             transition={{ duration: 0.25 }}
-            onSubmit={handleSubmit(onSubmit)}
+            onSubmit={handleSubmit(onSubmit, onInvalid)}
             noValidate
             className="space-y-7"
           >
-            <HoneypotField {...register('middleName')} />
+            <HoneypotField {...register('formMeta')} />
             {!isInviteMode && (
               <button
                 type="button"

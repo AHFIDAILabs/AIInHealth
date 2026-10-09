@@ -13,7 +13,7 @@ import { HoneypotField } from '../../components/ui/HoneypotField';
 import { submitContactMessage, CONTACT_CATEGORIES } from '../../services/contact.service';
 import { getApiErrorMessage } from '../../services/api';
 import { useFormToken } from '../../hooks/useFormToken';
-import { SUPPORT_EMAIL, SUPPORT_MAILTO, VENUE_FULL_ADDRESS } from '../../lib/siteInfo';
+import { SUPPORT_EMAIL, SUPPORT_MAILTO, VENUE_FULL_ADDRESS, GENERIC_FORM_INVALID_MESSAGE } from '../../lib/siteInfo';
 import { SEO } from '../../components/seo/SEO';
 
 const schema = z.object({
@@ -21,7 +21,10 @@ const schema = z.object({
   email: z.string().trim().toLowerCase().email('Enter a valid email'),
   category: z.enum(CONTACT_CATEGORIES),
   message: z.string().trim().min(10, 'Message should be at least 10 characters'),
-  website: z.string().max(0).optional(),
+  // Honeypot — see registration.service.ts's comment on why this is named
+  // `formMeta`, not something real-sounding that browser autofill could
+  // silently poison.
+  formMeta: z.string().max(0).optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -54,6 +57,10 @@ export const Contact = () => {
       setSubmitError(getApiErrorMessage(err));
     }
   };
+
+  // Safety net for react-hook-form's own silent failure mode — see
+  // siteInfo.ts's comment on GENERIC_FORM_INVALID_MESSAGE.
+  const onInvalid = () => setSubmitError(GENERIC_FORM_INVALID_MESSAGE);
 
   return (
     <>
@@ -106,8 +113,8 @@ export const Contact = () => {
                   {submitError}
                 </p>
               )}
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-                <HoneypotField {...register('website')} />
+              <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-5" noValidate>
+                <HoneypotField {...register('formMeta')} />
                 <div className="grid gap-5 sm:grid-cols-2">
                   <LightField label={t('contact.form.fullName', 'Full Name')} error={errors.name?.message} {...register('name')} />
                   <LightField label={t('contact.form.email', 'Email')} type="email" error={errors.email?.message} {...register('email')} />

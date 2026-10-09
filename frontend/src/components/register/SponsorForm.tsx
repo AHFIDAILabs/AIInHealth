@@ -11,6 +11,7 @@ import { submitRegistration } from '../../services/registration.service';
 import { getApiErrorMessage } from '../../services/api';
 import { optionalUrlField } from '../../lib/validation';
 import { useFormToken } from '../../hooks/useFormToken';
+import { GENERIC_FORM_INVALID_MESSAGE } from '../../lib/siteInfo';
 
 const schema = z.object({
   companyName: z.string().trim().min(2, "Enter your organization's name"),
@@ -19,7 +20,10 @@ const schema = z.object({
   contactPhone: z.string().trim().optional(),
   website: optionalUrlField,
   message: z.string().trim().max(2000).optional(),
-  middleName: z.string().max(0).optional(),
+  // Honeypot — see registration.service.ts's comment on why this is named
+  // `formMeta`, not something real-sounding that browser autofill could
+  // silently poison.
+  formMeta: z.string().max(0).optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -45,6 +49,10 @@ export const SponsorForm = () => {
     }
   };
 
+  // Safety net for react-hook-form's own silent failure mode — see
+  // siteInfo.ts's comment on GENERIC_FORM_INVALID_MESSAGE.
+  const onInvalid = () => setServerError(GENERIC_FORM_INVALID_MESSAGE);
+
   const resetAll = () => {
     reset();
     setConfirmation(null);
@@ -53,8 +61,8 @@ export const SponsorForm = () => {
   if (confirmation) return <RegisterSuccess message={confirmation} onReset={resetAll} />;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-      <HoneypotField {...register('middleName')} />
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate className="space-y-5">
+      <HoneypotField {...register('formMeta')} />
       <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
         Interested in partnering with us? Tell us about your organization and we&rsquo;ll share sponsorship packages
         and benefits.

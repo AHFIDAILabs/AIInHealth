@@ -22,7 +22,7 @@ export interface SubmitWaiHealthRegistrationPayload {
   country: string;
   coHostNetwork: string;
   gender: WaiHealthGender;
-  middleName?: string; // honeypot
+  formMeta?: string; // honeypot — see registration.service.ts's comment
   formToken?: string;
 }
 

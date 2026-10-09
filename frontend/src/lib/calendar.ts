@@ -62,7 +62,11 @@ export const downloadSummitIcs = (): void => {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Safari starts a blob download asynchronously — revoking the object URL in
+  // the same tick (as every other browser can safely do) sometimes wins the
+  // race and silently cancels the download there. A short delay costs nothing
+  // elsewhere and fixes it on Safari.
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 };
 
 export const googleCalendarUrl = (): string => {
