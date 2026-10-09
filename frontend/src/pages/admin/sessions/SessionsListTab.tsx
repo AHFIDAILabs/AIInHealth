@@ -11,6 +11,7 @@ import {
   adminRemoveSessionRsvp,
   adminTranslateSession,
   adminUpdateSessionTranslation,
+  adminTranslateMissingSessions,
   SESSION_DAYS,
   SESSION_CARD_STYLES,
   SUPPORTED_TRANSLATION_LANGS,
@@ -122,6 +123,7 @@ export const SessionsListTab = () => {
     pt: { title: '', description: '' },
   });
   const [translating, setTranslating] = useState<Record<TranslationLang, boolean>>({ fr: false, pt: false });
+  const [translatingMissing, setTranslatingMissing] = useState<Record<TranslationLang, boolean>>({ fr: false, pt: false });
   const [translationSaving, setTranslationSaving] = useState<Record<TranslationLang, boolean>>({ fr: false, pt: false });
 
   const load = useCallback(() => {
@@ -265,6 +267,24 @@ export const SessionsListTab = () => {
     }
   };
 
+  // Bulk counterpart to generateTranslation above — drafts every session
+  // still missing a translation for this language in one go (e.g. right
+  // after a bulk agenda import), instead of opening each one individually.
+  // Still only ever produces a draft; review/approve each from its own edit
+  // drawer exactly as before.
+  const translateAllMissing = async (lang: TranslationLang) => {
+    setTranslatingMissing((prev) => ({ ...prev, [lang]: true }));
+    try {
+      const { drafted, failed } = await adminTranslateMissingSessions(lang);
+      toast('success', drafted === 0 ? 'Nothing to translate — every session already has one.' : `Drafted ${drafted} translation${drafted === 1 ? '' : 's'}${failed ? ` (${failed} failed)` : ''} — review & approve them from each session.`);
+      load();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setTranslatingMissing((prev) => ({ ...prev, [lang]: false }));
+    }
+  };
+
   const toggleTrack = (id: string) => {
     setForm((prev) => {
       const current = prev.tracks ?? [];
@@ -389,12 +409,25 @@ export const SessionsListTab = () => {
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-500">{total} session{total === 1 ? '' : 's'}</p>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:bg-orange-hover"
-        >
-          <Plus size={16} /> Add Session
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {SUPPORTED_TRANSLATION_LANGS.map((lang) => (
+            <button
+              key={lang}
+              onClick={() => translateAllMissing(lang)}
+              disabled={translatingMissing[lang]}
+              title={`AI-draft ${LANG_LABEL[lang]} for every session that doesn't have one yet — you still review and approve each one`}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] font-semibold text-navy transition-colors hover:border-orange/40 disabled:opacity-60"
+            >
+              <Sparkles size={15} /> {translatingMissing[lang] ? 'Drafting…' : `Translate All Missing (${LANG_LABEL[lang]})`}
+            </button>
+          ))}
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:bg-orange-hover"
+          >
+            <Plus size={16} /> Add Session
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">

@@ -236,3 +236,13 @@ export const adminUpdateSessionTranslation = async (
   const res = await api.patch<{ success: true; data: AdminSession }>(`/admin/sessions/${id}/translations/${lang}`, input);
   return res.data.data;
 };
+
+// Bulk-drafts a translation for every session missing one (ids omitted), or
+// a specific subset (ids given — re-drafts those regardless of current
+// status). Still only ever produces a draft — review/approve each one from
+// the session edit drawer exactly as before, same as a single "Generate with
+// AI" click.
+export const adminTranslateMissingSessions = async (lang: TranslationLang, ids?: string[]): Promise<{ drafted: number; failed: number }> => {
+  const res = await api.post<{ success: true; data: { drafted: number; failed: number } }>('/admin/sessions/translate-missing', { lang, ids });
+  return res.data.data;
+};
