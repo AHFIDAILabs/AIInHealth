@@ -1420,15 +1420,17 @@ export const adminExport = catchAsync(async (req: Request, res: Response) => {
 });
 
 // POST /admin/registrations/card/send-invites — invites confirmed attendees
-// to generate their own "I will be attending" share card from the portal
-// (cardGenerator.ts composites it entirely client-side; this just emails a
-// link to the existing portal, same ids-or-filter shape as the RSVP
-// reminder). ids omitted -> every confirmed attendee with an email.
+// AND team members (organizers/staff — same personal-info field shape as
+// attendee, just a different `type`) to generate their own "I will be
+// attending" share card from the portal (cardGenerator.ts composites it
+// entirely client-side; this just emails a link to the existing portal, same
+// ids-or-filter shape as the RSVP reminder). ids omitted -> every confirmed
+// attendee/team registration with an email.
 export const adminSendCardInvites = catchAsync(async (req: Request, res: Response) => {
   const { ids }: SendCardInvitesInput = sendCardInvitesSchema.parse({ body: req.body }).body;
 
   const registrations = await Registration.find({
-    type: 'attendee',
+    type: { $in: ['attendee', 'team'] },
     status: 'confirmed',
     ...(ids && ids.length > 0 && { _id: { $in: ids } }),
   });
