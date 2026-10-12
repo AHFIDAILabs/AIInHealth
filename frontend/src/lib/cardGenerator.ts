@@ -9,13 +9,15 @@
 // once (see the infra-risk discussion this plan came out of). The backend's
 // only involvement anywhere in this feature is emailing people a link.
 //
-// CARD_TEMPLATES ships with a programmatic navy/orange gradient background —
-// a placeholder using this site's real brand tokens (see tailwind.config.js),
-// not the final professionally-designed artwork. Swapping in real template
-// art later is a one-line change (set `backgroundImageUrl` on the relevant
-// template) with no other code to touch — `renderEventCard` already prefers
-// it over the gradient whenever it's present.
+// Visual design mirrors a reference card the user supplied (an Africa
+// HealthTech Summit "I will be attending" graphic): dark navy/blue ground
+// with diagonal accent streaks, a two-line white/orange headline, an orange
+// info block, a FULL (non-circular) photo panel, a cyan name banner, and a
+// white partner-logo strip at the bottom. The partner logos are this event's
+// real confirmed set (event-extras plan conversation) — swap FOOTER_GROUPS
+// below if that roster ever changes.
 import { EVENT_DATE_RANGE, VENUE_SHORT } from './siteInfo';
+import eventLogoUrl from '../assets/AI_Logo_New_white.png';
 
 export type EventCardKind = 'attending' | 'presenting' | 'speaking';
 
@@ -30,60 +32,53 @@ export interface EventCardData {
   line2?: string;
 }
 
-interface TextStyle {
-  font: string;
-  color: string;
-  align: CanvasTextAlign;
-  lineHeight: number;
-}
-
-interface CardTemplateConfig {
-  width: number;
-  height: number;
-  /** Real designed artwork, once available — drawn full-bleed (cover-fit) in place of the gradient below. */
-  backgroundImageUrl?: string;
-  gradient: { from: string; to: string; angleDeg: number };
-  heading: string;
-  headingStyle: TextStyle & { x: number; y: number };
-  // Name and detail are laid out bottom-up (see renderEventCard) rather than
-  // from a fixed top y — a wrapped title (2+ lines, common for real abstract
-  // titles) would otherwise push the block below it down into whatever sits
-  // underneath, which is exactly the overlap a live render surfaced during
-  // verification: a 2-line title pushed the date/room line down into the
-  // footer. Anchoring to where each block ENDS keeps the footer's position
-  // safe no matter how many lines a name or title wraps to.
-  name: TextStyle & { x: number; maxWidth: number; gapAboveDetail: number };
-  detail: TextStyle & { x: number; bottomY: number; maxWidth: number };
-  photo?: { cx: number; cy: number; radius: number; ringColor: string; ringWidth: number };
-  footer: TextStyle & { x: number; y: number };
-}
-
 const SIZE = 1080; // square — matches the reference card's own aspect ratio, and every major platform's post format
+const MARGIN = 70;
 
 const BRAND = {
   navy: '#0F172A',
-  navySecondary: '#14213D',
+  navyDeep: '#0A1120',
+  navyMid: '#122036',
   orange: '#E8792C',
+  cyan: '#49C5E0',
   white: '#FFFFFF',
+  textOnCyan: '#0B1220',
 };
 
-const baseTemplate = (heading: string): CardTemplateConfig => ({
-  width: SIZE,
-  height: SIZE,
-  gradient: { from: BRAND.navy, to: BRAND.navySecondary, angleDeg: 135 },
-  heading,
-  headingStyle: { x: 72, y: 150, font: '800 64px Sora, sans-serif', color: BRAND.orange, align: 'left', lineHeight: 70 },
-  name: { x: 72, font: '700 52px Sora, sans-serif', color: BRAND.white, align: 'left', maxWidth: SIZE - 144, lineHeight: 58, gapAboveDetail: 36 },
-  detail: { x: 72, bottomY: SIZE - 90, font: '500 30px "Plus Jakarta Sans", sans-serif', color: '#CBD5E1', align: 'left', maxWidth: SIZE - 144, lineHeight: 38 },
-  photo: { cx: SIZE - 220, cy: 340, radius: 160, ringColor: BRAND.orange, ringWidth: 8 },
-  footer: { x: SIZE / 2, y: SIZE - 36, font: '700 22px Sora, sans-serif', color: 'rgba(255,255,255,0.55)', align: 'center', lineHeight: 26 },
-});
-
-export const CARD_TEMPLATES: Record<EventCardKind, CardTemplateConfig> = {
-  attending: baseTemplate('I WILL BE ATTENDING'),
-  presenting: baseTemplate('I WILL BE PRESENTING'),
-  speaking: baseTemplate('I AM SPEAKING AT AIHS 2026'),
+const HEADLINE: Record<EventCardKind, [string, string]> = {
+  attending: ['I WILL BE', 'ATTENDING'],
+  presenting: ['I WILL BE', 'PRESENTING'],
+  speaking: ['I AM', 'SPEAKING'],
 };
+
+// The real, confirmed partner set for this card's bottom strip (event-extras
+// plan conversation) — "Convened By" mirrors the exact wording already used
+// sitewide (Footer.tsx's "Convened by AHFID"), just extended to the second
+// co-convener on record. Update this list, not the drawing code, if the
+// roster changes.
+const FOOTER_GROUPS: { label: string; logos: string[] }[] = [
+  {
+    label: 'Convened By',
+    logos: [
+      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1790020932/ai-health-summit-2026/sno95g1kcwwuf8k9lt96.png', // AHFID
+      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1790581934/ai-health-summit-2026/rd9h1wvdhjioqzafici0.png', // AI in Health Summit
+    ],
+  },
+  {
+    label: 'Government Partners',
+    logos: [
+      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1789837888/ai-health-summit-2026/aatouyklzjtgv6qg2znt.png', // Federal Ministry of Health & Social Welfare
+      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1789837696/ai-health-summit-2026/ej5mb9wul8uledkmoejo.png', // Nigeria CDC
+      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1790573701/ai-health-summit-2026/fyhjnt5r99gzutdbywur.png', // National Centre for AI and Robotics
+    ],
+  },
+  {
+    label: 'Title Partner',
+    logos: [
+      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1789574145/ai-health-summit-2026/hjeqhya18ncpbygegexo.webp', // CHAI
+    ],
+  },
+];
 
 // Pure and unit-tested: wraps `text` into lines no wider than `maxWidth`,
 // using an injected measure function so this has no dependency on a real
@@ -110,8 +105,8 @@ export const wrapText = (text: string, maxWidth: number, measure: (s: string) =>
   return lines;
 };
 
-// Pure: decides what the two detail lines under the name should say, with
-// no canvas involved — the part of the layout that's actually worth
+// Pure: decides what the info block under the headline should say, with no
+// canvas involved — the part of the layout that's actually worth
 // unit-testing in isolation from real rendering.
 export const buildDetailLines = (data: EventCardData): string[] => {
   if (data.kind === 'attending') {
@@ -125,10 +120,8 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
     const img = new Image();
     // Required so a cross-origin (e.g. Cloudinary) photo doesn't taint the
     // canvas — without this, canvas.toBlob() throws a SecurityError instead
-    // of returning the composited image. Needs the source to actually send
-    // CORS headers (Cloudinary does by default); verify live with a real
-    // photoUrl before shipping, not just with local file-upload object URLs
-    // (which are same-origin and wouldn't surface this).
+    // of returning the composited image. Harmless on same-origin assets
+    // (the bundled event logo) — the browser just ignores it there.
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
@@ -161,98 +154,229 @@ const drawImageCover = (
   ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
 };
 
-const drawTextBlock = (
-  ctx: CanvasRenderingContext2D,
-  lines: string[],
-  x: number,
-  startY: number,
-  style: TextStyle
-) => {
-  ctx.font = style.font;
-  ctx.fillStyle = style.color;
-  ctx.textAlign = style.align;
+// Own implementation rather than the native ctx.roundRect — that landed in
+// Safari later than the rest of this project's baseline, and this is a
+// three-line function to not depend on it for.
+const roundRectPath = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+};
+
+const drawBackground = (ctx: CanvasRenderingContext2D) => {
+  const grad = ctx.createLinearGradient(0, 0, SIZE, SIZE);
+  grad.addColorStop(0, BRAND.navyDeep);
+  grad.addColorStop(1, BRAND.navyMid);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Diagonal light streaks — a subtle, abstracted nod to the reference
+  // image's circuit/data-stream texture, drawn procedurally (no external
+  // asset needed, and it scales to any photo without a mismatched crop).
+  ctx.save();
+  ctx.globalAlpha = 0.1;
+  ctx.strokeStyle = '#7DD3FC';
+  ctx.lineWidth = 2;
+  for (let i = -4; i < 10; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * 140, 0);
+    ctx.lineTo(i * 140 + SIZE, SIZE);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // A soft warm glow echoing the reference's orange accent light.
+  const glow = ctx.createRadialGradient(SIZE - 150, 150, 0, SIZE - 150, 150, 420);
+  glow.addColorStop(0, 'rgba(232,121,44,0.16)');
+  glow.addColorStop(1, 'rgba(232,121,44,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+};
+
+// Full rectangular photo (never circular — explicitly asked for), with the
+// top edge feathered to fade into the dark background rather than sitting
+// behind a hard rectangle edge, approximating the reference image's blended
+// portrait treatment.
+const drawPhotoPanel = (ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) => {
+  const off = document.createElement('canvas');
+  off.width = w;
+  off.height = h;
+  const octx = off.getContext('2d');
+  if (!octx) return;
+  drawImageCover(octx, img, 0, 0, w, h);
+
+  // One single destination-in fill covering the WHOLE canvas — a second,
+  // separate fillRect call under destination-in would wipe out whatever the
+  // first call preserved outside its own shape (destination-in's "make
+  // everything else transparent" applies per call, across the entire
+  // canvas, not just that call's own rect — two sequential calls are
+  // mutually destructive, not additive). The gradient's own color stops do
+  // all the fade-then-stay-opaque work in one pass instead.
+  const fadeFraction = 0.22;
+  octx.globalCompositeOperation = 'destination-in';
+  const grad = octx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(fadeFraction, 'rgba(0,0,0,1)');
+  grad.addColorStop(1, 'rgba(0,0,0,1)');
+  octx.fillStyle = grad;
+  octx.fillRect(0, 0, w, h);
+
+  ctx.drawImage(off, x, y);
+};
+
+const HEADLINE_FONT = '800 66px Sora, sans-serif';
+const HEADLINE_LINE_HEIGHT = 72;
+
+const drawHeadline = (ctx: CanvasRenderingContext2D, lines: [string, string]) => {
+  ctx.font = HEADLINE_FONT;
+  ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  lines.forEach((line, i) => ctx.fillText(line, x, startY + i * style.lineHeight));
+  ctx.fillStyle = BRAND.white;
+  ctx.fillText(lines[0], MARGIN, 230);
+  ctx.fillStyle = BRAND.orange;
+  ctx.fillText(lines[1], MARGIN, 230 + HEADLINE_LINE_HEIGHT);
+};
+
+const INFO_FONT = '800 28px Sora, sans-serif';
+const INFO_LINE_HEIGHT = 36;
+const INFO_MAX_WIDTH = 384;
+const INFO_BOTTOM_Y = 640;
+
+// Bottom-anchored (grows upward) for the same reason the old text blocks
+// were — a wrapped title must never push into the headline above it,
+// regardless of how many lines it takes.
+const drawInfoBlock = (ctx: CanvasRenderingContext2D, rawLines: string[]) => {
+  ctx.font = INFO_FONT;
+  const lines = rawLines.flatMap((line) => wrapText(line, INFO_MAX_WIDTH, (s) => ctx.measureText(s).width));
+  if (lines.length === 0) return;
+
+  const paddingX = 28;
+  const paddingY = 20;
+  const textWidth = Math.max(...lines.map((l) => ctx.measureText(l).width));
+  const blockWidth = Math.min(textWidth + paddingX * 2, INFO_MAX_WIDTH + paddingX * 2);
+  const blockHeight = lines.length * INFO_LINE_HEIGHT + paddingY * 2 - 8;
+  const blockTop = INFO_BOTTOM_Y - blockHeight;
+
+  ctx.fillStyle = BRAND.orange;
+  roundRectPath(ctx, MARGIN, blockTop, blockWidth, blockHeight, 14);
+  ctx.fill();
+
+  ctx.fillStyle = BRAND.navy;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  lines.forEach((line, i) => {
+    ctx.fillText(line, MARGIN + paddingX, blockTop + paddingY + (i + 1) * INFO_LINE_HEIGHT - 10);
+  });
+};
+
+const NAME_BANNER_Y = 700;
+const NAME_BANNER_HEIGHT = 84;
+
+const drawNameBanner = (ctx: CanvasRenderingContext2D, name: string) => {
+  const width = SIZE - MARGIN * 2;
+  ctx.fillStyle = BRAND.cyan;
+  roundRectPath(ctx, MARGIN, NAME_BANNER_Y, width, NAME_BANNER_HEIGHT, 10);
+  ctx.fill();
+
+  let fontSize = 38;
+  const maxTextWidth = width - 48;
+  ctx.font = `800 ${fontSize}px Sora, sans-serif`;
+  while (ctx.measureText(name).width > maxTextWidth && fontSize > 20) {
+    fontSize -= 2;
+    ctx.font = `800 ${fontSize}px Sora, sans-serif`;
+  }
+  ctx.fillStyle = BRAND.textOnCyan;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(name, MARGIN + 24, NAME_BANNER_Y + NAME_BANNER_HEIGHT / 2 + 2);
+};
+
+const FOOTER_STRIP_TOP = 860;
+
+const drawFooterStrip = async (ctx: CanvasRenderingContext2D) => {
+  ctx.fillStyle = BRAND.white;
+  ctx.fillRect(0, FOOTER_STRIP_TOP, SIZE, SIZE - FOOTER_STRIP_TOP);
+
+  const colWidth = (SIZE - MARGIN * 2) / FOOTER_GROUPS.length;
+  const logoH = 52;
+  const gap = 14;
+
+  for (let i = 0; i < FOOTER_GROUPS.length; i++) {
+    const group = FOOTER_GROUPS[i];
+    const colCenterX = MARGIN + colWidth * i + colWidth / 2;
+
+    ctx.font = '700 14px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = '#64748B';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(group.label.toUpperCase(), colCenterX, FOOTER_STRIP_TOP + 36);
+
+    // Logos load independently and failures are skipped silently — one
+    // broken/slow partner logo should never block the rest of the strip
+    // (or the whole card) from rendering.
+    const images = await Promise.all(
+      group.logos.map((url) =>
+        loadImage(url).catch(() => null)
+      )
+    );
+    const validImages = images.filter((img): img is HTMLImageElement => !!img);
+    if (validImages.length === 0) continue;
+
+    const widths = validImages.map((img) => (img.width / img.height) * logoH);
+    const totalW = widths.reduce((a, b) => a + b, 0) + gap * (validImages.length - 1);
+    let x = colCenterX - totalW / 2;
+    const logoY = FOOTER_STRIP_TOP + 58;
+    for (let j = 0; j < validImages.length; j++) {
+      ctx.drawImage(validImages[j], x, logoY, widths[j], logoH);
+      x += widths[j] + gap;
+    }
+  }
 };
 
 // Orchestration — not unit-tested (needs a real 2D canvas context); exercise
 // this live in a browser instead. Returns a PNG Blob ready to download/share.
-export async function renderEventCard(
-  data: EventCardData,
-  template: CardTemplateConfig = CARD_TEMPLATES[data.kind]
-): Promise<Blob> {
+export async function renderEventCard(data: EventCardData): Promise<Blob> {
   const canvas = document.createElement('canvas');
-  canvas.width = template.width;
-  canvas.height = template.height;
+  canvas.width = SIZE;
+  canvas.height = SIZE;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context is not available in this browser.');
 
-  // Background: real artwork if supplied, otherwise the brand gradient.
-  if (template.backgroundImageUrl) {
-    const bg = await loadImage(template.backgroundImageUrl);
-    drawImageCover(ctx, bg, 0, 0, template.width, template.height);
-  } else {
-    const angle = (template.gradient.angleDeg * Math.PI) / 180;
-    const x1 = template.width / 2 - (Math.cos(angle) * template.width) / 2;
-    const y1 = template.height / 2 - (Math.sin(angle) * template.height) / 2;
-    const x2 = template.width / 2 + (Math.cos(angle) * template.width) / 2;
-    const y2 = template.height / 2 + (Math.sin(angle) * template.height) / 2;
-    const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-    gradient.addColorStop(0, template.gradient.from);
-    gradient.addColorStop(1, template.gradient.to);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, template.width, template.height);
+  drawBackground(ctx);
+
+  // Header: the event's own logo, top-left.
+  try {
+    const logo = await loadImage(eventLogoUrl);
+    const logoHeight = 54;
+    const logoWidth = (logo.width / logo.height) * logoHeight;
+    ctx.drawImage(logo, MARGIN, 56, logoWidth, logoHeight);
+  } catch {
+    // Missing/failed logo shouldn't block the rest of the card.
   }
 
-  // Photo — circular, with a brand-colored ring. Silently skipped (not a
-  // thrown error) if no photo was supplied or it fails to load, since a
-  // missing photo shouldn't block someone from getting their card at all.
-  if (template.photo && data.photoUrl) {
+  drawHeadline(ctx, HEADLINE[data.kind]);
+  drawInfoBlock(ctx, buildDetailLines(data));
+
+  // Photo — full rectangular panel, never cropped to a circle (explicitly
+  // asked for). Silently skipped if no photo was supplied or it fails to
+  // load, since a missing photo shouldn't block someone from getting their
+  // card at all.
+  if (data.photoUrl) {
     try {
       const photo = await loadImage(data.photoUrl);
-      const { cx, cy, radius, ringColor, ringWidth } = template.photo;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.clip();
-      drawImageCover(ctx, photo, cx - radius, cy - radius, radius * 2, radius * 2);
-      ctx.restore();
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius + ringWidth / 2, 0, Math.PI * 2);
-      ctx.lineWidth = ringWidth;
-      ctx.strokeStyle = ringColor;
-      ctx.stroke();
+      drawPhotoPanel(ctx, photo, 560, 190, SIZE - MARGIN - 560, 470);
     } catch {
       // Photo load failed (network hiccup, CORS, broken URL) — card still
       // renders fine without it.
     }
   }
 
-  drawTextBlock(ctx, [template.heading], template.headingStyle.x, template.headingStyle.y, template.headingStyle);
-
-  const measureName = (s: string) => {
-    ctx.font = template.name.font;
-    return ctx.measureText(s).width;
-  };
-  const measureDetail = (s: string) => {
-    ctx.font = template.detail.font;
-    return ctx.measureText(s).width;
-  };
-  const nameLines = wrapText(data.name, template.name.maxWidth, measureName);
-  const detailLines = buildDetailLines(data).flatMap((line) => wrapText(line, template.detail.maxWidth, measureDetail));
-
-  // Bottom-up: the detail block's LAST line always lands on bottomY, then
-  // the name block's last line sits a fixed gap above the detail block's
-  // first line — so neither block's size changes where the footer (or
-  // anything else) ends up, regardless of how many lines either wrapped to.
-  const detailStartY = template.detail.bottomY - (detailLines.length - 1) * template.detail.lineHeight;
-  const nameBottomY = detailStartY - template.name.gapAboveDetail;
-  const nameStartY = nameBottomY - (nameLines.length - 1) * template.name.lineHeight;
-
-  drawTextBlock(ctx, nameLines, template.name.x, nameStartY, template.name);
-  drawTextBlock(ctx, detailLines, template.detail.x, detailStartY, template.detail);
-  drawTextBlock(ctx, ['AI in Health Summit 2026'], template.footer.x, template.footer.y, template.footer);
+  drawNameBanner(ctx, data.name);
+  await drawFooterStrip(ctx);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Canvas failed to export an image.'))), 'image/png');
