@@ -2,7 +2,10 @@ import { api } from './api';
 
 export interface DelegateMe {
   id: string;
-  type: 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer';
+  // 'team' included — registration.controller.ts's requestAccessCode has no
+  // type filter, so a team/staff/organizer registration logs into this same
+  // portal too (used by PortalMyCard.tsx to show the right role label).
+  type: 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer' | 'team';
   name: string;
   email: string | null;
   phone?: string;

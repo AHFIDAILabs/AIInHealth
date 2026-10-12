@@ -20,11 +20,15 @@ export const PortalMyCard = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SpeakerSession[]>([]);
+  const [isSpeaker, setIsSpeaker] = useState(false);
   const [sessionsError, setSessionsError] = useState('');
 
   useEffect(() => {
     fetchSpeakerSessions()
-      .then((result) => setSessions(result.sessions))
+      .then((result) => {
+        setSessions(result.sessions);
+        setIsSpeaker(result.isSpeaker);
+      })
       .catch((err) => setSessionsError(getApiErrorMessage(err, 'Could not check your speaking sessions.')));
   }, []);
 
@@ -50,13 +54,20 @@ export const PortalMyCard = () => {
   // Shared across every card below — it's the same person in all of them.
   const effectivePhotoUrl = localPhotoUrl ?? delegate.avatarUrl ?? null;
 
+  // The attending card's role label reflects the person, not just the card
+  // layout: a team/staff registration (an organizer) or a confirmed speaker
+  // still uses this same "I will be attending" card, just with a different
+  // word under the photo. Speaker takes priority over "team" — someone can
+  // be registered as staff and also be a confirmed speaker.
+  const attendingRoleLabel = isSpeaker ? 'Speaker' : delegate.type === 'team' ? 'Organizer' : 'Delegate';
+
   const cards: { key: string; heading: string; filename: string; shareText: string; data: EventCardData }[] = [
     {
       key: 'attending',
       heading: 'I Will Be Attending',
       filename: 'aihs-2026-i-will-be-attending.png',
       shareText: "I'll be at the AI in Health Summit 2026! #AIHS2026",
-      data: { kind: 'attending', name: delegate.name, photoUrl: effectivePhotoUrl },
+      data: { kind: 'attending', name: delegate.name, photoUrl: effectivePhotoUrl, roleLabel: attendingRoleLabel },
     },
     ...sessions.map((s) => ({
       key: s.id,

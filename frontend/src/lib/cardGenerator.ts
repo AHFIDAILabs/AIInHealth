@@ -9,15 +9,28 @@
 // once (see the infra-risk discussion this plan came out of). The backend's
 // only involvement anywhere in this feature is emailing people a link.
 //
-// Visual design mirrors a reference card the user supplied (an Africa
-// HealthTech Summit "I will be attending" graphic): dark navy/blue ground
-// with diagonal accent streaks, a two-line white/orange headline, an orange
-// info block, a FULL (non-circular) photo panel, a cyan name banner, and a
-// white partner-logo strip at the bottom. The partner logos are this event's
-// real confirmed set (event-extras plan conversation) — swap FOOTER_GROUPS
-// below if that roster ever changes.
+// Visual design is now the user's own real template artwork
+// (card-attending-template.png) — a flattened, no-layers PNG, not a
+// procedurally-drawn background. There's no separate "blank" version with
+// the photo/name/role regions left empty, so this composites real content
+// on top of the SAME flattened image for every card:
+//   - photo: drawn over the placeholder silhouette (clipped to match its
+//     rounded-square box); left alone entirely if no photo was supplied —
+//     the baked-in placeholder IS the correct empty state.
+//   - name: drawn into the blank white box (genuinely empty in the source).
+//   - role label: the source says "DELEGATE" — that's blotted out (painted
+//     over with a sampled patch of the real background behind it) and
+//     redrawn with whatever this person's real role is.
+//   - for 'presenting'/'speaking' only: the headline ("I will be
+//     attending", in the source's own hand-drawn script) and the THEME
+//     block (the summit theme, correct as-is for 'attending') are ALSO
+//     blotted and redrawn — this card needs different words there, and
+//     there's no "presenting"/"speaking" version of the hand-drawn art to
+//     draw from instead. The replacement headline uses a real handwriting
+//     Google Font (Caveat) as the closest available match, not a pixel-exact
+//     reproduction of the original strokes.
 import { EVENT_DATE_RANGE, VENUE_SHORT } from './siteInfo';
-import eventLogoUrl from '../assets/AI_Logo_New_white.png';
+import templateUrl from '../assets/images/card-attending-template.png';
 
 export type EventCardKind = 'attending' | 'presenting' | 'speaking';
 
@@ -30,55 +43,55 @@ export interface EventCardData {
   line1?: string;
   /** Date/time/room string — required for 'presenting'/'speaking', ignored for 'attending'. */
   line2?: string;
+  /**
+   * Replaces the template's baked-in "DELEGATE" label — e.g. "Delegate",
+   * "Speaker", "Organizer", "Presenter". Defaults to a sensible value per
+   * `kind` if omitted (see ROLE_DEFAULT below), but a caller that knows the
+   * person's actual role (a team/staff registration, a confirmed speaker)
+   * should always pass it explicitly — the label is about the PERSON, not
+   * just which of the three card layouts they're generating.
+   */
+  roleLabel?: string;
 }
 
-const SIZE = 1080; // square — matches the reference card's own aspect ratio, and every major platform's post format
-const MARGIN = 70;
+const ROLE_DEFAULT: Record<EventCardKind, string> = {
+  attending: 'Delegate',
+  presenting: 'Presenter',
+  speaking: 'Speaker',
+};
+
+// The template's own native resolution — used as the canvas size directly so
+// every region coordinate below maps 1:1 onto the source image with no
+// scaling arithmetic to get wrong.
+const W = 1800;
+const H = 2250;
 
 const BRAND = {
   navy: '#0F172A',
-  navyDeep: '#0A1120',
-  navyMid: '#122036',
   orange: '#E8792C',
-  cyan: '#49C5E0',
   white: '#FFFFFF',
-  textOnCyan: '#0B1220',
 };
 
-const HEADLINE: Record<EventCardKind, [string, string]> = {
-  attending: ['I WILL BE', 'ATTENDING'],
-  presenting: ['I WILL BE', 'PRESENTING'],
-  speaking: ['I AM', 'SPEAKING'],
-};
-
-// The real, confirmed partner set for this card's bottom strip (event-extras
-// plan conversation) — "Convened By" mirrors the exact wording already used
-// sitewide (Footer.tsx's "Convened by AHFID"), just extended to the second
-// co-convener on record. Update this list, not the drawing code, if the
-// roster changes.
-const FOOTER_GROUPS: { label: string; logos: string[] }[] = [
-  {
-    label: 'Convened By',
-    logos: [
-      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1790020932/ai-health-summit-2026/sno95g1kcwwuf8k9lt96.png', // AHFID
-      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1790581934/ai-health-summit-2026/rd9h1wvdhjioqzafici0.png', // AI in Health Summit
-    ],
-  },
-  {
-    label: 'Government Partners',
-    logos: [
-      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1789837888/ai-health-summit-2026/aatouyklzjtgv6qg2znt.png', // Federal Ministry of Health & Social Welfare
-      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1789837696/ai-health-summit-2026/ej5mb9wul8uledkmoejo.png', // Nigeria CDC
-      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1790573701/ai-health-summit-2026/fyhjnt5r99gzutdbywur.png', // National Centre for AI and Robotics
-    ],
-  },
-  {
-    label: 'Title Partner',
-    logos: [
-      'https://res.cloudinary.com/ds0wznnj9/image/upload/v1789574145/ai-health-summit-2026/hjeqhya18ncpbygegexo.webp', // CHAI
-    ],
-  },
-];
+// Pixel regions in the template's own 1800x2250 coordinate space. Measured
+// off the reference image — close, but expect a pixel or two of drift; this
+// is the one part of this file most likely to need a live-render-and-compare
+// pass to true up, the same way the rest of this card engine's layout work
+// has gone.
+const PHOTO_BOX = { x: 186, y: 540, w: 730, h: 765, r: 48 };
+const NAME_BOX = { x: 984, y: 540, w: 630, h: 248 };
+const ROLE_BLOT = { x: 186, y: 1330, w: 760, h: 110 };
+const ROLE_TEXT_Y = 1410;
+// Kept conservatively INSIDE the dark photo-row area — safely below the name
+// box's real bottom edge (788) and safely above the role label's own blot
+// (1330), rather than the first-pass bounds that overlapped both (the
+// visible seams that live-rendering caught).
+const HEADLINE_BLOT = { x: 940, y: 820, w: 790, h: 480 };
+// Kept conservatively INSIDE the white bottom card's left (theme) half, wide
+// enough to fully cover the original 4-line theme paragraph (its longest
+// line runs to roughly x=888) while staying short of the vertical divider
+// at x=979 — the first shrunk-too-far pass left that line's tail end
+// ("...Framework") still visibly peeking out past the blot's right edge.
+const THEME_BLOT = { x: 196, y: 1506, w: 740, h: 440 };
 
 // Pure and unit-tested: wraps `text` into lines no wider than `maxWidth`,
 // using an injected measure function so this has no dependency on a real
@@ -105,9 +118,9 @@ export const wrapText = (text: string, maxWidth: number, measure: (s: string) =>
   return lines;
 };
 
-// Pure: decides what the info block under the headline should say, with no
-// canvas involved — the part of the layout that's actually worth
-// unit-testing in isolation from real rendering.
+// Pure: decides what the info block (THEME block, for non-attending cards)
+// should say, with no canvas involved — the part of the layout that's
+// actually worth unit-testing in isolation from real rendering.
 export const buildDetailLines = (data: EventCardData): string[] => {
   if (data.kind === 'attending') {
     return [EVENT_DATE_RANGE, VENUE_SHORT];
@@ -121,7 +134,7 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
     // Required so a cross-origin (e.g. Cloudinary) photo doesn't taint the
     // canvas — without this, canvas.toBlob() throws a SecurityError instead
     // of returning the composited image. Harmless on same-origin assets
-    // (the bundled event logo) — the browser just ignores it there.
+    // (the bundled template/logo) — the browser just ignores it there.
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
@@ -167,216 +180,163 @@ const roundRectPath = (ctx: CanvasRenderingContext2D, x: number, y: number, w: n
   ctx.closePath();
 };
 
-const drawBackground = (ctx: CanvasRenderingContext2D) => {
-  const grad = ctx.createLinearGradient(0, 0, SIZE, SIZE);
-  grad.addColorStop(0, BRAND.navyDeep);
-  grad.addColorStop(1, BRAND.navyMid);
+// Paints over a region of the ALREADY-DRAWN template image with a patch
+// sampled from its own real background (not a flat guessed hex), so a
+// blotted-out region blends into whatever subtle gradient/texture already
+// sits there. Samples the rect's own corners rather than assuming a flat
+// color, since several of these regions sit on soft gradients.
+const blotRegion = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) => {
+  const topLeft = ctx.getImageData(x + 2, y + 2, 1, 1).data;
+  const bottomRight = ctx.getImageData(x + w - 2, y + h - 2, 1, 1).data;
+  const grad = ctx.createLinearGradient(x, y, x + w, y + h);
+  grad.addColorStop(0, `rgba(${topLeft[0]},${topLeft[1]},${topLeft[2]},${topLeft[3] / 255})`);
+  grad.addColorStop(1, `rgba(${bottomRight[0]},${bottomRight[1]},${bottomRight[2]},${bottomRight[3] / 255})`);
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.fillRect(x, y, w, h);
+};
 
-  // Diagonal light streaks — a subtle, abstracted nod to the reference
-  // image's circuit/data-stream texture, drawn procedurally (no external
-  // asset needed, and it scales to any photo without a mismatched crop).
-  ctx.save();
-  ctx.globalAlpha = 0.1;
-  ctx.strokeStyle = '#7DD3FC';
-  ctx.lineWidth = 2;
-  for (let i = -4; i < 10; i++) {
-    ctx.beginPath();
-    ctx.moveTo(i * 140, 0);
-    ctx.lineTo(i * 140 + SIZE, SIZE);
-    ctx.stroke();
+// Loaded on demand (only for 'presenting'/'speaking' cards, which need to
+// draw NEW headline words the template's own hand-drawn art doesn't have) —
+// never added to index.html's global <head>, since every other card kind
+// never touches this font at all.
+let handwritingFontPromise: Promise<void> | null = null;
+const ensureHandwritingFont = (): Promise<void> => {
+  if (!handwritingFontPromise) {
+    handwritingFontPromise = (async () => {
+      if (!document.querySelector('link[data-card-font="caveat"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.dataset.cardFont = 'caveat';
+        link.href = 'https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap';
+        document.head.appendChild(link);
+        await new Promise((resolve) => {
+          link.onload = resolve;
+          link.onerror = resolve;
+        });
+      }
+      try {
+        await document.fonts.load('700 90px Caveat');
+      } catch {
+        // Font failed to load — the fallback font stack still renders something.
+      }
+    })();
   }
-  ctx.restore();
-
-  // A soft warm glow echoing the reference's orange accent light.
-  const glow = ctx.createRadialGradient(SIZE - 150, 150, 0, SIZE - 150, 150, 420);
-  glow.addColorStop(0, 'rgba(232,121,44,0.16)');
-  glow.addColorStop(1, 'rgba(232,121,44,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, SIZE, SIZE);
+  return handwritingFontPromise;
 };
 
-// Full rectangular photo (never circular — explicitly asked for), with the
-// top edge feathered to fade into the dark background rather than sitting
-// behind a hard rectangle edge, approximating the reference image's blended
-// portrait treatment.
-const drawPhotoPanel = (ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) => {
-  const off = document.createElement('canvas');
-  off.width = w;
-  off.height = h;
-  const octx = off.getContext('2d');
-  if (!octx) return;
-  drawImageCover(octx, img, 0, 0, w, h);
-
-  // One single destination-in fill covering the WHOLE canvas — a second,
-  // separate fillRect call under destination-in would wipe out whatever the
-  // first call preserved outside its own shape (destination-in's "make
-  // everything else transparent" applies per call, across the entire
-  // canvas, not just that call's own rect — two sequential calls are
-  // mutually destructive, not additive). The gradient's own color stops do
-  // all the fade-then-stay-opaque work in one pass instead.
-  const fadeFraction = 0.22;
-  octx.globalCompositeOperation = 'destination-in';
-  const grad = octx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, 'rgba(0,0,0,0)');
-  grad.addColorStop(fadeFraction, 'rgba(0,0,0,1)');
-  grad.addColorStop(1, 'rgba(0,0,0,1)');
-  octx.fillStyle = grad;
-  octx.fillRect(0, 0, w, h);
-
-  ctx.drawImage(off, x, y);
+const drawPhoto = async (ctx: CanvasRenderingContext2D, photoUrl: string) => {
+  try {
+    const photo = await loadImage(photoUrl);
+    ctx.save();
+    roundRectPath(ctx, PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.w, PHOTO_BOX.h, PHOTO_BOX.r);
+    ctx.clip();
+    drawImageCover(ctx, photo, PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.w, PHOTO_BOX.h);
+    ctx.restore();
+  } catch {
+    // Photo failed to load — the template's own placeholder silhouette
+    // underneath is the correct empty state, so just leave it showing.
+  }
 };
 
-const HEADLINE_FONT = '800 66px Sora, sans-serif';
-const HEADLINE_LINE_HEIGHT = 72;
-
-const drawHeadline = (ctx: CanvasRenderingContext2D, lines: [string, string]) => {
-  ctx.font = HEADLINE_FONT;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = BRAND.white;
-  ctx.fillText(lines[0], MARGIN, 230);
-  ctx.fillStyle = BRAND.orange;
-  ctx.fillText(lines[1], MARGIN, 230 + HEADLINE_LINE_HEIGHT);
-};
-
-const INFO_FONT = '800 28px Sora, sans-serif';
-const INFO_LINE_HEIGHT = 36;
-const INFO_MAX_WIDTH = 384;
-const INFO_BOTTOM_Y = 640;
-
-// Bottom-anchored (grows upward) for the same reason the old text blocks
-// were — a wrapped title must never push into the headline above it,
-// regardless of how many lines it takes.
-const drawInfoBlock = (ctx: CanvasRenderingContext2D, rawLines: string[]) => {
-  ctx.font = INFO_FONT;
-  const lines = rawLines.flatMap((line) => wrapText(line, INFO_MAX_WIDTH, (s) => ctx.measureText(s).width));
-  if (lines.length === 0) return;
-
-  const paddingX = 28;
-  const paddingY = 20;
-  const textWidth = Math.max(...lines.map((l) => ctx.measureText(l).width));
-  const blockWidth = Math.min(textWidth + paddingX * 2, INFO_MAX_WIDTH + paddingX * 2);
-  const blockHeight = lines.length * INFO_LINE_HEIGHT + paddingY * 2 - 8;
-  const blockTop = INFO_BOTTOM_Y - blockHeight;
-
-  ctx.fillStyle = BRAND.orange;
-  roundRectPath(ctx, MARGIN, blockTop, blockWidth, blockHeight, 14);
-  ctx.fill();
-
-  ctx.fillStyle = BRAND.navy;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  lines.forEach((line, i) => {
-    ctx.fillText(line, MARGIN + paddingX, blockTop + paddingY + (i + 1) * INFO_LINE_HEIGHT - 10);
-  });
-};
-
-const NAME_BANNER_Y = 700;
-const NAME_BANNER_HEIGHT = 84;
-
-const drawNameBanner = (ctx: CanvasRenderingContext2D, name: string) => {
-  const width = SIZE - MARGIN * 2;
-  ctx.fillStyle = BRAND.cyan;
-  roundRectPath(ctx, MARGIN, NAME_BANNER_Y, width, NAME_BANNER_HEIGHT, 10);
-  ctx.fill();
-
-  let fontSize = 38;
-  const maxTextWidth = width - 48;
+const drawName = (ctx: CanvasRenderingContext2D, name: string) => {
+  let fontSize = 52;
+  const maxTextWidth = NAME_BOX.w - 64;
   ctx.font = `800 ${fontSize}px Sora, sans-serif`;
-  while (ctx.measureText(name).width > maxTextWidth && fontSize > 20) {
+  while (ctx.measureText(name).width > maxTextWidth && fontSize > 24) {
     fontSize -= 2;
     ctx.font = `800 ${fontSize}px Sora, sans-serif`;
   }
-  ctx.fillStyle = BRAND.textOnCyan;
-  ctx.textAlign = 'left';
+  ctx.fillStyle = BRAND.navy;
+  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(name, MARGIN + 24, NAME_BANNER_Y + NAME_BANNER_HEIGHT / 2 + 2);
+  ctx.fillText(name, NAME_BOX.x + NAME_BOX.w / 2, NAME_BOX.y + NAME_BOX.h / 2 + 4);
 };
 
-const FOOTER_STRIP_TOP = 860;
+const drawRoleLabel = (ctx: CanvasRenderingContext2D, roleLabel: string) => {
+  blotRegion(ctx, ROLE_BLOT.x, ROLE_BLOT.y, ROLE_BLOT.w, ROLE_BLOT.h);
+  ctx.font = '800 56px Sora, sans-serif';
+  ctx.fillStyle = BRAND.orange;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(roleLabel.toUpperCase(), ROLE_BLOT.x, ROLE_TEXT_Y);
+};
 
-const drawFooterStrip = async (ctx: CanvasRenderingContext2D) => {
+const HEADLINE_TEXT: Record<'presenting' | 'speaking', [string, string]> = {
+  presenting: ['I will be', 'presenting'],
+  speaking: ['I am', 'speaking'],
+};
+
+const drawReplacementHeadline = async (ctx: CanvasRenderingContext2D, kind: 'presenting' | 'speaking') => {
+  await ensureHandwritingFont();
+  blotRegion(ctx, HEADLINE_BLOT.x, HEADLINE_BLOT.y, HEADLINE_BLOT.w, HEADLINE_BLOT.h);
+  const [line1, line2] = HEADLINE_TEXT[kind];
+  ctx.font = '700 100px Caveat, cursive';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = BRAND.orange;
+  ctx.fillText(line1, HEADLINE_BLOT.x, HEADLINE_BLOT.y + 140);
+  ctx.fillStyle = '#E8E0A8'; // the template's own cream/pale-gold second line color
+  ctx.fillText(line2, HEADLINE_BLOT.x, HEADLINE_BLOT.y + 260);
+};
+
+const THEME_FONT = '800 34px Sora, sans-serif';
+const THEME_LINE_HEIGHT = 44;
+const THEME_MAX_WIDTH = THEME_BLOT.w - 32;
+
+const drawReplacementThemeBlock = (ctx: CanvasRenderingContext2D, rawLines: string[]) => {
+  // A flat near-white fill, not blotRegion's sampled gradient — this region
+  // sits on the bottom card's near-white background, and live testing showed
+  // the sampled gradient occasionally picking up a mismatched gray-blue tone
+  // here (producing a visibly wrong box instead of blending in). A flat
+  // off-white is both simpler and a closer match to its surroundings.
+  ctx.fillStyle = '#FDFBF8';
+  ctx.fillRect(THEME_BLOT.x, THEME_BLOT.y, THEME_BLOT.w, THEME_BLOT.h);
+
+  const badgeW = 220;
+  const badgeH = 52;
+  ctx.fillStyle = BRAND.orange;
+  roundRectPath(ctx, THEME_BLOT.x, THEME_BLOT.y, badgeW, badgeH, 8);
+  ctx.fill();
+  ctx.font = '700 22px "Plus Jakarta Sans", sans-serif';
   ctx.fillStyle = BRAND.white;
-  ctx.fillRect(0, FOOTER_STRIP_TOP, SIZE, SIZE - FOOTER_STRIP_TOP);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('SESSION', THEME_BLOT.x + badgeW / 2, THEME_BLOT.y + badgeH / 2 + 2);
 
-  const colWidth = (SIZE - MARGIN * 2) / FOOTER_GROUPS.length;
-  const logoH = 52;
-  const gap = 14;
-
-  for (let i = 0; i < FOOTER_GROUPS.length; i++) {
-    const group = FOOTER_GROUPS[i];
-    const colCenterX = MARGIN + colWidth * i + colWidth / 2;
-
-    ctx.font = '700 14px "Plus Jakarta Sans", sans-serif';
-    ctx.fillStyle = '#64748B';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(group.label.toUpperCase(), colCenterX, FOOTER_STRIP_TOP + 36);
-
-    // Logos load independently and failures are skipped silently — one
-    // broken/slow partner logo should never block the rest of the strip
-    // (or the whole card) from rendering.
-    const images = await Promise.all(
-      group.logos.map((url) =>
-        loadImage(url).catch(() => null)
-      )
-    );
-    const validImages = images.filter((img): img is HTMLImageElement => !!img);
-    if (validImages.length === 0) continue;
-
-    const widths = validImages.map((img) => (img.width / img.height) * logoH);
-    const totalW = widths.reduce((a, b) => a + b, 0) + gap * (validImages.length - 1);
-    let x = colCenterX - totalW / 2;
-    const logoY = FOOTER_STRIP_TOP + 58;
-    for (let j = 0; j < validImages.length; j++) {
-      ctx.drawImage(validImages[j], x, logoY, widths[j], logoH);
-      x += widths[j] + gap;
-    }
-  }
+  ctx.font = THEME_FONT;
+  const lines = rawLines.flatMap((line) => wrapText(line, THEME_MAX_WIDTH, (s) => ctx.measureText(s).width));
+  ctx.fillStyle = '#475569';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  const startY = THEME_BLOT.y + badgeH + 56;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, THEME_BLOT.x, startY + i * THEME_LINE_HEIGHT);
+  });
 };
 
 // Orchestration — not unit-tested (needs a real 2D canvas context); exercise
 // this live in a browser instead. Returns a PNG Blob ready to download/share.
 export async function renderEventCard(data: EventCardData): Promise<Blob> {
   const canvas = document.createElement('canvas');
-  canvas.width = SIZE;
-  canvas.height = SIZE;
+  canvas.width = W;
+  canvas.height = H;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context is not available in this browser.');
 
-  drawBackground(ctx);
+  const template = await loadImage(templateUrl);
+  drawImageCover(ctx, template, 0, 0, W, H);
 
-  // Header: the event's own logo, top-left.
-  try {
-    const logo = await loadImage(eventLogoUrl);
-    const logoHeight = 54;
-    const logoWidth = (logo.width / logo.height) * logoHeight;
-    ctx.drawImage(logo, MARGIN, 56, logoWidth, logoHeight);
-  } catch {
-    // Missing/failed logo shouldn't block the rest of the card.
-  }
-
-  drawHeadline(ctx, HEADLINE[data.kind]);
-  drawInfoBlock(ctx, buildDetailLines(data));
-
-  // Photo — full rectangular panel, never cropped to a circle (explicitly
-  // asked for). Silently skipped if no photo was supplied or it fails to
-  // load, since a missing photo shouldn't block someone from getting their
-  // card at all.
   if (data.photoUrl) {
-    try {
-      const photo = await loadImage(data.photoUrl);
-      drawPhotoPanel(ctx, photo, 560, 190, SIZE - MARGIN - 560, 470);
-    } catch {
-      // Photo load failed (network hiccup, CORS, broken URL) — card still
-      // renders fine without it.
-    }
+    await drawPhoto(ctx, data.photoUrl);
   }
 
-  drawNameBanner(ctx, data.name);
-  await drawFooterStrip(ctx);
+  drawName(ctx, data.name);
+  drawRoleLabel(ctx, data.roleLabel ?? ROLE_DEFAULT[data.kind]);
+
+  if (data.kind !== 'attending') {
+    await drawReplacementHeadline(ctx, data.kind);
+    drawReplacementThemeBlock(ctx, buildDetailLines(data));
+  }
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Canvas failed to export an image.'))), 'image/png');
