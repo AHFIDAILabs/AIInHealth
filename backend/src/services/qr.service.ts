@@ -23,3 +23,10 @@ export const qrDataUrlForUrl = (url: string): Promise<string> =>
 // HTML) instead — every mail client supports that.
 export const qrPngBufferForToken = (token: string): Promise<Buffer> =>
   QRCode.toBuffer(token, { margin: 1, width: 320, errorCorrectionLevel: 'M' });
+
+// Raw PNG bytes for a full URL (not a bare token) — feedback.controller.ts's
+// printable venue-signage QR codes, same qrDataUrlForUrl/qrPngBufferForToken
+// split as above: this one's for downloading/printing a real image file
+// rather than rendering inline in a live page.
+export const qrPngBufferForUrl = (url: string): Promise<Buffer> =>
+  QRCode.toBuffer(url, { margin: 1, width: 480, errorCorrectionLevel: 'M' });

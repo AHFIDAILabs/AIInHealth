@@ -329,6 +329,20 @@ export const waiHealthLimiter = rateLimit({
   handler: onLimitExceeded('waiHealthLimiter', 'low'),
 });
 
+// Anonymous event/session feedback (feedback.controller.ts) — IP-only like
+// rsvpRedeemLimiter/formTokenLimiter above, since there's no email collected
+// here to key on (see Feedback.model.ts's own comment on why this is
+// deliberately anonymous). Generous enough for one real attendee to rate
+// several sessions across both days of the Summit.
+export const feedbackLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many submissions. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('feedbackLimiter', 'low'),
+});
+
 export const askAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

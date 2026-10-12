@@ -12,12 +12,13 @@ import { EventTeamMember } from '../models/EventTeamMember.model.js';
 import { AccessCode, type AccessCodeDoc } from '../models/AccessCode.model.js';
 import { CustomFormField } from '../models/CustomFormField.model.js';
 import { Lead } from '../models/Lead.model.js';
-import type { CreateRegistrationInput, ListRegistrationsQuery, AdminCreateRegistrationInput, MarkRegistrationPaidInput } from '../validations/registration.validation.js';
+import type { CreateRegistrationInput, ListRegistrationsQuery, AdminCreateRegistrationInput, MarkRegistrationPaidInput, SendCardInvitesInput } from '../validations/registration.validation.js';
 import {
   listRegistrationsQuerySchema,
   updateRegistrationStatusSchema,
   adminCreateRegistrationSchema,
   markRegistrationPaidSchema,
+  sendCardInvitesSchema,
 } from '../validations/registration.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
@@ -28,7 +29,8 @@ import type { Role, RegistrationType } from '../types/enums.js';
 import { generateQrToken } from '../services/qr.service.js';
 import { generateCode } from './accessCode.controller.js';
 import { initializePaymentForRegistration } from './payment.controller.js';
-import { sendRegistrationPaymentLinkEmail } from '../services/email.service.js';
+import { sendRegistrationPaymentLinkEmail, sendAttendanceCardEmail } from '../services/email.service.js';
+import { env } from '../config/env.js';
 import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
 import { getOrCreateVolunteerSettings } from '../models/VolunteerSettings.model.js';
 import { getOrCreateInnovatorSettings } from '../models/InnovatorSettings.model.js';
@@ -1415,4 +1417,36 @@ export const adminExport = catchAsync(async (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="registrations-${Date.now()}.csv"`);
   res.send(csv);
+});
+
+// POST /admin/registrations/card/send-invites — invites confirmed attendees
+// to generate their own "I will be attending" share card from the portal
+// (cardGenerator.ts composites it entirely client-side; this just emails a
+// link to the existing portal, same ids-or-filter shape as the RSVP
+// reminder). ids omitted -> every confirmed attendee with an email.
+export const adminSendCardInvites = catchAsync(async (req: Request, res: Response) => {
+  const { ids }: SendCardInvitesInput = sendCardInvitesSchema.parse({ body: req.body }).body;
+
+  const registrations = await Registration.find({
+    type: 'attendee',
+    status: 'confirmed',
+    ...(ids && ids.length > 0 && { _id: { $in: ids } }),
+  });
+  const targetable = registrations.filter((r) => !!r.email);
+
+  const { succeeded, failed } = await runInBatches(targetable, 3, async (registration) => {
+    await sendAttendanceCardEmail(registration.email!, registration.fullName ?? 'there', `${env.FRONTEND_ORIGIN}/portal/my-card`);
+    registration.cardEmailSentAt = new Date();
+    await registration.save();
+  });
+
+  await recordAudit({
+    req,
+    action: 'registration.card_invites_sent',
+    resourceType: 'Registration',
+    resourceId: 'bulk',
+    after: { targeted: targetable.length, sent: succeeded, failed: failed.length },
+  });
+
+  res.json(new ApiResponse({ targeted: targetable.length, sent: succeeded, failed: failed.length }));
 });

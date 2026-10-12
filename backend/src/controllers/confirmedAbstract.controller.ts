@@ -1,10 +1,12 @@
 import type { Request, Response } from 'express';
+import crypto from 'node:crypto';
 import { isValidObjectId, type FilterQuery } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ConfirmedAbstract, type ConfirmedAbstractDoc } from '../models/ConfirmedAbstract.model.js';
 import { Track } from '../models/Track.model.js';
+import type { SessionDoc } from '../models/Session.model.js';
 import {
   createConfirmedAbstractSchema,
   updateConfirmedAbstractSchema,
@@ -12,11 +14,20 @@ import {
   adminRecordConsentSchema,
   adminBulkRecordConsentSchema,
   adminSetCompendiumStatusSchema,
+  adminSetPresentingCardSchema,
+  adminSendPresentingCardInvitesSchema,
   type ListConfirmedAbstractsQuery,
+  type AdminSetPresentingCardInput,
+  type AdminSendPresentingCardInvitesInput,
 } from '../validations/confirmedAbstract.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { runInBatches } from '../utils/batch.js';
+import { sendPresentingCardEmail } from '../services/email.service.js';
+import { env } from '../config/env.js';
 import type { CompendiumPublicationStatus } from '../types/enums.js';
+
+// Same idiom as Registration.rsvpToken/registrationRsvp.controller.ts.
+const generateCardAccessToken = (): string => crypto.randomBytes(24).toString('base64url');
 
 // Same pattern as innovation.controller.ts's assertValidTrack — checks the
 // live Track collection rather than a fixed enum. Unset track is allowed
@@ -234,4 +245,96 @@ export const adminSetCompendiumStatus = catchAsync(async (req: Request, res: Res
     after: { publicationStatus: target },
   });
   res.json(new ApiResponse(abstract));
+});
+
+// --- "I will be presenting" DP card (event-extras plan, Batch 2) ---
+
+// PATCH /admin/confirmed-abstracts/:id/presenting-card — the one-time
+// session-assignment + contact-email entry pass. Deliberately its own
+// endpoint (not folded into adminUpdate) so it can $set these two nested
+// fields individually without ever touching the sibling accessToken/
+// emailSentAt — see the validation schema's own comment.
+export const adminSetPresentingCard = catchAsync(async (req: Request, res: Response) => {
+  const { params, body }: { params: { id: string }; body: AdminSetPresentingCardInput } = adminSetPresentingCardSchema.parse({
+    params: req.params,
+    body: req.body,
+  });
+  const abstract = await ConfirmedAbstract.findById(params.id);
+  if (!abstract) throw new ApiError(404, 'Confirmed abstract not found', 'NOT_FOUND');
+
+  const before = { sessionRef: abstract.get('presentingCard.sessionRef'), presenterEmail: abstract.get('presentingCard.presenterEmail') };
+  if (body.sessionRef !== undefined) abstract.set('presentingCard.sessionRef', body.sessionRef);
+  if (body.presenterEmail !== undefined) abstract.set('presentingCard.presenterEmail', body.presenterEmail);
+  await abstract.save();
+
+  await recordAudit({
+    req,
+    action: 'confirmedAbstract.presentingCardAssigned',
+    resourceType: 'ConfirmedAbstract',
+    resourceId: abstract.id,
+    before,
+    after: { sessionRef: abstract.get('presentingCard.sessionRef'), presenterEmail: abstract.get('presentingCard.presenterEmail') },
+  });
+  res.json(new ApiResponse(abstract));
+});
+
+// POST /admin/confirmed-abstracts/card/send-invites — ids omitted -> every
+// record with both a session assigned AND a presenter email on file.
+// Everything else (missing either field) is silently excluded from
+// `targeted` rather than attempted and failed, so nothing half-broken ever
+// goes out — see `skipped` in the response for how many were left out this way.
+export const adminSendPresentingCardInvites = catchAsync(async (req: Request, res: Response) => {
+  const { ids }: AdminSendPresentingCardInvitesInput = adminSendPresentingCardInvitesSchema.parse({ body: req.body }).body;
+
+  const candidates = await ConfirmedAbstract.find({
+    ...(ids && ids.length > 0 && { _id: { $in: ids } }),
+  });
+  const eligible = candidates.filter((a) => !!a.get('presentingCard.sessionRef') && !!a.get('presentingCard.presenterEmail'));
+  const skipped = candidates.length - eligible.length;
+
+  const { succeeded, failed } = await runInBatches(eligible, 3, async (abstract) => {
+    if (!abstract.get('presentingCard.accessToken')) {
+      abstract.set('presentingCard.accessToken', generateCardAccessToken());
+    }
+    const cardUrl = `${env.FRONTEND_ORIGIN}/presenting/${abstract.get('presentingCard.accessToken')}`;
+    await sendPresentingCardEmail(abstract.get('presentingCard.presenterEmail'), abstract.authorName, cardUrl);
+    abstract.set('presentingCard.emailSentAt', new Date());
+    await abstract.save();
+  });
+
+  await recordAudit({
+    req,
+    action: 'confirmedAbstract.presentingCardInvitesSent',
+    resourceType: 'ConfirmedAbstract',
+    resourceId: 'bulk',
+    after: { targeted: eligible.length, sent: succeeded, failed: failed.length, skipped },
+  });
+
+  res.json(new ApiResponse({ targeted: eligible.length, sent: succeeded, failed: failed.length, skipped }));
+});
+
+// GET /confirmed-abstracts/presenting/:token — public, no auth (no portal
+// login exists for presenters). Returns only what the card/page needs to
+// render — never presenterEmail, internalNotes, or any compendium field.
+export const getPresentingCard = catchAsync(async (req: Request, res: Response) => {
+  const abstract = await ConfirmedAbstract.findOne({ 'presentingCard.accessToken': req.params.token }).populate<{
+    presentingCard: { sessionRef: SessionDoc | null };
+  }>('presentingCard.sessionRef');
+  if (!abstract) throw new ApiError(404, 'This link is invalid or has expired.', 'NOT_FOUND');
+
+  const session = abstract.presentingCard?.sessionRef as unknown as SessionDoc | null;
+
+  res.json(
+    new ApiResponse({
+      code: abstract.code,
+      authorName: abstract.authorName,
+      photoUrl: abstract.photoUrl ?? null,
+      title: abstract.title,
+      track: abstract.track ?? null,
+      presentationType: abstract.presentationType ?? null,
+      session: session
+        ? { title: session.title, day: session.day, startTime: session.startTime, endTime: session.endTime, room: session.room }
+        : null,
+    })
+  );
 });

@@ -32,6 +32,7 @@ import formsRoutes from './forms.routes.js';
 import waiHealthRoutes from './waiHealth.routes.js';
 import whatsappRoutes from './whatsapp.routes.js';
 import innovatorRoutes from './innovator.routes.js';
+import feedbackRoutes from './feedback.routes.js';
 
 const router = Router();
 
@@ -68,5 +69,6 @@ router.use('/forms', formsRoutes);
 router.use('/wai-health', waiHealthRoutes);
 router.use('/whatsapp', whatsappRoutes);
 router.use('/innovator', innovatorRoutes);
+router.use('/feedback', feedbackRoutes);
 
 export default router;

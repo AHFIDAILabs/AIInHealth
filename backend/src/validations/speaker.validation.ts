@@ -63,9 +63,20 @@ export const adminUpdateSpeakerTranslationSchema = z.object({
   }),
 });
 
+// POST /admin/speakers/card/send-invites — speaker.controller.ts's
+// adminSendCardInvites. ids omitted -> every published speaker with a
+// registered email. Same ids-or-filter shape as registration.validation.ts's
+// sendCardInvitesSchema.
+export const sendSpeakerCardInvitesSchema = z.object({
+  body: z.object({
+    ids: z.array(z.string().trim()).max(200).optional(),
+  }),
+});
+
 export type CreateSpeakerInput = z.infer<typeof createSpeakerSchema>['body'];
 export type UpdateSpeakerInput = z.infer<typeof updateSpeakerSchema>['body'];
 export type ListSpeakersQuery = z.infer<typeof listSpeakersQuerySchema>;
 export type ReorderSpeakersInput = z.infer<typeof reorderSpeakersSchema>['body'];
 export type AdminTranslateSpeakerInput = z.infer<typeof adminTranslateSpeakerSchema>;
+export type SendSpeakerCardInvitesInput = z.infer<typeof sendSpeakerCardInvitesSchema>['body'];
 export type AdminUpdateSpeakerTranslationInput = z.infer<typeof adminUpdateSpeakerTranslationSchema>;

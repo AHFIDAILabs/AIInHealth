@@ -76,6 +76,27 @@ const confirmedAbstractSchema = new Schema(
       ],
       publishedInVersion: { type: String, trim: true },
     },
+
+    // --- "I will be presenting" DP card (event-extras plan, Batch 2) — a
+    // separate feature namespace from compendium{} above, unrelated to
+    // open-access publishing/consent; eligibility here is just "has a
+    // session and a contact email", independent of compendium.publicationStatus.
+    // sessionRef is admin-assigned by hand: nothing reliably links an abstract
+    // to a specific agenda Session (see exportSnapshot.ts's own sessionRef:null
+    // comment — no shared key exists to join on, and title-matching was
+    // explicitly rejected as unsafe). presenterEmail is likewise admin-entered
+    // — this model has never stored an author's email anywhere (ground rule:
+    // no author email in any public output), so this is deliberately separate
+    // from authors[] and is never read by exportSnapshot.ts.
+    presentingCard: {
+      sessionRef: { type: Schema.Types.ObjectId, ref: 'Session' },
+      presenterEmail: { type: String, trim: true, lowercase: true },
+      // Opaque magic-link token (same crypto.randomBytes(24).toString('base64url')
+      // idiom as Registration.rsvpToken) — the public /presenting/:token page's
+      // only credential; no portal login exists for presenters.
+      accessToken: { type: String, unique: true, sparse: true },
+      emailSentAt: { type: Date },
+    },
   },
   { timestamps: true }
 );

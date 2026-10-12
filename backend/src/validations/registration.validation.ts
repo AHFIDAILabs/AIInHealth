@@ -342,6 +342,16 @@ export const sendRsvpRemindersSchema = z.object({
 });
 export type SendRsvpRemindersInput = z.infer<typeof sendRsvpRemindersSchema>['body'];
 
+// POST /admin/registrations/card/send-invites — registration.controller.ts's
+// adminSendCardInvites. ids omitted -> every confirmed attendee. Same
+// ids-or-filter shape as sendRsvpRemindersSchema above.
+export const sendCardInvitesSchema = z.object({
+  body: z.object({
+    ids: z.array(z.string().trim()).max(200).optional(),
+  }),
+});
+export type SendCardInvitesInput = z.infer<typeof sendCardInvitesSchema>['body'];
+
 // POST /registrations/rsvp/:token — public redemption link. Params only —
 // rsvpToken is an opaque random string, not a shape worth validating beyond
 // "long enough to plausibly be one" (mirrors waiHealth.validation.ts's

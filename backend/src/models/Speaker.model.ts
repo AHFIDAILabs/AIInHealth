@@ -50,6 +50,13 @@ const speakerSchema = new Schema(
     // no separate boolean needed. The Registration it points to carries
     // ticketCategory 'speaker' and the actual qrToken used at check-in.
     registration: { type: Schema.Types.ObjectId, ref: 'Registration' },
+
+    // "I am speaking at AIHS 2026" / "I will be attending" card invite
+    // (speaker.controller.ts's adminSendCardInvites) — last time that email
+    // went out. Separate from Registration.cardEmailSentAt (the generic
+    // attendee bulk-send): this tracks the speaker-specific send from the
+    // admin Speakers page, a different action from a different screen.
+    cardEmailSentAt: { type: Date },
   },
   { timestamps: true }
 );

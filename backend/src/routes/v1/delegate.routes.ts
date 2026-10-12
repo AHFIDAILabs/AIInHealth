@@ -26,6 +26,7 @@ router.post('/verify-code', loginLimiter, validate(verifyAccessCodeSchema), dele
 router.use(requireDelegateAuth);
 
 router.get('/me', delegateController.me);
+router.get('/speaker-sessions', delegateController.speakerSessions);
 router.post('/logout', delegateController.logout);
 router.get('/ticket/qr', delegateController.ticketQr);
 router.post('/resend-ticket', delegateController.resendTicket);

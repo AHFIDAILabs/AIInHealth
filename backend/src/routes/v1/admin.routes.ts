@@ -4,6 +4,7 @@ import * as registrationController from '../../controllers/registration.controll
 import * as registrationRsvpController from '../../controllers/registrationRsvp.controller.js';
 import * as knowledgeChunkController from '../../controllers/knowledgeChunk.controller.js';
 import * as speakerController from '../../controllers/speaker.controller.js';
+import * as feedbackController from '../../controllers/feedback.controller.js';
 import * as sessionController from '../../controllers/session.controller.js';
 import * as partnerController from '../../controllers/partner.controller.js';
 import * as inquiryController from '../../controllers/inquiry.controller.js';
@@ -169,6 +170,14 @@ router.post(
   requireRole('super_admin', 'admin', 'registrations_officer'),
   registrationRsvpController.adminSendReminders
 );
+// "I will be attending" DP card invite — see registration.controller.ts's
+// adminSendCardInvites and cardGenerator.ts (frontend) for why this never
+// touches image processing on the backend.
+router.post(
+  '/registrations/card/send-invites',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  registrationController.adminSendCardInvites
+);
 router.post(
   '/registrations/import-volunteers',
   requireRole('super_admin', 'admin', 'registrations_officer'),
@@ -273,12 +282,22 @@ router.post('/speakers', requireRole(...adminOnlyRoles), speakerController.admin
 // Must come before the /:id routes below — otherwise Express matches
 // "reorder" as an :id param instead of this route.
 router.patch('/speakers/reorder', requireRole(...adminOnlyRoles), speakerController.adminReorder);
+// "I am speaking" / "I will be attending" card invite — bulk, so it lives
+// alongside reorder above rather than down with the other :id-scoped routes.
+router.post('/speakers/card/send-invites', requireRole(...adminOnlyRoles), speakerController.adminSendCardInvites);
 router.patch('/speakers/:id', requireRole(...adminOnlyRoles), speakerController.adminUpdate);
 router.delete('/speakers/:id', requireRole(...adminOnlyRoles), speakerController.adminDelete);
 router.post('/speakers/:id/translate', requireRole(...adminOnlyRoles), speakerController.translate);
 router.patch('/speakers/:id/translations/:lang', requireRole(...adminOnlyRoles), speakerController.updateTranslation);
 router.post('/speakers/:id/register', requireRole(...adminOnlyRoles), speakerController.adminRegister);
 router.post('/speakers/:id/send-access-email', requireRole(...adminOnlyRoles), speakerController.adminSendAccessEmail);
+
+// Event-extras plan, Batch 4 — anonymous session/event feedback collected
+// via a venue QR code. Not tied to an existing per-area role, same reasoning
+// as the other adminOnlyRoles-gated areas above.
+router.get('/feedback/summary', requireRole(...adminOnlyRoles), feedbackController.adminSummary);
+router.get('/feedback', requireRole(...adminOnlyRoles), feedbackController.adminList);
+router.get('/feedback/qr', requireRole(...adminOnlyRoles), feedbackController.qr);
 
 router.get('/sessions', requireRole(...adminOnlyRoles), sessionController.adminList);
 router.post('/sessions/check-conflict', requireRole(...adminOnlyRoles), sessionController.checkConflict);
@@ -406,6 +425,19 @@ router.patch(
   '/confirmed-abstracts/:id/compendium-status',
   requireRole(...abstractRoles),
   confirmedAbstractController.adminSetCompendiumStatus
+);
+// "I will be presenting" DP card — the bulk invite send (POST, so no
+// collision with the PATCH /:id routes above regardless of order) and the
+// single-record session-assignment/contact-email entry below.
+router.post(
+  '/confirmed-abstracts/card/send-invites',
+  requireRole(...abstractRoles),
+  confirmedAbstractController.adminSendPresentingCardInvites
+);
+router.patch(
+  '/confirmed-abstracts/:id/presenting-card',
+  requireRole(...abstractRoles),
+  confirmedAbstractController.adminSetPresentingCard
 );
 
 router.get('/innovation-showcase-entries', requireRole(...adminOnlyRoles), innovationShowcaseEntryController.adminList);

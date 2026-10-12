@@ -188,6 +188,14 @@ const registrationSchema = new Schema(
     // self-requested or triggered by staff. Purely informational, not a session record.
     portalLastLinkSentAt: { type: Date },
 
+    // "I will be attending" DP card invite (registration.controller.ts's
+    // adminSendCardInvites) — last time that email went out, so the admin
+    // list can show who's already been invited and the bulk-send action can
+    // be re-run safely without worrying whether it's a duplicate. The card
+    // itself is generated client-side in the portal (cardGenerator.ts) — this
+    // field never represents the card's generation, only the email.
+    cardEmailSentAt: { type: Date },
+
     // Delegate portal login credential — generated once (lazily, on first
     // confirmation email or resend request) and reused for the registration's
     // whole lifetime, same pattern as Reviewer.model.ts's accessCode. Replaces

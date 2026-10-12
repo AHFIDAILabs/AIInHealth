@@ -388,7 +388,7 @@ export const sendSponsorshipApprovedEmail = async (
       <p><strong>Please note:</strong> this covers the Summit registration fee only. Accommodation, flights/transport, and meals outside the event are not included and remain the delegate's own responsibility.</p>
       <p>Your access code is: <strong style="font-size: 18px; letter-spacing: 1px;">${code}</strong></p>
       <p>Visit <a href="${registerUrl}">the registration page</a>, register under the Attendee tab, ${openCategoryGuidance(false)}, and enter this code${
-        discountPercent === 100 ? ' (it covers your fee in full — no payment needed)' : ' before checkout'
+        discountPercent === 100 ? ' (it covers your registration fee in full — no payment needed)' : ' before checkout'
       } — it's tied to this email address, so please register using ${to}.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
@@ -484,6 +484,45 @@ export const sendPendingRsvpReminderEmail = async (to: string, fullName: string,
       ${emailButton(rsvpUrl, "Yes, I'll be there — RSVP now")}
       <p>Clicking the button lets our team know you're still interested — we'll follow up by email to finalize your registration.</p>
       <p><strong>Please note:</strong> this relates to your Summit registration only. Accommodation, flights/transport, and meals outside the event are not included and remain your own responsibility.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
+// registration.controller.ts's adminSendCardInvites — invites a confirmed
+// attendee to generate their own "I will be attending" share card from the
+// portal. The card is composited entirely client-side (cardGenerator.ts);
+// this email only ever points at the existing portal, nothing new to build
+// server-side for the card itself.
+export const sendAttendanceCardEmail = async (to: string, fullName: string, portalUrl: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "Share that you're attending — AI in Health Summit 2026",
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Your registration for the AI in Health Summit 2026 is confirmed — let your network know you'll be there.</p>
+      ${emailButton(portalUrl, 'Generate my "I will be attending" card')}
+      <p>Sign in to the delegate portal with your usual access code, then download or share your personalized card straight to social media.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
+// confirmedAbstract.controller.ts's adminSendPresentingCardInvites — invites
+// an accepted abstract presenter to generate their "I will be presenting"
+// share card from a public magic-link page (no portal login exists for
+// presenters — unlike the attendee/speaker card invite, this one isn't tied
+// to a Registration at all). The card is composited entirely client-side
+// (cardGenerator.ts); this email only ever points at that one public page.
+export const sendPresentingCardEmail = async (to: string, authorName: string, cardUrl: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Share that you\'re presenting — AI in Health Summit 2026',
+    html: `
+      <p>Hi ${authorName},</p>
+      <p>Your abstract has been accepted for presentation at the AI in Health Summit 2026 — let your network know.</p>
+      ${emailButton(cardUrl, 'Generate my "I will be presenting" card')}
+      <p>No sign-in needed — the link above takes you straight to your personalized card to download or share to social media.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });

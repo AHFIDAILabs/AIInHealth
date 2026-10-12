@@ -88,9 +88,36 @@ export const adminSetCompendiumStatusSchema = z.object({
   body: z.object({ status: z.enum(COMPENDIUM_PUBLICATION_STATUSES) }),
 });
 
+// PATCH /admin/confirmed-abstracts/:id/presenting-card — a dedicated
+// endpoint (not folded into updateConfirmedAbstractSchema) specifically so
+// this can $set individual nested paths (presentingCard.sessionRef,
+// presentingCard.presenterEmail) without ever touching the sibling
+// accessToken/emailSentAt fields the way a blanket `{ presentingCard: {...} }`
+// replace via the generic update endpoint would. `null` explicitly clears a
+// field (unassigning a session, or removing an email) — `undefined`/omitted
+// leaves it untouched.
+export const adminSetPresentingCardSchema = z.object({
+  params: z.object({ id: objectId }),
+  body: z.object({
+    sessionRef: objectId.nullable().optional(),
+    presenterEmail: z.string().trim().toLowerCase().email('Enter a valid email').nullable().optional(),
+  }),
+});
+
+// POST /admin/confirmed-abstracts/card/send-invites — ids omitted -> every
+// record with both presentingCard.sessionRef AND presentingCard.presenterEmail
+// set. Same ids-or-filter shape as the other bulk card-invite endpoints.
+export const adminSendPresentingCardInvitesSchema = z.object({
+  body: z.object({
+    ids: z.array(objectId).max(200).optional(),
+  }),
+});
+
 export type CreateConfirmedAbstractInput = z.infer<typeof createConfirmedAbstractSchema>['body'];
 export type UpdateConfirmedAbstractInput = z.infer<typeof updateConfirmedAbstractSchema>['body'];
 export type ListConfirmedAbstractsQuery = z.infer<typeof listConfirmedAbstractsQuerySchema>;
 export type AdminRecordConsentInput = z.infer<typeof adminRecordConsentSchema>['body'];
 export type AdminBulkRecordConsentInput = z.infer<typeof adminBulkRecordConsentSchema>['body'];
 export type AdminSetCompendiumStatusInput = z.infer<typeof adminSetCompendiumStatusSchema>['body'];
+export type AdminSetPresentingCardInput = z.infer<typeof adminSetPresentingCardSchema>['body'];
+export type AdminSendPresentingCardInvitesInput = z.infer<typeof adminSendPresentingCardInvitesSchema>['body'];

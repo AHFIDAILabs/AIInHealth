@@ -13,13 +13,17 @@ import {
   reorderSpeakersSchema,
   adminTranslateSpeakerSchema,
   adminUpdateSpeakerTranslationSchema,
+  sendSpeakerCardInvitesSchema,
   type ListSpeakersQuery,
+  type SendSpeakerCardInvitesInput,
 } from '../validations/speaker.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { translateText } from '../services/ai/translate.service.js';
 import { publicTranslations } from '../utils/translations.js';
 import { generateQrToken, qrPngBufferForToken } from '../services/qr.service.js';
-import { sendSpeakerAccessEmail } from '../services/email.service.js';
+import { sendSpeakerAccessEmail, sendAttendanceCardEmail } from '../services/email.service.js';
+import { runInBatches } from '../utils/batch.js';
+import { env } from '../config/env.js';
 
 // Shared by adminCreate/adminUpdate — track is free text now (see
 // Speaker.model.ts), so validity is checked here against the live Track
@@ -198,6 +202,39 @@ export const adminSendAccessEmail = catchAsync(async (req: Request, res: Respons
   await registration.save();
 
   res.json(new ApiResponse({ sentAt: registration.portalLastLinkSentAt }));
+});
+
+// POST /admin/speakers/card/send-invites — bulk invite to generate the
+// "I am speaking" / "I will be attending" cards (delegate.controller.ts's
+// speakerSessions endpoint + PortalMyCard.tsx render them; this just emails
+// a link to the existing portal, reusing the same email as the generic
+// attendee card invite since the portal page itself already shows whichever
+// cards apply to each person). ids omitted -> every published speaker with
+// an email on file.
+export const adminSendCardInvites = catchAsync(async (req: Request, res: Response) => {
+  const { ids }: SendSpeakerCardInvitesInput = sendSpeakerCardInvitesSchema.parse({ body: req.body }).body;
+
+  const speakers = await Speaker.find({
+    isPublished: true,
+    ...(ids && ids.length > 0 && { _id: { $in: ids } }),
+  });
+  const targetable = speakers.filter((s) => !!s.email);
+
+  const { succeeded, failed } = await runInBatches(targetable, 3, async (speaker) => {
+    await sendAttendanceCardEmail(speaker.email!, speaker.fullName, `${env.FRONTEND_ORIGIN}/portal/my-card`);
+    speaker.cardEmailSentAt = new Date();
+    await speaker.save();
+  });
+
+  await recordAudit({
+    req,
+    action: 'speaker.card_invites_sent',
+    resourceType: 'Speaker',
+    resourceId: 'bulk',
+    after: { targeted: targetable.length, sent: succeeded, failed: failed.length },
+  });
+
+  res.json(new ApiResponse({ targeted: targetable.length, sent: succeeded, failed: failed.length }));
 });
 
 // PATCH /admin/speakers/:id/translations/:lang — an admin editing and/or

@@ -3,6 +3,8 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Registration } from '../models/Registration.model.js';
+import { Speaker } from '../models/Speaker.model.js';
+import { Session } from '../models/Session.model.js';
 import { DelegatePushSubscription } from '../models/DelegatePushSubscription.model.js';
 import { env } from '../config/env.js';
 import { setDelegateCookie, clearDelegateCookie } from '../utils/cookies.js';
@@ -81,6 +83,47 @@ export const me = catchAsync(async (req: Request, res: Response) => {
       tshirtSize: registration.tshirtSize,
       trackSelected: registration.trackSelected,
       trackAssigned: registration.trackAssigned,
+    })
+  );
+});
+
+// GET /delegate/speaker-sessions — "I am speaking at AIHS 2026" card data
+// (Batch 3 of the event-extras plan). Speaker has no field of its own
+// pointing back at who's logged in; the only reliable link is the one that
+// already exists the other way (Speaker.registration), set when
+// speaker.controller.ts's adminRegister creates their Registration — so this
+// looks itself up via that field rather than ever matching by name/email.
+// Returns isSpeaker:false (not an error) for the common case of a delegate
+// who simply isn't a speaker at all.
+export const speakerSessions = catchAsync(async (req: Request, res: Response) => {
+  const speaker = await Speaker.findOne({ registration: req.delegate!.registrationId, isPublished: true });
+  if (!speaker) {
+    res.json(new ApiResponse({ isSpeaker: false, sessions: [] }));
+    return;
+  }
+
+  // Moderating counts as "speaking at" for this card's purposes — the brief
+  // never distinguished the two, and a moderator is just as much a reason to
+  // announce "I'm part of this session" as a listed speaker is.
+  const sessions = await Session.find({
+    $or: [{ speakers: speaker._id }, { moderator: speaker._id }],
+    isPublished: true,
+  })
+    .select('title day startTime endTime room')
+    .sort({ day: 1, startTime: 1 });
+
+  res.json(
+    new ApiResponse({
+      isSpeaker: true,
+      photoUrl: speaker.photoUrl ?? null,
+      sessions: sessions.map((s) => ({
+        id: s.id,
+        title: s.title,
+        day: s.day,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        room: s.room,
+      })),
     })
   );
 });
