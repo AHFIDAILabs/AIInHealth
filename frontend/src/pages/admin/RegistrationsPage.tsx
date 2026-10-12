@@ -375,11 +375,21 @@ export const RegistrationsPage = () => {
     }
   };
 
+  // Deliberately always scoped to an explicit selection — never "send to
+  // everyone" from this button. Microsoft Graph throttles past ~5 concurrent
+  // sends (a known, already-hit limit on this mailbox), and an admin picking
+  // a deliberate handful at a time (test one, confirm it landed right, then
+  // widen out) is both the safer default and how the first real test send of
+  // this card already had to happen in practice.
   const sendCardInviteBatch = async () => {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
     setSendingCardInvites(true);
     try {
-      const result = await sendCardInvites();
-      toast('success', `Card invite sent to ${result.sent} of ${result.targeted} confirmed attendee${result.targeted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}.`);
+      const result = await sendCardInvites(ids);
+      toast('success', `Card invite sent to ${result.sent} of ${result.targeted} selected record${result.targeted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}.`);
+      setSelected(new Set());
+      load();
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -571,14 +581,6 @@ export const RegistrationsPage = () => {
             <Send size={15} /> {sendingRsvpReminders ? 'Sending…' : 'Send RSVP Reminders'}
           </button>
           <button
-            onClick={sendCardInviteBatch}
-            disabled={sendingCardInvites}
-            title='Email every confirmed attendee a link to generate their "I will be attending" share card'
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-sm transition-colors hover:border-orange/40 disabled:opacity-60"
-          >
-            <Share2 size={15} /> {sendingCardInvites ? 'Sending…' : 'Send Card Invites'}
-          </button>
-          <button
             onClick={openAddForm}
             className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:bg-orange-hover"
           >
@@ -724,6 +726,14 @@ export const RegistrationsPage = () => {
               </button>
               <button onClick={() => bulkApply('declined')} className="rounded-md bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
                 Decline
+              </button>
+              <button
+                onClick={sendCardInviteBatch}
+                disabled={sendingCardInvites}
+                title="Email the selected confirmed attendees/team members a link to generate their I will be attending share card — kept scoped to your selection, not everyone, to stay well under the Microsoft Graph mailbox's concurrent-send limit"
+                className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy hover:border-orange/40 disabled:opacity-60"
+              >
+                <Share2 size={13} /> {sendingCardInvites ? 'Sending…' : 'Send Card Invite'}
               </button>
             </div>
           </motion.div>
