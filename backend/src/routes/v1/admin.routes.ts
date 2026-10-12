@@ -17,6 +17,7 @@ import * as jobController from '../../controllers/job.controller.js';
 import * as accessCodeController from '../../controllers/accessCode.controller.js';
 import * as accessCodeBatchController from '../../controllers/accessCodeBatch.controller.js';
 import * as scholarshipApplicationController from '../../controllers/scholarshipApplication.controller.js';
+import * as scholarshipSettingsController from '../../controllers/scholarshipSettings.controller.js';
 import * as waiHealthController from '../../controllers/waiHealth.controller.js';
 import * as whatsappController from '../../controllers/whatsapp.controller.js';
 import * as promoController from '../../controllers/promo.controller.js';
@@ -80,6 +81,7 @@ import { setInnovatorSettingsSchema } from '../../validations/innovatorSettings.
 import { setPromoActiveSchema } from '../../validations/promo.validation.js';
 import { setWaiHealthCapacitySchema } from '../../validations/waiHealth.validation.js';
 import { decideScholarshipApplicationSchema, adminAnalyzeApplicationsSchema } from '../../validations/scholarshipApplication.validation.js';
+import { setScholarshipSettingsSchema } from '../../validations/scholarshipSettings.validation.js';
 
 const router = Router();
 
@@ -154,6 +156,11 @@ router.post(
   requireRole('super_admin', 'admin', 'registrations_officer'),
   registrationController.adminBulkSendPaymentReminders
 );
+router.post(
+  '/registrations/scholarship-campaign',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  registrationController.adminSendScholarshipCampaign
+);
 // A financial action (marks a real payment collected outside Paystack) — not
 // innovator_lead/exhibitor_lead territory.
 router.post(
@@ -216,6 +223,14 @@ router.patch(
   requireRole('super_admin', 'admin', 'registrations_officer'),
   validate(decideScholarshipApplicationSchema),
   scholarshipApplicationController.adminDecide
+);
+
+router.get('/scholarship-settings', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipSettingsController.adminGet);
+router.put(
+  '/scholarship-settings',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  validate(setScholarshipSettingsSchema),
+  scholarshipSettingsController.adminSet
 );
 
 // Women in AI & Health Breakfast — a new, separate event-registration area,

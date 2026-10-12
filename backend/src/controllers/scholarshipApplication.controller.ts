@@ -5,6 +5,7 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { toCsv } from '../utils/toCsv.js';
 import { ScholarshipApplication, type ScholarshipApplicationDoc } from '../models/ScholarshipApplication.model.js';
+import { getOrCreateScholarshipSettings } from '../models/ScholarshipSettings.model.js';
 import { AccessCode } from '../models/AccessCode.model.js';
 import { generateCode } from './accessCode.controller.js';
 import { recordAudit } from '../services/audit.service.js';
@@ -27,6 +28,15 @@ const SUBMISSION_MESSAGE = "Thanks for applying — our team will review your ap
 // POST /scholarship-applications — public. See ScholarshipApplication.model.ts's
 // header comment for how this differs from AccessCode's own 'scholarship' type.
 export const submit = catchAsync(async (req: Request, res: Response) => {
+  const settings = await getOrCreateScholarshipSettings();
+  if (!settings.applicationsOpen) {
+    throw new ApiError(
+      422,
+      settings.closedReason || 'Sponsored Delegate applications are closed right now. Please check back later.',
+      'SCHOLARSHIP_APPLICATIONS_CLOSED'
+    );
+  }
+
   const input = req.body as SubmitScholarshipApplicationInput;
   const application = await ScholarshipApplication.create({
     fullName: input.fullName,

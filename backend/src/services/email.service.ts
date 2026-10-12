@@ -846,6 +846,30 @@ export const sendRegistrationPaymentLinkEmail = async (
   });
 };
 
+// One-time 50%-off scholarship campaign (registration.controller.ts's
+// adminSendScholarshipCampaign) — distinct from the generic payment-link
+// reminder above, since this needs real urgency framing and a hard deadline
+// the generic template doesn't carry. The deadline is soft (copy only, see
+// that controller's own comment) — nothing here auto-expires the link.
+export const sendScholarshipCampaignEmail = async (
+  to: string,
+  fullName: string,
+  data: { authorizationUrl: string; ticketCategory: string; amountNaira: number; deadlineLabel: string }
+): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: '50% Off Your Registration — Ends Tomorrow | AI in Health Summit 2026',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>We're offering a limited-time <strong>50% scholarship discount</strong> on your ${data.ticketCategory.replace(/_/g, ' ')} registration for the AI in Health Summit 2026.</p>
+      <p>Your discounted price is <strong>&#8358;${data.amountNaira.toLocaleString('en-NG')}</strong> — but this offer expires <strong>${data.deadlineLabel}</strong>.</p>
+      ${emailButton(data.authorizationUrl, 'Claim my 50% discount now')}
+      <p>Once payment is confirmed, you'll receive your registration confirmation and check-in QR code by email.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 export const sendTestEmail = async (to: string): Promise<void> => {
   await sendEmail({
     to,

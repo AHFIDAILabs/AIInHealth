@@ -29,7 +29,7 @@ import type { Role, RegistrationType } from '../types/enums.js';
 import { generateQrToken } from '../services/qr.service.js';
 import { generateCode } from './accessCode.controller.js';
 import { initializePaymentForRegistration } from './payment.controller.js';
-import { sendRegistrationPaymentLinkEmail, sendAttendanceCardEmail } from '../services/email.service.js';
+import { sendRegistrationPaymentLinkEmail, sendAttendanceCardEmail, sendScholarshipCampaignEmail } from '../services/email.service.js';
 import { env } from '../config/env.js';
 import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
 import { getOrCreateVolunteerSettings } from '../models/VolunteerSettings.model.js';
@@ -1114,6 +1114,76 @@ export const adminBulkSendPaymentReminders = catchAsync(async (req: Request, res
       sent: succeeded,
       failed: failed.length,
       failedEmails: failed.map((f) => f.item.email).filter(Boolean),
+    })
+  );
+});
+
+// Africa/Lagos is fixed UTC+1 year-round (no DST) — safe to hardcode the offset
+// rather than pull in a timezone library for this one calculation.
+const LAGOS_UTC_OFFSET_MS = 60 * 60 * 1000;
+
+// "End of business tomorrow, Lagos time" — a soft deadline used only in the
+// scholarship campaign email's copy (sendScholarshipCampaignEmail below).
+// Nothing expires the generated Paystack link automatically; this is a
+// one-time blast, not a scheduled job, per the admin's own instruction.
+const scholarshipCampaignDeadline = (): { at: Date; label: string } => {
+  const nowLagos = new Date(Date.now() + LAGOS_UTC_OFFSET_MS);
+  const tomorrow18hLagos = new Date(Date.UTC(nowLagos.getUTCFullYear(), nowLagos.getUTCMonth(), nowLagos.getUTCDate() + 1, 18, 0, 0));
+  const at = new Date(tomorrow18hLagos.getTime() - LAGOS_UTC_OFFSET_MS);
+  const label = `end of business (6:00 PM) tomorrow, ${at.toLocaleDateString('en-NG', {
+    timeZone: 'Africa/Lagos',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })}, Lagos time`;
+  return { at, label };
+};
+
+// POST /admin/registrations/scholarship-campaign — one-time blast: every
+// still-unpaid/failed attendee gets a 50% scholarship discount applied
+// directly to their EXISTING registration plus a fresh Paystack link
+// reflecting the new price, framed as a limited-time offer. Never downgrades
+// someone who already has a discount of 50% or more. No new AccessCode is
+// minted here — unlike a brand-new Sponsored Delegate approval (adminDecide,
+// scholarshipApplication.controller.ts), these registrations already exist,
+// so setting discountPercent directly and re-initializing payment (same
+// mechanism as adminBulkSendPaymentReminders above) is all that's needed to
+// make the discounted price real and payable.
+export const adminSendScholarshipCampaign = catchAsync(async (req: Request, res: Response) => {
+  const targets = await Registration.find({ type: 'attendee', paymentStatus: { $in: ['unpaid', 'failed'] } });
+  const { at: deadlineAt, label: deadlineLabel } = scholarshipCampaignDeadline();
+
+  const { succeeded, failed } = await runInBatches(targets, 10, async (reg) => {
+    if (!reg.email) throw new Error('No email on file');
+    if ((reg.discountPercent ?? 0) < 50) {
+      reg.discountPercent = 50;
+    }
+    const { authorizationUrl } = await initializePaymentForRegistration(reg);
+    const attendeeCount = 1 + (reg.groupAttendees?.length ?? 0);
+    const amountNaira = priceForRegistration(reg.ticketCategory as TicketCategory, attendeeCount, reg.discountPercent ?? undefined);
+    await sendScholarshipCampaignEmail(reg.email, reg.fullName || 'there', {
+      authorizationUrl,
+      ticketCategory: reg.ticketCategory ?? '',
+      amountNaira,
+      deadlineLabel,
+    });
+  });
+
+  await recordAudit({
+    req,
+    action: 'registration.scholarship_campaign_sent',
+    resourceType: 'Registration',
+    resourceId: 'bulk',
+    after: { attempted: targets.length, sent: succeeded, failed: failed.length, deadlineAt },
+  });
+
+  res.json(
+    new ApiResponse({
+      attempted: targets.length,
+      sent: succeeded,
+      failed: failed.length,
+      failedEmails: failed.map((f) => f.item.email).filter(Boolean),
+      deadlineAt,
     })
   );
 });
