@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { uploadAdminImage } from '../../services/upload.service';
 import { fetchAdminVolunteerSettings, setVolunteerApplicationsOpen } from '../../services/volunteerSettings.service';
 import { fetchAdminInnovatorSettings, setInnovatorApplicationsOpen } from '../../services/innovatorSettings.service';
+import { fetchAdminScholarshipSettings, setScholarshipApplicationsOpen } from '../../services/scholarshipSettings.service';
 import { adminFetchPromoStatus, adminLaunchPromoCampaign, adminSetPromoActive, type PromoStatus } from '../../services/promo.service';
 
 // Same roles that manage Volunteers elsewhere (Registrations' Volunteers
@@ -21,6 +22,10 @@ const VOLUNTEER_SETTINGS_ROLES = ['super_admin', 'admin', 'registrations_officer
 // innovator_lead owns this area (not registrations_officer — Innovator was
 // deliberately carved out of that role's scope elsewhere in this app).
 const INNOVATOR_SETTINGS_ROLES = ['super_admin', 'admin', 'innovator_lead'];
+// Same scope as Volunteer above — the Sponsored Delegate pool lives inside
+// registrations_officer's existing area, same as every other scholarship-
+// application admin route (admin.routes.ts).
+const SCHOLARSHIP_SETTINGS_ROLES = ['super_admin', 'admin', 'registrations_officer'];
 
 const EVENT_LABEL: Record<NotificationEvent, string> = {
   'registration.new': 'New registration submitted',
@@ -147,6 +152,10 @@ export const SettingsPage = () => {
   const [innovatorOpen, setInnovatorOpenState] = useState<boolean | null>(null);
   const [innovatorBusy, setInnovatorBusy] = useState(false);
 
+  const canManageScholarshipSettings = !!user && SCHOLARSHIP_SETTINGS_ROLES.includes(user.role);
+  const [scholarshipOpen, setScholarshipOpenState] = useState<boolean | null>(null);
+  const [scholarshipBusy, setScholarshipBusy] = useState(false);
+
   // A real, uncapped-quantity 100%-off giveaway running for a fixed 10 days
   // once launched — restricted to super_admin, distinct from the broader
   // registrations_officer/admin scope every other card above allows.
@@ -197,6 +206,30 @@ export const SettingsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setInnovatorBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!canManageScholarshipSettings) return;
+    fetchAdminScholarshipSettings()
+      .then((s) => setScholarshipOpenState(s.open))
+      .catch((err) => toast('error', getApiErrorMessage(err)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManageScholarshipSettings]);
+
+  const toggleScholarshipApplications = async (next: boolean) => {
+    const reason = !next
+      ? window.prompt('Optional: reason shown to admins (and visitors) — e.g. "Sponsored Delegate scholarships are fully allocated."') ?? undefined
+      : undefined;
+    setScholarshipBusy(true);
+    try {
+      const settings = await setScholarshipApplicationsOpen(next, reason);
+      setScholarshipOpenState(settings.open);
+      toast('success', next ? 'Sponsored Delegate applications reopened' : 'Sponsored Delegate applications closed');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setScholarshipBusy(false);
     }
   };
 
@@ -378,6 +411,41 @@ export const SettingsPage = () => {
             <p className="mt-2 text-xs text-slate-400">
               Turn this off to stop new Innovator applications on the public Register page — anyone already
               pre-approved with an access code can still confirm immediately either way.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Same shape as the cards above, for the Sponsored Delegate (100%
+          scholarship) application pool — see SCHOLARSHIP_SETTINGS_ROLES. The
+          reminder banner is a plain date check, not a scheduled job: nothing
+          closes this automatically, the admin still has to click the toggle. */}
+      {canManageScholarshipSettings && (
+        <div className="mt-6 rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sponsored Delegate Applications</p>
+          {scholarshipOpen === true && (
+            <div className="mt-3">
+              <Banner variant="warning">
+                Reminder: the Sponsored Delegate (100% scholarship) pool is scheduled to close end of business tomorrow,
+                Lagos time. Turn off "Accepting new applications" below when you're ready to stop new submissions —
+                already-submitted applications stay reviewable either way.
+              </Banner>
+            </div>
+          )}
+          <div className="mt-4">
+            {scholarshipOpen === null ? (
+              <p className="text-sm text-slate-400">Loading…</p>
+            ) : (
+              <AdminToggle
+                label={scholarshipBusy ? 'Accepting new applications (updating…)' : 'Accepting new applications'}
+                checked={scholarshipOpen}
+                onChange={toggleScholarshipApplications}
+              />
+            )}
+            <p className="mt-2 text-xs text-slate-400">
+              Turn this off to stop new Sponsored Delegate applications on the public page — already-submitted
+              applications still get reviewed normally, and anyone with an invite link/code can still complete their
+              free registration either way.
             </p>
           </div>
         </div>

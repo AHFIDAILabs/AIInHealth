@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CreditCard, Send, Search, Download, Wallet, CheckCircle2, Clock, XCircle, BadgeCheck } from 'lucide-react';
+import { CreditCard, Send, Search, Download, Wallet, CheckCircle2, Clock, XCircle, BadgeCheck, Percent } from 'lucide-react';
 import {
   listRegistrations,
   bulkSendPaymentReminders,
+  sendScholarshipCampaign,
   exportRegistrationsUrl,
   fetchPaymentStats,
   adminMarkRegistrationPaid,
@@ -59,6 +60,8 @@ export const PaymentsPage = () => {
   const [stats, setStats] = useState<PaymentStats | null>(null);
   const [confirmRemind, setConfirmRemind] = useState(false);
   const [sendingReminders, setSendingReminders] = useState(false);
+  const [confirmCampaign, setConfirmCampaign] = useState(false);
+  const [sendingCampaign, setSendingCampaign] = useState(false);
   const [markPaidTarget, setMarkPaidTarget] = useState<AdminRegistration | null>(null);
   const [markPaidNote, setMarkPaidNote] = useState('');
   const [markingPaid, setMarkingPaid] = useState(false);
@@ -112,6 +115,24 @@ export const PaymentsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setSendingReminders(false);
+    }
+  };
+
+  const sendCampaign = async () => {
+    setSendingCampaign(true);
+    try {
+      const result = await sendScholarshipCampaign();
+      toast(
+        'success',
+        `Sent ${result.sent} of ${result.attempted} scholarship offer${result.attempted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}.`
+      );
+      setConfirmCampaign(false);
+      load();
+      refreshStats();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingCampaign(false);
     }
   };
 
@@ -202,8 +223,15 @@ export const PaymentsPage = () => {
         )}
         <span className="text-xs text-slate-400">{total} matching</span>
         <button
+          onClick={() => setConfirmCampaign(true)}
+          className="ml-auto flex items-center gap-1.5 rounded-lg border border-orange/40 bg-white px-3.5 py-2 text-[13px] font-semibold text-orange hover:bg-orange/5"
+        >
+          <Percent size={14} />
+          Send 50% Scholarship Offer
+        </button>
+        <button
           onClick={() => setConfirmRemind(true)}
-          className="ml-auto flex items-center gap-1.5 rounded-lg bg-orange px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-orange-hover"
+          className="flex items-center gap-1.5 rounded-lg bg-orange px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-orange-hover"
         >
           <Send size={14} />
           Send Payment Reminder to All Pending
@@ -320,6 +348,17 @@ export const PaymentsPage = () => {
         loading={sendingReminders}
         onConfirm={sendReminders}
         onCancel={() => setConfirmRemind(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmCampaign}
+        title="Send the 50% scholarship offer?"
+        description="Every attendee who hasn't completed payment (unpaid or failed) gets a 50% discount applied to their existing ticket category and a fresh Paystack link for the new price, framed as a one-time offer expiring end of business tomorrow (Lagos time). Anyone who already has a discount of 50% or more keeps their existing discount — this never downgrades them. This can't be limited to the current filter — it always covers everyone pending."
+        confirmLabel="Send Offer"
+        danger={false}
+        loading={sendingCampaign}
+        onConfirm={sendCampaign}
+        onCancel={() => setConfirmCampaign(false)}
       />
 
       {/* Custom (not ConfirmDialog) — needs an editable note field alongside

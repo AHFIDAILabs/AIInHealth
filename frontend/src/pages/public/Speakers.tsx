@@ -195,6 +195,7 @@ export const Speakers = () => {
                           {speaker.fullName}
                         </p>
                         <p className="mt-1 text-xs leading-snug text-slate-500">{speaker.title}</p>
+                        <p className='mt-1 text-xs leading-snug text-orange-500'>{speaker.organization}</p>
                       </div>
                     </div>
                   </button>

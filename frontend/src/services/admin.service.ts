@@ -202,6 +202,19 @@ export const bulkSendPaymentReminders = async (): Promise<BulkPaymentReminderRes
   return res.data.data;
 };
 
+export interface ScholarshipCampaignResult extends BulkPaymentReminderResult {
+  deadlineAt: string;
+}
+
+// One-time 50%-off blast to every unpaid/failed attendee — see
+// registration.controller.ts's adminSendScholarshipCampaign for the full
+// mechanism (reuses the same fresh-Paystack-link approach as the generic
+// reminder above, just with a 50% discount forced and urgency-framed copy).
+export const sendScholarshipCampaign = async (): Promise<ScholarshipCampaignResult> => {
+  const res = await api.post<{ success: true; data: ScholarshipCampaignResult }>('/admin/registrations/scholarship-campaign');
+  return res.data.data;
+};
+
 export interface VolunteerImportReport {
   totalRows: number;
   inserted: { email: string; fullName: string; status: RegistrationStatus }[];

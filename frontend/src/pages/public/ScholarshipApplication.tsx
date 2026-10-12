@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,6 +19,7 @@ import {
   SCHOLARSHIP_STUDY_LEVELS,
   type ScholarshipApplicantType,
 } from '../../services/scholarshipApplication.service';
+import { fetchScholarshipApplicationsStatus } from '../../services/scholarshipSettings.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SEO } from '../../components/seo/SEO';
 
@@ -80,6 +81,20 @@ export const ScholarshipApplication = () => {
   const [documentName, setDocumentName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Default to open while the status call is in flight — the same optimistic
+  // fallback VolunteerForm.tsx uses, so a slow/failed status check never
+  // blocks someone from applying.
+  const [applicationsOpen, setApplicationsOpen] = useState<boolean | null>(null);
+  const [closedReason, setClosedReason] = useState<string | undefined>();
+
+  useEffect(() => {
+    fetchScholarshipApplicationsStatus()
+      .then((s) => {
+        setApplicationsOpen(s.open);
+        setClosedReason(s.reason);
+      })
+      .catch(() => setApplicationsOpen(true));
+  }, []);
 
   const {
     register,
@@ -201,6 +216,11 @@ export const ScholarshipApplication = () => {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-glow-subtle sm:p-9">
             {confirmation ? (
               <RegisterSuccess message={confirmation} onReset={resetAll} />
+            ) : applicationsOpen === false ? (
+              <Banner variant="warning">
+                {closedReason || 'Sponsored Delegate applications are closed right now.'} If you already have an invite
+                code, use the link we sent you to complete your free registration directly.
+              </Banner>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
                 {serverError && <Banner variant="error">{serverError}</Banner>}
