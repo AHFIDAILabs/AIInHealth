@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Plus, X, Users, Pencil, Trash2, GripVertical, Sparkles, QrCode, Mail } from 'lucide-react';
+import { Search, Plus, X, Users, Pencil, Trash2, GripVertical, Sparkles, QrCode, Mail, Share2 } from 'lucide-react';
 import {
   adminListSpeakers,
   adminCreateSpeaker,
@@ -12,6 +12,7 @@ import {
   adminUpdateSpeakerTranslation,
   adminRegisterSpeaker,
   adminSendSpeakerAccessEmail,
+  adminSendSpeakerCardInvites,
   SUPPORTED_TRANSLATION_LANGS,
   type AdminSpeaker,
   type SpeakerInput,
@@ -57,6 +58,7 @@ export const SpeakersPage = () => {
   const toast = useToast();
   const [items, setItems] = useState<AdminSpeaker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sendingCardInvites, setSendingCardInvites] = useState(false);
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
   const [q, setQ] = useState(searchParams.get('q') ?? '');
@@ -125,6 +127,18 @@ export const SpeakersPage = () => {
     setTrack('');
     setPublished('');
     setPage(1);
+  };
+
+  const sendCardInviteBatch = async () => {
+    setSendingCardInvites(true);
+    try {
+      const result = await adminSendSpeakerCardInvites();
+      toast('success', `Card invite sent to ${result.sent} of ${result.targeted} published speaker${result.targeted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}.`);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingCardInvites(false);
+    }
   };
 
   const openCreate = () => {
@@ -303,12 +317,22 @@ export const SpeakersPage = () => {
             {reordering && <span className="ml-2 text-orange">Saving order…</span>}
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:bg-orange-hover"
-        >
-          <Plus size={16} /> Add Speaker
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={sendCardInviteBatch}
+            disabled={sendingCardInvites}
+            title='Email every published speaker a link to generate their "I am speaking" / "I will be attending" cards'
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-sm transition-colors hover:border-orange/40 disabled:opacity-60"
+          >
+            <Share2 size={15} /> {sendingCardInvites ? 'Sending…' : 'Send Card Invites'}
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:bg-orange-hover"
+          >
+            <Plus size={16} /> Add Speaker
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">

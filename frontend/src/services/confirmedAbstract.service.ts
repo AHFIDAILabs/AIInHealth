@@ -39,6 +39,15 @@ export interface CompendiumFields {
   publishedInVersion?: string;
 }
 
+// "I will be presenting" DP card (event-extras plan) — a separate feature
+// namespace from CompendiumFields above; eligibility is just "has a session
+// and a contact email", independent of compendium.publicationStatus.
+export interface PresentingCardFields {
+  sessionRef?: string | null;
+  presenterEmail?: string | null;
+  emailSentAt?: string;
+}
+
 // The public-safe subset — no email/phone/visa-or-funding-ask fields exist
 // on this model at all (see backend ConfirmedAbstract.model.ts), so there is
 // nothing further to strip here the way admin-only fields are stripped
@@ -68,6 +77,7 @@ export interface AdminConfirmedAbstract extends ConfirmedAbstract {
   keywords?: string[];
   language?: string;
   compendium?: CompendiumFields;
+  presentingCard?: PresentingCardFields;
 }
 
 export interface ConfirmedAbstractInput {
@@ -161,5 +171,55 @@ export const adminSetCompendiumStatus = async (
   const res = await api.patch<{ success: true; data: AdminConfirmedAbstract }>(`/admin/confirmed-abstracts/${id}/compendium-status`, {
     status,
   });
+  return res.data.data;
+};
+
+// --- "I will be presenting" DP card (event-extras plan) ---
+
+// `null` explicitly clears a field; omitting a key leaves it untouched.
+export const adminSetPresentingCard = async (
+  id: string,
+  input: { sessionRef?: string | null; presenterEmail?: string | null }
+): Promise<AdminConfirmedAbstract> => {
+  const res = await api.patch<{ success: true; data: AdminConfirmedAbstract }>(`/admin/confirmed-abstracts/${id}/presenting-card`, input);
+  return res.data.data;
+};
+
+// ids omitted -> every record with both a session assigned and a presenter
+// email on file. `skipped` is how many candidates were missing one of those
+// two fields (never attempted, not a send failure).
+export const adminSendPresentingCardInvites = async (
+  ids?: string[]
+): Promise<{ targeted: number; sent: number; failed: number; skipped: number }> => {
+  const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number; skipped: number } }>(
+    '/admin/confirmed-abstracts/card/send-invites',
+    { ids }
+  );
+  return res.data.data;
+};
+
+export interface PresentingCardSession {
+  title: string;
+  day: 'day1' | 'day2';
+  startTime: string;
+  endTime: string;
+  room: string;
+}
+
+// The public-safe subset returned by the magic-link page — never includes
+// presenterEmail or anything compendium-related.
+export interface PresentingCardData {
+  code: string;
+  authorName: string;
+  photoUrl: string | null;
+  title: string;
+  track: string | null;
+  presentationType: PresentationType | null;
+  session: PresentingCardSession | null;
+}
+
+// Public — GET /confirmed-abstracts/presenting/:token, no auth.
+export const fetchPresentingCard = async (token: string): Promise<PresentingCardData> => {
+  const res = await api.get<{ success: true; data: PresentingCardData }>(`/confirmed-abstracts/presenting/${token}`);
   return res.data.data;
 };

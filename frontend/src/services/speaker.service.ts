@@ -40,6 +40,9 @@ export interface AdminSpeaker {
   // instead of a Resend one.
   email?: string;
   registration?: string | null;
+  // "I am speaking" / "I will be attending" card invite — last time that
+  // email went out (speaker.controller.ts's adminSendCardInvites).
+  cardEmailSentAt?: string;
 }
 
 export interface SpeakerInput {
@@ -116,6 +119,16 @@ export const adminRegisterSpeaker = async (id: string): Promise<AdminSpeaker> =>
 
 export const adminSendSpeakerAccessEmail = async (id: string): Promise<{ sentAt: string }> => {
   const res = await api.post<{ success: true; data: { sentAt: string } }>(`/admin/speakers/${id}/send-access-email`);
+  return res.data.data;
+};
+
+// Bulk "I am speaking" / "I will be attending" card invite. ids omitted ->
+// every published speaker with an email on file.
+export const adminSendSpeakerCardInvites = async (ids?: string[]): Promise<{ targeted: number; sent: number; failed: number }> => {
+  const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
+    '/admin/speakers/card/send-invites',
+    { ids }
+  );
   return res.data.data;
 };
 

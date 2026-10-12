@@ -39,6 +39,28 @@ export const delegateLogout = async (): Promise<void> => {
   await api.post('/delegate/logout');
 };
 
+export interface SpeakerSession {
+  id: string;
+  title: string;
+  day: 'day1' | 'day2';
+  startTime: string;
+  endTime: string;
+  room: string;
+}
+
+export interface SpeakerSessionsResult {
+  isSpeaker: boolean;
+  photoUrl: string | null;
+  sessions: SpeakerSession[];
+}
+
+// Backs the "I am speaking at AIHS 2026" card (PortalMyCard.tsx) — isSpeaker
+// is false, not an error, for the common case of a delegate who isn't one.
+export const fetchSpeakerSessions = async (): Promise<SpeakerSessionsResult> => {
+  const res = await api.get<{ success: true; data: SpeakerSessionsResult }>('/delegate/speaker-sessions');
+  return res.data.data;
+};
+
 export const fetchTicketQr = async (): Promise<string> => {
   const res = await api.get<{ success: true; data: { qrDataUrl: string } }>('/delegate/ticket/qr');
   return res.data.data.qrDataUrl;

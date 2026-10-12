@@ -4,6 +4,10 @@ import { AhfidBadge } from '../ui/AhfidBadge';
 import summitMark from '../../assets/images/summit_logo_mark.png';
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../lib/siteInfo';
 
+// On by default — see docs/compendium/PUBLISHING.md. Mirrors App.tsx's and
+// Navbar.tsx's own COMPENDIUM_ENABLED check.
+const COMPENDIUM_ENABLED = import.meta.env.VITE_COMPENDIUM_ENABLED === 'true';
+
 export const Footer = () => {
   const { t } = useTranslation();
   return (
@@ -36,6 +40,9 @@ export const Footer = () => {
             <li><Link to="/abstracts/confirmed" className="hover:text-orange">{t('footer.summit.submitAbstract', 'Submit an Abstract')}</Link></li>
             <li><Link to="/policy-tracker" className="hover:text-orange">{t('footer.summit.policyTracker', 'Policy Tracker')}</Link></li>
             <li><Link to="/wai-health-breakfast" className="hover:text-orange">{t('footer.summit.waiHealth', 'WAI-Health Breakfast')}</Link></li>
+            {COMPENDIUM_ENABLED && (
+              <li><Link to="/compendium" className="hover:text-orange">{t('footer.summit.compendium', 'Compendium')}</Link></li>
+            )}
           </ul>
         </div>
         <div>

@@ -40,6 +40,7 @@ import {
   Layers,
   UserCheck,
   Send,
+  Star,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -123,6 +124,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Content',
     items: [
       { label: 'Agenda', to: '/admin/sessions', icon: CalendarDays, roles: adminOnlyRoles },
+      { label: 'Feedback', to: '/admin/feedback', icon: Star, roles: adminOnlyRoles },
       { label: 'Speakers', to: '/admin/speakers', icon: Users, roles: adminOnlyRoles },
       { label: 'Innovation Showcase', to: '/admin/innovations', icon: Lightbulb, roles: adminOnlyRoles },
       { label: 'Confirmed Showcase', to: '/admin/innovation-showcase-entries', icon: Rocket, roles: adminOnlyRoles },

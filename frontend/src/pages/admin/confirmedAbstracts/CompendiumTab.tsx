@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, X, Eye, Pencil, CheckCircle2, XCircle, Plus, Trash2, ShieldCheck } from 'lucide-react';
+import { Search, X, Eye, Pencil, CheckCircle2, XCircle, Plus, Trash2, ShieldCheck, Share2 } from 'lucide-react';
 import {
   adminListConfirmedAbstracts,
   adminUpdateConfirmedAbstract,
   adminRecordConsent,
   adminBulkRecordConsent,
   adminSetCompendiumStatus,
+  adminSetPresentingCard,
+  adminSendPresentingCardInvites,
   COMPENDIUM_CONSENT_METHODS,
   COMPENDIUM_PUBLICATION_STATUSES,
   type AdminConfirmedAbstract,
@@ -15,6 +17,8 @@ import {
   type CompendiumPublicationStatus,
 } from '../../../services/confirmedAbstract.service';
 import { listTracks, type PublicTrack } from '../../../services/track.service';
+import { adminListSessions, type AdminSession } from '../../../services/session.service';
+import { SESSION_DAY_LABEL } from '../../../lib/siteInfo';
 import { getApiErrorMessage } from '../../../services/api';
 import { SkeletonRows } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
@@ -56,6 +60,12 @@ const ALLOWED_FROM: Record<CompendiumPublicationStatus, CompendiumPublicationSta
   withdrawn: ['ready', 'published'],
 };
 
+// "I will be presenting" card's session picker — a readable label since
+// there's no other way for an admin to recognize one session among ~dozens
+// by id alone.
+const sessionLabel = (s: AdminSession): string =>
+  `${SESSION_DAY_LABEL[s.day]} · ${s.startTime}–${s.endTime} · ${s.room} — ${s.title}`;
+
 const ReadinessDot = ({ ok, label }: { ok: boolean; label: string }) => (
   <span title={label} className={`flex items-center gap-1 ${ok ? 'text-success' : 'text-slate-300'}`}>
     {ok ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
@@ -67,6 +77,12 @@ interface EditState {
   keywords: string; // comma-separated in the UI, split/joined on save
   authors: CompendiumAuthor[];
   abstractText: string;
+  // "I will be presenting" card (event-extras plan, Batch 2) — saved via a
+  // separate dedicated endpoint (adminSetPresentingCard), not the generic
+  // update call below, so it never risks clobbering the sibling accessToken/
+  // emailSentAt fields that endpoint alone owns.
+  sessionRef: string;
+  presenterEmail: string;
 }
 
 // Open-access compendium: readiness, consent, and publication status for the
@@ -81,6 +97,8 @@ export const CompendiumTab = () => {
   const [q, setQ] = useState('');
   const [statusFilter, setStatusFilter] = useState<CompendiumPublicationStatus | ''>('');
   const [tracks, setTracks] = useState<PublicTrack[] | null>(null);
+  const [sessions, setSessions] = useState<AdminSession[] | null>(null);
+  const [sendingCardInvites, setSendingCardInvites] = useState(false);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -90,7 +108,14 @@ export const CompendiumTab = () => {
   const [consentSaving, setConsentSaving] = useState(false);
 
   const [editing, setEditing] = useState<AdminConfirmedAbstract | null>(null);
-  const [editForm, setEditForm] = useState<EditState>({ track: '', keywords: '', authors: [], abstractText: '' });
+  const [editForm, setEditForm] = useState<EditState>({
+    track: '',
+    keywords: '',
+    authors: [],
+    abstractText: '',
+    sessionRef: '',
+    presenterEmail: '',
+  });
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -101,6 +126,12 @@ export const CompendiumTab = () => {
     listTracks()
       .then(setTracks)
       .catch(() => setTracks([]));
+    // "I will be presenting" card's one-time session-assignment pass (Batch 2
+    // of the event-extras plan) — a high limit since a two-day summit's
+    // whole session list is small enough to just load once for the dropdown.
+    adminListSessions({ limit: 300 })
+      .then((res) => setSessions(res.items))
+      .catch(() => setSessions([]));
   }, []);
 
   const load = useCallback(() => {
@@ -180,6 +211,23 @@ export const CompendiumTab = () => {
     }
   };
 
+  const sendCardInviteBatch = async () => {
+    setSendingCardInvites(true);
+    try {
+      const result = await adminSendPresentingCardInvites([...selected]);
+      toast(
+        'success',
+        `Card invite sent to ${result.sent} of ${result.targeted} eligible record${result.targeted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}${result.skipped ? ` — ${result.skipped} skipped (missing session or email)` : ''}.`
+      );
+      setSelected(new Set());
+      load();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingCardInvites(false);
+    }
+  };
+
   const openEdit = (abstract: AdminConfirmedAbstract) => {
     setEditing(abstract);
     setEditForm({
@@ -187,6 +235,8 @@ export const CompendiumTab = () => {
       keywords: (abstract.keywords ?? []).join(', '),
       authors: abstract.authors && abstract.authors.length > 0 ? abstract.authors : [{ name: abstract.authorName }],
       abstractText: abstract.abstractText ?? '',
+      sessionRef: abstract.presentingCard?.sessionRef ?? '',
+      presenterEmail: abstract.presentingCard?.presenterEmail ?? '',
     });
     setEditError('');
   };
@@ -211,7 +261,7 @@ export const CompendiumTab = () => {
     setEditSaving(true);
     setEditError('');
     try {
-      const updated = await adminUpdateConfirmedAbstract(editing._id, {
+      await adminUpdateConfirmedAbstract(editing._id, {
         track: editForm.track || undefined,
         keywords: editForm.keywords
           .split(',')
@@ -219,6 +269,15 @@ export const CompendiumTab = () => {
           .filter(Boolean),
         authors,
         abstractText: editForm.abstractText.trim() || undefined,
+      });
+      // Separate endpoint on purpose — see EditState's own comment on why
+      // this never goes through the generic update call above. Its response
+      // already reflects everything the first call just saved too (same
+      // document, sequential saves), so this one alone is enough to update
+      // local state with.
+      const updated = await adminSetPresentingCard(editing._id, {
+        sessionRef: editForm.sessionRef || null,
+        presenterEmail: editForm.presenterEmail.trim() || null,
       });
       setItems((prev) => prev.map((i) => (i._id === updated._id ? updated : i)));
       toast('success', 'Saved.');
@@ -293,6 +352,14 @@ export const CompendiumTab = () => {
               >
                 <ShieldCheck size={13} /> Record Consent
               </button>
+              <button
+                onClick={sendCardInviteBatch}
+                disabled={sendingCardInvites}
+                title='Email the selected records a link to generate their "I will be presenting" card — records missing a session or contact email are skipped'
+                className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy hover:border-orange/40 disabled:opacity-60"
+              >
+                <Share2 size={13} /> {sendingCardInvites ? 'Sending…' : 'Send Card Invites'}
+              </button>
             </div>
           </motion.div>
         )}
@@ -320,6 +387,7 @@ export const CompendiumTab = () => {
                   <th className="px-3 py-3 font-semibold">Readiness</th>
                   <th className="px-3 py-3 font-semibold">Consent</th>
                   <th className="px-3 py-3 font-semibold">Status</th>
+                  <th className="px-3 py-3 font-semibold">Presenting Card</th>
                   <th className="px-3 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
@@ -395,6 +463,19 @@ export const CompendiumTab = () => {
                               );
                             })}
                           </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex flex-col gap-1 text-[11px]">
+                          <span className={a.presentingCard?.sessionRef ? 'font-semibold text-success' : 'text-slate-400'}>
+                            {a.presentingCard?.sessionRef ? 'Session assigned' : 'No session'}
+                          </span>
+                          <span className={a.presentingCard?.presenterEmail ? 'font-semibold text-success' : 'text-slate-400'}>
+                            {a.presentingCard?.presenterEmail ? 'Email on file' : 'No email'}
+                          </span>
+                          {a.presentingCard?.emailSentAt && (
+                            <span className="text-slate-400">Sent {new Date(a.presentingCard.emailSentAt).toLocaleDateString('en-GB')}</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-3">
@@ -530,6 +611,38 @@ export const CompendiumTab = () => {
                   onChange={(e) => setEditForm((p) => ({ ...p, keywords: e.target.value }))}
                   placeholder="e.g. machine learning, imbalanced data"
                 />
+
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-[13px] font-semibold text-navy">"I Will Be Presenting" Card</p>
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    Both fields are required before an invite can be sent for this record.
+                  </p>
+                  <div className="mt-3 space-y-3">
+                    <AdminSelect
+                      label="Session"
+                      value={editForm.sessionRef}
+                      onChange={(e) => setEditForm((p) => ({ ...p, sessionRef: e.target.value }))}
+                      disabled={!sessions}
+                    >
+                      <option value="">Not assigned</option>
+                      {sessions?.map((s) => (
+                        <option key={s._id} value={s._id}>
+                          {sessionLabel(s)}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                    <AdminInput
+                      label="Presenter contact email"
+                      type="email"
+                      value={editForm.presenterEmail}
+                      onChange={(e) => setEditForm((p) => ({ ...p, presenterEmail: e.target.value }))}
+                      placeholder="presenter@example.com"
+                    />
+                    <p className="text-xs text-slate-400">
+                      Private — used only to send the card invite, never shown publicly or in the compendium export.
+                    </p>
+                  </div>
+                </div>
 
                 <div>
                   <div className="mb-1.5 flex items-center justify-between">

@@ -59,6 +59,7 @@ import { InnovatorsPage } from './pages/admin/InnovatorsPage';
 import { AttendeesPage } from './pages/admin/AttendeesPage';
 import { SpeakersPage } from './pages/admin/SpeakersPage';
 import { SessionsPage } from './pages/admin/SessionsPage';
+import { FeedbackPage } from './pages/admin/FeedbackPage';
 import { PartnersPage } from './pages/admin/PartnersPage';
 import { InnovationsPage } from './pages/admin/InnovationsPage';
 import { InnovationShowcaseEntriesPage } from './pages/admin/InnovationShowcaseEntriesPage';
@@ -94,6 +95,9 @@ import { PortalLogin } from './pages/portal/PortalLogin';
 import { PortalHome } from './pages/portal/PortalHome';
 import { PortalDirectory } from './pages/portal/PortalDirectory';
 import { PortalMeetings } from './pages/portal/PortalMeetings';
+import { PortalMyCard } from './pages/portal/PortalMyCard';
+import { PresentingCard } from './pages/public/PresentingCard';
+import { Feedback } from './pages/public/Feedback';
 import { ReviewerLogin } from './pages/reviewer/ReviewerLogin';
 import { ReviewerDashboard } from './pages/reviewer/ReviewerDashboard';
 import { ReviewerScoreForm } from './pages/reviewer/ReviewerScoreForm';
@@ -103,11 +107,15 @@ const ADMIN_ONLY_ROLES = ['super_admin', 'admin'] as const;
 const REGISTRATION_ROLES = ['super_admin', 'admin', 'registrations_officer'] as const;
 const ABSTRACT_ROLES = ['super_admin', 'admin', 'abstract_lead'] as const;
 const RAPPORTEUR_ROLES = ['super_admin', 'admin', 'rapporteur_lead'] as const;
-// Dark by default — see docs/compendium brief. Flip on in .env with
-// VITE_COMPENDIUM_ENABLED=true. When off, these routes simply aren't
-// registered, so /compendium/* falls through to the existing `*` NotFound
+// On by default — see docs/compendium brief. Flip off in .env with
+// VITE_COMPENDIUM_ENABLED=false if needed (e.g. before anything is actually
+// published). When off, these routes simply aren't registered, so
+// /compendium/* falls through to the existing `*` NotFound
 // catch-all with zero special-case logic.
 const COMPENDIUM_ENABLED = import.meta.env.VITE_COMPENDIUM_ENABLED === 'true';
+// "I will be attending/presenting/speaking" DP cards + feedback QR system —
+// see docs' event-extras plan. On by default, same convention as above.
+const EVENT_EXTRAS_ENABLED = import.meta.env.VITE_EVENT_EXTRAS_ENABLED === 'true';
 
 function App() {
   return (
@@ -142,6 +150,9 @@ function App() {
             <Route path="/wai-health-breakfast" element={<WaiHealthBreakfast />} />
             <Route path="/wai-health-breakfast/rsvp/:token" element={<WaiHealthRsvp />} />
             <Route path="/rsvp/:token" element={<AttendeeRsvpConfirm />} />
+            {EVENT_EXTRAS_ENABLED && <Route path="/presenting/:token" element={<PresentingCard />} />}
+            {EVENT_EXTRAS_ENABLED && <Route path="/feedback" element={<Feedback />} />}
+            {EVENT_EXTRAS_ENABLED && <Route path="/feedback/:sessionId" element={<Feedback />} />}
             <Route path="/rapporteur/:token" element={<RapporteurForm />} />
             <Route path="/knowledge-products/:type" element={<KnowledgeProductView />} />
             <Route path="/contact" element={<Contact />} />
@@ -222,6 +233,7 @@ function App() {
               <Route element={<RequireRole roles={[...ADMIN_ONLY_ROLES]} />}>
                 <Route path="/admin/speakers" element={<SpeakersPage />} />
                 <Route path="/admin/sessions" element={<SessionsPage />} />
+                <Route path="/admin/feedback" element={<FeedbackPage />} />
                 <Route path="/admin/innovations" element={<InnovationsPage />} />
                 <Route path="/admin/innovation-showcase-entries" element={<InnovationShowcaseEntriesPage />} />
                 <Route path="/admin/partners" element={<PartnersPage />} />
@@ -286,6 +298,7 @@ function App() {
               <Route path="/portal" element={<PortalHome />} />
               <Route path="/portal/directory" element={<PortalDirectory />} />
               <Route path="/portal/meetings" element={<PortalMeetings />} />
+              {EVENT_EXTRAS_ENABLED && <Route path="/portal/my-card" element={<PortalMyCard />} />}
             </Route>
           </Route>
 

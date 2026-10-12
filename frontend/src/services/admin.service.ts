@@ -62,6 +62,8 @@ export interface AdminRegistration {
   // sent / once they click it. rsvpRespondedAt alone never changes `status`.
   rsvpRequestedAt?: string;
   rsvpRespondedAt?: string;
+  // "I will be attending" DP card invite — last time that email went out.
+  cardEmailSentAt?: string;
   // Independent of status — see backend Registration.model.ts's isActive comment.
   isActive: boolean;
   // Spam hardening — see backend Registration.model.ts's flaggedSuspicious
@@ -161,6 +163,16 @@ export const updateRegistrationStatus = async (id: string, status: RegistrationS
 export const sendRsvpReminders = async (ids?: string[]): Promise<{ targeted: number; sent: number; failed: number }> => {
   const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
     '/admin/registrations/rsvp/send-reminders',
+    { ids }
+  );
+  return res.data.data;
+};
+
+// "I will be attending" DP card invite — registration.controller.ts's
+// adminSendCardInvites. ids omitted -> every confirmed attendee.
+export const sendCardInvites = async (ids?: string[]): Promise<{ targeted: number; sent: number; failed: number }> => {
+  const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
+    '/admin/registrations/card/send-invites',
     { ids }
   );
   return res.data.data;

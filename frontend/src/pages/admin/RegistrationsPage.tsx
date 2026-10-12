@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Download, Upload, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard, ShieldAlert, ShieldOff, Send } from 'lucide-react';
+import { Search, Download, Upload, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard, ShieldAlert, ShieldOff, Send, Share2 } from 'lucide-react';
 import {
   listRegistrations,
   updateRegistrationStatus,
@@ -12,6 +12,7 @@ import {
   exportRegistrationsUrl,
   importVolunteersCsv,
   sendRsvpReminders,
+  sendCardInvites,
   type AdminRegistration,
   type RegistrationStatus,
   type RegistrationType,
@@ -177,6 +178,7 @@ export const RegistrationsPage = () => {
   // AttendeesPage.tsx's ?status=confirmed.
   const [rsvpResponded, setRsvpResponded] = useState(searchParams.get('rsvpResponded') === 'true');
   const [sendingRsvpReminders, setSendingRsvpReminders] = useState(false);
+  const [sendingCardInvites, setSendingCardInvites] = useState(false);
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<AdminRegistration | null>(null);
@@ -373,6 +375,18 @@ export const RegistrationsPage = () => {
     }
   };
 
+  const sendCardInviteBatch = async () => {
+    setSendingCardInvites(true);
+    try {
+      const result = await sendCardInvites();
+      toast('success', `Card invite sent to ${result.sent} of ${result.targeted} confirmed attendee${result.targeted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}.`);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingCardInvites(false);
+    }
+  };
+
   const clearFlag = async (registration: AdminRegistration) => {
     setSavingId(registration._id);
     try {
@@ -555,6 +569,14 @@ export const RegistrationsPage = () => {
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-sm transition-colors hover:border-orange/40 disabled:opacity-60"
           >
             <Send size={15} /> {sendingRsvpReminders ? 'Sending…' : 'Send RSVP Reminders'}
+          </button>
+          <button
+            onClick={sendCardInviteBatch}
+            disabled={sendingCardInvites}
+            title='Email every confirmed attendee a link to generate their "I will be attending" share card'
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-sm transition-colors hover:border-orange/40 disabled:opacity-60"
+          >
+            <Share2 size={15} /> {sendingCardInvites ? 'Sending…' : 'Send Card Invites'}
           </button>
           <button
             onClick={openAddForm}

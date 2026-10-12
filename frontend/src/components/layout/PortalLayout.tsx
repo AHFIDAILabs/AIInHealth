@@ -1,12 +1,16 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Ticket, Users, Handshake, LogOut } from 'lucide-react';
+import { Ticket, Users, Handshake, LogOut, Share2 } from 'lucide-react';
 import { useDelegateAuth } from '../../contexts/DelegateAuthContext';
 import summitMark from '../../assets/images/summit_logo_mark.png';
+
+// On by default — see App.tsx's own EVENT_EXTRAS_ENABLED check.
+const EVENT_EXTRAS_ENABLED = import.meta.env.VITE_EVENT_EXTRAS_ENABLED === 'true';
 
 const NAV_ITEMS = [
   { label: 'My Ticket', to: '/portal', icon: Ticket, end: true },
   { label: 'Directory', to: '/portal/directory', icon: Users, end: false },
   { label: 'Meetings', to: '/portal/meetings', icon: Handshake, end: false },
+  ...(EVENT_EXTRAS_ENABLED ? [{ label: 'My Card', to: '/portal/my-card', icon: Share2, end: false }] : []),
 ];
 
 export const PortalLayout = () => {

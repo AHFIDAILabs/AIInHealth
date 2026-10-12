@@ -39,7 +39,12 @@ const LanguageSwitcher = ({ className = '' }: { className?: string }) => {
 // kept out of NAV_ITEMS' own shape (no per-item "inMoreMenu" flag) since this
 // is purely a desktop-row grouping decision; the mobile menu still lists
 // every item flat, where clutter isn't a concern the same way.
-const MORE_MENU_IDS = ['sponsored-delegates', 'wai-health'];
+const MORE_MENU_IDS = ['sponsored-delegates', 'wai-health', 'compendium'];
+
+// On by default — see docs/compendium/PUBLISHING.md. Mirrors App.tsx's own
+// COMPENDIUM_ENABLED check, so the nav link only ever appears when the route
+// it points to actually exists.
+const COMPENDIUM_ENABLED = import.meta.env.VITE_COMPENDIUM_ENABLED === 'true';
 
 export const Navbar = () => {
   const { t } = useTranslation();
@@ -70,6 +75,9 @@ export const Navbar = () => {
     // more flat items here made the header read as cluttered.
     { id: 'sponsored-delegates', label: t('nav.sponsoredDelegates', 'Sponsored Delegates'), to: '/sponsored-delegates' },
     { id: 'wai-health', label: t('nav.waiHealth', 'Women in AI'), to: '/wai-health-breakfast' },
+    ...(COMPENDIUM_ENABLED
+      ? [{ id: 'compendium', label: t('nav.compendium', 'Compendium'), to: '/compendium' }]
+      : []),
     { id: 'register', label: t('nav.registerNow', 'Register Now'), to: '/register' },
     { id: 'ahfid', label: 'AHFID', to: 'https://ahfid.org/', external: true },
     // Delegate portal sign-in — kept out of the main nav row (see the filter

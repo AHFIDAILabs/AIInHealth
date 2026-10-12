@@ -4,6 +4,21 @@
 // band, the countdown card...), which is exactly how the venue went stale
 // after the location changed. Update it here and every consumer follows.
 
+// Human-readable event date range — was previously only inline as a
+// translation fallback in Contact.tsx; pulled out here so the new
+// card-generator templates (cardGenerator.ts) can reuse the same string
+// instead of re-hardcoding it.
+export const EVENT_DATE_RANGE = '19–20 October 2026';
+
+// Mirrors Agenda.tsx's own DAY_ISO_DATE/day labels — used by the "I am
+// speaking"/"I will be presenting" cards (PortalMyCard.tsx, PresentingCard.tsx)
+// to format a session's date without duplicating these two literal dates a
+// third and fourth time.
+export const SESSION_DAY_LABEL: Record<'day1' | 'day2', string> = {
+  day1: '19 October 2026',
+  day2: '20 October 2026',
+};
+
 export const VENUE_NAME = 'TY Danjuma Foundation Building';
 export const VENUE_STREET_ADDRESS = 'Plot 988, Cadastral Zone A00, Central Business District';
 export const VENUE_CITY = 'Abuja, Nigeria';
