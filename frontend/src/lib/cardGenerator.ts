@@ -238,18 +238,34 @@ const drawPhoto = async (ctx: CanvasRenderingContext2D, photoUrl: string) => {
   }
 };
 
+// Wraps onto up to two lines at a large, fixed bold size instead of staying
+// on one line and shrinking to fit — a long name used to end up tiny and
+// thin; now it flows as a short column of up to two lines instead, only
+// shrinking the font as a last resort if even two lines can't hold it.
+const NAME_FONT_SIZE = 60;
+const NAME_MIN_FONT_SIZE = 34;
+const NAME_LINE_HEIGHT_RATIO = 1.12;
+
 const drawName = (ctx: CanvasRenderingContext2D, name: string) => {
-  let fontSize = 52;
   const maxTextWidth = NAME_BOX.w - 64;
-  ctx.font = `800 ${fontSize}px Sora, sans-serif`;
-  while (ctx.measureText(name).width > maxTextWidth && fontSize > 24) {
-    fontSize -= 2;
+  let fontSize = NAME_FONT_SIZE;
+  let lines: string[] = [name];
+  while (fontSize > NAME_MIN_FONT_SIZE) {
     ctx.font = `800 ${fontSize}px Sora, sans-serif`;
+    lines = wrapText(name, maxTextWidth, (s) => ctx.measureText(s).width);
+    if (lines.length <= 2) break;
+    fontSize -= 2;
   }
+  ctx.font = `800 ${fontSize}px Sora, sans-serif`;
   ctx.fillStyle = BRAND.navy;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(name, NAME_BOX.x + NAME_BOX.w / 2, NAME_BOX.y + NAME_BOX.h / 2 + 4);
+  const lineHeight = fontSize * NAME_LINE_HEIGHT_RATIO;
+  const blockHeight = (lines.length - 1) * lineHeight;
+  const firstLineY = NAME_BOX.y + NAME_BOX.h / 2 - blockHeight / 2;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, NAME_BOX.x + NAME_BOX.w / 2, firstLineY + i * lineHeight);
+  });
 };
 
 const drawRoleLabel = (ctx: CanvasRenderingContext2D, roleLabel: string) => {
