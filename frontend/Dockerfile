@@ -4,10 +4,18 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-# VITE_API_URL is baked into the static bundle at build time, not read at runtime —
-# pass it as a build arg so a deploy can point at its real backend URL.
+# VITE_* vars are baked into the static bundle at build time, not read at
+# runtime — each one must be passed as a build ARG (Render forwards its
+# dashboard-configured env vars into `docker build` as ARGs, but only for
+# names a Dockerfile actually declares; an undeclared one is silently
+# dropped). Defaults here match this app's "on by default" posture even if
+# Render's dashboard has nothing configured for them at all.
 ARG VITE_API_URL=http://localhost:5000/api/v1
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_COMPENDIUM_ENABLED=true
+ENV VITE_COMPENDIUM_ENABLED=$VITE_COMPENDIUM_ENABLED
+ARG VITE_EVENT_EXTRAS_ENABLED=true
+ENV VITE_EVENT_EXTRAS_ENABLED=$VITE_EVENT_EXTRAS_ENABLED
 RUN npm run build
 
 # --- production: static files served by nginx ---
