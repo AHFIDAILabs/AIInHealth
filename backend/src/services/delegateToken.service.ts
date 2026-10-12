@@ -34,24 +34,6 @@ export const ensureDelegateAccessCode = async (registration: HydratedDocument<Re
   return code;
 };
 
-export const verifyDelegateAccessCode = async (email: string, code: string): Promise<string> => {
-  const normalizedEmail = email.trim().toLowerCase();
-  const normalizedCode = code.trim().toUpperCase();
-  const registration = await Registration.findOne({
-    status: 'confirmed',
-    isActive: true,
-    $or: [{ email: normalizedEmail }, { contactEmail: normalizedEmail }],
-  }).sort({ createdAt: -1 });
-
-  if (!registration || !registration.portalAccessCode || registration.portalAccessCode !== normalizedCode) {
-    throw new ApiError(400, 'That email/access code combination is invalid.', 'ACCESS_CODE_INVALID');
-  }
-  if (!registration.portalAccessCodeExpiresAt || registration.portalAccessCodeExpiresAt < new Date()) {
-    throw new ApiError(400, 'This access code has expired.', 'ACCESS_CODE_EXPIRED');
-  }
-  return registration.id;
-};
-
 // --- Session token (long-lived JWT cookie, no rotation — low-stakes, short event window) ---
 
 export interface DelegateSessionPayload {

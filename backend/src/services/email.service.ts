@@ -1,6 +1,6 @@
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
-import { REVIEWER_ACCESS_CODE_EXPIRES_AT, DELEGATE_ACCESS_CODE_EXPIRES_AT, RAPPORTEUR_TOKEN_EXPIRES_AT } from '../config/event.js';
+import { REVIEWER_ACCESS_CODE_EXPIRES_AT, RAPPORTEUR_TOKEN_EXPIRES_AT } from '../config/event.js';
 import { VENUE_SHORT, VENUE_FULL_ADDRESS, VENUE_MAPS_LINK } from '../config/venue.js';
 
 const graphConfigured = Boolean(env.MS_TENANT_ID && env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.MS_SENDER_EMAIL);
@@ -553,26 +553,17 @@ export const sendInviteEmail = async (to: string, fullName: string, setPasswordU
   });
 };
 
-// Every delegate-portal email below (volunteer confirmation, payment/free
-// confirmation, and this one) shows the SAME reusable access code — see
-// ensureDelegateAccessCode — with this one label shared across all of them.
-const delegateAccessCodeExpiresLabel = DELEGATE_ACCESS_CODE_EXPIRES_AT.toLocaleDateString('en-GB', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-});
 
 export const sendDelegateAccessCodeEmail = async (to: string, fullName: string, accessCode: string): Promise<void> => {
   const portalUrl = `${env.FRONTEND_ORIGIN}/portal/login`;
   await sendEmail({
     to,
-    subject: 'Your AI in Health Summit 2026 delegate portal access code',
+    subject: 'Sign in to your AI in Health Summit 2026 delegate portal',
     html: `
       <p>Hi ${fullName},</p>
-      <p>Your delegate portal access code is:</p>
-      <p style="font-size:20px;font-weight:700;letter-spacing:1px;">${accessCode}</p>
-      <p><a href="${portalUrl}">Click here to go to the delegate portal</a>, then enter your email and this code to sign in. This code doesn't expire on a timer — it stays valid through ${delegateAccessCodeExpiresLabel} (about a week after the Summit).</p>
-      <p>From there you can view your e-ticket and QR check-in code, browse the delegate directory, and manage meeting requests.</p>
+      <p><a href="${portalUrl}">Click here to sign in to the delegate portal</a> — just enter your email, no code or password needed.</p>
+      <p>From there you can view your e-ticket and QR check-in code, generate your "I will be attending" share card, browse the delegate directory, and manage meeting requests.</p>
+      <p style="color:#94a3b8;font-size:12px;">Reference ID: ${accessCode} (only needed if you contact support about your registration).</p>
       <p>If you didn't request this, you can safely ignore this email, or contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });
@@ -655,8 +646,8 @@ export const sendPaymentConfirmationEmail = async (
     html: `
       <p>Hi ${fullName},</p>
       <p>Your payment of <strong>&#8358;${data.amountNaira.toLocaleString('en-NG')}</strong> (${data.ticketCategory.replace(/_/g, ' ')}) was successful and your registration is confirmed.</p>
-      <p>Your delegate portal access code is: <strong style="font-size:18px;letter-spacing:1px;">${data.accessCode}</strong></p>
-      <p><a href="${portalUrl}">Visit the delegate portal</a> and enter your email and this code to sign in — it's yours to reuse anytime through ${delegateAccessCodeExpiresLabel}, no rush and no re-requesting needed. From there you can access your e-ticket / QR check-in code.</p>
+      <p><a href="${portalUrl}">Visit the delegate portal</a> and sign in with just your email — no code or password needed. From there you can access your e-ticket / QR check-in code and generate your "I will be attending" share card.</p>
+      <p style="color:#94a3b8;font-size:12px;">Reference ID: ${data.accessCode} (only needed if you contact support about your registration).</p>
       <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
     `,
   });
@@ -703,8 +694,8 @@ export const sendRegistrationConfirmedEmail = async (
       <p>Hi ${fullName},</p>
       <p>Your registration${data.ticketCategory ? ` (${data.ticketCategory.replace(/_/g, ' ')})` : ''} for the AI in Health Summit 2026 is confirmed — no payment is required.</p>
       <p><strong>Please note:</strong> this covers the Summit registration fee only. Accommodation, flights/transport, and meals outside the event are not included and remain your own responsibility.</p>
-      <p>Your delegate portal access code is: <strong style="font-size:18px;letter-spacing:1px;">${data.accessCode}</strong></p>
-      <p><a href="${portalUrl}">Visit the delegate portal</a> and enter your email and this code to sign in — it's yours to reuse anytime through ${delegateAccessCodeExpiresLabel}, no rush and no re-requesting needed. From there you can access your e-ticket / QR check-in code.</p>
+      <p><a href="${portalUrl}">Visit the delegate portal</a> and sign in with just your email — no code or password needed. From there you can access your e-ticket / QR check-in code and generate your "I will be attending" share card.</p>
+      <p style="color:#94a3b8;font-size:12px;">Reference ID: ${data.accessCode} (only needed if you contact support about your registration).</p>
       <p>See you at the ${VENUE_SHORT}, 19&ndash;20 October 2026.</p>
     `,
   });

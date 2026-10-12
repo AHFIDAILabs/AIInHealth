@@ -7,8 +7,7 @@ import { uploadImage } from '../../middlewares/upload.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { loginLimiter } from '../../middlewares/rateLimiter.middleware.js';
 import {
-  requestAccessCodeSchema,
-  verifyAccessCodeSchema,
+  delegateLoginSchema,
   delegatePushSubscribeSchema,
   delegatePushUnsubscribeSchema,
   updateDirectoryOptInSchema,
@@ -18,9 +17,8 @@ import { createMeetingRequestSchema, respondMeetingRequestSchema } from '../../v
 
 const router = Router();
 
-// --- Public: access-code auth ---
-router.post('/request-code', loginLimiter, validate(requestAccessCodeSchema), delegateController.requestAccessCode);
-router.post('/verify-code', loginLimiter, validate(verifyAccessCodeSchema), delegateController.verifyAccessCode);
+// --- Public: email-only login (see delegate.controller.ts's login) ---
+router.post('/login', loginLimiter, validate(delegateLoginSchema), delegateController.login);
 
 // --- Delegate-authenticated ---
 router.use(requireDelegateAuth);

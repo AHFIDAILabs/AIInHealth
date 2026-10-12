@@ -1,20 +1,17 @@
 import { z } from 'zod';
 import { optionalUrlField } from './common.js';
 
-export const requestAccessCodeSchema = z.object({
+// Email-only login — no code to request/verify. Logs straight into the
+// portal for any confirmed, active registration matching this email (see
+// delegate.controller.ts's login for why this is deliberately NOT
+// enumeration-safe: it's the one piece of actual feedback a person gets if
+// they mistyped their email or aren't registered yet).
+export const delegateLoginSchema = z.object({
   body: z.object({
     email: z.string().trim().toLowerCase().email('Enter a valid email'),
   }),
 });
-export type RequestAccessCodeInput = z.infer<typeof requestAccessCodeSchema>['body'];
-
-export const verifyAccessCodeSchema = z.object({
-  body: z.object({
-    email: z.string().trim().toLowerCase().email('Enter a valid email'),
-    code: z.string().trim().min(1, 'Enter your access code'),
-  }),
-});
-export type VerifyAccessCodeInput = z.infer<typeof verifyAccessCodeSchema>['body'];
+export type DelegateLoginInput = z.infer<typeof delegateLoginSchema>['body'];
 
 export const delegatePushSubscribeSchema = z.object({
   body: z.object({

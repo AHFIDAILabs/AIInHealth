@@ -8,12 +8,11 @@ import { Session } from '../models/Session.model.js';
 import { DelegatePushSubscription } from '../models/DelegatePushSubscription.model.js';
 import { env } from '../config/env.js';
 import { setDelegateCookie, clearDelegateCookie } from '../utils/cookies.js';
-import { verifyDelegateAccessCode, signDelegateSessionToken } from '../services/delegateToken.service.js';
+import { signDelegateSessionToken } from '../services/delegateToken.service.js';
 import { qrDataUrlForToken } from '../services/qr.service.js';
 import { resendAccessCodeAndTicket } from '../services/registrationNotification.service.js';
 import type {
-  RequestAccessCodeInput,
-  VerifyAccessCodeInput,
+  DelegateLoginInput,
   DelegatePushSubscribeInput,
   DelegatePushUnsubscribeInput,
   UpdateDirectoryOptInInput,
@@ -25,8 +24,15 @@ const delegateName = (r: { fullName?: string | null; contactName?: string | null
 
 const delegateEmail = (r: { email?: string | null; contactEmail?: string | null }) => r.email || r.contactEmail || null;
 
-export const requestAccessCode = catchAsync(async (req: Request, res: Response) => {
-  const { email } = req.body as RequestAccessCodeInput;
+// POST /delegate/login — email-only portal access, deliberately no code or
+// password: a confirmed, active registration matching this email signs
+// straight in. This replaces the old two-step request-code/verify-code flow;
+// the friction of copying a code out of an email was stopping people from
+// bothering to log in at all (and, by extension, from ever generating their
+// "I will be attending" share card). loginLimiter below is the real guard
+// against abuse now — rate-limited per ip+email, same as the old flow.
+export const login = catchAsync(async (req: Request, res: Response) => {
+  const { email } = req.body as DelegateLoginInput;
 
   const registration = await Registration.findOne({
     status: 'confirmed',
@@ -34,19 +40,11 @@ export const requestAccessCode = catchAsync(async (req: Request, res: Response) 
     $or: [{ email }, { contactEmail: email }],
   }).sort({ createdAt: -1 });
 
-  if (registration) {
-    await resendAccessCodeAndTicket(registration);
+  if (!registration) {
+    throw new ApiError(404, "We couldn't find a confirmed registration for that email.", 'REGISTRATION_NOT_FOUND');
   }
 
-  // Enumeration-safe: identical response whether or not a confirmed registration exists.
-  res.json(new ApiResponse({ message: 'If that email has a confirmed registration, your access code has been sent.' }));
-});
-
-export const verifyAccessCode = catchAsync(async (req: Request, res: Response) => {
-  const { email, code } = req.body as VerifyAccessCodeInput;
-  const registrationId = await verifyDelegateAccessCode(email, code);
-
-  const sessionToken = signDelegateSessionToken(registrationId);
+  const sessionToken = signDelegateSessionToken(registration.id);
   setDelegateCookie(res, sessionToken, env.DELEGATE_SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
 
   res.json(new ApiResponse({ ok: true }));
