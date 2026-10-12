@@ -24,13 +24,12 @@ export interface DelegateMe {
   trackAssigned?: string;
 }
 
-export const requestAccessCode = async (email: string): Promise<string> => {
-  const res = await api.post<{ success: true; data: { message: string } }>('/delegate/request-code', { email });
-  return res.data.data.message;
-};
-
-export const verifyAccessCode = async (email: string, code: string): Promise<void> => {
-  await api.post('/delegate/verify-code', { email, code });
+// Email-only login — no code to request/verify. See delegate.controller.ts's
+// login for why this is deliberately simpler than the old two-step flow: the
+// friction of copying a code out of an email was stopping people from
+// bothering to sign in (and generate their "I will be attending" card).
+export const delegateLogin = async (email: string): Promise<void> => {
+  await api.post('/delegate/login', { email });
 };
 
 export const fetchDelegateMe = async (): Promise<DelegateMe> => {

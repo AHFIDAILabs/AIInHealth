@@ -82,9 +82,8 @@ export const Navbar = () => {
     { id: 'ahfid', label: 'AHFID', to: 'https://ahfid.org/', external: true },
     // Delegate portal sign-in — kept out of the main nav row (see the filter
     // below) and shown instead in the utility strip next to AHFID, and in the
-    // mobile menu list. Anyone with a confirmed registration lands here; if
-    // they've lost their access code, PortalLogin.tsx's "Resend it" re-sends
-    // both the code and their QR ticket to their email.
+    // mobile menu list. Email-only sign-in (PortalLogin.tsx) — anyone with a
+    // confirmed registration lands straight in, no access code needed.
     { id: 'login', label: t('nav.login', 'Login'), to: '/portal/login' },
   ];
 
