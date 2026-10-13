@@ -149,7 +149,7 @@ export interface PaymentBreakdown {
   byPaymentStatus: Record<string, { count: number; revenueNaira: number }>;
   byPaymentMethod: Record<string, { count: number; revenueNaira: number }>;
   byTicketCategory: { category: string; count: number; revenueNaira: number }[];
-  byDiscountTier: { tier: number; label: string; count: number; revenueNaira: number }[];
+  byDiscountTier: { tier: number; label: string; count: number; paidCount: number; revenueNaira: number }[];
   revenueByDay: { date: string; amountNaira: number }[];
 }
 

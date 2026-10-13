@@ -28,7 +28,7 @@ import {
   type PaymentBreakdown,
 } from '../../services/admin.service';
 import type { TicketCategory } from '../../services/registration.service';
-import { TICKET_PRICE_NGN, formatNaira } from '../../lib/pricing';
+import { TICKET_PRICE_NGN, formatNaira, formatNairaStrict } from '../../lib/pricing';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows, Skeleton } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
@@ -204,7 +204,7 @@ export const PaymentsPage = () => {
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <AnalyticsStatCard icon={Wallet} label="Collected" value={stats ? formatNaira(stats.collectedNaira) : null} />
+        <AnalyticsStatCard icon={Wallet} label="Collected" value={stats ? formatNairaStrict(stats.collectedNaira) : null} />
         <AnalyticsStatCard icon={CheckCircle2} label="Paid Registrations" value={stats?.paidCount ?? null} />
         <AnalyticsStatCard icon={Clock} label="Unpaid" value={stats?.unpaidCount ?? null} />
         <AnalyticsStatCard icon={XCircle} label="Failed" value={stats?.failedCount ?? null} />
@@ -244,7 +244,7 @@ export const PaymentsPage = () => {
                       data={breakdown?.revenueByDay.map((d) => ({ date: d.date, count: d.amountNaira })) ?? null}
                       color="#16A34A"
                       emptyLabel="No payments in this window yet"
-                      unitLabel={(n) => formatNaira(n)}
+                      unitLabel={(n) => formatNairaStrict(n)}
                     />
                   </div>
                   <div>
@@ -285,22 +285,30 @@ export const PaymentsPage = () => {
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">By Discount Tier</p>
                     <DonutChart
                       data={breakdown?.byDiscountTier.map((t) => ({ label: t.label, value: t.count })) ?? null}
-                      emptyLabel="No paid attendees yet"
+                      emptyLabel="No attendee registrations yet"
                     />
                   </div>
                 </div>
 
                 <div className="mt-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Discount Tier Detail</p>
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    Paid / total holding each tier — a tier can carry people who haven't paid yet (e.g. a discount
+                    campaign email applies the tier immediately, before anyone clicks pay).
+                  </p>
                   {!breakdown ? (
                     <Skeleton className="mt-3 h-20 w-full" />
                   ) : (
                     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
                       {breakdown.byDiscountTier.map((t) => (
                         <div key={t.tier} className="rounded-xl bg-offwhite px-3 py-3 text-center">
-                          <p className="font-display text-lg font-bold text-navy">{t.count}</p>
+                          <p className="font-display text-lg font-bold text-navy">
+                            {t.tier === 100 ? t.count : `${t.paidCount}/${t.count}`}
+                          </p>
                           <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{t.label}</p>
-                          <p className="mt-0.5 text-[11px] text-slate-400">{formatNaira(t.revenueNaira)}</p>
+                          <p className="mt-0.5 text-[11px] text-slate-400">
+                            {t.tier === 100 ? 'No payment required' : `${formatNairaStrict(t.revenueNaira)} collected`}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -363,8 +371,8 @@ export const PaymentsPage = () => {
           onClick={() => setConfirmCampaign(true)}
           className="ml-auto flex items-center gap-1.5 rounded-lg border border-orange/40 bg-white px-3.5 py-2 text-[13px] font-semibold text-orange hover:bg-orange/5"
         >
-          <Percent size={14} />
-          Send 50% Scholarship Offer
+         
+          Send 50<Percent size={14} /> Scholarship Offer
         </button>
         <button
           onClick={() => setConfirmRemind(true)}

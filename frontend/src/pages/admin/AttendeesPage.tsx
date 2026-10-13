@@ -28,7 +28,7 @@ import {
   type RegistrationStatus,
 } from '../../services/admin.service';
 import { idVerificationRequirementText, type TicketCategory } from '../../services/registration.service';
-import { TICKET_PRICE_NGN, isFreeTicketCategory, formatNaira } from '../../lib/pricing';
+import { TICKET_PRICE_NGN, isFreeTicketCategory, formatNaira, formatNairaStrict } from '../../lib/pricing';
 import { fetchAttendeeStats, fetchConfirmedAttendeeBreakdown, type AttendeeStats, type ConfirmedAttendeeBreakdown } from '../../services/attendee.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows, Skeleton } from '../../components/ui/Skeleton';
@@ -309,7 +309,7 @@ export const AttendeesPage = () => {
           }}
         />
         <AnalyticsStatCard icon={QrCode} label="Checked In" value={stats?.checkedIn ?? null} suffix={stats ? `(${stats.checkInRate}%)` : undefined} />
-        <AnalyticsStatCard icon={Wallet} label="Revenue" value={stats ? formatNaira(stats.revenueNaira) : null} />
+        <AnalyticsStatCard icon={Wallet} label="Revenue" value={stats ? formatNairaStrict(stats.revenueNaira) : null} />
       </div>
 
       {/* "What actually makes up the confirmed list" — every number here is
