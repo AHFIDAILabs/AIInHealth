@@ -1,0 +1,348 @@
+[
+  {
+    "code": "AIHS261002",
+    "title": "TB-AI: Automated Detection of Acid-Fast Bacilli from Ziehl Neelsen-Stained Sputum Smear Microscopy Using EfficientNet-Based Computer Vision and HiResCAM Heatmapping",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Dr. Hira Farid",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Dr. Nasir Mahmood",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "BACKGROUND: Tuberculosis (TB) remains one of the leading infectious causes of death worldwide, with the greatest burden occurring in low- and middle-income countries. Although molecular diagnostic tests have expanded access to rapid diagnosis, Ziehl Neelsen-stained sputum smear microscopy remains the most widely used frontline diagnostic method in resource-limited settings because of its affordability and accessibility. However, manual microscopy is labor-intensive, time-consuming, and susceptible to inter-observer variability, contributing to delayed diagnosis and treatment. This study presents TB-AI, an artificial intelligence-based diagnostic platform designed to support automated tuberculosis detection from sputum smear microscopy.\nMETHODS: TB-AI utilizes an EfficientNet-based convolutional neural network for automated detection of acid-fast bacilli (AFB) from Ziehl Neelsen-stained sputum smear microscopy images. The model was developed using 45,000 annotated microscopy images, including 30,000 pre-annotated images acquired using conventional brightfield microscopy and 15,000 high-resolution digital microscopy images obtained from collaborating clinical laboratories and publicly available datasets. Ground-truth annotations were provided by experienced microbiologists. Images were divided into training (70%), validation (15%), and testing (15%) datasets. Image augmentation techniques, including rotation, scaling, normalization, and contrast adjustment, were applied to enhance model generalization. HiResCAM heatmapping was incorporated to generate high-resolution activation maps highlighting image regions contributing to model predictions.\nRESULTS: TB-AI achieved a sensitivity of 98.5%, specificity of 97.2%, and an overall accuracy of 97.9% for automated AFB detection. HiResCAM heatmaps consistently localized image regions associated with AFB, supporting interpretation of model predictions, while EfficientNet demonstrated robust performance across heterogeneous microscopy image sources. These findings suggest that the framework can provide accurate and reliable assistance for smear microscopy interpretation.\nCONCLUSION: TB-AI demonstrates the potential of combining EfficientNet-based computer vision with HiResCAM heatmapping to enhance tuberculosis diagnosis from Ziehl Neelsen-stained sputum smear microscopy images. By supporting standardized interpretation, reducing reliance on manual microscopy, and improving laboratory efficiency, the platform offers a scalable approach for strengthening TB diagnostic services in resource-constrained healthcare settings. Future studies will focus on prospective multicentre clinical validation and integration into routine tuberculosis laboratory workflows.",
+    "keywords": [],
+    "track": "Applied Clinical AI",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261007",
+    "title": "A Stroke Prediction Model In Imbalanced Data: The Case of an Improved Cost Function for Logistic Regression",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Andrew Luwandagga",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "BACKGROUND: Stroke is a major non-communicable disease and a leading cause of morbidity and mortality globally. Early identification of individuals at increased risk of stroke can support timely prevention and intervention. However, developing accurate prediction models is challenging when stroke cases are substantially underrepresented relative to non-stroke cases. Conventional classification methods may therefore be biased toward the majority class, resulting in poor identification of individuals at risk of stroke. This study aimed to compare the performance of the Binary Logistic Regression, balanced logistic regression, and the Grid Search Regularized Weighted Logistic Regression (GSRWLR) models, which integrate class weighting, L2 regularization, and grid search for hyperparameter tuning, using 5,110 records from Kaggle's Stroke Prediction Dataset (2020).\nRESULT: Findings revealed that the Binary Logistic regression model had poor sensitivity (1.33%), identifying only one stroke case; the balanced logistic regression improved to 77.33%. GSRWLR further enhanced recall to 93.33%, though Area Under Curve-Receiver Operating Characteristic (AUC-ROC) values were similar across models (approximately 0.83), indicating comparable overall classification ability. GSRWLR demonstrated superior performance in identifying rare events. Age, heart disease, average glucose level, and hypertension were identified as key predictors of stroke.\nCONCLUSION: from the study suggest that optimizing logistic regression with regularization, class weighting, and grid search significantly improves stroke prediction in imbalanced datasets. Health systems could utilize Grid Search Regularized Weighted Logistic Regression to enhance the detection of stroke, particularly in under-resourced environments such as Ugandan hospitals. Further research using routinely collected clinical data from Uganda and other African populations is needed to externally validate the model and assess its potential application in local health systems.",
+    "keywords": [
+      "Stroke prediction",
+      "imbalanced data",
+      "logistic regression",
+      "machine learning",
+      "class weighting",
+      "regularization",
+      "health data science"
+    ],
+    "track": "Applied Clinical AI",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261009",
+    "title": "Using AI to Close the Communication Gap in Hospital Discharge: A Frontline-Built NHS Solution",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Ebiere O. Osusu",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "Introduction: Hospital discharge delays are a recurring issue in many healthcare systems, including the NHS. Patients who are medically fit to leave hospital are often delayed simply because the organisations involved in discharge planning don't share systems or communicate well with each other. Fragmented communication between these organisations has been identified as one of the leading causes of discharge delay. This puts more strain on hospital beds, disrupts patient flow, and causes unnecessary stress for patients, families and staff. Hospitals often have excellent internal electronic records, but that visibility disappears once discharge involves outside organisations.\nObjective: To present the design of EO HealthHub Connect, an AI-enabled platform built from frontline NHS experience to close these communication gaps and support safer, faster hospital discharge.\nMethods: The platform was shaped directly by frontline NHS discharge work. We ran a structured survey of 66 healthcare professionals involved in discharge across the pathway, asking what caused delays, where communication broke down, and where technology could help. These findings, combined with day-to-day clinical experience, shaped the design of the Minimum Viable Product, which is currently in development. Innovation: EO HealthHub Connect is a cloud-based SaaS platform, enabled by AI, that gives hospitals, local authorities, community providers, and other services a shared digital space to plan and coordinate discharge together. Patients and families are also included on the platform, so they can stay informed and involved in their own discharge process rather than relying only on phone calls for updates. The platform is built to close the communication gap between everyone involved and give a clearer, more connected view of a patient's discharge journey. AI supports the platform by streamlining workflows, but clinical decisions stay firmly with healthcare professionals.\nExpected Impact: The platform hasn't been piloted yet, but it's been designed to directly address problems identified by frontline staff and stakeholders. Once implemented, it should improve communication between organisations, strengthen coordination across health and social care, and make discharge faster and less stressful for patients, families, and staff. This approach could also be useful for other healthcare providers facing the same problem.\nConclusion: Frontline healthcare staff see the everyday breakdowns in patient care up close, which puts them in a strong position to build practical solutions. EO HealthHub Connect is an example of clinical experience, stakeholder input and digital design coming together to solve a real problem in the NHS. Next steps are piloting the platform, evaluating it with real discharge teams, and refining it based on what we learn.",
+    "keywords": [],
+    "track": "Applied Clinical AI",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261018",
+    "title": "Early Diagnosis of Ischemic Stroke on Non-Contrast CT Scans Using Artificial Intelligence: Development and Evaluation of a CNN-Based Decision Support System in Uganda",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Kateregga Michael",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Ronald Kananura",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Irene Wanyana",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "Background: Timely diagnosis of ischemic stroke remains a major challenge in many low-resource settings due to shortages of specialist radiologists and increasing imaging workloads. Artificial intelligence (AI) offers opportunities to support rapid image interpretation and strengthen health service delivery. This study developed and evaluated a convolutional neural network (CNN) for automated detection of early ischemic stroke on non-contrast computed tomography (NCCT) scans and implemented the model within a web-based decision support platform.\nMethods: A retrospective dataset of NCCT scans obtained from Mulago National Referral Hospital was used to train and evaluate the CNN model. Images underwent preprocessing, including intensity normalization and feature enhancement, before model development. Performance was assessed using five-fold cross-validation and compared with a senior radiologist on an independent evaluation subset. A web-based platform was developed to facilitate image upload and automated analysis.\nResults: The CNN achieved a mean accuracy of 90.2%, sensitivity of 91.4%, specificity of 89.0%, and an area under the receiver operating characteristic curve (AUC) of 91.3% across five-fold cross-validation. On an independent comparison dataset, the model demonstrated competitive performance relative to a senior radiologist while producing results in approximately three seconds per scan compared with approximately five minutes for manual interpretation. The web-based platform successfully generated automated predictions and confidence scores, demonstrating the feasibility of integrating AI-assisted stroke detection into routine clinical workflows.\nConclusion: The study demonstrates the potential of locally developed AI solutions to support early ischemic stroke diagnosis using routinely available NCCT imaging. By reducing interpretation time and providing rapid decision support, the system may contribute to strengthening health service delivery and improving access to timely stroke care in resource-constrained settings. Further multicenter validation is recommended prior to large-scale deployment.",
+    "keywords": [],
+    "track": "Applied Clinical AI",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261001",
+    "title": "ABIYAMO: Governance Lessons from a Responsible AI Framework for Sexual and Reproductive Health Communication Among Nigerian Adolescents",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Abiola Lawal",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "BACKGROUND: Sexual and reproductive health (SRH) remains deeply stigmatised among Nigerian adolescents aged 16 to 24, with social barriers and fear of judgment limiting access to professional care. As young people increasingly turn to general-purpose large language models (LLMs) for health guidance, their use in sensitive healthcare contexts raises governance concerns around safety, accountability, data protection, and equitable access. These challenges are particularly relevant in low-resource settings where inappropriate AI deployment may increase risks of misinformation and delayed care.\nMETHOD: Abiyamo was developed as a responsible AI chatbot for SRH education among Nigerian youth and evaluated as a case study of how responsible AI requirements can be operationalised in healthcare. The system uses Retrieval-Augmented Generation grounded in validated Federal Ministry of Health and WHO SRH resources and supports English, Hausa, Yoruba, and Igbo. A two-layer intent detection mechanism combining deterministic keyword matching and fine-tuned DistilBERT distinguishes educational, diagnostic, and crisis queries. Diagnostic and crisis queries bypass AI generation and are routed to verified Nigerian health facility referrals and the national emergency number. Interaction data is anonymised using SHA-256 hashing before logging, with data handling aligned with the Nigeria Data Protection Act (NDPA) 2023.\nRESULT: The fine-tuned DistilBERT model achieved a crisis recall of 0.909 at an adjusted classification threshold, exceeding the a priori safety target of 0.80 and outperforming the TF-IDF baseline, which achieved 0.818. Educational query classification achieved an F1 score of 0.882. Crisis recall was prioritised because failure to identify a user in crisis carries greater potential harm than a false positive referral.\nCONCLUSION: Abiyamo demonstrates how responsible AI principles can be translated into practical safeguards and measurable controls for healthcare deployment. The implementation provides governance lessons for Nigeria, particularly the need for defined AI-use boundaries, risk-sensitive evaluation, locally validated knowledge, linguistic inclusion, data protection, and human escalation mechanisms to support national AI health standards and responsible AI adoption.",
+    "keywords": [],
+    "track": "Country AI-in-Health Governance",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261006",
+    "title": "Developing Smart Policies: An AI Framework for Integrating Multisectoral Insights into Nigerian Government Health Systems",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Umulkhairah Arama",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Lilian Damisa",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "Background: AI-driven health surveillance and natural language processing (NLP) tools have improved data synthesis and decision support in global health systems. However, in Nigeria and other low- and middle-income countries (LMICs), evidence generated by NGOs, universities, and research institutions is often poorly integrated into government decision-making, resulting in delayed policy responses and inefficient resource allocation. This study proposes a context-specific AI framework to bridge this policy-data gap within Nigeria's health governance system.\nMethods: This mixed-methods, phased study will develop and validate an AI-powered \"Multisectoral Intelligence Hub,\" piloted in Zaria, Kaduna State, over six months. Stage 1 uses an NLP pipeline built on the OpenAI GPT API to scan, extract, and summarize health reports, outbreak alerts, and policy briefs from 8-10 verified sources, including NCDC situation reports, Kaduna State Ministry of Health bulletins, Ahmadu Bello University research repositories, WHO AFRO outbreak news, Africa CDC bulletins, and AJOL-indexed journals. Extraction accuracy will be validated against 100 manually annotated documents using precision, recall, and F1-score. Stage 2 scores extracted recommendations using a composite urgency-relevance index built from five weighted variables: event severity, population vulnerability, geographic relevance, topic-ministry alignment, and source credibility, with weights set via a Delphi exercise involving 8 to 10 experts. Recommendations exceeding threshold scores are routed through a dashboard, automated email digest, and SMS alerts for high-urgency items. Stage 3 involves stakeholder validation with 15 ministry officials and 10 civil society/NGO representatives via semi-structured interviews and an adapted System Usability Scale survey, analyzed thematically and descriptively. The framework incorporates a data provenance/verification layer and human-in-the-loop review before dissemination, follows informed consent and anonymization procedures, and will seek approval from the ABUTH Health Research Ethics Committee in compliance with the Nigeria Data Protection Act. Performance will be evaluated using NLP accuracy, response time reduction, policy uptake rate, and stakeholder satisfaction.\nExpected Outcomes: The framework is expected to reduce bureaucratic delays, improve real-time situational awareness, and accelerate evidence-based decision-making, while strengthening multisectoral collaboration, resource allocation, and emergency response capacity.\nConclusion: Strong data-driven frameworks are essential for sustainable health systems. This pilot offers a potentially scalable and replicable model for addressing the policy-data gap in Nigeria and similar LMIC contexts.",
+    "keywords": [],
+    "track": "Country AI-in-Health Governance",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261017",
+    "title": "TinyMed-NG: Fully Offline Multilingual Medical AI for Nigerian Rural Health Workers, Deployed on Commodity Android Devices",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Faruq Oluwatobi Afolabi",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "Background: Community Health Extension Workers form the frontline of rural healthcare delivery across Nigeria, yet frequently operate without specialist consultation, reference materials in local languages, or reliable internet connectivity. Existing medical language models are cloud-dependent and English-centric, making them unusable in the settings where frontline health workers most need decision support. Methods: We developed TinyMed-NG, a fully offline multilingual medical language model system built on Llama 3.2 3B Instruct. The model was fine-tuned in two stages: supervised fine-tuning via QLoRA on 3,917 curated medical question-answer pairs spanning Yoruba, Hausa, Igbo, and Nigerian Pidgin English, covering malaria, typhoid, maternal health, child health, wound management, and emergency recognition; followed by Direct Preference Optimization using synthetic preference pairs to improve language adherence and reduce code-switching. The model was quantized to Q2_K format (1.36 GB, a 4.7x compression from the merged 16-bit model) and deployed via llama.cpp on Android ARM64 devices with no internet connectivity, including an integrated on-device Electronic Medical Record module and a multilingual emergency referral alerting system.\nResults: SFT training achieved a final cross-entropy loss of 1.099 over 932 steps. DPO training yielded a chosen response reward of 28.86 versus a rejected response reward of 10.46, a margin of 18.40, with 0.95 reward accuracy, confirming successful preference alignment across all four languages. The deployed system runs on a TECNO CAMON 40 Pro (8GB RAM) with average on-device inference latency of 62 seconds and a minimum requirement of 2GB available RAM, matching the typical constraint of rural-deployed Android devices in Nigerian markets. We additionally identified and resolved a previously undocumented Llama 3 GGUF tokenizer incompatibility affecting standard llama.cpp Android deployments, a fix required for any Llama 3 model deployed offline on Android via this widely used runtime.\nConclusion: TinyMed-NG demonstrates that fully offline, multilingual, safety-conscious medical AI is achievable on commodity Android hardware already in the hands of Nigerian rural health workers, without dependence on connectivity or cloud infrastructure. This offers a practical, country-led path to extending AI-enabled clinical decision support into the lowest-connectivity, highest-need settings across the continent.",
+    "keywords": [],
+    "track": "Country AI-in-Health Governance",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261003",
+    "title": "Development and Integration of an AI-Enabled Preeclampsia Risk Stratification and Pregnancy Outcomes Registry into Hospital Electronic Medical Records in Nigeria",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Suraiya Suleiman Auwal",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "BACKGROUND: Preeclampsia and other hypertensive disorders of pregnancy are among the leading direct causes of maternal death worldwide, accounting for approximately 16% of the 287,000 maternal deaths recorded globally in 2020, and an estimated 50,000 deaths, per the World Health Organization's most recent analysis of maternal mortality causes. The condition affects 3-8% of pregnancies worldwide, with its burden concentrated in sub-Saharan Africa. Nigeria illustrates this starkly with National maternal mortality estimated at 993 per 100,000 live births, rising above 1,000 per 100,000 in several Northern States. A recent meta-analysis of Nigerian pregnancy cohorts reported a pooled preeclampsia/eclampsia prevalence of 4.51%, an associated maternal mortality rate of 6.04%, and a fetal mortality rate of 16.73%. This burden is large, geographically concentrated, and substantially preventable through timely risk identification and low-cost prophylaxis, making the absence of a locally deployable screening tool an urgent gap rather than a theoretical one. Yet the risk-prediction models with the strongest evidence base were validated in settings with routine biomarker and Doppler access that many Nigerian antenatal facilities lack, leaving providers without an auditable, locally appropriate tool for early risk stratification.\nMETHODS: Preeclampsia Prediction Prevention and Surveillance (PREPPS) combines two risk-stratification pathways: a Tier 1 competing-risks model using maternal history, mean arterial pressure (MAP), uterine artery pulsatility index (Ut A PI), and angiogenic biomarkers where available, and a Tier 2 calibrated gradient-boosted model using history and MAP, or history and Ut A PI alone, where they are not, so facilities lacking biomarker access remain served rather than excluded. Both pathways operate alongside a deterministic safety-rule layer flagging severe presentations irrespective of model output, with per-patient explanations via SHAP or an Explainable Boosting Machine. Integration is achieved through an EMR-agnostic HL7 FHIR interface, and a longitudinal outcomes registry links each classification to eventual delivery and neonatal outcomes; overrides are logged with a mandatory rationale, governed by Nigeria Data Protection Act compliance and Health Research Ethics Committee oversight.\nRESULTS: The system architecture, tiered modelling specification, and antenatal data schema are finalised, and algorithm adaptation for the Nigerian clinical context is complete. An EMR-integrated PREPPS pilot module using the FHIR interface has been built for deployment at National Hospital Abuja, the designated single-site pilot facility, where Health Research Ethics Committee review is underway alongside finalisation of the pilot design and the developer-facility data sharing agreement. The validation plan specifies concrete next steps viz: prospective single-centre validation with refinement of decision-support prompts and registry fields; multi-centre expansion across tertiary and selected secondary facilities for external validation and recalibration; and integration with Ministry of Health maternal health information systems to support national scale-up and dissemination of registry-derived outcomes data. Clinical performance results are not yet available.\nCONCLUSION: PREPPS closes the gap between validated preeclampsia risk models and Nigeria's deployable infrastructure with a completed system design, an adapted algorithm, and an EMR-integrated pilot ready for deployment at National Hospital Abuja.",
+    "keywords": [],
+    "track": "Federated AI Systems & Data Sovereignty",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261013",
+    "title": "The state of the data ecosystem in health facilities in Uganda: A multi-center study with application on stroke data",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Suzan Nakasendwa",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "David Guwatudde",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Joan Mutyoba",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Agnes Kiragga",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "BACKGROUND: Stroke is an increasing public health challenge in low- and middle-income countries, yet the availability, quality, and usability of stroke data systems required to support surveillance, clinical care, research, and policy remain poorly characterized. Understanding the existing stroke data ecosystem is essential for identifying opportunities to strengthen data-driven stroke care and health system planning. This study assessed the structure and functionality of the stroke data ecosystem across selected hospitals in Uganda.\nMETHODS: We conducted a cross-sectional multi-center descriptive study among six tertiary health facilities providing stroke care in Uganda. Data were collected from April to June 2026 using a structured assessment tool covering four domains of the stroke data ecosystem: data governance, data architecture and management, digital platforms and infrastructure, and data users and utilization. Information was collected from facility representatives responsible for stroke data management, primarily medical records officers. Descriptive analyses were conducted to summarize the availability of data systems, governance practices, infrastructure, workforce capacity, and use of stroke information for clinical care, reporting, research, and decision-making.\nRESULTS: Five tertiary-level referral hospitals and one secondary-level specialized facility participated in this study. All facilities maintained stroke registries and provided rehabilitation services, while five provided acute stroke care and neuroimaging services. Four hospitals used electronic stroke registries, whereas two relied on paper-based systems. Foundational governance structures were commonly reported, with most facilities having data governance frameworks (4/6), dedicated leadership, accountability mechanisms, and routine reporting processes. However, formal governance structures such as steering committees and advanced data-sharing mechanisms were less consistently implemented. All hospitals used standardized stroke definitions and diagnostic coding systems, and most (4/6) maintained metadata documentation and conducted routine data quality checks. However, longitudinal data capture remained limited, with post-discharge follow-up information collected in only two facilities. Digital infrastructure was widely available, including local servers, cloud-based storage, user authentication, and routine submission of stroke data to the national DHIS2 platform. However, information technology support and integration of advanced analytics varied across facilities. Stroke data were routinely used for clinical care, hospital reporting, planning, and research, although the availability of specialized analytical skills and advanced data products differed between institutions.\nCONCLUSION: Health facilities in Uganda have established important components of a stroke data ecosystem, however, gaps remain in longitudinal patient tracking, advanced analytics, interoperability, and specialized workforce capacity. Strengthening these areas will be critical for developing integrated stroke information systems capable of supporting clinical decision-making, research, surveillance, and policy development.",
+    "keywords": [],
+    "track": "Federated AI Systems & Data Sovereignty",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261005",
+    "title": "From Situation Report to Signal: An Interoperable, AI-Native Aberration-Detection Layer for IDSR, SORMAS, and DHIS2 to Strengthen Real-Time Outbreak Response in Nigeria",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Ezekiel Oladejo",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Miracle Adesina",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Owen Adeniyi",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "BACKGROUND: Nigeria has invested substantially in digital health infrastructure, operating Integrated Disease Surveillance and Response (IDSR) reporting, deploying the Surveillance Outbreak Response Management and Analysis System (SORMAS), and running DHIS2 as its routine health management information system. In practice, however, these platforms largely store and display data. Aberration detection still depends on manual review of weekly situation reports, so outbreak signals frequently surface late and unevenly across states.\nMETHOD: We designed an interoperable, AI-native detection layer intended to sit on top of existing surveillance systems rather than replace them. Built on a FastAPI and PostgreSQL backend, the layer ingests routine indicator data through standard interfaces, including the DHIS2 Web API, SORMAS data exports, and IDSR line lists, harmonises it to a common schema, and runs a multi-method engine combining negative-binomial CUSUM, EWMA, DBSCAN spatio-temporal clustering, and a LightGBM syndromic classifier. Ranked alerts are surfaced through a Next.js dashboard with interactive Leaflet maps and delivered to frontline officers by SMS. The framework was evaluated retrospectively using Nigerian cholera surveillance data spanning 1971-2021 together with recent NCDC situation reports.\nRESULT: The layer was designed to integrate with existing surveillance platforms through standard APIs and data exports, enabling retrospective processing of 2,652 weekly surveillance records without modification to the underlying data model. The integrated detection engine generated prioritised alerts with a median lead time of 2.6 weeks ahead of formally recognised outbreaks, at a false-alarm rate of 1.3 alerts per surveillance year, while successfully identifying 89.4% of historically recognised outbreaks in the validation dataset. End-to-end processing, dashboard visualisation, and SMS notification completed in under 60 seconds on low-cost cloud infrastructure.\nCONCLUSION: The work demonstrates that early-warning intelligence can be added as a non-invasive layer over the surveillance and information systems African countries already operate, converting passive reporting into active outbreak detection without replacing existing national infrastructure. By consuming standard IDSR, SORMAS, and DHIS2 outputs, the approach is readily portable across countries that share this digital backbone, providing a practical, interoperability-first pathway for strengthening epidemic preparedness and health security.",
+    "keywords": [],
+    "track": "Public Health Intelligence & Disease Programs",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261011",
+    "title": "Subnational Malaria Response Gaps: An Interactive Dashboard for Priority Setting in Eastern Africa",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Eban Saria",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Sosthenes Ketende",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Dr. Susan Rumisha",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "INTRODUCTION: Malaria control remains undermined by a persistent mismatch between disease burden and intervention coverage. National surveillance can identify which countries lag but masks within-country heterogeneity, leaving program managers unable to see where inside a country the response is failing to match the disease the scale at which resources are actually deployed.\nMETHODOLOGY: Malaria incidence, P. falciparum prevalence (PfPR 2-10), ITN use, and effective treatment were drawn from Malaria Atlas Project modelled surfaces for eight countries (Tanzania, Kenya, Uganda, Ethiopia, Eritrea, Rwanda, South Sudan, Madagascar), 2015-2024, and aggregated to first-level administrative units (Uganda to districts). A Malaria Response Gap Index defined the gap as burden left uncovered burden (mean of scaled incidence and prevalence) times (1 minus response), response being the mean of ITN use and treatment. Units were tiered into four priority classes and visualized in an interactive R Shiny dashboard with choropleth drill-down and trends.\nRESULTS: Unmet need was concentrated, not uniform. South Sudan's Equatoria states ranked highest Western Equatorial sustained incidence above 320 per 1,000 and prevalence above 30% against coverage near 50%. The subnational lens exposed hotspots masked by national adequacy, notably western Kenya's Lake Victoria basin (Siaya, Busia). Coverage rose across most regions over the period, narrowing gaps overall, yet a subset of high-burden regions retained substantial unmet need through 2024.\nCONCLUSION: A sub-national Response Gap Index turns routine modelled surveillance into region-specific intelligence, pinpointing which provinces and districts not just which countries warrant investment, giving programs a practical, scalable subnational priority-setting tool.",
+    "keywords": [],
+    "track": "Public Health Intelligence & Disease Programs",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261015",
+    "title": "Unlocking community pharmacy data for national AMR intelligence: a case for AI-enabled surveillance integration in sub-Saharan Africa",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Elise Mbulu Matondo",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "BACKGROUND: Antimicrobial resistance (AMR) surveillance in sub-Saharan Africa relies almost exclusively on laboratory-based sentinel systems located in referral hospitals. In Tanzania, for example, only nine sentinel hospital labs feed data into the national surveillance system, which then reports to WHO GLASS. Yet community pharmacies, where up to 88% of antibiotics are dispensed without prescription generate no data that reaches national health authorities. This means the majority of antibiotic transactions in the region occur in a surveillance blind spot, leaving policymakers without the information they need to design targeted stewardship interventions. Globally, efforts to strengthen AMR surveillance have focused on expanding laboratory capacity and hospital reporting. This paper argues that a parallel strategy is needed: integrating community pharmacy dispensing data into national AMR intelligence systems using AI-enabled tools appropriate for low-resource environments.\nMETHODS: This conceptual analysis draws on a review of current AMR surveillance architectures in sub-Saharan Africa, with Tanzania as a primary case study, alongside published evidence on community pharmacy antibiotic dispensing patterns, AI applications in health surveillance, and digital health implementation in resource-limited settings. The analysis maps the existing data flow from sentinel labs to the national level and identifies the structural, technical, and governance gaps that currently prevent community pharmacy data from entering this flow. It then proposes a model for AI-enabled integration, drawing on the author's experience as a pharmacist from the Democratic Republic of Congo and researcher on a pharmacy-centred AI surveillance framework presented at the 5th SFUCHAS Annual Scientific Conference in Tanzania.\nRESULT: The analysis identifies three principal barriers to integrating pharmacy data into national AMR intelligence. First, community pharmacies lack standardised digital data capture systems, most transactions are recorded manually or not at all. Second, no regulatory mechanism currently requires or incentivises pharmacies to report dispensing data to health authorities. Third, the volume and variability of pharmacy-level data would overwhelm manual review processes, making AI-assisted pattern detection not merely useful but necessary. The proposed model addresses these barriers through a three-layer architecture: local data capture at the pharmacy level via lightweight digital tools such as USSD or SMS-based forms; centralised AI analysis to detect unusual prescribing patterns, geographic clusters, and temporal trends across many pharmacies simultaneously; and structured reporting of anonymised, aggregated insights to existing national surveillance systems.\nCONCLUSION: Community pharmacy data represents the largest untapped source of real-time antibiotic use intelligence in sub-Saharan Africa. Integrating this data into national surveillance through AI-enabled tools could fundamentally improve the evidence base available to policymakers designing AMR containment strategies. However, this requires deliberate policy decisions, not just technical development, including regulatory frameworks for pharmacy data reporting, governance standards for AI-assisted health intelligence, and investment in basic digital infrastructure at the community pharmacy level. Without these enabling conditions, even the most sophisticated AI tools will have no data to analyse. Countries developing national AI-in-health strategies should prioritise community-level data integration as a foundational layer rather than an afterthought.",
+    "keywords": [],
+    "track": "Public Health Intelligence & Disease Programs",
+    "presentationType": "oral",
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  },
+  {
+    "code": "AIHS261027",
+    "title": "From Situation Report to Signal: An Interoperable, AI-Native Aberration-Detection Layer for IDSR, SORMAS, and DHIS2 to Strengthen Real-Time Outbreak Response in Nigeria",
+    "status": "published",
+    "authors": [
+      {
+        "name": "Ezekiel Oladejo",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Miracle Adesina",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      },
+      {
+        "name": "Owen Adeniyi",
+        "affiliation": null,
+        "isCorresponding": null,
+        "orcid": null
+      }
+    ],
+    "abstract": "BACKGROUND: Nigeria has invested substantially in digital health infrastructure, operating Integrated Disease Surveillance and Response (IDSR) reporting, deploying the Surveillance Outbreak Response Management and Analysis System (SORMAS), and running DHIS2 as its routine health management information system. In practice, however, these platforms largely store and display data. Aberration detection still depends on manual review of weekly situation reports, so outbreak signals frequently surface late and unevenly across states.\nMETHOD: We designed an interoperable, AI-native detection layer intended to sit on top of existing surveillance systems rather than replace them. Built on a FastAPI and PostgreSQL backend, the layer ingests routine indicator data through standard interfaces, including the DHIS2 Web API, SORMAS data exports, and IDSR line lists, harmonises it to a common schema, and runs a multi-method engine combining negative-binomial CUSUM, EWMA, DBSCAN spatio-temporal clustering, and a LightGBM syndromic classifier. Ranked alerts are surfaced through a Next.js dashboard with interactive Leaflet maps and delivered to frontline officers by SMS. The framework was evaluated retrospectively using Nigerian cholera surveillance data spanning 1971-2021 together with recent NCDC situation reports.\nRESULT: The layer was designed to integrate with existing surveillance platforms through standard APIs and data exports, enabling retrospective processing of 2,652 weekly surveillance records without modification to the underlying data model. The integrated detection engine generated prioritised alerts with a median lead time of 2.6 weeks ahead of formally recognised outbreaks, at a false-alarm rate of 1.3 alerts per surveillance year, while successfully identifying 89.4% of historically recognised outbreaks in the validation dataset. End-to-end processing, dashboard visualisation, and SMS notification completed in under 60 seconds on low-cost cloud infrastructure.\nCONCLUSION: The work demonstrates that early-warning intelligence can be added as a non-invasive layer over the surveillance and information systems African countries already operate, converting passive reporting into active outbreak detection without replacing existing national infrastructure. By consuming standard IDSR, SORMAS, and DHIS2 outputs, the approach is readily portable across countries that share this digital backbone, providing a practical, interoperability-first pathway for strengthening epidemic preparedness and health security.",
+    "keywords": [],
+    "track": "Public Health Intelligence & Disease Programs",
+    "presentationType": null,
+    "sessionRef": null,
+    "language": "en",
+    "corrections": []
+  }
+]
