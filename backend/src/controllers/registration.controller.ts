@@ -1165,6 +1165,7 @@ export const adminSendScholarshipCampaign = catchAsync(async (req: Request, res:
       authorizationUrl,
       ticketCategory: reg.ticketCategory ?? '',
       amountNaira,
+      deadlineAt,
       deadlineLabel,
     });
   });

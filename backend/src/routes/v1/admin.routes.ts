@@ -277,6 +277,7 @@ router.get('/whatsapp/conversations/:id', requireRole('super_admin', 'admin'), w
 router.post('/whatsapp/conversations/:id/reply', requireRole('super_admin', 'admin'), whatsappController.adminReply);
 
 router.get('/payments-stats', requireRole('super_admin', 'admin', 'viewer'), paymentController.adminStats);
+router.get('/payments-stats/breakdown', requireRole('super_admin', 'admin', 'viewer'), paymentController.adminBreakdown);
 router.get('/payments/reconciliations', requireRole('super_admin', 'admin'), reconciliationController.list);
 router.post('/payments/reconciliations/:reference/resync', requireRole('super_admin', 'admin'), reconciliationController.resync);
 

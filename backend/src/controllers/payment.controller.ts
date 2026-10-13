@@ -14,7 +14,7 @@ import { emitAdminNotification } from '../services/notification.service.js';
 import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
 import { sendPaymentPendingIdVerificationEmail } from '../services/email.service.js';
 import type { InitializePaymentInput } from '../validations/payment.validation.js';
-import { ID_VERIFICATION_TICKET_CATEGORIES, type TicketCategory } from '../types/enums.js';
+import { ID_VERIFICATION_TICKET_CATEGORIES, TICKET_CATEGORIES, PAYMENT_METHODS, ACCESS_CODE_DISCOUNTS, type TicketCategory } from '../types/enums.js';
 
 // A retried "Pay Now" click (double-click, a network timeout the client retries)
 // shouldn't open a second Paystack transaction for the same seat — Paystack has no
@@ -264,6 +264,94 @@ export const adminStats = catchAsync(async (_req: Request, res: Response) => {
       paidCount,
       unpaidCount,
       failedCount,
+    })
+  );
+});
+
+const DAYS = 30;
+const since = () => new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000);
+const koboToNaira = (kobo: number): number => Math.round(kobo / 100);
+
+// GET /admin/payments-stats/breakdown — the "where is the money actually
+// coming from, and what's still outstanding" view for the Payments page.
+// Every aggregate below is scoped to type:'attendee' only (the only type that
+// ever has a real paymentStatus/amountKobo — see adminMarkPaid's own guard)
+// and, except byPaymentStatus itself, further scoped to paymentStatus:'paid'
+// since revenue-by-X breakdowns are meaningless for money that was never
+// collected. Same flat Promise.all-of-aggregates shape as analytics.controller.ts,
+// not $facet, for consistency with the rest of this codebase.
+export const adminBreakdown = catchAsync(async (_req: Request, res: Response) => {
+  const match = { type: 'attendee' } as const;
+  const paidMatch = { ...match, paymentStatus: 'paid' } as const;
+
+  const [
+    byPaymentStatusRaw,
+    byPaymentMethodRaw,
+    byTicketCategoryRaw,
+    byDiscountTierRaw,
+    revenueByDayRaw,
+  ] = await Promise.all([
+    Registration.aggregate<{ _id: string; count: number; revenueKobo: number }>([
+      { $match: match },
+      { $group: { _id: '$paymentStatus', count: { $sum: 1 }, revenueKobo: { $sum: '$amountKobo' } } },
+    ]),
+    // paymentMethod is only ever explicitly set to 'manual' (adminMarkPaid) —
+    // the real Paystack webhook/verify path (confirmPaymentByReference) never
+    // sets it at all, so a missing value means "paid via Paystack", same
+    // convention the Payments table's own "Manual" badge already relies on
+    // (paymentMethod === 'manual', nothing else). Filtering on $exists here
+    // would silently drop every real Paystack payment from this breakdown.
+    Registration.aggregate<{ _id: string; count: number; revenueKobo: number }>([
+      { $match: paidMatch },
+      { $group: { _id: { $ifNull: ['$paymentMethod', 'paystack'] }, count: { $sum: 1 }, revenueKobo: { $sum: '$amountKobo' } } },
+    ]),
+    Registration.aggregate<{ _id: string; count: number; revenueKobo: number }>([
+      { $match: paidMatch },
+      { $group: { _id: '$ticketCategory', count: { $sum: 1 }, revenueKobo: { $sum: '$amountKobo' } } },
+      { $sort: { revenueKobo: -1 } },
+    ]),
+    Registration.aggregate<{ _id: number; count: number; revenueKobo: number }>([
+      { $match: paidMatch },
+      { $group: { _id: { $ifNull: ['$discountPercent', 0] }, count: { $sum: 1 }, revenueKobo: { $sum: '$amountKobo' } } },
+      { $sort: { _id: 1 } },
+    ]),
+    Registration.aggregate<{ _id: string; amountKobo: number }>([
+      { $match: { ...paidMatch, paidAt: { $gte: since() } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$paidAt' } }, amountKobo: { $sum: '$amountKobo' } } },
+      { $sort: { _id: 1 } },
+    ]),
+  ]);
+
+  const byPaymentStatus = Object.fromEntries(
+    ['not_required', 'unpaid', 'paid', 'failed'].map((s) => [s, { count: 0, revenueNaira: 0 }])
+  ) as Record<string, { count: number; revenueNaira: number }>;
+  byPaymentStatusRaw.forEach((r) => (byPaymentStatus[r._id] = { count: r.count, revenueNaira: koboToNaira(r.revenueKobo ?? 0) }));
+
+  const byPaymentMethod = Object.fromEntries(PAYMENT_METHODS.map((m) => [m, { count: 0, revenueNaira: 0 }])) as Record<
+    string,
+    { count: number; revenueNaira: number }
+  >;
+  byPaymentMethodRaw.forEach((r) => (byPaymentMethod[r._id] = { count: r.count, revenueNaira: koboToNaira(r.revenueKobo) }));
+
+  const byTicketCategory = TICKET_CATEGORIES.map((category) => {
+    const row = byTicketCategoryRaw.find((r) => r._id === category);
+    return { category, count: row?.count ?? 0, revenueNaira: koboToNaira(row?.revenueKobo ?? 0) };
+  }).filter((r) => r.count > 0);
+
+  const byDiscountTier = [0, ...ACCESS_CODE_DISCOUNTS].map((tier) => ({
+    tier,
+    label: tier === 0 ? 'Full price' : tier === 10 ? '10% (group)' : `${tier}% (scholarship)`,
+    count: byDiscountTierRaw.find((r) => r._id === tier)?.count ?? 0,
+    revenueNaira: koboToNaira(byDiscountTierRaw.find((r) => r._id === tier)?.revenueKobo ?? 0),
+  }));
+
+  res.json(
+    new ApiResponse({
+      byPaymentStatus,
+      byPaymentMethod,
+      byTicketCategory,
+      byDiscountTier,
+      revenueByDay: revenueByDayRaw.map((r) => ({ date: r._id, amountNaira: koboToNaira(r.amountKobo) })),
     })
   );
 });

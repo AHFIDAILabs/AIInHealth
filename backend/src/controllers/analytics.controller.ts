@@ -74,8 +74,12 @@ export const overview = catchAsync(async (_req: Request, res: Response) => {
     ]),
     // Kept here (not just in the Revenue tab's own endpoint) — DashboardPage.tsx's
     // landing-page KPI sparkline/delta reads this same field off this endpoint.
+    // type:'attendee' matches every other revenue query in this file — no other
+    // registration type can ever carry a real paid amountKobo (adminMarkPaid
+    // and every Paystack-initializing path are both attendee-only), but this
+    // keeps that an explicit guarantee rather than an incidental one.
     Registration.aggregate<{ _id: string; amountKobo: number }>([
-      { $match: { paymentStatus: 'paid', paidAt: { $gte: since() } } },
+      { $match: { type: 'attendee', paymentStatus: 'paid', paidAt: { $gte: since() } } },
       { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$paidAt' } }, amountKobo: { $sum: '$amountKobo' } } },
       { $sort: { _id: 1 } },
     ]),

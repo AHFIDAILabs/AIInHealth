@@ -845,11 +845,16 @@ export const sendRegistrationPaymentLinkEmail = async (
 export const sendScholarshipCampaignEmail = async (
   to: string,
   fullName: string,
-  data: { authorizationUrl: string; ticketCategory: string; amountNaira: number; deadlineLabel: string }
+  data: { authorizationUrl: string; ticketCategory: string; amountNaira: number; deadlineAt: Date; deadlineLabel: string }
 ): Promise<void> => {
+  // A real calendar date, not just the word "tomorrow" — this is computed
+  // fresh from deadlineAt (itself computed at send time, not hardcoded) so the
+  // subject can never drift from the body if the campaign is sent later than
+  // originally planned.
+  const shortDate = data.deadlineAt.toLocaleDateString('en-NG', { timeZone: 'Africa/Lagos', day: 'numeric', month: 'short' });
   await sendEmail({
     to,
-    subject: '50% Off Your Registration — Ends Tomorrow | AI in Health Summit 2026',
+    subject: `50% Off Your Registration — Ends ${shortDate} | AI in Health Summit 2026`,
     html: `
       <p>Hi ${fullName},</p>
       <p>We're offering a limited-time <strong>50% scholarship discount</strong> on your ${data.ticketCategory.replace(/_/g, ' ')} registration for the AI in Health Summit 2026.</p>
