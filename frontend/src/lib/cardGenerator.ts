@@ -78,7 +78,13 @@ const BRAND = {
 // is the one part of this file most likely to need a live-render-and-compare
 // pass to true up, the same way the rest of this card engine's layout work
 // has gone.
-const PHOTO_BOX = { x: 186, y: 540, w: 730, h: 765, r: 48 };
+// Width extended to butt directly against NAME_BOX's left edge (984) — the
+// template's own source art leaves a ~68px dead gutter between the two white
+// boxes here, which read as the photo "not filling its side of the card"
+// once a real (non-placeholder) photo is dropped in. Matching the box to the
+// photo clip region exactly means the photo now genuinely fills everything
+// up to the name card, no unfilled dark sliver left over.
+const PHOTO_BOX = { x: 186, y: 540, w: 798, h: 765, r: 48 };
 const NAME_BOX = { x: 984, y: 540, w: 630, h: 248 };
 const ROLE_BLOT = { x: 186, y: 1330, w: 760, h: 110 };
 const ROLE_TEXT_Y = 1410;
