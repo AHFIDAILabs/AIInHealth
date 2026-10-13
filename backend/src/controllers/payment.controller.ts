@@ -316,18 +316,24 @@ export const adminBreakdown = catchAsync(async (_req: Request, res: Response) =>
       { $sort: { revenueKobo: -1 } },
     ]),
     // count spans every attendee regardless of paymentStatus (so a 100%-
-    // scholarship seat, always 'not_required', still shows up) — but the
-    // revenue sum is conditioned on paymentStatus:'paid' specifically.
-    // amountKobo is set the moment a Paystack transaction is INITIALIZED
-    // (initializePaymentForRegistration, at "Pay Now" click time), not only on
-    // successful payment, so an unconditional sum here would count money that
-    // was quoted but never actually collected as if it were real revenue.
-    Registration.aggregate<{ _id: number; count: number; revenueKobo: number }>([
+    // scholarship seat, always 'not_required', still shows up) — but
+    // paidCount/revenueKobo are both conditioned on paymentStatus:'paid'
+    // specifically, so the UI can show "how many actually paid at this tier"
+    // distinctly from "how many currently hold this tier" (e.g. a 50%-off
+    // campaign sets discountPercent:50 on every targeted registration the
+    // moment the email goes out, long before — or regardless of whether —
+    // they ever actually pay; counting that as "179 paid at 50%" would be
+    // flatly wrong). amountKobo is set the moment a Paystack transaction is
+    // INITIALIZED (initializePaymentForRegistration, at "Pay Now" click
+    // time), not only on successful payment, so an unconditional revenue sum
+    // here would count money that was quoted but never actually collected.
+    Registration.aggregate<{ _id: number; count: number; paidCount: number; revenueKobo: number }>([
       { $match: match },
       {
         $group: {
           _id: { $ifNull: ['$discountPercent', 0] },
           count: { $sum: 1 },
+          paidCount: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, 1, 0] } },
           revenueKobo: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$amountKobo', 0] } },
         },
       },
@@ -356,12 +362,16 @@ export const adminBreakdown = catchAsync(async (_req: Request, res: Response) =>
     return { category, count: row?.count ?? 0, revenueNaira: koboToNaira(row?.revenueKobo ?? 0) };
   }).filter((r) => r.count > 0);
 
-  const byDiscountTier = [0, ...ACCESS_CODE_DISCOUNTS].map((tier) => ({
-    tier,
-    label: tier === 0 ? 'Full price' : tier === 10 ? '10% (group)' : `${tier}% (scholarship)`,
-    count: byDiscountTierRaw.find((r) => r._id === tier)?.count ?? 0,
-    revenueNaira: koboToNaira(byDiscountTierRaw.find((r) => r._id === tier)?.revenueKobo ?? 0),
-  }));
+  const byDiscountTier = [0, ...ACCESS_CODE_DISCOUNTS].map((tier) => {
+    const row = byDiscountTierRaw.find((r) => r._id === tier);
+    return {
+      tier,
+      label: tier === 0 ? 'Full price' : tier === 10 ? '10% (group)' : `${tier}% (scholarship)`,
+      count: row?.count ?? 0,
+      paidCount: row?.paidCount ?? 0,
+      revenueNaira: koboToNaira(row?.revenueKobo ?? 0),
+    };
+  });
 
   res.json(
     new ApiResponse({
