@@ -528,6 +528,25 @@ export const sendPresentingCardEmail = async (to: string, authorName: string, ca
   });
 };
 
+// innovationShowcaseEntry.controller.ts's adminSendShowcaseCardInvites —
+// invites a confirmed Innovation Showcase entrant to generate their "I'm
+// showcasing" share card from a public magic-link page, same no-login shape
+// as sendPresentingCardEmail above (no portal login exists for showcase
+// entrants either).
+export const sendShowcaseCardEmail = async (to: string, startupName: string, cardUrl: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "Share that you're in the Innovation Showcase — AI in Health Summit 2026",
+    html: `
+      <p>Hi there,</p>
+      <p>${startupName} has been confirmed for the Innovation Showcase at the AI in Health Summit 2026 — let your network know.</p>
+      ${emailButton(cardUrl, 'Generate my "I\'m showcasing" card')}
+      <p>No sign-in needed — the link above takes you straight to your personalized card to download or share to social media.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 export const sendPasswordResetEmail = async (to: string, resetUrl: string): Promise<void> => {
   await sendEmail({
     to,
@@ -861,6 +880,22 @@ export const sendScholarshipCampaignEmail = async (
       <p>Your discounted price is <strong>&#8358;${data.amountNaira.toLocaleString('en-NG')}</strong> — but this offer expires <strong>${data.deadlineLabel}</strong>.</p>
       ${emailButton(data.authorizationUrl, 'Claim my 50% discount now')}
       <p>Once payment is confirmed, you'll receive your registration confirmation and check-in QR code by email.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
+// contact.controller.ts's adminReply — a free-text reply to a public
+// Contact form submission. Line breaks the admin typed are preserved as
+// <br/> since this is plain text in, not a rich editor.
+export const sendContactReplyEmail = async (to: string, name: string, body: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Re: Your message to AI in Health Summit 2026',
+    html: `
+      <p>Hi ${name},</p>
+      <p>${body.replace(/\n/g, '<br/>')}</p>
+      <p>— The AI in Health Summit 2026 team</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });

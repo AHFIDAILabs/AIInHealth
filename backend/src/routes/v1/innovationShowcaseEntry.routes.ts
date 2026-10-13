@@ -4,5 +4,6 @@ import * as innovationShowcaseEntryController from '../../controllers/innovation
 const router = Router();
 
 router.get('/', innovationShowcaseEntryController.list);
+router.get('/showcase/:token', innovationShowcaseEntryController.getShowcaseCard);
 
 export default router;

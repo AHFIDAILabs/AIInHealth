@@ -9,6 +9,11 @@ const contactMessageSchema = new Schema(
     message: { type: String, required: true, trim: true, maxlength: 3000 },
     isRead: { type: Boolean, default: false },
     isResolved: { type: Boolean, default: false },
+    // Set by contact.controller.ts's adminReply — a real reply (email, plus a
+    // portal message when a matching registration exists) rather than just
+    // the isResolved toggle, which an admin can still set independently.
+    repliedAt: { type: Date },
+    repliedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     // Set fire-and-forget by triage.service.ts right after creation — a sort
     // hint for the admin list, never a gate (see AI_PRIORITY_LABELS comment).
     // Stays 'standard' (the schema default) if classification never runs

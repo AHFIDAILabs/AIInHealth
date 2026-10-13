@@ -4,10 +4,13 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ContactMessage, type ContactMessageDoc } from '../models/ContactMessage.model.js';
-import type { CreateContactMessageInput, ListMessagesQuery } from '../validations/contact.validation.js';
-import { listMessagesQuerySchema, updateMessageSchema } from '../validations/contact.validation.js';
+import { PortalMessage } from '../models/PortalMessage.model.js';
+import { Registration } from '../models/Registration.model.js';
+import type { CreateContactMessageInput, ListMessagesQuery, AdminReplyMessageInput } from '../validations/contact.validation.js';
+import { listMessagesQuerySchema, updateMessageSchema, adminReplyMessageSchema } from '../validations/contact.validation.js';
 import { recordAudit } from '../services/audit.service.js';
 import { emitAdminNotification } from '../services/notification.service.js';
+import { sendContactReplyEmail } from '../services/email.service.js';
 import { classifyPriority } from '../services/ai/triage.service.js';
 import { verifyFormToken } from '../services/formToken.service.js';
 import { canonicalizeEmail, scoreSubmission, applyVelocityBump } from '../utils/spamHeuristics.js';
@@ -146,4 +149,55 @@ export const adminUpdate = catchAsync(async (req: Request, res: Response) => {
     }
   }
   res.json(new ApiResponse(message));
+});
+
+// PATCH /admin/messages/:id/reply — one action that always emails the
+// sender and, when a confirmed registration matches their email, also
+// delivers the same text into that delegate's own portal (PortalMessages.tsx).
+// Replaces the old plain mailto: "Reply via Email" link, which silently did
+// nothing on any machine without a desktop mail client registered as the OS
+// default handler — a real, previously-reported failure mode, not just a
+// nice-to-have upgrade.
+export const adminReply = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Message not found', 'NOT_FOUND');
+  const { body }: AdminReplyMessageInput = adminReplyMessageSchema.parse({ params: req.params, body: req.body }).body;
+
+  const message = await ContactMessage.findById(req.params.id);
+  if (!message) throw new ApiError(404, 'Message not found', 'NOT_FOUND');
+
+  await sendContactReplyEmail(message.email, message.name, body);
+
+  // Same "find this person's own registration" lookup as delegate.controller.ts's
+  // login — a confirmed, active registration matching this email gets a copy
+  // of the reply in their portal too, not just by email.
+  const registration = await Registration.findOne({
+    status: 'confirmed',
+    isActive: true,
+    $or: [{ email: message.email }, { contactEmail: message.email }],
+  }).sort({ createdAt: -1 });
+
+  let deliveredToPortal = false;
+  if (registration) {
+    await PortalMessage.create({
+      registration: registration._id,
+      body,
+      sentBy: req.user!.sub,
+      relatedContactMessage: message.id,
+    });
+    deliveredToPortal = true;
+  }
+
+  message.repliedAt = new Date();
+  message.repliedBy = req.user!.sub as never;
+  await message.save();
+
+  await recordAudit({
+    req,
+    action: 'contact_message.replied',
+    resourceType: 'ContactMessage',
+    resourceId: message.id,
+    after: { repliedAt: message.repliedAt, deliveredToPortal },
+  });
+
+  res.json(new ApiResponse({ repliedAt: message.repliedAt, deliveredToPortal }));
 });

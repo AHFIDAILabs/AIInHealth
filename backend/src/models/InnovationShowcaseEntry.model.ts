@@ -7,9 +7,11 @@ import { Schema, model, type InferSchemaType } from 'mongoose';
 // shown on its own new public page. Only safe-to-publish fields live here:
 // no contact person/job title/email/phone, and no pitch-deck/demo-video
 // links (unlisted/private in the source data) — the admin form below is the
-// full set intentionally, there is nothing private left out that a
-// developer needs to remember to filter at read time (unlike
-// ConfirmedAbstract's internalNotes).
+// full set intentionally. The one exception is `showcaseCard` added below
+// for the "I'm showcasing" DP card — it carries a real contact email, so
+// list()/every public read in innovationShowcaseEntry.controller.ts must
+// explicitly exclude that one subdocument (same rule ConfirmedAbstract's
+// presentingCard.presenterEmail already follows).
 const innovationShowcaseEntrySchema = new Schema(
   {
     startupName: { type: String, required: true, trim: true },
@@ -39,6 +41,19 @@ const innovationShowcaseEntrySchema = new Schema(
     uniqueValue: { type: String, trim: true, maxlength: 8000 },
     order: { type: Number, default: 0 },
     isPublished: { type: Boolean, default: false },
+    // "I'm showcasing" DP card (mirrors ConfirmedAbstract's presentingCard) —
+    // no sessionRef here, unlike abstract presenters: showcase entries aren't
+    // tied to a specific session/time slot, so email on file is the only
+    // thing that gates sending an invite.
+    showcaseCard: {
+      contactEmail: { type: String, trim: true, lowercase: true },
+      // Opaque magic-link token (same crypto.randomBytes(24).toString('base64url')
+      // idiom as ConfirmedAbstract.presentingCard.accessToken) — the public
+      // /showcase/:token page's only credential; no portal login exists for
+      // showcase entrants.
+      accessToken: { type: String, unique: true, sparse: true },
+      emailSentAt: { type: Date },
+    },
   },
   { timestamps: true }
 );

@@ -275,11 +275,16 @@ const koboToNaira = (kobo: number): number => Math.round(kobo / 100);
 // GET /admin/payments-stats/breakdown — the "where is the money actually
 // coming from, and what's still outstanding" view for the Payments page.
 // Every aggregate below is scoped to type:'attendee' only (the only type that
-// ever has a real paymentStatus/amountKobo — see adminMarkPaid's own guard)
-// and, except byPaymentStatus itself, further scoped to paymentStatus:'paid'
-// since revenue-by-X breakdowns are meaningless for money that was never
-// collected. Same flat Promise.all-of-aggregates shape as analytics.controller.ts,
-// not $facet, for consistency with the rest of this codebase.
+// ever has a real paymentStatus/amountKobo — see adminMarkPaid's own guard).
+// byPaymentMethod/byTicketCategory/revenueByDay are further scoped to
+// paymentStatus:'paid' since those are specifically revenue breakdowns,
+// meaningless for money that was never collected. byDiscountTier is
+// deliberately NOT paid-only — a 100%-scholarship seat is always
+// paymentStatus:'not_required' (it never touches Paystack at all), so
+// filtering that chart to paid-only would silently show "0" for every
+// scholarship tier despite real confirmed attendees sitting on it. Same flat
+// Promise.all-of-aggregates shape as analytics.controller.ts, not $facet, for
+// consistency with the rest of this codebase.
 export const adminBreakdown = catchAsync(async (_req: Request, res: Response) => {
   const match = { type: 'attendee' } as const;
   const paidMatch = { ...match, paymentStatus: 'paid' } as const;
@@ -310,9 +315,22 @@ export const adminBreakdown = catchAsync(async (_req: Request, res: Response) =>
       { $group: { _id: '$ticketCategory', count: { $sum: 1 }, revenueKobo: { $sum: '$amountKobo' } } },
       { $sort: { revenueKobo: -1 } },
     ]),
+    // count spans every attendee regardless of paymentStatus (so a 100%-
+    // scholarship seat, always 'not_required', still shows up) — but the
+    // revenue sum is conditioned on paymentStatus:'paid' specifically.
+    // amountKobo is set the moment a Paystack transaction is INITIALIZED
+    // (initializePaymentForRegistration, at "Pay Now" click time), not only on
+    // successful payment, so an unconditional sum here would count money that
+    // was quoted but never actually collected as if it were real revenue.
     Registration.aggregate<{ _id: number; count: number; revenueKobo: number }>([
-      { $match: paidMatch },
-      { $group: { _id: { $ifNull: ['$discountPercent', 0] }, count: { $sum: 1 }, revenueKobo: { $sum: '$amountKobo' } } },
+      { $match: match },
+      {
+        $group: {
+          _id: { $ifNull: ['$discountPercent', 0] },
+          count: { $sum: 1 },
+          revenueKobo: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$amountKobo', 0] } },
+        },
+      },
       { $sort: { _id: 1 } },
     ]),
     Registration.aggregate<{ _id: string; amountKobo: number }>([

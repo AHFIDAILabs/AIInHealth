@@ -465,6 +465,19 @@ router.get('/innovation-showcase-entries', requireRole(...adminOnlyRoles), innov
 router.post('/innovation-showcase-entries', requireRole(...adminOnlyRoles), innovationShowcaseEntryController.adminCreate);
 router.patch('/innovation-showcase-entries/:id', requireRole(...adminOnlyRoles), innovationShowcaseEntryController.adminUpdate);
 router.delete('/innovation-showcase-entries/:id', requireRole(...adminOnlyRoles), innovationShowcaseEntryController.adminDelete);
+// "I'm showcasing" DP card — same POST-before-PATCH-/:id ordering as
+// confirmed-abstracts' card routes above (no actual path collision here
+// either, just kept consistent).
+router.post(
+  '/innovation-showcase-entries/card/send-invites',
+  requireRole(...adminOnlyRoles),
+  innovationShowcaseEntryController.adminSendShowcaseCardInvites
+);
+router.patch(
+  '/innovation-showcase-entries/:id/showcase-card',
+  requireRole(...adminOnlyRoles),
+  innovationShowcaseEntryController.adminSetShowcaseCardEmail
+);
 
 router.get('/abstracts', requireRole(...abstractRoles), abstractController.adminList);
 router.patch('/abstracts/:id', requireRole(...abstractRoles), abstractController.adminUpdate);
@@ -573,6 +586,7 @@ router.patch('/inquiries/:id', requireRole(...adminOnlyRoles), inquiryController
 
 router.get('/messages', requireRole(...adminOnlyRoles), contactController.adminList);
 router.patch('/messages/:id', requireRole(...adminOnlyRoles), contactController.adminUpdate);
+router.patch('/messages/:id/reply', requireRole(...adminOnlyRoles), contactController.adminReply);
 
 router.get('/newsletter-subscribers', requireRole(...adminOnlyRoles), newsletterController.adminList);
 router.get('/newsletter-subscribers/export', requireRole(...adminOnlyRoles), newsletterController.adminExport);

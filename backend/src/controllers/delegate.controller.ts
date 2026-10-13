@@ -6,6 +6,7 @@ import { Registration } from '../models/Registration.model.js';
 import { Speaker } from '../models/Speaker.model.js';
 import { Session } from '../models/Session.model.js';
 import { DelegatePushSubscription } from '../models/DelegatePushSubscription.model.js';
+import { PortalMessage } from '../models/PortalMessage.model.js';
 import { env } from '../config/env.js';
 import { setDelegateCookie, clearDelegateCookie } from '../utils/cookies.js';
 import { signDelegateSessionToken } from '../services/delegateToken.service.js';
@@ -59,9 +60,15 @@ export const me = catchAsync(async (req: Request, res: Response) => {
   const registration = await Registration.findById(req.delegate!.registrationId);
   if (!registration) throw new ApiError(401, 'Session invalid', 'UNAUTHENTICATED');
 
+  const unreadPortalMessages = await PortalMessage.countDocuments({
+    registration: registration._id,
+    isRead: false,
+  });
+
   res.json(
     new ApiResponse({
       id: registration.id,
+      unreadPortalMessages,
       type: registration.type,
       name: delegateName(registration),
       email: delegateEmail(registration),
@@ -82,6 +89,30 @@ export const me = catchAsync(async (req: Request, res: Response) => {
       trackSelected: registration.trackSelected,
       trackAssigned: registration.trackAssigned,
     })
+  );
+});
+
+// GET /delegate/portal-messages — admin replies delivered into this
+// delegate's own portal (contact.controller.ts's adminReply). Marks every
+// currently-unread message as read as a side effect of listing them — the
+// delegate just saw them, by definition — so there's no separate
+// mark-as-read round trip for the frontend to make.
+export const portalMessages = catchAsync(async (req: Request, res: Response) => {
+  const messages = await PortalMessage.find({ registration: req.delegate!.registrationId }).sort({ createdAt: -1 });
+
+  const unreadIds = messages.filter((m) => !m.isRead).map((m) => m._id);
+  if (unreadIds.length > 0) {
+    await PortalMessage.updateMany({ _id: { $in: unreadIds } }, { $set: { isRead: true } });
+  }
+
+  res.json(
+    new ApiResponse(
+      messages.map((m) => ({
+        id: m.id,
+        body: m.body,
+        createdAt: m.createdAt,
+      }))
+    )
   );
 });
 

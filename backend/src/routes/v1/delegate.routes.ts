@@ -24,6 +24,7 @@ router.post('/login', loginLimiter, validate(delegateLoginSchema), delegateContr
 router.use(requireDelegateAuth);
 
 router.get('/me', delegateController.me);
+router.get('/portal-messages', delegateController.portalMessages);
 router.get('/speaker-sessions', delegateController.speakerSessions);
 router.post('/logout', delegateController.logout);
 router.get('/ticket/qr', delegateController.ticketQr);

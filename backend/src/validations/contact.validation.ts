@@ -41,5 +41,19 @@ export const listMessagesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
+
+// PATCH /admin/messages/:id/reply — a single free-text reply that always
+// emails the sender and, when a confirmed registration matches their email,
+// also delivers the same text into that delegate's portal — see
+// contact.controller.ts's adminReply.
+export const adminReplyMessageSchema = z.object({
+  params: z.object({ id: objectId }),
+  body: z.object({
+    body: z.string().trim().min(1, 'Enter a reply').max(3000),
+  }),
+});
+
 export type CreateContactMessageInput = z.infer<typeof createContactMessageSchema>['body'];
 export type ListMessagesQuery = z.infer<typeof listMessagesQuerySchema>;
+export type AdminReplyMessageInput = z.infer<typeof adminReplyMessageSchema>['body'];
