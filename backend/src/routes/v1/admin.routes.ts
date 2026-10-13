@@ -375,6 +375,11 @@ router.patch('/leads/:id', requireRole('super_admin', 'admin', 'registrations_of
 router.delete('/leads/:id', requireRole('super_admin', 'admin', 'registrations_officer'), leadController.adminDelete);
 
 router.get('/attendees-stats', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer'), attendeeController.adminStats);
+router.get(
+  '/attendees-stats/confirmed-breakdown',
+  requireRole('super_admin', 'admin', 'registrations_officer', 'viewer'),
+  attendeeController.adminConfirmedBreakdown
+);
 
 router.get('/custom-fields', requireRole('super_admin', 'admin', 'registrations_officer', 'viewer'), customFormFieldController.adminList);
 router.post('/custom-fields', requireRole('super_admin', 'admin', 'registrations_officer'), customFormFieldController.adminCreate);
