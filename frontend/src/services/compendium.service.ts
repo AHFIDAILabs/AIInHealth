@@ -33,6 +33,7 @@ export interface CompendiumAbstractRecord {
   sessionRef?: string | null;
   language?: string;
   corrections?: CompendiumCorrection[];
+  photoUrl?: string | null;
 }
 
 export interface CompendiumEdition {

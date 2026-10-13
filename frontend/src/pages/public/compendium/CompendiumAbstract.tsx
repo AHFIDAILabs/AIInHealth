@@ -4,7 +4,7 @@ import { SEO } from '../../../components/seo/SEO';
 import { NotFound } from '../NotFound';
 import { citeApa, citeBibtex, citeRis, buildScholarlyArticleJsonLd } from '../../../lib/citation';
 import { sanitizeAbstractHtml } from '../../../lib/sanitizeAbstractHtml';
-import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT, slugify } from './shared';
+import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT, PresenterPhoto, slugify } from './shared';
 import { useCompendiumData } from './useCompendiumData';
 
 type CiteFormat = 'apa' | 'bibtex' | 'ris';
@@ -62,7 +62,14 @@ export const CompendiumAbstract = () => {
       <section className="bg-white py-14 sm:py-16">
         <article className="mx-auto max-w-3xl px-4 sm:px-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{record.code}</p>
-          <h1 className="mt-2 font-display text-2xl font-semibold leading-tight text-navy sm:text-3xl">{record.title}</h1>
+          <div className="mt-2 flex items-start gap-4">
+            <PresenterPhoto
+              photoUrl={record.photoUrl}
+              name={record.authors?.[0]?.name ?? record.title}
+              className="h-16 w-16 shrink-0 rounded-full"
+            />
+            <h1 className="font-display text-2xl font-semibold leading-tight text-navy sm:text-3xl">{record.title}</h1>
+          </div>
 
           {record.authors && record.authors.length > 0 && (
             <ul className="mt-4 space-y-1 text-[15px] text-slate-700">

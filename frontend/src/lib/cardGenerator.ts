@@ -78,13 +78,13 @@ const BRAND = {
 // is the one part of this file most likely to need a live-render-and-compare
 // pass to true up, the same way the rest of this card engine's layout work
 // has gone.
-// Width extended to butt directly against NAME_BOX's left edge (984) — the
-// template's own source art leaves a ~68px dead gutter between the two white
-// boxes here, which read as the photo "not filling its side of the card"
-// once a real (non-placeholder) photo is dropped in. Matching the box to the
-// photo clip region exactly means the photo now genuinely fills everything
-// up to the name card, no unfilled dark sliver left over.
-const PHOTO_BOX = { x: 186, y: 540, w: 798, h: 765, r: 48 };
+// Widened from the template's original (much narrower) placeholder box so a
+// real photo fills more of its side of the card, but stopped short of
+// NAME_BOX's left edge (984) by PHOTO_NAME_GAP — butting the two boxes
+// together with no gap at all read as the photo and name card merging into
+// one shape rather than two distinct cards.
+const PHOTO_NAME_GAP = 36;
+const PHOTO_BOX = { x: 186, y: 540, w: 984 - 186 - PHOTO_NAME_GAP, h: 765, r: 48 };
 const NAME_BOX = { x: 984, y: 540, w: 630, h: 248 };
 const ROLE_BLOT = { x: 186, y: 1330, w: 760, h: 110 };
 const ROLE_TEXT_Y = 1410;
@@ -148,14 +148,18 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
     img.src = src;
   });
 
-// object-fit: cover, drawn into an arbitrary destination rect.
+// object-fit: cover, drawn into an arbitrary destination rect. `focusY`
+// controls where a vertical (height) crop is anchored — 0 keeps the top of
+// the source image, 1 keeps the bottom, 0.5 is a plain center crop. Default
+// is a center crop; drawPhoto below overrides this for headshots.
 const drawImageCover = (
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   dx: number,
   dy: number,
   dWidth: number,
-  dHeight: number
+  dHeight: number,
+  focusY = 0.5
 ) => {
   const imgRatio = img.width / img.height;
   const targetRatio = dWidth / dHeight;
@@ -169,7 +173,7 @@ const drawImageCover = (
     sWidth = img.width;
     sHeight = sWidth / targetRatio;
     sx = 0;
-    sy = (img.height - sHeight) / 2;
+    sy = (img.height - sHeight) * focusY;
   }
   ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
 };
@@ -231,13 +235,21 @@ const ensureHandwritingFont = (): Promise<void> => {
   return handwritingFontPromise;
 };
 
+// Headshots (passport/ID-style photos especially) typically have the face
+// positioned above the frame's vertical center with little headroom to
+// spare — a plain 0.5 center crop trims equally from top and bottom, which
+// on a portrait-oriented photo squeezed into this near-square box ends up
+// cutting into the top of the head. Anchoring higher keeps the head intact
+// at the cost of a bit more shoulder/chest room at the bottom instead.
+const PHOTO_FOCUS_Y = 0.15;
+
 const drawPhoto = async (ctx: CanvasRenderingContext2D, photoUrl: string) => {
   try {
     const photo = await loadImage(photoUrl);
     ctx.save();
     roundRectPath(ctx, PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.w, PHOTO_BOX.h, PHOTO_BOX.r);
     ctx.clip();
-    drawImageCover(ctx, photo, PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.w, PHOTO_BOX.h);
+    drawImageCover(ctx, photo, PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.w, PHOTO_BOX.h, PHOTO_FOCUS_Y);
     ctx.restore();
   } catch {
     // Photo failed to load — the template's own placeholder silhouette

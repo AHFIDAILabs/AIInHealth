@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { InitialsAvatar } from '../../../components/ui/InitialsAvatar';
 
 // Small cross-page nav shared by all five compendium pages — kept out of
 // Navbar.tsx entirely (that's the site-wide nav; this is a local section
@@ -56,3 +58,21 @@ export const slugify = (value: string): string =>
     .replace(/(^-|-$)/g, '');
 
 export const LICENCE_CAVEAT = ' (not yet confirmed with AHFID)';
+
+// Shared by both the list and detail pages — falls back to the branded
+// initials tile if photoUrl is missing OR if the image actually fails to
+// load at runtime (a dead link, a deleted asset, a slow/flaky connection),
+// rather than letting a visitor see a broken-image icon.
+export const PresenterPhoto = ({
+  photoUrl,
+  name,
+  className,
+}: {
+  photoUrl?: string | null;
+  name: string;
+  className: string;
+}) => {
+  const [failed, setFailed] = useState(false);
+  if (!photoUrl || failed) return <InitialsAvatar name={name} className={className} />;
+  return <img src={photoUrl} alt="" onError={() => setFailed(true)} className={`${className} object-cover`} />;
+};
