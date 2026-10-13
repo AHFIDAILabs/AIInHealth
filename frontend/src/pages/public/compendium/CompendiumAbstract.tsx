@@ -4,6 +4,7 @@ import { SEO } from '../../../components/seo/SEO';
 import { NotFound } from '../NotFound';
 import { citeApa, citeBibtex, citeRis, buildScholarlyArticleJsonLd } from '../../../lib/citation';
 import { sanitizeAbstractHtml } from '../../../lib/sanitizeAbstractHtml';
+import { splitStructuredAbstract } from '../../../lib/structuredAbstract';
 import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT, PresenterPhoto, slugify } from './shared';
 import { useCompendiumData } from './useCompendiumData';
 
@@ -89,13 +90,21 @@ export const CompendiumAbstract = () => {
           </div>
 
           {record.abstract && (
-            <div
-              className="mt-8 max-w-none text-[17px] leading-[1.7] text-slate-800"
-              // Already sanitized at export time AND again here (see
-              // sanitizeAbstractHtml.ts) — only an exact i/b/sub/sup markup
-              // can ever survive to reach this point.
-              dangerouslySetInnerHTML={{ __html: sanitizeAbstractHtml(record.abstract) }}
-            />
+            <div className="mt-8 max-w-none text-[17px] leading-[1.7] text-slate-800">
+              {splitStructuredAbstract(record.abstract).map((para, i) => (
+                <p key={i} className={`text-justify [text-justify:inter-word] ${i > 0 ? 'mt-5' : ''}`}>
+                  {para.label && (
+                    <strong className="mr-1.5 font-display text-sm font-bold uppercase tracking-wide text-navy">
+                      {para.label}:
+                    </strong>
+                  )}
+                  {/* Already sanitized at export time AND again here (see
+                      sanitizeAbstractHtml.ts) — only an exact i/b/sub/sup
+                      markup can ever survive to reach this point. */}
+                  <span dangerouslySetInnerHTML={{ __html: sanitizeAbstractHtml(para.body) }} />
+                </p>
+              ))}
+            </div>
           )}
 
           {record.keywords && record.keywords.length > 0 && (
