@@ -1,25 +1,46 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CreditCard, Send, Search, Download, Wallet, CheckCircle2, Clock, XCircle, BadgeCheck, Percent } from 'lucide-react';
+import {
+  CreditCard,
+  Send,
+  Search,
+  Download,
+  Wallet,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  BadgeCheck,
+  Percent,
+  ChevronDown,
+  ChevronUp,
+  Layers,
+} from 'lucide-react';
 import {
   listRegistrations,
   bulkSendPaymentReminders,
   sendScholarshipCampaign,
   exportRegistrationsUrl,
   fetchPaymentStats,
+  fetchPaymentBreakdown,
   adminMarkRegistrationPaid,
   type AdminRegistration,
   type PaymentStats,
+  type PaymentBreakdown,
 } from '../../services/admin.service';
 import type { TicketCategory } from '../../services/registration.service';
 import { TICKET_PRICE_NGN, formatNaira } from '../../lib/pricing';
 import { getApiErrorMessage } from '../../services/api';
-import { SkeletonRows } from '../../components/ui/Skeleton';
+import { SkeletonRows, Skeleton } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { AdminInput } from '../../components/ui/AdminField';
 import { AnalyticsStatCard } from './analytics/AnalyticsStatCard';
+import { TrendAreaChart } from './analytics/TrendAreaChart';
+import { HorizontalBarChart } from './analytics/HorizontalBarChart';
+import { DonutChart } from './analytics/DonutChart';
 import { useToast } from '../../contexts/ToastContext';
+
+const ticketLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 type PaymentStatus = NonNullable<AdminRegistration['paymentStatus']>;
 
@@ -58,6 +79,9 @@ export const PaymentsPage = () => {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<PaymentStats | null>(null);
+  const [breakdown, setBreakdown] = useState<PaymentBreakdown | null>(null);
+  const [breakdownError, setBreakdownError] = useState('');
+  const [breakdownOpen, setBreakdownOpen] = useState(true);
   const [confirmRemind, setConfirmRemind] = useState(false);
   const [sendingReminders, setSendingReminders] = useState(false);
   const [confirmCampaign, setConfirmCampaign] = useState(false);
@@ -92,8 +116,16 @@ export const PaymentsPage = () => {
   }, [load, q]);
 
   const refreshStats = () => fetchPaymentStats().then(setStats).catch(() => undefined);
+  const refreshBreakdown = () =>
+    fetchPaymentBreakdown()
+      .then((b) => {
+        setBreakdown(b);
+        setBreakdownError('');
+      })
+      .catch((err) => setBreakdownError(getApiErrorMessage(err)));
   useEffect(() => {
     refreshStats();
+    refreshBreakdown();
   }, []);
 
   const clearFilters = () => {
@@ -111,6 +143,7 @@ export const PaymentsPage = () => {
       setConfirmRemind(false);
       load();
       refreshStats();
+      refreshBreakdown();
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -129,6 +162,7 @@ export const PaymentsPage = () => {
       setConfirmCampaign(false);
       load();
       refreshStats();
+      refreshBreakdown();
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -146,6 +180,7 @@ export const PaymentsPage = () => {
       setMarkPaidNote('');
       load();
       refreshStats();
+      refreshBreakdown();
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -173,6 +208,108 @@ export const PaymentsPage = () => {
         <AnalyticsStatCard icon={CheckCircle2} label="Paid Registrations" value={stats?.paidCount ?? null} />
         <AnalyticsStatCard icon={Clock} label="Unpaid" value={stats?.unpaidCount ?? null} />
         <AnalyticsStatCard icon={XCircle} label="Failed" value={stats?.failedCount ?? null} />
+      </div>
+
+      {/* "Where is the money actually coming from" — every number here is
+          already scoped server-side to type:'attendee' (revenue breakdowns
+          further scoped to paymentStatus:'paid'), independent of whatever
+          status/ticket/search filters are applied to the table below. */}
+      <div className="mt-6 rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover">
+        <button
+          onClick={() => setBreakdownOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange/15 text-orange">
+              <Layers size={16} />
+            </span>
+            <div>
+              <p className="font-display text-base font-semibold text-navy">Payment Breakdown</p>
+              <p className="text-xs text-slate-400">Where the money is coming from, and what's still outstanding</p>
+            </div>
+          </div>
+          {breakdownOpen ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+        </button>
+
+        {breakdownOpen && (
+          <div className="border-t border-slate-100 px-5 py-5">
+            {breakdownError ? (
+              <Banner variant="error">{breakdownError}</Banner>
+            ) : (
+              <>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Revenue Over Time — Last 30 Days</p>
+                    <TrendAreaChart
+                      data={breakdown?.revenueByDay.map((d) => ({ date: d.date, count: d.amountNaira })) ?? null}
+                      color="#16A34A"
+                      emptyLabel="No payments in this window yet"
+                      unitLabel={(n) => formatNaira(n)}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Revenue by Ticket Category</p>
+                    <HorizontalBarChart
+                      data={breakdown?.byTicketCategory.map((c) => ({ label: ticketLabel(c.category), value: c.revenueNaira })) ?? null}
+                      color="#2563EB"
+                      emptyLabel="No paid attendees yet"
+                      valueFormatter={formatNaira}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">By Payment Status</p>
+                    <DonutChart
+                      data={
+                        breakdown
+                          ? Object.entries(breakdown.byPaymentStatus).map(([k, v]) => ({ label: ticketLabel(k), value: v.count }))
+                          : null
+                      }
+                      emptyLabel="No attendee registrations yet"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Payment Method (Revenue)</p>
+                    <DonutChart
+                      data={
+                        breakdown
+                          ? Object.entries(breakdown.byPaymentMethod).map(([k, v]) => ({ label: ticketLabel(k), value: v.revenueNaira }))
+                          : null
+                      }
+                      emptyLabel="No paid confirmations yet"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">By Discount Tier</p>
+                    <DonutChart
+                      data={breakdown?.byDiscountTier.map((t) => ({ label: t.label, value: t.count })) ?? null}
+                      emptyLabel="No paid attendees yet"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Discount Tier Detail</p>
+                  {!breakdown ? (
+                    <Skeleton className="mt-3 h-20 w-full" />
+                  ) : (
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                      {breakdown.byDiscountTier.map((t) => (
+                        <div key={t.tier} className="rounded-xl bg-offwhite px-3 py-3 text-center">
+                          <p className="font-display text-lg font-bold text-navy">{t.count}</p>
+                          <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{t.label}</p>
+                          <p className="mt-0.5 text-[11px] text-slate-400">{formatNaira(t.revenueNaira)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">

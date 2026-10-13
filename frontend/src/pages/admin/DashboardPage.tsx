@@ -205,7 +205,13 @@ export const DashboardPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
 
-  const totalRevenueNaira = analytics ? analytics.revenueByDay.reduce((sum, d) => sum + d.amountNaira, 0) : 0;
+  // The real all-time total the backend already computes (type:'attendee',
+  // paymentStatus:'paid', no date restriction) — same figure the Payments and
+  // Attendees pages show. This used to be re-derived by summing
+  // analytics.revenueByDay instead, which is only a last-30-days window: that
+  // silently understated "Revenue Collected" (mislabeled as if all-time) and
+  // is why this card could show a different number than Payments/Attendees.
+  const totalRevenueNaira = analytics?.totalRevenueNaira ?? 0;
   const registrationsDelta = analytics ? weekOverWeekDelta(analytics.registrationsByDay, 'count') : null;
   const revenueDelta = analytics ? weekOverWeekDelta(analytics.revenueByDay, 'amountNaira') : null;
   const confirmedCount = stats?.registrations.byStatus.confirmed ?? 0;

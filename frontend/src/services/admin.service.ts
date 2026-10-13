@@ -145,6 +145,24 @@ export const fetchPaymentStats = async (): Promise<PaymentStats> => {
   return res.data.data;
 };
 
+export interface PaymentBreakdown {
+  byPaymentStatus: Record<string, { count: number; revenueNaira: number }>;
+  byPaymentMethod: Record<string, { count: number; revenueNaira: number }>;
+  byTicketCategory: { category: string; count: number; revenueNaira: number }[];
+  byDiscountTier: { tier: number; label: string; count: number; revenueNaira: number }[];
+  revenueByDay: { date: string; amountNaira: number }[];
+}
+
+// Backs the "where is the money actually coming from" breakdown on the
+// Payments page — every number here is already scoped server-side to
+// type:'attendee' (and, except byPaymentStatus, further to paymentStatus:'paid'),
+// independent of whatever status/ticket/search filters are active on the
+// page's own table.
+export const fetchPaymentBreakdown = async (): Promise<PaymentBreakdown> => {
+  const res = await api.get<{ success: true; data: PaymentBreakdown }>('/admin/payments-stats/breakdown');
+  return res.data.data;
+};
+
 export const listRegistrations = async (params: ListRegistrationsParams): Promise<Paginated<AdminRegistration>> => {
   const res = await api.get<{ success: true; data: AdminRegistration[]; meta: Omit<Paginated<never>, 'items'> }>(
     '/admin/registrations',
