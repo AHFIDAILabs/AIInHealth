@@ -322,6 +322,24 @@ export const CompendiumTab = () => {
             </option>
           ))}
         </select>
+        {/* Always visible (not just once something's checked below) — this
+            was previously only reachable via the selection-triggered sticky
+            bar further down, which made the whole feature undiscoverable
+            unless an admin already knew to check a row first. Still fully
+            selection-gated (disabled with no selection) — no "send to
+            everyone" unscoped action exists here, same as before. */}
+        <button
+          onClick={sendCardInviteBatch}
+          disabled={selected.size === 0 || sendingCardInvites}
+          title={
+            selected.size === 0
+              ? 'Check one or more rows below first'
+              : 'Email the selected records a link to generate their "I will be presenting" card — records missing a session or contact email are skipped'
+          }
+          className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-semibold text-navy hover:border-orange/40 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Share2 size={14} /> {sendingCardInvites ? 'Sending…' : `Send Card Invites${selected.size > 0 ? ` (${selected.size})` : ''}`}
+        </button>
       </div>
 
       {error && (
@@ -351,14 +369,6 @@ export const CompendiumTab = () => {
                 className="flex items-center gap-1.5 rounded-md bg-orange px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-hover"
               >
                 <ShieldCheck size={13} /> Record Consent
-              </button>
-              <button
-                onClick={sendCardInviteBatch}
-                disabled={sendingCardInvites}
-                title='Email the selected records a link to generate their "I will be presenting" card — records missing a session or contact email are skipped'
-                className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy hover:border-orange/40 disabled:opacity-60"
-              >
-                <Share2 size={13} /> {sendingCardInvites ? 'Sending…' : 'Send Card Invites'}
               </button>
             </div>
           </motion.div>

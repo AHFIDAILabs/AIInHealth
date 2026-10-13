@@ -22,6 +22,8 @@ export interface DelegateMe {
   tshirtSize?: string;
   trackSelected?: string;
   trackAssigned?: string;
+  // Admin replies waiting in /portal/messages — see fetchPortalMessages.
+  unreadPortalMessages: number;
 }
 
 // Email-only login — no code to request/verify. See delegate.controller.ts's
@@ -39,6 +41,20 @@ export const fetchDelegateMe = async (): Promise<DelegateMe> => {
 
 export const delegateLogout = async (): Promise<void> => {
   await api.post('/delegate/logout');
+};
+
+export interface PortalMessage {
+  id: string;
+  body: string;
+  createdAt: string;
+}
+
+// Admin replies to this delegate's own contact-form message(s) — see
+// contact.controller.ts's adminReply. Fetching this list also marks every
+// currently-unread message as read server-side (no separate mark-read call).
+export const fetchPortalMessages = async (): Promise<PortalMessage[]> => {
+  const res = await api.get<{ success: true; data: PortalMessage[] }>('/delegate/portal-messages');
+  return res.data.data;
 };
 
 export interface SpeakerSession {

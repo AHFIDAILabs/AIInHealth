@@ -21,27 +21,27 @@
 //   - role label: the source says "DELEGATE" — that's blotted out (painted
 //     over with a sampled patch of the real background behind it) and
 //     redrawn with whatever this person's real role is.
-//   - for 'presenting'/'speaking' only: the headline ("I will be
+//   - for every kind except 'attending': the headline ("I will be
 //     attending", in the source's own hand-drawn script) and the THEME
 //     block (the summit theme, correct as-is for 'attending') are ALSO
 //     blotted and redrawn — this card needs different words there, and
-//     there's no "presenting"/"speaking" version of the hand-drawn art to
-//     draw from instead. The replacement headline uses a real handwriting
-//     Google Font (Caveat) as the closest available match, not a pixel-exact
-//     reproduction of the original strokes.
+//     there's no "presenting"/"speaking"/"showcase" version of the
+//     hand-drawn art to draw from instead. The replacement headline uses a
+//     real handwriting Google Font (Caveat) as the closest available match,
+//     not a pixel-exact reproduction of the original strokes.
 import { EVENT_DATE_RANGE, VENUE_SHORT } from './siteInfo';
 import templateUrl from '../assets/images/card-attending-template.png';
 
-export type EventCardKind = 'attending' | 'presenting' | 'speaking';
+export type EventCardKind = 'attending' | 'presenting' | 'speaking' | 'showcase';
 
 export interface EventCardData {
   kind: EventCardKind;
   name: string;
   /** Remote URL (e.g. Cloudinary) or a local object URL from a file input. */
   photoUrl?: string | null;
-  /** Abstract/session title — required for 'presenting'/'speaking', ignored for 'attending'. */
+  /** Abstract/session/project title — required for every kind except 'attending'. */
   line1?: string;
-  /** Date/time/room string — required for 'presenting'/'speaking', ignored for 'attending'. */
+  /** Date/time/room (or category/tagline for 'showcase') — required for every kind except 'attending'. */
   line2?: string;
   /**
    * Replaces the template's baked-in "DELEGATE" label — e.g. "Delegate",
@@ -58,6 +58,7 @@ const ROLE_DEFAULT: Record<EventCardKind, string> = {
   attending: 'Delegate',
   presenting: 'Presenter',
   speaking: 'Speaker',
+  showcase: 'Innovator',
 };
 
 // The template's own native resolution — used as the canvas size directly so
@@ -277,12 +278,13 @@ const drawRoleLabel = (ctx: CanvasRenderingContext2D, roleLabel: string) => {
   ctx.fillText(roleLabel.toUpperCase(), ROLE_BLOT.x, ROLE_TEXT_Y);
 };
 
-const HEADLINE_TEXT: Record<'presenting' | 'speaking', [string, string]> = {
+const HEADLINE_TEXT: Record<'presenting' | 'speaking' | 'showcase', [string, string]> = {
   presenting: ['I will be', 'presenting'],
   speaking: ['I am', 'speaking'],
+  showcase: ["I'm", 'showcasing'],
 };
 
-const drawReplacementHeadline = async (ctx: CanvasRenderingContext2D, kind: 'presenting' | 'speaking') => {
+const drawReplacementHeadline = async (ctx: CanvasRenderingContext2D, kind: 'presenting' | 'speaking' | 'showcase') => {
   await ensureHandwritingFont();
   blotRegion(ctx, HEADLINE_BLOT.x, HEADLINE_BLOT.y, HEADLINE_BLOT.w, HEADLINE_BLOT.h);
   const [line1, line2] = HEADLINE_TEXT[kind];
@@ -299,7 +301,17 @@ const THEME_FONT = '800 34px Sora, sans-serif';
 const THEME_LINE_HEIGHT = 44;
 const THEME_MAX_WIDTH = THEME_BLOT.w - 32;
 
-const drawReplacementThemeBlock = (ctx: CanvasRenderingContext2D, rawLines: string[]) => {
+const THEME_BADGE_TEXT: Record<'presenting' | 'speaking' | 'showcase', string> = {
+  presenting: 'SESSION',
+  speaking: 'SESSION',
+  showcase: 'SHOWCASE',
+};
+
+const drawReplacementThemeBlock = (
+  ctx: CanvasRenderingContext2D,
+  kind: 'presenting' | 'speaking' | 'showcase',
+  rawLines: string[]
+) => {
   // A flat near-white fill, not blotRegion's sampled gradient — this region
   // sits on the bottom card's near-white background, and live testing showed
   // the sampled gradient occasionally picking up a mismatched gray-blue tone
@@ -317,7 +329,7 @@ const drawReplacementThemeBlock = (ctx: CanvasRenderingContext2D, rawLines: stri
   ctx.fillStyle = BRAND.white;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('SESSION', THEME_BLOT.x + badgeW / 2, THEME_BLOT.y + badgeH / 2 + 2);
+  ctx.fillText(THEME_BADGE_TEXT[kind], THEME_BLOT.x + badgeW / 2, THEME_BLOT.y + badgeH / 2 + 2);
 
   ctx.font = THEME_FONT;
   const lines = rawLines.flatMap((line) => wrapText(line, THEME_MAX_WIDTH, (s) => ctx.measureText(s).width));
@@ -351,7 +363,7 @@ export async function renderEventCard(data: EventCardData): Promise<Blob> {
 
   if (data.kind !== 'attending') {
     await drawReplacementHeadline(ctx, data.kind);
-    drawReplacementThemeBlock(ctx, buildDetailLines(data));
+    drawReplacementThemeBlock(ctx, data.kind, buildDetailLines(data));
   }
 
   return new Promise((resolve, reject) => {

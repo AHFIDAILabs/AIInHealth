@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Ticket, Users, Handshake, LogOut, Share2 } from 'lucide-react';
+import { Ticket, Users, Handshake, LogOut, Share2, Mail } from 'lucide-react';
 import { useDelegateAuth } from '../../contexts/DelegateAuthContext';
 import summitMark from '../../assets/images/summit_logo_mark.png';
 
@@ -10,12 +10,14 @@ const NAV_ITEMS = [
   { label: 'My Ticket', to: '/portal', icon: Ticket, end: true },
   { label: 'Directory', to: '/portal/directory', icon: Users, end: false },
   { label: 'Meetings', to: '/portal/meetings', icon: Handshake, end: false },
+  { label: 'Messages', to: '/portal/messages', icon: Mail, end: false },
   ...(EVENT_EXTRAS_ENABLED ? [{ label: 'My Card', to: '/portal/my-card', icon: Share2, end: false }] : []),
 ];
 
 export const PortalLayout = () => {
   const { delegate, logout } = useDelegateAuth();
   const navigate = useNavigate();
+  const unreadMessages = delegate?.unreadPortalMessages ?? 0;
 
   const handleLogout = async () => {
     await logout();
@@ -54,6 +56,11 @@ export const PortalLayout = () => {
               }
             >
               <item.icon size={15} /> {item.label}
+              {item.to === '/portal/messages' && unreadMessages > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-orange px-1 text-[10px] font-bold text-white">
+                  {unreadMessages}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Plus, X, Rocket, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, X, Rocket, Pencil, Trash2, Share2 } from 'lucide-react';
 import {
   adminListInnovationShowcaseEntries,
   adminCreateInnovationShowcaseEntry,
   adminUpdateInnovationShowcaseEntry,
   adminDeleteInnovationShowcaseEntry,
+  adminSetShowcaseCardEmail,
+  adminSendShowcaseCardInvites,
   type InnovationShowcaseEntry,
   type InnovationShowcaseEntryInput,
 } from '../../services/innovationShowcaseEntry.service';
@@ -61,11 +63,19 @@ export const InnovationShowcaseEntriesPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InnovationShowcaseEntry | null>(null);
   const [form, setForm] = useState<InnovationShowcaseEntryInput>(emptyForm());
+  // "I'm showcasing" card contact email — saved via its own dedicated
+  // endpoint (adminSetShowcaseCardEmail), never folded into the generic
+  // update call, so it can never risk clobbering the sibling accessToken/
+  // emailSentAt fields that endpoint alone owns.
+  const [showcaseCardEmail, setShowcaseCardEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
   const [toDelete, setToDelete] = useState<InnovationShowcaseEntry | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sendingCardInvites, setSendingCardInvites] = useState(false);
 
   // One-time, unpaginated fetch purely to derive the set of categories in use
   // for the filter dropdown — category is free text (no fixed enum, see
@@ -116,12 +126,14 @@ export const InnovationShowcaseEntriesPage = () => {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm());
+    setShowcaseCardEmail('');
     setFormError('');
     setFormOpen(true);
   };
 
   const openEdit = (entry: InnovationShowcaseEntry) => {
     setEditing(entry);
+    setShowcaseCardEmail(entry.showcaseCard?.contactEmail ?? '');
     setForm({
       startupName: entry.startupName,
       founderNames: entry.founderNames ?? '',
@@ -158,7 +170,14 @@ export const InnovationShowcaseEntriesPage = () => {
     setFormError('');
     try {
       if (editing) {
-        const updated = await adminUpdateInnovationShowcaseEntry(editing._id, form);
+        let updated = await adminUpdateInnovationShowcaseEntry(editing._id, form);
+        // Separate endpoint on purpose — see showcaseCardEmail's own comment
+        // on why this never goes through the generic update call above. Only
+        // sent when it actually changed, so a no-op edit never touches
+        // emailSentAt-adjacent audit history for nothing.
+        if (showcaseCardEmail.trim() !== (editing.showcaseCard?.contactEmail ?? '')) {
+          updated = await adminSetShowcaseCardEmail(editing._id, showcaseCardEmail.trim() || null);
+        }
         setItems((prev) => prev.map((i) => (i._id === editing._id ? updated : i)));
         toast('success', 'Entry updated');
       } else {
@@ -171,6 +190,32 @@ export const InnovationShowcaseEntriesPage = () => {
       setFormError(getApiErrorMessage(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const sendCardInviteBatch = async () => {
+    setSendingCardInvites(true);
+    try {
+      const result = await adminSendShowcaseCardInvites([...selected]);
+      toast(
+        'success',
+        `Card invite sent to ${result.sent} of ${result.targeted} eligible record${result.targeted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}${result.skipped ? ` — ${result.skipped} skipped (no contact email)` : ''}.`
+      );
+      setSelected(new Set());
+      load();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingCardInvites(false);
     }
   };
 
@@ -270,9 +315,38 @@ export const InnovationShowcaseEntriesPage = () => {
         </div>
       )}
 
+      <AnimatePresence>
+        {selected.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="sticky top-[4.5rem] z-20 mt-4 flex items-center gap-3 rounded-lg border border-orange/30 bg-orange/5 px-4 py-2.5"
+          >
+            <span className="text-[13px] font-semibold text-navy">{selected.size} selected</span>
+            <div className="ml-auto flex gap-2">
+              <button
+                onClick={() => setSelected(new Set())}
+                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy hover:border-orange/40"
+              >
+                Clear
+              </button>
+              <button
+                onClick={sendCardInviteBatch}
+                disabled={sendingCardInvites}
+                title="Email the selected records a link to generate their Innovation Showcase card — records with no contact email on file are skipped"
+                className="flex items-center gap-1.5 rounded-md bg-orange px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
+              >
+                <Share2 size={13} /> {sendingCardInvites ? 'Sending…' : 'Send Showcase Card Invites'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {loading ? (
         <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover">
-          <SkeletonRows rows={6} cols={4} />
+          <SkeletonRows rows={6} cols={7} />
         </div>
       ) : items.length === 0 ? (
         <div className="mt-4 flex flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover py-20 text-center">
@@ -290,17 +364,34 @@ export const InnovationShowcaseEntriesPage = () => {
             <table className="w-full text-left text-[13px]">
               <thead className="border-b border-slate-100 bg-offwhite/60 text-[11px] uppercase tracking-wide text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Startup</th>
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={items.length > 0 && selected.size === items.length}
+                      onChange={(e) => setSelected(e.target.checked ? new Set(items.map((i) => i._id)) : new Set())}
+                      className="h-4 w-4 rounded border-slate-300 text-orange focus:ring-orange/40"
+                    />
+                  </th>
+                  <th className="px-3 py-3 font-semibold">Startup</th>
                   <th className="px-3 py-3 font-semibold">Category</th>
                   <th className="px-3 py-3 font-semibold">Country</th>
                   <th className="px-3 py-3 font-semibold">Status</th>
+                  <th className="px-3 py-3 font-semibold">Showcase Card</th>
                   <th className="px-3 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {items.map((i) => (
                   <tr key={i._id} className={!i.isPublished ? 'opacity-70' : ''}>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(i._id)}
+                        onChange={() => toggleSelected(i._id)}
+                        className="h-4 w-4 rounded border-slate-300 text-orange focus:ring-orange/40"
+                      />
+                    </td>
+                    <td className="px-3 py-3">
                       <div className="flex items-center gap-3">
                         {i.logoUrl ? (
                           <img src={i.logoUrl} alt="" className="h-8 w-8 rounded-md object-contain" />
@@ -326,6 +417,16 @@ export const InnovationShowcaseEntriesPage = () => {
                       >
                         {i.isPublished ? 'Published' : 'Draft'}
                       </button>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-col gap-0.5 text-[11px]">
+                        <span className={i.showcaseCard?.contactEmail ? 'font-semibold text-success' : 'text-slate-400'}>
+                          {i.showcaseCard?.contactEmail ? 'Email on file' : 'No email'}
+                        </span>
+                        {i.showcaseCard?.emailSentAt && (
+                          <span className="text-slate-400">Sent {new Date(i.showcaseCard.emailSentAt).toLocaleDateString('en-GB')}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex justify-end gap-1.5">
@@ -420,6 +521,30 @@ export const InnovationShowcaseEntriesPage = () => {
                 <AdminTextarea label="Evidence of Impact" value={form.evidenceOfImpact} onChange={(e) => setForm({ ...form, evidenceOfImpact: e.target.value })} />
                 <AdminTextarea label="Demo Highlight" value={form.demoHighlight} onChange={(e) => setForm({ ...form, demoHighlight: e.target.value })} />
                 <AdminTextarea label="What Makes It Unique" value={form.uniqueValue} onChange={(e) => setForm({ ...form, uniqueValue: e.target.value })} />
+
+                {editing && (
+                  <div className="rounded-lg border border-slate-200 p-3">
+                    <p className="text-[13px] font-semibold text-navy">"I'm Showcasing" Card</p>
+                    <p className="mt-0.5 text-xs text-slate-400">A contact email is required before an invite can be sent.</p>
+                    <div className="mt-3">
+                      <AdminInput
+                        label="Contact email"
+                        type="email"
+                        value={showcaseCardEmail}
+                        onChange={(e) => setShowcaseCardEmail(e.target.value)}
+                        placeholder="founder@example.com"
+                      />
+                      <p className="mt-1.5 text-xs text-slate-400">
+                        Private — used only to send the card invite, never shown publicly.
+                      </p>
+                      {editing.showcaseCard?.emailSentAt && (
+                        <p className="mt-1.5 text-xs text-slate-400">
+                          Last sent {new Date(editing.showcaseCard.emailSentAt).toLocaleString('en-GB')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <hr className="border-slate-100" />
 

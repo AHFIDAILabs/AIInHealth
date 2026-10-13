@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MessageSquare, X, CheckCircle2, Mail, Search, ShieldAlert, Flame, ShieldX, ShieldOff } from 'lucide-react';
-import { adminListMessages, adminUpdateMessage, CONTACT_CATEGORIES, type AdminMessage, type ContactCategory } from '../../services/adminMessage.service';
+import { MessageSquare, X, CheckCircle2, Mail, Search, ShieldAlert, Flame, ShieldX, ShieldOff, Send } from 'lucide-react';
+import {
+  adminListMessages,
+  adminUpdateMessage,
+  adminReplyMessage,
+  CONTACT_CATEGORIES,
+  type AdminMessage,
+  type ContactCategory,
+} from '../../services/adminMessage.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
@@ -40,6 +47,9 @@ export const MessagesPage = () => {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [active, setActive] = useState<AdminMessage | null>(null);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyBody, setReplyBody] = useState('');
+  const [replying, setReplying] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -68,6 +78,8 @@ export const MessagesPage = () => {
 
   const openMessage = async (msg: AdminMessage) => {
     setActive(msg);
+    setReplyOpen(false);
+    setReplyBody('');
     if (!msg.isRead && !msg.isSpam) {
       try {
         const updated = await adminUpdateMessage(msg._id, { isRead: true });
@@ -102,6 +114,26 @@ export const MessagesPage = () => {
       toast('success', msg.isSpam ? 'Restored — no longer marked as spam' : 'Marked as spam');
     } catch (err) {
       toast('error', getApiErrorMessage(err));
+    }
+  };
+
+  const sendReply = async () => {
+    if (!active || !replyBody.trim()) return;
+    setReplying(true);
+    try {
+      const result = await adminReplyMessage(active._id, replyBody.trim());
+      setItems((prev) => prev.map((m) => (m._id === active._id ? { ...m, repliedAt: result.repliedAt } : m)));
+      setActive((prev) => (prev ? { ...prev, repliedAt: result.repliedAt } : prev));
+      toast(
+        'success',
+        result.deliveredToPortal ? 'Reply sent — emailed and delivered to their delegate portal.' : 'Reply sent by email.'
+      );
+      setReplyOpen(false);
+      setReplyBody('');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setReplying(false);
     }
   };
 
@@ -292,6 +324,44 @@ export const MessagesPage = () => {
                 )}
                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-navy">{active.message}</p>
                 <p className="text-xs text-slate-400">{new Date(active.createdAt).toLocaleString()}</p>
+                {active.repliedAt && (
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-success">
+                    <CheckCircle2 size={13} /> Replied {new Date(active.repliedAt).toLocaleString()}
+                  </p>
+                )}
+
+                {replyOpen && !active.isSpam && (
+                  <div className="rounded-lg border border-slate-200 p-3">
+                    <textarea
+                      autoFocus
+                      value={replyBody}
+                      onChange={(e) => setReplyBody(e.target.value)}
+                      placeholder={`Write your reply to ${active.name}...`}
+                      maxLength={3000}
+                      rows={5}
+                      className="w-full resize-none rounded-md border border-slate-200 px-3 py-2 text-[13px] text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+                    />
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      Always sent by email. Also delivered to their delegate portal if a confirmed registration matches
+                      this email.
+                    </p>
+                    <div className="mt-2.5 flex gap-2">
+                      <button
+                        onClick={() => setReplyOpen(false)}
+                        className="flex-1 rounded-lg border border-slate-200 py-2 text-[13px] font-semibold text-navy hover:bg-offwhite"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={sendReply}
+                        disabled={replying || !replyBody.trim()}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-orange py-2 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
+                      >
+                        <Send size={14} /> {replying ? 'Sending…' : 'Send Reply'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2.5 border-t border-slate-100 px-5 py-4">
@@ -302,14 +372,14 @@ export const MessagesPage = () => {
                   >
                     <ShieldOff size={15} /> Not Spam
                   </button>
-                ) : (
+                ) : !replyOpen ? (
                   <>
-                    <a
-                      href={`mailto:${active.email}?subject=${encodeURIComponent('Re: Your message to AI in Health Summit 2026')}`}
+                    <button
+                      onClick={() => setReplyOpen(true)}
                       className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 py-2.5 text-[13px] font-semibold text-navy hover:bg-offwhite"
                     >
-                      <Mail size={15} /> Reply via Email
-                    </a>
+                      <Mail size={15} /> Reply
+                    </button>
                     <button
                       onClick={() => toggleResolved(active)}
                       className={`flex-1 rounded-lg py-2.5 text-[13px] font-semibold text-white ${active.isResolved ? 'bg-slate-400 hover:bg-slate-500' : 'bg-orange hover:bg-orange-hover'}`}
@@ -324,7 +394,7 @@ export const MessagesPage = () => {
                       <ShieldX size={15} />
                     </button>
                   </>
-                )}
+                ) : null}
               </div>
             </motion.div>
           </motion.div>

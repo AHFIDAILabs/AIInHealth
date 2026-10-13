@@ -95,8 +95,10 @@ import { PortalLogin } from './pages/portal/PortalLogin';
 import { PortalHome } from './pages/portal/PortalHome';
 import { PortalDirectory } from './pages/portal/PortalDirectory';
 import { PortalMeetings } from './pages/portal/PortalMeetings';
+import { PortalMessages } from './pages/portal/PortalMessages';
 import { PortalMyCard } from './pages/portal/PortalMyCard';
 import { PresentingCard } from './pages/public/PresentingCard';
+import { ShowcaseCard } from './pages/public/ShowcaseCard';
 import { Feedback } from './pages/public/Feedback';
 import { ReviewerLogin } from './pages/reviewer/ReviewerLogin';
 import { ReviewerDashboard } from './pages/reviewer/ReviewerDashboard';
@@ -151,6 +153,7 @@ function App() {
             <Route path="/wai-health-breakfast/rsvp/:token" element={<WaiHealthRsvp />} />
             <Route path="/rsvp/:token" element={<AttendeeRsvpConfirm />} />
             {EVENT_EXTRAS_ENABLED && <Route path="/presenting/:token" element={<PresentingCard />} />}
+            {EVENT_EXTRAS_ENABLED && <Route path="/showcase/:token" element={<ShowcaseCard />} />}
             {EVENT_EXTRAS_ENABLED && <Route path="/feedback" element={<Feedback />} />}
             {EVENT_EXTRAS_ENABLED && <Route path="/feedback/:sessionId" element={<Feedback />} />}
             <Route path="/rapporteur/:token" element={<RapporteurForm />} />
@@ -298,6 +301,7 @@ function App() {
               <Route path="/portal" element={<PortalHome />} />
               <Route path="/portal/directory" element={<PortalDirectory />} />
               <Route path="/portal/meetings" element={<PortalMeetings />} />
+              <Route path="/portal/messages" element={<PortalMessages />} />
               {EVENT_EXTRAS_ENABLED && <Route path="/portal/my-card" element={<PortalMyCard />} />}
             </Route>
           </Route>

@@ -21,7 +21,10 @@ export const ConfirmedAbstractsPage = () => {
     <div className="mx-auto max-w-6xl">
       <div>
         <h1 className="font-display text-2xl font-semibold text-navy">Confirmed Abstracts</h1>
-        <p className="text-sm text-slate-500">Manage the public presenters showcase and the open-access compendium.</p>
+        <p className="text-sm text-slate-500">
+          Manage the public presenters showcase and the open-access compendium. The "I will be presenting" share-card
+          invite is sent from the Compendium tab.
+        </p>
       </div>
 
       <div className="mt-6">

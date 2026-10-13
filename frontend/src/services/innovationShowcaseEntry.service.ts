@@ -1,8 +1,10 @@
 import { api } from './api';
 
-// Every field here is already safe for public display (see backend
-// InnovationShowcaseEntry.model.ts's header comment) — the public and admin
-// shapes are the same, unlike ConfirmedAbstract's internalNotes split.
+// Every field here except showcaseCard is already safe for public display
+// (see backend InnovationShowcaseEntry.model.ts's header comment) —
+// showcaseCard carries a real contact email, so it's the one field the
+// public list() endpoint explicitly strips, same split as ConfirmedAbstract's
+// internalNotes/presentingCard.presenterEmail.
 export interface InnovationShowcaseEntry {
   _id: string;
   startupName: string;
@@ -27,6 +29,10 @@ export interface InnovationShowcaseEntry {
   order: number;
   isPublished: boolean;
   createdAt: string;
+  // Admin-only — excluded entirely from the public list() endpoint (see
+  // backend model comment), so this is undefined on anything the public
+  // /innovation-showcase/confirmed page ever reads.
+  showcaseCard?: { contactEmail?: string; emailSentAt?: string };
 }
 
 export interface InnovationShowcaseEntryInput {
@@ -109,4 +115,43 @@ export const adminUpdateInnovationShowcaseEntry = async (
 
 export const adminDeleteInnovationShowcaseEntry = async (id: string): Promise<void> => {
   await api.delete(`/admin/innovation-showcase-entries/${id}`);
+};
+
+// --- "I'm showcasing" DP card ---
+
+export const adminSetShowcaseCardEmail = async (
+  id: string,
+  contactEmail: string | null
+): Promise<InnovationShowcaseEntry> => {
+  const res = await api.patch<{ success: true; data: InnovationShowcaseEntry }>(
+    `/admin/innovation-showcase-entries/${id}/showcase-card`,
+    { contactEmail }
+  );
+  return res.data.data;
+};
+
+// ids omitted -> every record with a contact email on file. `skipped` is how
+// many candidates had no email (never attempted, not a send failure).
+export const adminSendShowcaseCardInvites = async (
+  ids?: string[]
+): Promise<{ targeted: number; sent: number; failed: number; skipped: number }> => {
+  const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number; skipped: number } }>(
+    '/admin/innovation-showcase-entries/card/send-invites',
+    { ids }
+  );
+  return res.data.data;
+};
+
+export interface ShowcaseCardData {
+  startupName: string;
+  founderNames: string | null;
+  logoUrl: string | null;
+  solutionName: string | null;
+  category: string | null;
+}
+
+// Public — GET /innovation-showcase-entries/showcase/:token, no auth.
+export const fetchShowcaseCard = async (token: string): Promise<ShowcaseCardData> => {
+  const res = await api.get<{ success: true; data: ShowcaseCardData }>(`/innovation-showcase-entries/showcase/${token}`);
+  return res.data.data;
 };

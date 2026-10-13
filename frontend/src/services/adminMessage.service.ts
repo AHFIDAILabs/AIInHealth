@@ -20,6 +20,7 @@ export interface AdminMessage {
   isSpam?: boolean;
   spamScore?: number;
   spamReasons?: string[];
+  repliedAt?: string;
 }
 
 export interface Paginated<T> {
@@ -52,5 +53,18 @@ export const adminUpdateMessage = async (
   input: { isRead?: boolean; isResolved?: boolean; isSpam?: boolean }
 ): Promise<AdminMessage> => {
   const res = await api.patch<{ success: true; data: AdminMessage }>(`/admin/messages/${id}`, input);
+  return res.data.data;
+};
+
+// Always emails the sender; deliveredToPortal is true when a matching
+// confirmed registration also got a copy in their own delegate portal.
+export const adminReplyMessage = async (
+  id: string,
+  body: string
+): Promise<{ repliedAt: string; deliveredToPortal: boolean }> => {
+  const res = await api.patch<{ success: true; data: { repliedAt: string; deliveredToPortal: boolean } }>(
+    `/admin/messages/${id}/reply`,
+    { body }
+  );
   return res.data.data;
 };
