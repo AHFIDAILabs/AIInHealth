@@ -1,7 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Download, X, Users, UserCheck, QrCode, Wallet, Plus, Trash2, Ban, IdCard } from 'lucide-react';
+import {
+  Search,
+  Download,
+  X,
+  Users,
+  UserCheck,
+  QrCode,
+  Wallet,
+  Plus,
+  Trash2,
+  Ban,
+  IdCard,
+  ChevronDown,
+  ChevronUp,
+  Layers,
+} from 'lucide-react';
 import {
   listRegistrations,
   updateRegistrationStatus,
@@ -14,15 +29,20 @@ import {
 } from '../../services/admin.service';
 import { idVerificationRequirementText, type TicketCategory } from '../../services/registration.service';
 import { TICKET_PRICE_NGN, isFreeTicketCategory, formatNaira } from '../../lib/pricing';
-import { fetchAttendeeStats, type AttendeeStats } from '../../services/attendee.service';
+import { fetchAttendeeStats, fetchConfirmedAttendeeBreakdown, type AttendeeStats, type ConfirmedAttendeeBreakdown } from '../../services/attendee.service';
 import { getApiErrorMessage } from '../../services/api';
-import { SkeletonRows } from '../../components/ui/Skeleton';
+import { SkeletonRows, Skeleton } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { AdminInput, AdminSelect } from '../../components/ui/AdminField';
 import { Avatar } from '../../components/ui/Avatar';
 import { AnalyticsStatCard } from './analytics/AnalyticsStatCard';
+import { TrendAreaChart } from './analytics/TrendAreaChart';
+import { HorizontalBarChart } from './analytics/HorizontalBarChart';
+import { DonutChart } from './analytics/DonutChart';
 import { useToast } from '../../contexts/ToastContext';
+
+const ticketLabel = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 const TICKET_CATEGORIES = Object.keys(TICKET_PRICE_NGN) as TicketCategory[];
 const TICKET_LABEL: Record<TicketCategory, string> = {
@@ -91,6 +111,9 @@ export const AttendeesPage = () => {
   );
 
   const [stats, setStats] = useState<AttendeeStats | null>(null);
+  const [breakdown, setBreakdown] = useState<ConfirmedAttendeeBreakdown | null>(null);
+  const [breakdownError, setBreakdownError] = useState('');
+  const [breakdownOpen, setBreakdownOpen] = useState(true);
   const [active, setActive] = useState<AdminRegistration | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -131,8 +154,16 @@ export const AttendeesPage = () => {
   }, [load, q]);
 
   const refreshStats = () => fetchAttendeeStats().then(setStats).catch(() => undefined);
+  const refreshBreakdown = () =>
+    fetchConfirmedAttendeeBreakdown()
+      .then((b) => {
+        setBreakdown(b);
+        setBreakdownError('');
+      })
+      .catch((err) => setBreakdownError(getApiErrorMessage(err)));
   useEffect(() => {
     refreshStats();
+    refreshBreakdown();
   }, []);
 
   const clearFilters = () => {
@@ -151,6 +182,7 @@ export const AttendeesPage = () => {
       if (active?._id === id) setActive(updated);
       toast('success', `Status updated to ${next}`);
       refreshStats();
+      refreshBreakdown();
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -185,6 +217,7 @@ export const AttendeesPage = () => {
       toast('success', `${toDelete.fullName ?? 'Attendee'} removed`);
       setToDelete(null);
       refreshStats();
+      refreshBreakdown();
     } catch (err) {
       toast('error', getApiErrorMessage(err));
     } finally {
@@ -220,6 +253,7 @@ export const AttendeesPage = () => {
       });
       load();
       refreshStats();
+      refreshBreakdown();
       setFormOpen(false);
       toast('success', 'Attendee added.');
     } catch (err) {
@@ -276,6 +310,129 @@ export const AttendeesPage = () => {
         />
         <AnalyticsStatCard icon={QrCode} label="Checked In" value={stats?.checkedIn ?? null} suffix={stats ? `(${stats.checkInRate}%)` : undefined} />
         <AnalyticsStatCard icon={Wallet} label="Revenue" value={stats ? formatNaira(stats.revenueNaira) : null} />
+      </div>
+
+      {/* "What actually makes up the confirmed list" — every number here is
+          already scoped server-side to type:'attendee', status:'confirmed',
+          independent of whatever status/payment/ticket filters are applied to
+          the table below. */}
+      <div className="mt-6 rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover">
+        <button
+          onClick={() => setBreakdownOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange/15 text-orange">
+              <Layers size={16} />
+            </span>
+            <div>
+              <p className="font-display text-base font-semibold text-navy">Confirmed Attendee Breakdown</p>
+              <p className="text-xs text-slate-400">
+                {breakdown ? `${breakdown.records} confirmed registration${breakdown.records === 1 ? '' : 's'} · ${breakdown.seats} total seat${breakdown.seats === 1 ? '' : 's'} (incl. group members)` : 'How the confirmed list breaks down'}
+              </p>
+            </div>
+          </div>
+          {breakdownOpen ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+        </button>
+
+        {breakdownOpen && (
+          <div className="border-t border-slate-100 px-5 py-5">
+            {breakdownError ? (
+              <Banner variant="error">{breakdownError}</Banner>
+            ) : (
+              <>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Confirmed Over Time — Last 30 Days</p>
+                    <TrendAreaChart
+                      data={breakdown?.confirmedByDay ?? null}
+                      color="#16A34A"
+                      emptyLabel="No confirmations in this window yet"
+                      unitLabel={(n) => `confirmation${n === 1 ? '' : 's'}`}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">By Ticket Category</p>
+                    <HorizontalBarChart
+                      data={breakdown?.byTicketCategory.map((c) => ({ label: ticketLabel(c.category), value: c.count })) ?? null}
+                      color="#2563EB"
+                      emptyLabel="No confirmed attendees yet"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">By Discount Tier</p>
+                    <DonutChart
+                      data={breakdown?.byDiscountTier.map((t) => ({ label: t.label, value: t.count })) ?? null}
+                      emptyLabel="No confirmed attendees yet"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Payment Method</p>
+                    <DonutChart
+                      data={
+                        breakdown
+                          ? Object.entries(breakdown.byPaymentMethod).map(([k, v]) => ({ label: ticketLabel(k), value: v }))
+                          : null
+                      }
+                      emptyLabel="No paid confirmations yet"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Payment Status</p>
+                    {!breakdown ? (
+                      <Skeleton className="mt-4 h-24 w-full" />
+                    ) : (
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        {Object.entries(breakdown.byPaymentStatus).map(([k, v]) => (
+                          <div key={k} className="rounded-xl bg-offwhite px-3 py-3 text-center">
+                            <p className="font-display text-xl font-bold text-navy">{v}</p>
+                            <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{ticketLabel(k)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {!breakdown ? (
+                    <>
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="rounded-xl bg-offwhite px-3 py-3 text-center">
+                        <p className="font-display text-xl font-bold text-navy">{breakdown.byRegistrationMode.individual}</p>
+                        <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Individual</p>
+                      </div>
+                      <div className="rounded-xl bg-offwhite px-3 py-3 text-center">
+                        <p className="font-display text-xl font-bold text-navy">
+                          {breakdown.byRegistrationMode.group}
+                          <span className="text-sm font-medium text-slate-400"> ({breakdown.byRegistrationMode.groupSeats} seats)</span>
+                        </p>
+                        <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Group Registrations</p>
+                      </div>
+                      <div className="rounded-xl bg-offwhite px-3 py-3 text-center">
+                        <p className="font-display text-xl font-bold text-navy">{breakdown.byCheckIn.checkedIn}</p>
+                        <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Checked In</p>
+                      </div>
+                      <div className="rounded-xl bg-offwhite px-3 py-3 text-center">
+                        <p className="font-display text-xl font-bold text-navy">{breakdown.byCheckIn.notCheckedIn}</p>
+                        <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Not Checked In</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
