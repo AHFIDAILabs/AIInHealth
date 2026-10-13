@@ -72,6 +72,11 @@ export interface ExportedAbstract {
   sessionRef?: string | null;
   language?: string;
   corrections?: { date: string; note: string }[];
+  // The presenting author's headshot, same photoUrl the Presenters tab's
+  // curated public showcase already uses — null (never omitted) whenever one
+  // hasn't been uploaded, so the frontend can render its own fallback
+  // consistently rather than treating "no photo" as missing data.
+  photoUrl?: string | null;
 }
 
 export interface Edition {
@@ -142,6 +147,7 @@ export function buildExportRecord(doc: ConfirmedAbstractDoc): ExportedAbstract {
     keywords: doc.keywords ?? [],
     track: doc.track ?? null,
     presentationType: doc.presentationType ?? null,
+    photoUrl: doc.photoUrl ?? null,
     // No field on this model (or any other) links a confirmed abstract to a
     // specific agenda Session — poster/oral abstracts are grouped into
     // broader named sessions ("Oral Abstracts 1", "Poster Walk"), not 1:1

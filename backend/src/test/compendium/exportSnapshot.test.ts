@@ -27,7 +27,7 @@ describe('buildExportRecord', () => {
   it('exports the exact allowlisted key set for a published record — nothing more', () => {
     const result = buildExportRecord(publishedFixture);
     expect(Object.keys(result).sort()).toEqual(
-      ['code', 'title', 'status', 'authors', 'abstract', 'keywords', 'track', 'presentationType', 'sessionRef', 'language', 'corrections'].sort()
+      ['code', 'title', 'status', 'authors', 'abstract', 'keywords', 'track', 'presentationType', 'sessionRef', 'language', 'corrections', 'photoUrl'].sort()
     );
   });
 
