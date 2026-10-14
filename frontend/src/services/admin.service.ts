@@ -220,9 +220,10 @@ export const sendCardInvites = async (ids?: string[]): Promise<{ targeted: numbe
 
 // WAI-Health Breakfast invite campaign — registration.controller.ts's
 // adminSendWaiHealthBreakfastInvite. No ids/filter param: always targets
-// every confirmed Summit registration not yet invited, same "whole-list,
-// re-runnable" shape as sendScholarshipCampaign below — safe to click again
-// later, since already-invited people are excluded server-side.
+// every confirmed ATTENDEE registration not yet invited (never team/
+// organizer), same "whole-list, re-runnable" shape as sendScholarshipCampaign
+// below — safe to click again later, since already-invited people are
+// excluded server-side.
 export const sendWaiHealthBreakfastInvite = async (): Promise<{ targeted: number; sent: number; failed: number }> => {
   const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
     '/admin/registrations/wai-health-invite/send'

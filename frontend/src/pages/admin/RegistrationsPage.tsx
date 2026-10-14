@@ -1425,7 +1425,7 @@ export const RegistrationsPage = () => {
       <ConfirmDialog
         open={confirmWaiHealthInvite}
         title="Send the WAI-Health Breakfast invite?"
-        description="Every confirmed attendee/team registration that hasn't already been sent this invite gets an email inviting women to the WAI-Health Breakfast, with a link to register separately for that session. Safe to send again later — anyone already invited is skipped, so only newly-confirmed registrations receive it on a repeat send."
+        description="Every confirmed attendee registration that hasn't already been sent this invite gets an email inviting women to the WAI-Health Breakfast, with a link to register separately for that session. Team/organizer registrations are never included. Safe to send again later — anyone already invited is skipped, so only newly-confirmed registrations receive it on a repeat send."
         confirmLabel="Send Invite"
         danger={false}
         loading={sendingWaiHealthInvite}
