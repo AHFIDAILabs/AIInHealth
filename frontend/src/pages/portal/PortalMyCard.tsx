@@ -59,7 +59,26 @@ export const PortalMyCard = () => {
   // still uses this same "I will be attending" card, just with a different
   // word under the photo. Speaker takes priority over "team" — someone can
   // be registered as staff and also be a confirmed speaker.
-  const attendingRoleLabel = isSpeaker ? 'Speaker' : delegate.type === 'team' ? 'Organizer' : 'Delegate';
+  //
+  // paymentStatus === 'not_required' is a reliable "this seat cost them
+  // nothing" signal for every free channel at once (a free ticket category
+  // like government_official/accredited_media, OR any fully-comped access
+  // code redemption — scholarship-100%, promo, staff, bulk_invite,
+  // keynote_speaker, complimentary — see registration.controller.ts's
+  // create(): a 100%-comped registration never leaves 'not_required').
+  // Checked before the VIP case below, per management's ask: a free seat
+  // reads "Sponsored" even if its ticketCategory happens to be 'vip'; only a
+  // PAID vip keeps its own "VIP" label, and every other paid category reads
+  // the generic "Delegate".
+  const attendingRoleLabel = isSpeaker
+    ? 'Speaker'
+    : delegate.type === 'team'
+      ? 'Organizer'
+      : delegate.paymentStatus === 'not_required'
+        ? 'Sponsored'
+        : delegate.ticketCategory === 'vip'
+          ? 'VIP'
+          : 'Delegate';
 
   const cards: { key: string; heading: string; filename: string; shareText: string; data: EventCardData }[] = [
     {

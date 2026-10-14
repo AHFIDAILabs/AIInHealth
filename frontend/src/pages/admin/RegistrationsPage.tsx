@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Download, Upload, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard, ShieldAlert, ShieldOff, Send, Share2 } from 'lucide-react';
+import { Search, Download, Upload, X, ClipboardList, Plus, Trash2, Ban, Copy, Check, IdCard, ShieldAlert, ShieldOff, Send, Share2, Coffee } from 'lucide-react';
 import {
   listRegistrations,
   updateRegistrationStatus,
@@ -13,9 +13,13 @@ import {
   importVolunteersCsv,
   sendRsvpReminders,
   sendCardInvites,
+  sendWaiHealthBreakfastInvite,
+  REGISTRATION_CHANNELS,
+  REGISTRATION_CHANNEL_LABELS,
   type AdminRegistration,
   type RegistrationStatus,
   type RegistrationType,
+  type RegistrationChannel,
   type AdminCreateRegistrationPayload,
   type VolunteerImportReport,
 } from '../../services/admin.service';
@@ -177,7 +181,17 @@ export const RegistrationsPage = () => {
   // regardless of the status dropdown, same deep-link convention as
   // AttendeesPage.tsx's ?status=confirmed.
   const [rsvpResponded, setRsvpResponded] = useState(searchParams.get('rsvpResponded') === 'true');
+  // Registration Channels deep links (sidebar: Sponsored Delegates/Promo/
+  // Invited Guests, same `/admin/registrations?channel=` pattern as the
+  // existing `?type=team`/`?rsvpResponded=true` views) — see
+  // backend/src/utils/registrationChannel.ts for what each value means.
+  const initialChannel = searchParams.get('channel');
+  const [channel, setChannel] = useState<RegistrationChannel | ''>(
+    (REGISTRATION_CHANNELS as readonly string[]).includes(initialChannel ?? '') ? (initialChannel as RegistrationChannel) : ''
+  );
   const [sendingRsvpReminders, setSendingRsvpReminders] = useState(false);
+  const [confirmWaiHealthInvite, setConfirmWaiHealthInvite] = useState(false);
+  const [sendingWaiHealthInvite, setSendingWaiHealthInvite] = useState(false);
   const [sendingCardInvites, setSendingCardInvites] = useState(false);
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -285,6 +299,8 @@ export const RegistrationsPage = () => {
     const next = FILTER_TYPE_OPTIONS.includes(urlType as TypeFilterValue) ? (urlType as TypeFilterValue) : '';
     setType((prev) => (prev === next ? prev : next));
     setRsvpResponded(searchParams.get('rsvpResponded') === 'true');
+    const urlChannel = searchParams.get('channel');
+    setChannel((REGISTRATION_CHANNELS as readonly string[]).includes(urlChannel ?? '') ? (urlChannel as RegistrationChannel) : '');
     setPage(1);
   }, [searchParams, lockedType]);
 
@@ -300,6 +316,7 @@ export const RegistrationsPage = () => {
       ticketCategory: type === 'organizer' ? 'staff' : undefined,
       flagged: flaggedOnly ? 'true' : undefined,
       rsvpResponded: rsvpResponded ? 'true' : undefined,
+      channel: channel || undefined,
       q: q || undefined,
       page,
       limit: 20,
@@ -311,7 +328,7 @@ export const RegistrationsPage = () => {
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setLoading(false));
-  }, [status, type, flaggedOnly, rsvpResponded, q, page]);
+  }, [status, type, flaggedOnly, rsvpResponded, channel, q, page]);
 
   useEffect(() => {
     const id = setTimeout(load, q ? 350 : 0);
@@ -357,6 +374,7 @@ export const RegistrationsPage = () => {
     if (!lockedType) setType('');
     setFlaggedOnly(false);
     setRsvpResponded(false);
+    setChannel('');
     setQ('');
     setPage(1);
     setSearchParams({}, { replace: true });
@@ -372,6 +390,22 @@ export const RegistrationsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setSendingRsvpReminders(false);
+    }
+  };
+
+  const sendWaiHealthInviteBatch = async () => {
+    setSendingWaiHealthInvite(true);
+    try {
+      const result = await sendWaiHealthBreakfastInvite();
+      toast(
+        'success',
+        `Invite sent to ${result.sent} of ${result.targeted} confirmed registration${result.targeted === 1 ? '' : 's'}${result.failed ? ` (${result.failed} failed)` : ''}.`
+      );
+      setConfirmWaiHealthInvite(false);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingWaiHealthInvite(false);
     }
   };
 
@@ -561,14 +595,22 @@ export const RegistrationsPage = () => {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold text-navy">
-            {rsvpResponded ? "RSVP'd — Awaiting Confirmation" : type ? TYPE_LABEL[type] : 'Registrations'}
+            {rsvpResponded
+              ? "RSVP'd — Awaiting Confirmation"
+              : channel
+                ? `${REGISTRATION_CHANNEL_LABELS[channel]} Registrations`
+                : type
+                  ? TYPE_LABEL[type]
+                  : 'Registrations'}
           </h1>
           <p className="text-sm text-slate-500">
             {rsvpResponded
               ? `${total} pending attendee${total === 1 ? '' : 's'} confirmed they're still interested — review and confirm below.`
-              : type
-                ? `${total} ${TYPE_LABEL[type].toLowerCase()} submission${total === 1 ? '' : 's'}.`
-                : `${total} total submission${total === 1 ? '' : 's'} across attendees, exhibitors, sponsors, volunteers, and team.`}
+              : channel
+                ? `${total} registration${total === 1 ? '' : 's'} that came through the ${REGISTRATION_CHANNEL_LABELS[channel]} channel — these print with a "${REGISTRATION_CHANNEL_LABELS[channel]}" tag at check-in.`
+                : type
+                  ? `${total} ${TYPE_LABEL[type].toLowerCase()} submission${total === 1 ? '' : 's'}.`
+                  : `${total} total submission${total === 1 ? '' : 's'} across attendees, exhibitors, sponsors, volunteers, and team.`}
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -579,6 +621,13 @@ export const RegistrationsPage = () => {
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-sm transition-colors hover:border-orange/40 disabled:opacity-60"
           >
             <Send size={15} /> {sendingRsvpReminders ? 'Sending…' : 'Send RSVP Reminders'}
+          </button>
+          <button
+            onClick={() => setConfirmWaiHealthInvite(true)}
+            title="Email every confirmed registration not yet invited, inviting women to the WAI-Health Breakfast"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-sm transition-colors hover:border-orange/40"
+          >
+            <Coffee size={15} /> Send WAI-Health Invite
           </button>
           <button
             onClick={openAddForm}
@@ -669,7 +718,7 @@ export const RegistrationsPage = () => {
         >
           <ShieldAlert size={13} /> Flagged
         </button>
-        {(status || (!lockedType && type) || flaggedOnly || rsvpResponded || q) && (
+        {(status || (!lockedType && type) || flaggedOnly || rsvpResponded || channel || q) && (
           <button onClick={clearFilters} className="text-[13px] font-semibold text-orange hover:text-orange-hover">
             Clear
           </button>
@@ -692,6 +741,7 @@ export const RegistrationsPage = () => {
               status: status || undefined,
               type: type === 'organizer' ? 'attendee' : type || undefined,
               ticketCategory: type === 'organizer' ? 'staff' : undefined,
+              channel: channel || undefined,
               q: q || undefined,
             })}
             className={`flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-navy transition-colors hover:border-orange/40 ${type === 'volunteer' ? '' : 'ml-auto'}`}
@@ -804,6 +854,14 @@ export const RegistrationsPage = () => {
                         <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_BADGE[r.status]}`}>
                           {r.status}
                         </span>
+                        {r.channel && (
+                          <span
+                            title="Registration channel — prints with this tag at check-in"
+                            className="rounded-full bg-chart-teal/10 px-2.5 py-0.5 text-[11px] font-semibold text-chart-teal"
+                          >
+                            {REGISTRATION_CHANNEL_LABELS[r.channel]}
+                          </span>
+                        )}
                         {r.idCardUrl && <IdCard size={13} className="shrink-0 text-warning" aria-label="ID uploaded, needs review" />}
                         {r.flaggedSuspicious && (
                           <span
@@ -1362,6 +1420,17 @@ export const RegistrationsPage = () => {
         loading={deleting}
         onConfirm={confirmDeleteRegistration}
         onCancel={() => setToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmWaiHealthInvite}
+        title="Send the WAI-Health Breakfast invite?"
+        description="Every confirmed attendee/team registration that hasn't already been sent this invite gets an email inviting women to the WAI-Health Breakfast, with a link to register separately for that session. Safe to send again later — anyone already invited is skipped, so only newly-confirmed registrations receive it on a repeat send."
+        confirmLabel="Send Invite"
+        danger={false}
+        loading={sendingWaiHealthInvite}
+        onConfirm={sendWaiHealthInviteBatch}
+        onCancel={() => setConfirmWaiHealthInvite(false)}
       />
 
       <VolunteerTrackManagerModal

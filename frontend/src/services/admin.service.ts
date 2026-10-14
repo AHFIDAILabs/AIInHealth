@@ -33,6 +33,9 @@ export interface AdminRegistration {
   solutionDescription?: string;
   message?: string;
   accessCode?: string;
+  // Attendee only — the redeemed AccessCode's own `type` (e.g. 'scholarship',
+  // 'promo'), copied here at redemption time. Backs `channel` below.
+  accessCodeType?: string;
   // Attendee only — set when accessCode above redeemed a 'scholarship'-type code.
   discountPercent?: 10 | 25 | 50 | 100;
   paymentStatus?: 'not_required' | 'unpaid' | 'paid' | 'failed';
@@ -71,7 +74,24 @@ export interface AdminRegistration {
   flaggedSuspicious?: boolean;
   spamScore?: number;
   spamReasons?: string[];
+  // Computed server-side (never stored) — see backend's registrationChannel.ts.
+  // null for every registration outside the three named channels.
+  channel?: RegistrationChannel | null;
 }
+
+// The three "how did this free/comp seat happen" groupings management wants
+// to see broken out separately — mirrors backend/src/utils/registrationChannel.ts.
+export const REGISTRATION_CHANNELS = ['sponsored', 'promo', 'rsvp_invited'] as const;
+export type RegistrationChannel = (typeof REGISTRATION_CHANNELS)[number];
+
+// What a printed name tag should say for someone in this channel — 'sponsored'
+// is deliberately the bare word "Sponsored" per management's explicit ask,
+// not "Sponsored Delegate" or the raw 'invited_delegate' ticketCategory.
+export const REGISTRATION_CHANNEL_LABELS: Record<RegistrationChannel, string> = {
+  sponsored: 'Sponsored',
+  promo: 'Promo',
+  rsvp_invited: 'Invited Guest',
+};
 
 export interface RecentActivityItem {
   id: string;
@@ -112,6 +132,8 @@ export interface ListRegistrationsParams {
   ticketCategory?: TicketCategory;
   flagged?: 'true';
   rsvpResponded?: 'true';
+  // Registration Channels page (RegistrationChannelsPage.tsx).
+  channel?: RegistrationChannel;
   q?: string;
   page?: number;
   limit?: number;
@@ -192,6 +214,18 @@ export const sendCardInvites = async (ids?: string[]): Promise<{ targeted: numbe
   const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
     '/admin/registrations/card/send-invites',
     { ids }
+  );
+  return res.data.data;
+};
+
+// WAI-Health Breakfast invite campaign — registration.controller.ts's
+// adminSendWaiHealthBreakfastInvite. No ids/filter param: always targets
+// every confirmed Summit registration not yet invited, same "whole-list,
+// re-runnable" shape as sendScholarshipCampaign below — safe to click again
+// later, since already-invited people are excluded server-side.
+export const sendWaiHealthBreakfastInvite = async (): Promise<{ targeted: number; sent: number; failed: number }> => {
+  const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
+    '/admin/registrations/wai-health-invite/send'
   );
   return res.data.data;
 };

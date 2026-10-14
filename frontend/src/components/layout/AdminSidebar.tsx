@@ -41,6 +41,9 @@ import {
   UserCheck,
   Send,
   Star,
+  Gift,
+  Tag,
+  MailCheck,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -147,6 +150,13 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Innovators', to: '/admin/innovators', icon: Lightbulb, roles: [...registrationRoles, 'viewer', 'innovator_lead'] },
       { label: 'Volunteers', to: '/admin/registrations?type=volunteer', icon: HeartHandshake, roles: [...registrationRoles, 'viewer'] },
       { label: 'Team Registrations', to: '/admin/registrations?type=team', icon: UsersRound, roles: [...registrationRoles, 'viewer'] },
+      // Registration Channels — who came in through each free/comp channel
+      // (so check-in badge printing knows who to tag "Sponsored"). Same
+      // `/admin/registrations?channel=` deep-link pattern as the Volunteers/
+      // Team Registrations rows above.
+      { label: 'Sponsored Delegates', to: '/admin/registrations?channel=sponsored', icon: Gift, roles: [...registrationRoles, 'viewer'] },
+      { label: 'Promo Registrations', to: '/admin/registrations?channel=promo', icon: Tag, roles: [...registrationRoles, 'viewer'] },
+      { label: 'RSVP Invited Guests', to: '/admin/registrations?channel=rsvp_invited', icon: MailCheck, roles: [...registrationRoles, 'viewer'] },
       { label: 'Sponsors & Partners', to: '/admin/partners', icon: Handshake, roles: adminOnlyRoles },
       { label: 'Portal Tokens', to: '/admin/portal-tokens', icon: Smartphone, roles: adminOnlyRoles },
     ],
