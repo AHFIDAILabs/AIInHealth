@@ -346,6 +346,39 @@ const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker, onCardClick }:
             </div>
           )}
 
+          {s.moderator && (
+            <div className="mt-3">
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${s.cardStyle === 'standard' ? 'text-slate-400' : 'text-slate-400'}`}>
+                {t('agenda.detail.moderator', 'Moderator')}
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSpeakerClick(resolveSpeaker(s.moderator!, s.tracks[0]?.name ?? t('agenda.card.generalSession', 'General Session')));
+                  }}
+                  className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-left transition-colors ${
+                    s.cardStyle === 'standard'
+                      ? 'border-slate-200 bg-white hover:border-orange/40 hover:bg-orange/5'
+                      : 'border-white/20 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy text-[10px] font-semibold text-white">
+                    {s.moderator.photoUrl ? (
+                      <img src={s.moderator.photoUrl} alt={s.moderator.fullName} className="h-full w-full object-cover" />
+                    ) : (
+                      s.moderator.fullName[0]
+                    )}
+                  </span>
+                  <span className={`text-xs font-medium ${s.cardStyle === 'standard' ? 'text-navy' : 'text-white'}`}>
+                    {s.moderator.fullName}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {s.speakers.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {s.speakers.map((sp) => (
