@@ -9,6 +9,8 @@ import {
   PAYMENT_METHODS,
   ACCESS_CODE_DISCOUNTS,
   PRESENTATION_TYPES,
+  ACCESS_CODE_TYPES,
+  GENDERS,
 } from '../types/enums.js';
 
 // One flat collection for every Register-page flow (attendee/exhibitor/sponsor/
@@ -35,8 +37,13 @@ const registrationSchema = new Schema(
     // credential), for the admin to check before confirming. Same
     // Cloudinary-URL-string pattern as avatarUrl below.
     idCardUrl: { type: String, trim: true },
-    // Each member gets their OWN qrToken/checkedIn/checkedInAt — independent of
-    // the primary contact's own top-level fields below — so every person in a
+    // Self-reported at the door (checkin.controller.ts's scan()/manualCheckIn()),
+    // not on the original registration form — the form never asked, and this
+    // is the one guaranteed in-person touchpoint with every attendee. Optional;
+    // never required to complete check-in.
+    gender: { type: String, enum: GENDERS },
+    // Each member gets their OWN qrToken/checkedIn/checkedInAt/gender — independent
+    // of the primary contact's own top-level fields below — so every person in a
     // group registration can check in/out of the venue on their own instead of
     // the whole group sharing one QR code (checkin.controller.ts's scan/
     // manualCheckIn match against either the top-level qrToken or a member's).
@@ -48,6 +55,7 @@ const registrationSchema = new Schema(
         qrToken: { type: String },
         checkedIn: { type: Boolean, default: false },
         checkedInAt: { type: Date },
+        gender: { type: String, enum: GENDERS },
       },
     ],
 
@@ -112,6 +120,18 @@ const registrationSchema = new Schema(
     // (AccessCode.model.ts) at redemption time. Lets badge/tag printing (and
     // the admin Attendees list/export) tell Oral and Poster presenters apart.
     presentationType: { type: String, enum: PRESENTATION_TYPES },
+
+    // Attendee only — the redeemed AccessCode's own `type`, copied here at
+    // redemption time (same pattern as discountPercent/presentationType
+    // above). Needed because the Registration itself otherwise only records
+    // the code STRING, not what kind of code it was — which made it
+    // impossible to tell a Promo-channel redemption apart from a scholarship/
+    // staff/complimentary one without a join. Backs
+    // registrationChannel.ts's channel classification (Registration Channels
+    // admin page, and eventually check-in badge printing). Existing
+    // registrations predating this field are backfilled by
+    // scripts/backfillAccessCodeType.ts.
+    accessCodeType: { type: String, enum: ACCESS_CODE_TYPES },
 
     // Payment — paid attendee ticket categories only. 'not_required' covers free
     // categories and every non-attendee type; those never touch this beyond the default.
@@ -195,6 +215,13 @@ const registrationSchema = new Schema(
     // itself is generated client-side in the portal (cardGenerator.ts) — this
     // field never represents the card's generation, only the email.
     cardEmailSentAt: { type: Date },
+
+    // WAI-Health Breakfast invite campaign (registration.controller.ts's
+    // adminSendWaiHealthBreakfastInvite) — unlike cardEmailSentAt above, this
+    // one IS read back into the send filter (status:'confirmed' AND this
+    // unset), so re-clicking the same admin action only reaches people newly
+    // confirmed since the last send, rather than re-emailing everyone again.
+    waiHealthInviteSentAt: { type: Date },
 
     // Delegate portal login credential — generated once (lazily, on first
     // confirmation email or resend request) and reused for the registration's

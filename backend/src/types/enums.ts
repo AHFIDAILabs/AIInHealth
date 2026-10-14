@@ -48,6 +48,12 @@ export type RegistrationStatus = (typeof REGISTRATION_STATUSES)[number];
 export const REGISTRATION_MODES = ['individual', 'group'] as const;
 export type RegistrationMode = (typeof REGISTRATION_MODES)[number];
 
+// Self-reported at the door, not on the original registration form — see
+// checkin.controller.ts's scan()/manualCheckIn(). Optional and never blocks
+// check-in; a busy entrance can't afford a queue-stopping required field.
+export const GENDERS = ['male', 'female', 'prefer_not_to_say'] as const;
+export type Gender = (typeof GENDERS)[number];
+
 // Mirrors the pricing tiers published on the Register page's FAQ. 'staff' is
 // the odd one out — not a real public pricing tier, it's how an internal
 // event team member (see ACCESS_CODE_TYPES' 'staff') registers on the same

@@ -29,7 +29,7 @@ import type { Role, RegistrationType } from '../types/enums.js';
 import { generateQrToken } from '../services/qr.service.js';
 import { generateCode } from './accessCode.controller.js';
 import { initializePaymentForRegistration } from './payment.controller.js';
-import { sendRegistrationPaymentLinkEmail, sendAttendanceCardEmail, sendScholarshipCampaignEmail } from '../services/email.service.js';
+import { sendRegistrationPaymentLinkEmail, sendAttendanceCardEmail, sendScholarshipCampaignEmail, sendWaiHealthBreakfastInviteEmail } from '../services/email.service.js';
 import { env } from '../config/env.js';
 import { sendConfirmationAndTicketEmails } from '../services/registrationNotification.service.js';
 import { getOrCreateVolunteerSettings } from '../models/VolunteerSettings.model.js';
@@ -41,6 +41,7 @@ import { verifyFormToken } from '../services/formToken.service.js';
 import { canonicalizeEmail, scoreSubmission, applyVelocityBump, type SpamScoreResult } from '../utils/spamHeuristics.js';
 import { recordSecurityEvent } from '../services/securityEvent.service.js';
 import { getRawForwardedFor } from '../utils/clientIp.js';
+import { classifyRegistrationChannel, registrationChannelFilter, REGISTRATION_CHANNEL_LABELS } from '../utils/registrationChannel.js';
 
 const CONFIRMATION_MESSAGE: Record<CreateRegistrationInput['type'], string> = {
   attendee: "You're registered. We'll be in touch with next steps shortly.",
@@ -561,18 +562,27 @@ export const create = catchAsync(async (req: Request, res: Response) => {
     }
   }
 
-  // The QR-banner promo giveaway is deliberately excluded from VIP —
-  // management's premium tier shouldn't be handed out via an anonymous
-  // public scan-and-claim mechanic the way an ordinary paid category can be.
-  // Every other category (nigerian_professional, student_researcher,
-  // international_delegate, government_official, accredited_media) is
-  // unaffected — a promo code still comps those in full, same as any other
-  // non-scholarship attendee code.
-  if (!recentDuplicate && input.type === 'attendee' && input.ticketCategory === 'vip' && redeemedCode?.type === 'promo') {
+  // VIP is management's limited, premium tier — no fully-comped (100%) code
+  // of ANY type may be redeemed against it, whether that's the promo
+  // giveaway, a 100%-scholarship, or a keynote_speaker/complimentary code.
+  // Without this, a Sponsored Delegate (a 100%-scholarship code, meant for
+  // the regular paid categories) could pick VIP on the form and get a free
+  // VIP seat auto-confirmed with no review at all — exactly what happened
+  // before this check existed (6 real registrations downgraded by hand; see
+  // the admin audit log around 2026-10-14). A PARTIAL discount (10/25/50%)
+  // is still allowed on VIP — that's a real paid seat, just discounted, not
+  // a free ride. Every other category (nigerian_professional,
+  // student_researcher, international_delegate, government_official,
+  // accredited_media) is unaffected by this check.
+  //
+  // Scoped to this PUBLIC self-service path only — admin-created
+  // registrations (adminCreate below) never redeem a code at all, so
+  // management's own exclusive VIP invites are untouched by this rule.
+  if (!recentDuplicate && input.type === 'attendee' && input.ticketCategory === 'vip' && discountPercent === 100) {
     throw new ApiError(
       422,
-      'The promo code cannot be used for the VIP ticket category. It works for every other category (e.g. Nigerian Professional, Student/Researcher, International Delegate).',
-      'PROMO_NOT_VALID_FOR_VIP'
+      'A fully-comped access code cannot be used for the VIP ticket category. It works for every other category (e.g. Nigerian Professional, Student/Researcher, International Delegate).',
+      'FULL_COMP_NOT_VALID_FOR_VIP'
     );
   }
 
@@ -601,6 +611,10 @@ export const create = catchAsync(async (req: Request, res: Response) => {
         // Oral vs Poster — copied straight from the redeemed AccessCode so
         // badge/tag printing can tell the two apart (see that model's comment).
         ...(redeemedCode?.type === 'abstract_presenter' && redeemedCode.presentationType && { presentationType: redeemedCode.presentationType }),
+        // Which KIND of code was redeemed — see Registration.model.ts's
+        // accessCodeType comment. Backs the Registration Channels page's
+        // Sponsored/Promo classification.
+        ...(redeemedCode && { accessCodeType: redeemedCode.type }),
       });
       isNewRegistration = true;
     } catch (err) {
@@ -899,17 +913,25 @@ const buildAdminFilter = (query: ListRegistrationsQuery, req: Request): FilterQu
         ];
       })()
     : null;
+  // Registration Channels page (RegistrationChannelsPage.tsx) — its own
+  // compound condition (not always a plain $or), so it's kept as a whole
+  // filter fragment rather than an $or array like the two above.
+  const channelFilter = query.channel ? registrationChannelFilter(query.channel) : null;
 
-  // Both teamPoolOr and searchOr are their own $or — can't both live under
-  // filter.$or at once (a plain object can only hold one), so when both are
-  // present they're combined under $and instead of one silently clobbering
-  // the other.
-  if (teamPoolOr && searchOr) {
-    filter.$and = [{ $or: teamPoolOr }, { $or: searchOr }];
-  } else if (teamPoolOr) {
-    filter.$or = teamPoolOr;
-  } else if (searchOr) {
-    filter.$or = searchOr;
+  // teamPoolOr/searchOr are each their own $or, and channelFilter may carry
+  // its own nested $or too — none of these can share filter.$or directly (a
+  // plain object only holds one $or key), so whenever more than one of these
+  // groups is present they're combined under $and instead of one silently
+  // clobbering another.
+  const andGroups: FilterQuery<RegistrationDoc>[] = [
+    ...(teamPoolOr ? [{ $or: teamPoolOr }] : []),
+    ...(searchOr ? [{ $or: searchOr }] : []),
+    ...(channelFilter ? [channelFilter] : []),
+  ];
+  if (andGroups.length > 1) {
+    filter.$and = andGroups;
+  } else if (andGroups.length === 1) {
+    Object.assign(filter, andGroups[0]);
   }
 
   return filter;
@@ -925,8 +947,13 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
     Registration.countDocuments(filter),
   ]);
 
+  // Self-labels each row with its Registration Channel (Sponsored/Promo/
+  // Invited Guest, or null) — computed here rather than stored, so it stays
+  // correct even for registrations that predate this classification.
+  const itemsWithChannel = items.map((item) => ({ ...item.toObject(), channel: classifyRegistrationChannel(item) }));
+
   res.json(
-    new ApiResponse(items, { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) || 1 })
+    new ApiResponse(itemsWithChannel, { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) || 1 })
   );
 });
 
@@ -1456,9 +1483,9 @@ export const adminImportVolunteers = catchAsync(async (req: Request, res: Respon
 const CSV_COLUMNS = [
   '_id', 'type', 'status', 'isActive', 'createdAt', 'registrationMode', 'ticketCategory', 'fullName', 'email', 'phone',
   'organization', 'jobTitle', 'country', 'groupAttendees', 'companyName', 'contactName', 'contactEmail', 'contactPhone',
-  'website', 'boothSize', 'productsDescription', 'customFieldAnswers', 'message', 'accessCode', 'discountPercent',
-  'presentationType', 'paymentStatus', 'amountNaira', 'paidAt', 'paymentReference', 'checkedIn', 'checkedInAt', 'directoryOptIn',
-  'tshirtSize', 'trackSelected', 'trackAssigned', 'avatarUrl',
+  'website', 'boothSize', 'productsDescription', 'customFieldAnswers', 'message', 'accessCode', 'accessCodeType', 'discountPercent',
+  'presentationType', 'channel', 'badgeTag', 'paymentStatus', 'amountNaira', 'paidAt', 'paymentReference', 'checkedIn', 'checkedInAt',
+  'gender', 'directoryOptIn', 'tshirtSize', 'trackSelected', 'trackAssigned', 'avatarUrl',
 ];
 
 export const adminExport = catchAsync(async (req: Request, res: Response) => {
@@ -1473,16 +1500,24 @@ export const adminExport = catchAsync(async (req: Request, res: Response) => {
     (await CustomFormField.find({ formType: 'exhibitor' }).select('label').lean()).map((f) => [f._id.toString(), f.label])
   );
 
-  const rows = items.map((item) => ({
-    ...item,
-    groupAttendees: (item.groupAttendees ?? []).map((a) => `${a.fullName ?? ''} <${a.email ?? ''}>`).join('; '),
-    customFieldAnswers: item.customFieldAnswers
-      ? Object.entries(item.customFieldAnswers)
-          .map(([id, value]) => `${fieldLabelById.get(id) ?? id}: ${value}`)
-          .join('; ')
-      : '',
-    amountNaira: typeof item.amountKobo === 'number' ? Math.round(item.amountKobo / 100) : '',
-  }));
+  const rows = items.map((item) => {
+    const channel = classifyRegistrationChannel(item);
+    return {
+      ...item,
+      groupAttendees: (item.groupAttendees ?? []).map((a) => `${a.fullName ?? ''} <${a.email ?? ''}>`).join('; '),
+      customFieldAnswers: item.customFieldAnswers
+        ? Object.entries(item.customFieldAnswers)
+            .map(([id, value]) => `${fieldLabelById.get(id) ?? id}: ${value}`)
+            .join('; ')
+        : '',
+      amountNaira: typeof item.amountKobo === 'number' ? Math.round(item.amountKobo / 100) : '',
+      channel: channel ?? '',
+      // What a printed name tag should say for this channel (e.g. "Sponsored")
+      // — blank for every registration outside these three channels, same as
+      // `channel` itself.
+      badgeTag: channel ? REGISTRATION_CHANNEL_LABELS[channel] : '',
+    };
+  });
 
   const csv = toCsv(rows as unknown as Record<string, unknown>[], CSV_COLUMNS);
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -1516,6 +1551,38 @@ export const adminSendCardInvites = catchAsync(async (req: Request, res: Respons
   await recordAudit({
     req,
     action: 'registration.card_invites_sent',
+    resourceType: 'Registration',
+    resourceId: 'bulk',
+    after: { targeted: targetable.length, sent: succeeded, failed: failed.length },
+  });
+
+  res.json(new ApiResponse({ targeted: targetable.length, sent: succeeded, failed: failed.length }));
+});
+
+// POST /admin/registrations/wai-health-invite/send — the WAI-Health
+// Breakfast invite campaign. No ids/filter param (unlike adminSendCardInvites
+// above) — this always targets every confirmed Summit registration that
+// hasn't been sent yet, same "whole-list, re-runnable" shape as
+// adminSendScholarshipCampaign. Safe to click again as the confirmed list
+// grows: waiHealthInviteSentAt (unlike cardEmailSentAt) IS read back into
+// this filter, so a re-click only reaches people confirmed since the last send.
+export const adminSendWaiHealthBreakfastInvite = catchAsync(async (req: Request, res: Response) => {
+  const targets = await Registration.find({
+    type: { $in: ['attendee', 'team'] },
+    status: 'confirmed',
+    waiHealthInviteSentAt: { $exists: false },
+  });
+  const targetable = targets.filter((r) => !!r.email);
+
+  const { succeeded, failed } = await runInBatches(targetable, 3, async (registration) => {
+    await sendWaiHealthBreakfastInviteEmail(registration.email!, registration.fullName ?? 'there', `${env.FRONTEND_ORIGIN}/wai-health-breakfast`);
+    registration.waiHealthInviteSentAt = new Date();
+    await registration.save();
+  });
+
+  await recordAudit({
+    req,
+    action: 'registration.wai_health_invite_sent',
     resourceType: 'Registration',
     resourceId: 'bulk',
     after: { targeted: targetable.length, sent: succeeded, failed: failed.length },

@@ -6,6 +6,21 @@ import { ApiError } from '../utils/ApiError.js';
 import { Registration } from '../models/Registration.model.js';
 import { recordAudit } from '../services/audit.service.js';
 import { broadcastAdminEvent } from '../sockets/adminNamespace.js';
+import { qrDataUrlForToken } from '../services/qr.service.js';
+import { isFreeRegistration } from '../utils/registrationChannel.js';
+import { classifyBadgeCategory } from '../utils/badgeCategory.js';
+import { GENDERS } from '../types/enums.js';
+
+// Staff-only visual cue, not shown anywhere in words on the badge itself:
+// within the "Delegate" print category specifically — the one bucket that
+// covers a lot of different PAID ticket categories as well as every free
+// seat — a free Delegate's QR prints in this colour instead of the standard
+// black every other badge (paid Delegate, Speaker, VIP, Organizer, etc.)
+// uses. Dark enough to keep scanning reliably (QR decoding depends on
+// contrast against the white background, not colour), but worth a real
+// print+scan test against the actual badge printer before relying on it at
+// scale — see qr.service.ts's qrDataUrlForToken comment.
+const FREE_DELEGATE_QR_COLOR = '#1E3A8A';
 
 interface SummarizableRegistration {
   id?: string;
@@ -19,7 +34,14 @@ interface SummarizableRegistration {
   checkedIn: boolean;
   checkedInAt?: Date | null;
   isActive?: boolean;
-  groupAttendees?: { fullName?: string | null; email?: string | null; checkedIn?: boolean | null; checkedInAt?: Date | null }[];
+  gender?: string | null;
+  groupAttendees?: {
+    fullName?: string | null;
+    email?: string | null;
+    checkedIn?: boolean | null;
+    checkedInAt?: Date | null;
+    gender?: string | null;
+  }[];
 }
 
 // Every group member checks in/out independently of the primary contact and
@@ -39,13 +61,28 @@ const summarizePerson = (r: SummarizableRegistration, memberIndex?: number) => {
     checkedIn: member ? Boolean(member.checkedIn) : r.checkedIn,
     checkedInAt: member ? member.checkedInAt : r.checkedInAt,
     isActive: r.isActive,
+    gender: (member ? member.gender : r.gender) ?? undefined,
   };
 };
 
-// POST /admin/check-in/scan — body: { qrToken }
+// Self-reported at the door — optional, so a busy entrance never stalls on
+// it (an omitted value is simply not recorded, never an error); an invalid
+// one IS rejected, since that can only mean a broken integration, not a
+// person declining to answer (that's what 'prefer_not_to_say' is for).
+const parseGender = (body: unknown): (typeof GENDERS)[number] | undefined => {
+  const raw = (body as { gender?: unknown })?.gender;
+  if (raw === undefined || raw === null || raw === '') return undefined;
+  if (typeof raw !== 'string' || !(GENDERS as readonly string[]).includes(raw)) {
+    throw new ApiError(422, `gender must be one of: ${GENDERS.join(', ')}`, 'VALIDATION_ERROR');
+  }
+  return raw as (typeof GENDERS)[number];
+};
+
+// POST /admin/check-in/scan — body: { qrToken, gender? }
 export const scan = catchAsync(async (req: Request, res: Response) => {
   const qrToken = typeof req.body?.qrToken === 'string' ? req.body.qrToken.trim() : '';
   if (!qrToken) throw new ApiError(422, 'qrToken is required', 'VALIDATION_ERROR');
+  const gender = parseGender(req.body);
 
   // Try the primary contact's own token first — atomic for the same reason as
   // before: a shared/photographed QR scanned at two lanes at once could
@@ -53,7 +90,7 @@ export const scan = catchAsync(async (req: Request, res: Response) => {
   // lands, checking the same ticket in twice.
   let registration = await Registration.findOneAndUpdate(
     { qrToken, status: 'confirmed', isActive: true, checkedIn: false },
-    { $set: { checkedIn: true, checkedInAt: new Date() } },
+    { $set: { checkedIn: true, checkedInAt: new Date(), ...(gender && { gender }) } },
     { new: true }
   );
   let memberIndex: number | undefined;
@@ -70,7 +107,13 @@ export const scan = catchAsync(async (req: Request, res: Response) => {
         isActive: true,
         groupAttendees: { $elemMatch: { qrToken, checkedIn: { $ne: true } } },
       },
-      { $set: { 'groupAttendees.$.checkedIn': true, 'groupAttendees.$.checkedInAt': new Date() } },
+      {
+        $set: {
+          'groupAttendees.$.checkedIn': true,
+          'groupAttendees.$.checkedInAt': new Date(),
+          ...(gender && { 'groupAttendees.$.gender': gender }),
+        },
+      },
       { new: true }
     );
     if (registration) {
@@ -157,14 +200,15 @@ export const search = catchAsync(async (req: Request, res: Response) => {
 });
 
 // POST /admin/check-in/manual/:id — check in without scanning (e.g.
-// lost/undelivered QR). body: { memberIndex? } — omitted checks in the
-// primary contact (unchanged default behavior); a number checks in that one
-// group member instead.
+// lost/undelivered QR). body: { memberIndex?, gender? } — omitted memberIndex
+// checks in the primary contact (unchanged default behavior); a number
+// checks in that one group member instead.
 export const manualCheckIn = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
   const rawMemberIndex = req.body?.memberIndex;
   const memberIndex =
     typeof rawMemberIndex === 'number' && Number.isInteger(rawMemberIndex) && rawMemberIndex >= 0 ? rawMemberIndex : undefined;
+  const gender = parseGender(req.body);
 
   // Atomic for the same reason as scan() above — two staff hitting "check in"
   // on the same person at once shouldn't both succeed.
@@ -172,7 +216,7 @@ export const manualCheckIn = catchAsync(async (req: Request, res: Response) => {
     memberIndex === undefined
       ? await Registration.findOneAndUpdate(
           { _id: req.params.id, status: 'confirmed', isActive: true, checkedIn: false },
-          { $set: { checkedIn: true, checkedInAt: new Date() } },
+          { $set: { checkedIn: true, checkedInAt: new Date(), ...(gender && { gender }) } },
           { new: true }
         )
       : await Registration.findOneAndUpdate(
@@ -187,6 +231,7 @@ export const manualCheckIn = catchAsync(async (req: Request, res: Response) => {
             $set: {
               [`groupAttendees.${memberIndex}.checkedIn`]: true,
               [`groupAttendees.${memberIndex}.checkedInAt`]: new Date(),
+              ...(gender && { [`groupAttendees.${memberIndex}.gender`]: gender }),
             },
           },
           { new: true }
@@ -215,6 +260,61 @@ export const manualCheckIn = catchAsync(async (req: Request, res: Response) => {
   const summary = summarizePerson(registration, memberIndex);
   broadcastAdminEvent('checkin', summary);
   res.json(new ApiResponse(summary));
+});
+
+// GET /admin/check-in/badge/:id?memberIndex= — the printable payload for a
+// physical name-tag sticker: name, organization, role/title (one of
+// badgeCategory.ts's 7 fixed print categories — no "Sponsored"/"Invited
+// Guest" wording on a badge; that distinction only shows up as the Delegate
+// QR colour cue below), and a rendered QR image of THIS person's own
+// check-in token — everything a connected label printer needs in one call.
+// Read-only — printing a badge is a separate concern from actually checking
+// someone in; scan()/manualCheckIn() above still own that state change, and
+// a badge can be (re)printed any number of times without affecting it.
+export const getBadge = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
+  const rawMemberIndex = req.query.memberIndex;
+  const memberIndex =
+    typeof rawMemberIndex === 'string' && /^\d+$/.test(rawMemberIndex) ? Number(rawMemberIndex) : undefined;
+
+  const registration = await Registration.findById(req.params.id);
+  if (!registration) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
+
+  const member = memberIndex !== undefined ? registration.groupAttendees?.[memberIndex] : undefined;
+  if (memberIndex !== undefined && !member) throw new ApiError(404, 'Group member not found', 'NOT_FOUND');
+
+  // Each group member checks in on their OWN qrToken, not the primary
+  // contact's — same token the badge's QR must encode for THIS person.
+  const token = member ? member.qrToken : registration.qrToken;
+  if (registration.status !== 'confirmed' || !token) {
+    throw new ApiError(400, "This registration isn't confirmed yet — no badge can be printed until it is.", 'NOT_CONFIRMED');
+  }
+
+  const { name, organization } = summarizePerson(registration, memberIndex);
+  const badgeCategory = classifyBadgeCategory(registration);
+  // The QR colour cue only matters within "Delegate" — the one print
+  // category that covers both a lot of different PAID ticket categories and
+  // every free seat, so paid vs free is otherwise invisible on the badge.
+  // Every other badgeCategory always prints the standard colour regardless
+  // of payment (a free Speaker/Organizer/etc. looks the same as a paid one —
+  // management only asked for this cue on Delegate).
+  const qrColor = badgeCategory === 'Delegate' && isFreeRegistration(registration) ? FREE_DELEGATE_QR_COLOR : undefined;
+
+  res.json(
+    new ApiResponse({
+      name,
+      organization,
+      // Group members print under the shared registration's own job title —
+      // there's no per-member jobTitle field (Registration.model.ts's
+      // groupAttendees sub-schema only carries fullName/email/qrToken/
+      // checkedIn/checkedInAt), same reasoning as organization in
+      // summarizePerson above.
+      jobTitle: registration.jobTitle || undefined,
+      badgeCategory,
+      qrToken: token,
+      qrImage: await qrDataUrlForToken(token, qrColor),
+    })
+  );
 });
 
 // GET /admin/check-in/stats — small counter for the CheckInPage header.

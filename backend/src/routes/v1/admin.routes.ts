@@ -186,6 +186,11 @@ router.post(
   registrationController.adminSendCardInvites
 );
 router.post(
+  '/registrations/wai-health-invite/send',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  registrationController.adminSendWaiHealthBreakfastInvite
+);
+router.post(
   '/registrations/import-volunteers',
   requireRole('super_admin', 'admin', 'registrations_officer'),
   uploadCsv,
@@ -628,6 +633,7 @@ router.get('/check-in/stats', requireRole('super_admin', 'admin', 'registrations
 router.get('/check-in/search', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.search);
 router.post('/check-in/scan', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.scan);
 router.post('/check-in/manual/:id', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.manualCheckIn);
+router.get('/check-in/badge/:id', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.getBadge);
 
 router.post(
   '/delegate-announcements',

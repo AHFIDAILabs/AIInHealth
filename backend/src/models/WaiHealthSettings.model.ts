@@ -11,7 +11,7 @@ import { Schema, model, type InferSchemaType } from 'mongoose';
 // concurrent RSVP clicks.
 const waiHealthSettingsSchema = new Schema(
   {
-    capacity: { type: Number, default: 100, min: 1 },
+    capacity: { type: Number, default: 150, min: 1 },
     confirmedCount: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }

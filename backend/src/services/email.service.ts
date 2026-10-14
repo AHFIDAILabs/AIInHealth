@@ -885,6 +885,33 @@ export const sendScholarshipCampaignEmail = async (
   });
 };
 
+// Admin-triggered campaign invite (registration.controller.ts's
+// adminSendWaiHealthBreakfastInvite) — targets already-CONFIRMED Summit
+// registrations, inviting interested women to separately register for the
+// WAI-Health Breakfast via its own public page. Distinct from
+// sendWaiHealthConfirmationEmail/sendWaiHealthRsvpConfirmedEmail above, which
+// fire from the Breakfast's OWN registration/RSVP flow, not this one — this
+// email is what DRIVES someone to that flow in the first place, so it links
+// to the plain registration page (registerUrl), not an RSVP link.
+export const sendWaiHealthBreakfastInviteEmail = async (to: string, fullName: string, registerUrl: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Join us for the Women in AI & Health Breakfast, opening the Summit on 19 October',
+    html: `
+      <p>Dear ${fullName},</p>
+      <p>Thank you for registering for the AI in Health Summit 2026. We look forward to welcoming you to Abuja on 19 and 20 October.</p>
+      <p>The Summit opens with a special session, the Women in AI &amp; Health (WAI-HEALTH) Breakfast, on Monday, 19 October 2026, from 8:00 am to 9:30 am, at the TY Danjuma Foundation Building in Abuja. The theme is &ldquo;Leading the Future: Women&rsquo;s Voices Shaping AI and Health in Africa.&rdquo;</p>
+      <p>Women make up most of Nigeria&rsquo;s frontline health workforce and most of those the health system serves, yet are under-represented where decisions on AI strategy, regulation, procurement and investment are made. The breakfast puts that conversation at the start of the Summit, so that what it raises carries into the programme and the closing Declaration. It will also launch WAI-HEALTH, a standing network of women leaders in AI and health that continues beyond the Summit.</p>
+      <p>The session is for women, and we would be glad to see any woman attending the Summit who would like to join us. Places are limited, so if you are interested, please register using the button below.</p>
+      ${emailButton(registerUrl, 'Register for the WAI-Health Breakfast')}
+      <p>Because you are already registered for the Summit, please do <strong>not</strong> tick the option at the end of the form that asks whether you would like to register for the full Summit. Simply complete the rest of the form and click submit. After you register, you will receive an RSVP link to confirm your attendance.</p>
+      <p>If you have any questions, or need help with the registration, please call or WhatsApp Ummi at +2347052088166, or email <a href="mailto:ummi@ahfid.org">ummi@ahfid.org</a>.</p>
+      <p>We look forward to seeing you there.</p>
+      <p>With best regards,<br/>Ummi<br/>Strategy and Engagement<br/>Africa Hub for Innovation and Development (AHFID)</p>
+    `,
+  });
+};
+
 // contact.controller.ts's adminReply — a free-text reply to a public
 // Contact form submission. Line breaks the admin typed are preserved as
 // <br/> since this is plain text in, not a rich editor.

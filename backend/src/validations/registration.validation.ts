@@ -9,6 +9,7 @@ import {
   ID_VERIFICATION_TICKET_CATEGORIES,
 } from '../types/enums.js';
 import { optionalUrlField } from './common.js';
+import { REGISTRATION_CHANNELS } from '../utils/registrationChannel.js';
 
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
 
@@ -213,6 +214,9 @@ export const listRegistrationsQuerySchema = z.object({
   // Present -> list ONLY pending attendees who've clicked their RSVP
   // reconfirmation link (RsvpConfirmationsPage.tsx) — see buildAdminFilter.
   rsvpResponded: z.enum(['true']).optional(),
+  // Registration Channels page (RegistrationChannelsPage.tsx) — see
+  // registrationChannel.ts's registrationChannelFilter for what each value means.
+  channel: z.enum(REGISTRATION_CHANNELS).optional(),
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

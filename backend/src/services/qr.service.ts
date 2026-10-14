@@ -5,8 +5,13 @@ import QRCode from 'qrcode';
 // e-ticket leaks nothing beyond "this string checks someone in once."
 export const generateQrToken = (): string => crypto.randomBytes(24).toString('base64url');
 
-export const qrDataUrlForToken = (token: string): Promise<string> =>
-  QRCode.toDataURL(token, { margin: 1, width: 320, errorCorrectionLevel: 'M' });
+// `darkColor` recolors the QR's own modules (never the background, always
+// white) — checkin.controller.ts's getBadge uses this for the free/paid
+// Delegate colour cue. Purely a print-time visual: a scanner decodes the
+// token from the module PATTERN, not its colour, so this never affects
+// whether the code scans, only how it looks on paper.
+export const qrDataUrlForToken = (token: string, darkColor = '#000000'): Promise<string> =>
+  QRCode.toDataURL(token, { margin: 1, width: 320, errorCorrectionLevel: 'M', color: { dark: darkColor, light: '#FFFFFF' } });
 
 // Same rendering, but for encoding a full claimable URL (promo.controller.ts's
 // banner QR) rather than a bare check-in token — a stock phone camera app
