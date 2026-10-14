@@ -364,6 +364,13 @@ describe('POST /api/v1/admin/registrations/wai-health-invite/send — re-runnabl
       registrationMode: 'individual',
       status: 'pending',
     });
+    const confirmedTeamMember = await Registration.create({
+      type: 'team',
+      fullName: 'Confirmed Organizer',
+      email: 'wai-team@example.com',
+      phone: '+2348000001004',
+      status: 'confirmed',
+    });
 
     const first = await admin.post('/api/v1/admin/registrations/wai-health-invite/send');
     expect(first.status).toBe(200);
@@ -376,6 +383,8 @@ describe('POST /api/v1/admin/registrations/wai-health-invite/send — re-runnabl
       alreadyInvited.waiHealthInviteSentAt?.getTime()
     );
     expect(await Registration.findById(stillPending.id).then((r) => r?.waiHealthInviteSentAt)).toBeFalsy();
+    // Team/organizer registrations are never targeted, confirmed or not.
+    expect(await Registration.findById(confirmedTeamMember.id).then((r) => r?.waiHealthInviteSentAt)).toBeFalsy();
 
     // Re-click with nobody new confirmed — targets nobody this time.
     const second = await admin.post('/api/v1/admin/registrations/wai-health-invite/send');

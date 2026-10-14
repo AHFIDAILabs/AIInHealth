@@ -1561,14 +1561,16 @@ export const adminSendCardInvites = catchAsync(async (req: Request, res: Respons
 
 // POST /admin/registrations/wai-health-invite/send — the WAI-Health
 // Breakfast invite campaign. No ids/filter param (unlike adminSendCardInvites
-// above) — this always targets every confirmed Summit registration that
+// above) — this always targets every confirmed attendee registration that
 // hasn't been sent yet, same "whole-list, re-runnable" shape as
-// adminSendScholarshipCampaign. Safe to click again as the confirmed list
-// grows: waiHealthInviteSentAt (unlike cardEmailSentAt) IS read back into
-// this filter, so a re-click only reaches people confirmed since the last send.
+// adminSendScholarshipCampaign. Deliberately attendee-only — team/organizer
+// registrations never get this invite. Safe to click again as the confirmed
+// list grows: waiHealthInviteSentAt (unlike cardEmailSentAt) IS read back
+// into this filter, so a re-click only reaches people confirmed since the
+// last send.
 export const adminSendWaiHealthBreakfastInvite = catchAsync(async (req: Request, res: Response) => {
   const targets = await Registration.find({
-    type: { $in: ['attendee', 'team'] },
+    type: 'attendee',
     status: 'confirmed',
     waiHealthInviteSentAt: { $exists: false },
   });
