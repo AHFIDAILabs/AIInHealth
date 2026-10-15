@@ -110,7 +110,10 @@ router.get('/search', requireRole(...allRoles), searchController.globalSearch);
 
 // Any authenticated admin role can upload an image (own profile photo at minimum);
 // which resource a URL ends up saved on is still gated by that resource's own route.
-router.post('/uploads/image', uploadImage, uploadController.uploadImage);
+// Explicit requireRole (rather than relying solely on router-level requireAuth)
+// so this matches every other route's pattern and stays unambiguous if this
+// handler is ever extended to do more than return a bare Cloudinary URL.
+router.post('/uploads/image', requireRole(...allRoles), uploadImage, uploadController.uploadImage);
 
 // Gallery photo/video uploader — same scope as the Media CRUD routes below.
 router.post(
