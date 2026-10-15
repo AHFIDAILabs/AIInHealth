@@ -9,6 +9,7 @@ import { SpeakersGrid } from '../../components/home/SpeakersGrid';
 import { PromoBanner } from '../../components/home/PromoBanner';
 import { SummitProgramme } from '../../components/home/SummitProgramme';
 import { WaiHealthSpotlight } from '../../components/home/WaiHealthSpotlight';
+import { LeaderboardJoinPopup } from '../../components/home/LeaderboardJoinPopup';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase';
 import { CountdownCard } from '../../components/home-v2/CountdownCard';
 import { VENUE_NAME, VENUE_STREET_ADDRESS, VENUE_CITY } from '../../lib/siteInfo';
@@ -190,6 +191,7 @@ export const HomeMain = () => {
       <SpeakersGrid />
       <SummitProgramme />
       <PartnersShowcase />
+      <LeaderboardJoinPopup />
     </>
   );
 };
