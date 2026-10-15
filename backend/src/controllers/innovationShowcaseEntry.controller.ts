@@ -5,6 +5,7 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { InnovationShowcaseEntry, type InnovationShowcaseEntryDoc } from '../models/InnovationShowcaseEntry.model.js';
+import { Registration } from '../models/Registration.model.js';
 import {
   createInnovationShowcaseEntrySchema,
   updateInnovationShowcaseEntrySchema,
@@ -133,6 +134,56 @@ export const adminSetShowcaseCardEmail = catchAsync(async (req: Request, res: Re
     after: { contactEmail: entry.get('showcaseCard.contactEmail') },
   });
   res.json(new ApiResponse(entry));
+});
+
+// POST /admin/innovation-showcase-entries/card/match-emails — fills
+// showcaseCard.contactEmail from confirmed Innovator registrations
+// (Registration.model.ts, type:'innovator'), matched by company/startup
+// name (trimmed, case-insensitive) — the only field these two otherwise-
+// decoupled models share (this one has no contact email for anything but
+// the card; that one has no reference back to a showcase entry at all, see
+// both models' own header comments). Never overwrites a contactEmail that's
+// already set — an admin may have deliberately set a different one there.
+// Not every confirmed Innovator is a Showcase participant (they're separate
+// application tracks — one's an event ticket category, the other's the
+// judged startup competition), so a registration with no matching entry is
+// a normal, expected outcome here, not a failure; reported back for the
+// admin's own visibility rather than silently dropped.
+export const adminMatchShowcaseCardEmails = catchAsync(async (req: Request, res: Response) => {
+  const innovators = await Registration.find({ type: 'innovator', status: 'confirmed' }).select('companyName contactEmail');
+  const entries = await InnovationShowcaseEntry.find().select('startupName showcaseCard.contactEmail');
+  const entryByNormalizedName = new Map(entries.map((e) => [e.startupName.trim().toLowerCase(), e]));
+
+  const filled: { startupName: string; contactEmail: string }[] = [];
+  const alreadySet: { startupName: string; existingEmail: string }[] = [];
+  const noMatch: { companyName: string }[] = [];
+
+  for (const reg of innovators) {
+    if (!reg.companyName || !reg.contactEmail) continue;
+    const entry = entryByNormalizedName.get(reg.companyName.trim().toLowerCase());
+    if (!entry) {
+      noMatch.push({ companyName: reg.companyName });
+      continue;
+    }
+    const existing = entry.get('showcaseCard.contactEmail');
+    if (existing) {
+      alreadySet.push({ startupName: entry.startupName, existingEmail: existing });
+      continue;
+    }
+    entry.set('showcaseCard.contactEmail', reg.contactEmail);
+    await entry.save();
+    filled.push({ startupName: entry.startupName, contactEmail: reg.contactEmail });
+  }
+
+  await recordAudit({
+    req,
+    action: 'innovationShowcaseEntry.showcaseCardEmailsMatched',
+    resourceType: 'InnovationShowcaseEntry',
+    resourceId: 'bulk',
+    after: { filled: filled.length, alreadySet: alreadySet.length, noMatch: noMatch.length },
+  });
+
+  res.json(new ApiResponse({ filled, alreadySet, noMatch }));
 });
 
 // POST /admin/innovation-showcase-entries/card/send-invites — ids omitted ->

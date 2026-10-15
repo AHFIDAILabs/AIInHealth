@@ -477,6 +477,11 @@ router.delete('/innovation-showcase-entries/:id', requireRole(...adminOnlyRoles)
 // confirmed-abstracts' card routes above (no actual path collision here
 // either, just kept consistent).
 router.post(
+  '/innovation-showcase-entries/card/match-emails',
+  requireRole(...adminOnlyRoles),
+  innovationShowcaseEntryController.adminMatchShowcaseCardEmails
+);
+router.post(
   '/innovation-showcase-entries/card/send-invites',
   requireRole(...adminOnlyRoles),
   innovationShowcaseEntryController.adminSendShowcaseCardInvites
