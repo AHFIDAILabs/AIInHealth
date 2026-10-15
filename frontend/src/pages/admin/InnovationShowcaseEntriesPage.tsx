@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Plus, X, Rocket, Pencil, Trash2, Share2 } from 'lucide-react';
+import { Search, Plus, X, Rocket, Pencil, Trash2, Share2, Wand2 } from 'lucide-react';
 import {
   adminListInnovationShowcaseEntries,
   adminCreateInnovationShowcaseEntry,
   adminUpdateInnovationShowcaseEntry,
   adminDeleteInnovationShowcaseEntry,
   adminSetShowcaseCardEmail,
+  adminMatchShowcaseCardEmails,
   adminSendShowcaseCardInvites,
   type InnovationShowcaseEntry,
   type InnovationShowcaseEntryInput,
@@ -76,6 +77,7 @@ export const InnovationShowcaseEntriesPage = () => {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sendingCardInvites, setSendingCardInvites] = useState(false);
+  const [matchingEmails, setMatchingEmails] = useState(false);
 
   // One-time, unpaginated fetch purely to derive the set of categories in use
   // for the filter dropdown — category is free text (no fixed enum, see
@@ -219,6 +221,29 @@ export const InnovationShowcaseEntriesPage = () => {
     }
   };
 
+  // Matches confirmed Innovator registrations (Registration.model.ts,
+  // type:'innovator') to a Showcase entry by company/startup name and fills
+  // showcaseCard.contactEmail wherever it's still empty — never overwrites
+  // one already set. Safe to re-run anytime, e.g. after more Innovator
+  // access codes get redeemed over the following days.
+  const matchCardEmails = async () => {
+    setMatchingEmails(true);
+    try {
+      const result = await adminMatchShowcaseCardEmails();
+      toast(
+        'success',
+        `${result.filled.length} email${result.filled.length === 1 ? '' : 's'} filled in` +
+          (result.alreadySet.length ? `, ${result.alreadySet.length} already set (left untouched)` : '') +
+          (result.noMatch.length ? `, ${result.noMatch.length} confirmed innovator${result.noMatch.length === 1 ? '' : 's'} had no matching Showcase entry` : '')
+      );
+      load();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setMatchingEmails(false);
+    }
+  };
+
   const togglePublish = async (entry: InnovationShowcaseEntry) => {
     try {
       const updated = await adminUpdateInnovationShowcaseEntry(entry._id, { isPublished: !entry.isPublished });
@@ -254,12 +279,22 @@ export const InnovationShowcaseEntriesPage = () => {
             {total} startup{total === 1 ? '' : 's'} &middot; shown on the public /innovation-showcase/confirmed page
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:bg-orange-hover"
-        >
-          <Plus size={16} /> Add Startup
-        </button>
+        <div className="flex flex-wrap gap-2.5">
+          <button
+            onClick={matchCardEmails}
+            disabled={matchingEmails}
+            title="Fill showcaseCard contact emails from confirmed Innovator registrations, matched by company/startup name — never overwrites an email already set"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-sm hover:border-orange/40 disabled:opacity-60"
+          >
+            <Wand2 size={16} /> {matchingEmails ? 'Matching…' : 'Match Innovator Emails'}
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm hover:bg-orange-hover"
+          >
+            <Plus size={16} /> Add Startup
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">

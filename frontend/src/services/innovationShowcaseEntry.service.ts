@@ -130,6 +130,23 @@ export const adminSetShowcaseCardEmail = async (
   return res.data.data;
 };
 
+export interface ShowcaseCardEmailMatchResult {
+  filled: { startupName: string; contactEmail: string }[];
+  alreadySet: { startupName: string; existingEmail: string }[];
+  noMatch: { companyName: string }[];
+}
+
+// Fills showcaseCard.contactEmail from confirmed Innovator registrations,
+// matched by company/startup name — never overwrites an email that's
+// already set. Safe to re-run anytime (e.g. after more Innovator access
+// codes get redeemed) — nothing here is destructive.
+export const adminMatchShowcaseCardEmails = async (): Promise<ShowcaseCardEmailMatchResult> => {
+  const res = await api.post<{ success: true; data: ShowcaseCardEmailMatchResult }>(
+    '/admin/innovation-showcase-entries/card/match-emails'
+  );
+  return res.data.data;
+};
+
 // ids omitted -> every record with a contact email on file. `skipped` is how
 // many candidates had no email (never attempted, not a send failure).
 export const adminSendShowcaseCardInvites = async (
