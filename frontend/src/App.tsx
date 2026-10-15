@@ -97,6 +97,8 @@ import { PortalDirectory } from './pages/portal/PortalDirectory';
 import { PortalMeetings } from './pages/portal/PortalMeetings';
 import { PortalMessages } from './pages/portal/PortalMessages';
 import { PortalMyCard } from './pages/portal/PortalMyCard';
+import { PortalMyAgenda } from './pages/portal/PortalMyAgenda';
+import { PortalLeaderboard } from './pages/portal/PortalLeaderboard';
 import { PresentingCard } from './pages/public/PresentingCard';
 import { ShowcaseCard } from './pages/public/ShowcaseCard';
 import { Feedback } from './pages/public/Feedback';
@@ -118,6 +120,13 @@ const COMPENDIUM_ENABLED = import.meta.env.VITE_COMPENDIUM_ENABLED === 'true';
 // "I will be attending/presenting/speaking" DP cards + feedback QR system —
 // see docs' event-extras plan. On by default, same convention as above.
 const EVENT_EXTRAS_ENABLED = import.meta.env.VITE_EVENT_EXTRAS_ENABLED === 'true';
+// Directory is hidden (not deleted) for now — off unless explicitly flipped
+// on, the inverse default of the flags above. See PortalLayout.tsx's matching
+// flag and PortalHome.tsx's directoryOptIn toggle for the other two places
+// this same switch applies.
+const DIRECTORY_ENABLED = import.meta.env.VITE_DIRECTORY_ENABLED === 'true';
+// New public-facing portal feature — see PortalLayout.tsx's matching flag.
+const LEADERBOARD_ENABLED = import.meta.env.VITE_LEADERBOARD_ENABLED === 'true';
 
 function App() {
   return (
@@ -299,7 +308,9 @@ function App() {
           <Route element={<PortalProtectedRoute />}>
             <Route element={<PortalLayout />}>
               <Route path="/portal" element={<PortalHome />} />
-              <Route path="/portal/directory" element={<PortalDirectory />} />
+              <Route path="/portal/my-agenda" element={<PortalMyAgenda />} />
+              {LEADERBOARD_ENABLED && <Route path="/portal/leaderboard" element={<PortalLeaderboard />} />}
+              {DIRECTORY_ENABLED && <Route path="/portal/directory" element={<PortalDirectory />} />}
               <Route path="/portal/meetings" element={<PortalMeetings />} />
               <Route path="/portal/messages" element={<PortalMessages />} />
               {EVENT_EXTRAS_ENABLED && <Route path="/portal/my-card" element={<PortalMyCard />} />}

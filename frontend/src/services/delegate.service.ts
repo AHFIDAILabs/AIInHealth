@@ -1,4 +1,5 @@
 import { api } from './api';
+import type { AdminSession } from './session.service';
 
 export interface DelegateMe {
   id: string;
@@ -18,12 +19,27 @@ export interface DelegateMe {
   hasTicket: boolean;
   directoryOptIn: boolean;
   avatarUrl?: string;
+  // Just ids — enough for any page rendering a session card (the public
+  // Agenda, "Build My Day") to show bookmark state without its own fetch.
+  // Full session data for the "My Agenda" portal page comes from
+  // fetchMyBookmarks below.
+  bookmarkedSessionIds?: string[];
   // Volunteer only.
   tshirtSize?: string;
   trackSelected?: string;
   trackAssigned?: string;
   // Admin replies waiting in /portal/messages — see fetchPortalMessages.
   unreadPortalMessages: number;
+  // Gamification — Engagement Score + public Leaderboard. leaderboardOptIn is
+  // the delegate's own raw tri-state choice (null = never touched it);
+  // leaderboardVisible is the server-resolved effective boolean (team
+  // exclusion + sensitive-category default + this flag collapsed into one),
+  // which is what UI copy should actually key off. Both precomputed on a
+  // schedule — see backend/src/jobs/engagementScore.job.ts.
+  leaderboardOptIn: boolean | null;
+  leaderboardVisible: boolean;
+  engagementScore: number;
+  engagementRank: number | null;
 }
 
 // Email-only login — no code to request/verify. See delegate.controller.ts's
@@ -104,11 +120,81 @@ export const updateDelegateProfile = async (input: UpdateDelegateProfileInput): 
   await api.patch('/delegate/profile', input);
 };
 
+// Session-bookmarking feature (the public Agenda page's bookmark toggle +
+// the portal's "My Agenda" page). bookmarkSession/unbookmarkSession are both
+// idempotent server-side — calling either twice in a row is a harmless
+// no-op, never an error, so a slow network double-click can't surface
+// anything odd to the delegate.
+export const bookmarkSession = async (sessionId: string): Promise<void> => {
+  await api.post(`/delegate/sessions/${sessionId}/bookmark`);
+};
+
+export const unbookmarkSession = async (sessionId: string): Promise<void> => {
+  await api.delete(`/delegate/sessions/${sessionId}/bookmark`);
+};
+
+// Full session data (same AdminSession shape the public Agenda uses) for
+// every session this delegate has bookmarked — not just the ids DelegateMe
+// carries, since neither "My Agenda" nor its .ics export can render
+// anything from an id alone.
+export const fetchMyBookmarks = async (): Promise<AdminSession[]> => {
+  const res = await api.get<{ success: true; data: AdminSession[] }>('/delegate/bookmarks');
+  return res.data.data;
+};
+
 export const updateDirectoryOptIn = async (directoryOptIn: boolean): Promise<boolean> => {
   const res = await api.patch<{ success: true; data: { directoryOptIn: boolean } }>('/delegate/directory-opt-in', {
     directoryOptIn,
   });
   return res.data.data.directoryOptIn;
+};
+
+export const updateLeaderboardOptIn = async (leaderboardOptIn: boolean): Promise<boolean | null> => {
+  const res = await api.patch<{ success: true; data: { leaderboardOptIn: boolean | null } }>('/delegate/leaderboard-opt-in', {
+    leaderboardOptIn,
+  });
+  return res.data.data.leaderboardOptIn;
+};
+
+export interface LeaderboardEntry {
+  id: string;
+  name: string;
+  organization: string | null;
+  avatarUrl: string | null;
+  score: number;
+  rank: number;
+  badges: string[];
+  isYou: boolean;
+}
+
+export interface LeaderboardBreakdown {
+  checkIn: number;
+  meetings: number;
+  bookmarks: number;
+  profile: number;
+}
+
+export interface LeaderboardYou {
+  rank: number | null;
+  score: number;
+  breakdown: LeaderboardBreakdown;
+  badges: string[];
+  previousRank: number | null;
+  visible: boolean;
+  leaderboardOptIn: boolean | null;
+  ticketCategory?: string;
+  type: string;
+}
+
+export interface LeaderboardResult {
+  computedAt: string | null;
+  top: LeaderboardEntry[];
+  you: LeaderboardYou;
+}
+
+export const fetchLeaderboard = async (): Promise<LeaderboardResult> => {
+  const res = await api.get<{ success: true; data: LeaderboardResult }>('/delegate/leaderboard');
+  return res.data.data;
 };
 
 const urlBase64ToUint8Array = (base64String: string): Uint8Array => {

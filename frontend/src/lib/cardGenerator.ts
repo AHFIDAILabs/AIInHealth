@@ -22,13 +22,17 @@
 //     over with a sampled patch of the real background behind it) and
 //     redrawn with whatever this person's real role is.
 //   - for every kind except 'attending': the headline ("I will be
-//     attending", in the source's own hand-drawn script) and the THEME
-//     block (the summit theme, correct as-is for 'attending') are ALSO
-//     blotted and redrawn — this card needs different words there, and
-//     there's no "presenting"/"speaking"/"showcase" version of the
-//     hand-drawn art to draw from instead. The replacement headline uses a
-//     real handwriting Google Font (Caveat) as the closest available match,
-//     not a pixel-exact reproduction of the original strokes.
+//     attending", in the source's own bold rounded sans — NOT a script
+//     font, despite how it reads at a glance) and the THEME block (the
+//     summit theme, correct as-is for 'attending') are ALSO blotted and
+//     redrawn — this card needs different words there, and there's no
+//     "presenting"/"speaking"/"showcase" version of that art to draw from
+//     instead. The replacement headline uses Baloo 2 (a real Google Font
+//     closely matching that same chunky rounded-bold look) plus two small
+//     hand-drawn-style accents the original art also has: a bent arrow after
+//     line 1 and a swish-arrow underline beneath line 2 — not a pixel-exact
+//     reproduction, but the same font family, color treatment, and
+//     decorative accents rather than just the same two colors.
 import { EVENT_DATE_RANGE, VENUE_SHORT } from './siteInfo';
 import templateUrl from '../assets/images/card-attending-template.png';
 
@@ -206,19 +210,25 @@ const blotRegion = (ctx: CanvasRenderingContext2D, x: number, y: number, w: numb
   ctx.fillRect(x, y, w, h);
 };
 
-// Loaded on demand (only for 'presenting'/'speaking' cards, which need to
-// draw NEW headline words the template's own hand-drawn art doesn't have) —
-// never added to index.html's global <head>, since every other card kind
-// never touches this font at all.
-let handwritingFontPromise: Promise<void> | null = null;
-const ensureHandwritingFont = (): Promise<void> => {
-  if (!handwritingFontPromise) {
-    handwritingFontPromise = (async () => {
-      if (!document.querySelector('link[data-card-font="caveat"]')) {
+// Loaded on demand (only for 'presenting'/'speaking'/'showcase' cards, which
+// need to draw NEW headline words the template's own baked-in art doesn't
+// have) — never added to index.html's global <head>, since every other card
+// kind never touches this font at all.
+//
+// Baloo 2, not Caveat: the template's own "I will be attending" headline is
+// set in a chunky, rounded, EXTRA-bold sans — not a cursive/handwriting
+// script — so a script font (the original choice here) looked thin and out
+// of place next to it instead of matching. Baloo 2 is the closest free
+// Google Font to that same bubbly rounded-terminal bold look.
+let headlineFontPromise: Promise<void> | null = null;
+const ensureHeadlineFont = (): Promise<void> => {
+  if (!headlineFontPromise) {
+    headlineFontPromise = (async () => {
+      if (!document.querySelector('link[data-card-font="baloo2"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.dataset.cardFont = 'caveat';
-        link.href = 'https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap';
+        link.dataset.cardFont = 'baloo2';
+        link.href = 'https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap';
         document.head.appendChild(link);
         await new Promise((resolve) => {
           link.onload = resolve;
@@ -226,13 +236,67 @@ const ensureHandwritingFont = (): Promise<void> => {
         });
       }
       try {
-        await document.fonts.load('700 90px Caveat');
+        await document.fonts.load('800 100px "Baloo 2"');
       } catch {
         // Font failed to load — the fallback font stack still renders something.
       }
     })();
   }
-  return handwritingFontPromise;
+  return headlineFontPromise;
+};
+
+// The template's baked-in "I will be attending" headline pairs its text with
+// two small hand-drawn accents that the old Caveat-only replacement never
+// reproduced: a small bent arrow after line 1, and a loose swish-arrow
+// underline beneath line 2. Redrawing both for the replacement headlines is
+// what actually makes them read as the same design instead of just the same
+// two-tone color choice.
+const drawBentArrow = (ctx: CanvasRenderingContext2D, tipX: number, tipY: number, size: number, color: string) => {
+  const dx = size * Math.cos(Math.PI / 4);
+  const dy = size * Math.sin(Math.PI / 4);
+  const startX = tipX + dx;
+  const startY = tipY - dy;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size * 0.16;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(tipX, tipY);
+  ctx.stroke();
+
+  const headLen = size * 0.42;
+  const angle = Math.atan2(tipY - startY, tipX - startX);
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(tipX - headLen * Math.cos(angle - Math.PI / 7), tipY - headLen * Math.sin(angle - Math.PI / 7));
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(tipX - headLen * Math.cos(angle + Math.PI / 7), tipY - headLen * Math.sin(angle + Math.PI / 7));
+  ctx.stroke();
+  ctx.restore();
+};
+
+const drawSwishArrow = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, color: string) => {
+  const endX = x + width;
+  const endY = y + width * 0.08;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.bezierCurveTo(x + width * 0.35, y + width * 0.22, x + width * 0.6, y - width * 0.14, endX, endY);
+  ctx.stroke();
+
+  const headLen = width * 0.16;
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(endX - headLen * 0.9, endY - headLen * 0.55);
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(endX - headLen * 0.25, endY + headLen * 0.85);
+  ctx.stroke();
+  ctx.restore();
 };
 
 // Headshots (passport/ID-style photos especially) typically have the face
@@ -302,17 +366,33 @@ const HEADLINE_TEXT: Record<'presenting' | 'speaking' | 'showcase', [string, str
   showcase: ["I'm", 'showcasing'],
 };
 
+const HEADLINE_CREAM = '#E8E0A8'; // the template's own cream/pale-gold second-line color
+const HEADLINE_SWISH_GRAY = '#8A8F98'; // matches the template's own gray swish-arrow stroke
+
 const drawReplacementHeadline = async (ctx: CanvasRenderingContext2D, kind: 'presenting' | 'speaking' | 'showcase') => {
-  await ensureHandwritingFont();
+  await ensureHeadlineFont();
   blotRegion(ctx, HEADLINE_BLOT.x, HEADLINE_BLOT.y, HEADLINE_BLOT.w, HEADLINE_BLOT.h);
   const [line1, line2] = HEADLINE_TEXT[kind];
-  ctx.font = '700 100px Caveat, cursive';
+  const line1Y = HEADLINE_BLOT.y + 130;
+  const line2Y = HEADLINE_BLOT.y + 250;
+
+  ctx.font = '800 100px "Baloo 2", sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = BRAND.orange;
-  ctx.fillText(line1, HEADLINE_BLOT.x, HEADLINE_BLOT.y + 140);
-  ctx.fillStyle = '#E8E0A8'; // the template's own cream/pale-gold second line color
-  ctx.fillText(line2, HEADLINE_BLOT.x, HEADLINE_BLOT.y + 260);
+  ctx.fillText(line1, HEADLINE_BLOT.x, line1Y);
+  const line1Width = ctx.measureText(line1).width;
+
+  ctx.fillStyle = HEADLINE_CREAM;
+  ctx.fillText(line2, HEADLINE_BLOT.x, line2Y);
+
+  // Small bent arrow after line 1 — mirrors the template's own accent next
+  // to "I will be" on the baked-in attending headline.
+  drawBentArrow(ctx, HEADLINE_BLOT.x + line1Width + 70, line1Y - 60, 56, BRAND.orange);
+
+  // Swish-arrow underline beneath line 2 — mirrors the template's own
+  // hand-drawn flourish under "attending".
+  drawSwishArrow(ctx, HEADLINE_BLOT.x, line2Y + 70, 310, HEADLINE_SWISH_GRAY);
 };
 
 const THEME_FONT = '800 34px Sora, sans-serif';

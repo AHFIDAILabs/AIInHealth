@@ -65,3 +65,12 @@ export const useLanguage = (): LanguageContextValue => {
   if (!ctx) throw new Error('useLanguage must be used within a LanguageProvider');
   return ctx;
 };
+
+// For a shared component that's reused OUTSIDE the public site too (e.g.
+// SpeakerModal, also opened from the delegate portal's "My Agenda" page) —
+// falls back to 'en' instead of throwing when there's no LanguageProvider
+// above it, which is exactly this file's own "admin/portal/reviewer stay
+// English-only" rule, just enforced for a shared component instead of a
+// portal-only one. useLanguage() above keeps throwing for every public-only
+// call site, so a genuine missing-provider bug there still fails loud.
+export const useOptionalLanguage = (): SiteLanguage => useContext(LanguageContext)?.lang ?? 'en';

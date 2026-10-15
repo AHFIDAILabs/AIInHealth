@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { InitialsAvatar } from './InitialsAvatar';
 import { ButtonLink } from './Button';
 import type { AdminSpeaker } from '../../services/speaker.service';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useOptionalLanguage } from '../../contexts/LanguageContext';
 
 interface SpeakerModalProps {
   speaker: AdminSpeaker | null;
@@ -17,7 +17,7 @@ interface SpeakerModalProps {
 // they're actually filled in (unlike the old static roster, which never had them).
 export const SpeakerModal = ({ speaker, onClose }: SpeakerModalProps) => {
   const { t } = useTranslation();
-  const { lang } = useLanguage();
+  const lang = useOptionalLanguage();
   // speaker.translations only ever carries a language key when that
   // translation's status is 'approved' (stripped server-side otherwise —
   // see backend utils/translations.ts), so the `||` fallback below is the

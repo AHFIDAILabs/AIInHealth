@@ -12,8 +12,13 @@ import { WaiHealthSpotlight } from '../../components/home/WaiHealthSpotlight';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase';
 import { CountdownCard } from '../../components/home-v2/CountdownCard';
 import { VENUE_NAME, VENUE_STREET_ADDRESS, VENUE_CITY } from '../../lib/siteInfo';
+import { useDelegateAuth } from '../../contexts/DelegateAuthContext';
 import heroBg from '../../assets/Image (2).png';
 import homePageBg from '../../assets/images/AI in Health Summit 2026 - Website.webp';
+
+// Gates the portal's "I will be attending" share-card feature — see App.tsx's
+// own copy of this same flag.
+const EVENT_EXTRAS_ENABLED = import.meta.env.VITE_EVENT_EXTRAS_ENABLED === 'true';
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },
@@ -33,6 +38,12 @@ const fadeUp: Variants = {
 // now that the countdown lives in the hero itself.
 export const HomeMain = () => {
   const { t } = useTranslation();
+  const { delegate, isAuthenticated } = useDelegateAuth();
+  // Only a delegate whose seat is actually confirmed gets the "I'm Attending"
+  // entry point here — everyone else (including anonymous visitors, who are
+  // the vast majority of this page's traffic) sees the exact same hero as
+  // before, so this adds zero visual weight to the page for them.
+  const isConfirmedDelegate = isAuthenticated && delegate?.status === 'confirmed';
 
   return (
     <>
@@ -137,16 +148,38 @@ export const HomeMain = () => {
               </div>
 
               <div className="flex flex-col gap-3 p-5">
-                <ButtonLink to="/register" variant="primary" className="!w-full !justify-center">
-                  {t('home.hero.registerInterest', 'Register Interest')}
-                </ButtonLink>
-                <ButtonLink
-                  to="/partners"
-                  variant="secondary"
-                  className="!w-full !justify-center !border-slate-200 !bg-white !text-navy hover:!bg-offwhite"
-                >
-                  {t('home.hero.becomePartner', 'Become a Partner')}
-                </ButtonLink>
+                {isConfirmedDelegate ? (
+                  <>
+                    <p className="text-sm font-semibold text-navy">
+                      You&rsquo;re confirmed for AIHS 2026, {delegate!.name.split(' ')[0]} — let people know.
+                    </p>
+                    {EVENT_EXTRAS_ENABLED && (
+                      <ButtonLink to="/portal/my-card" variant="primary" className="!w-full !justify-center">
+                        I&rsquo;m Attending — Get My Card
+                      </ButtonLink>
+                    )}
+                    <ButtonLink
+                      to="/portal"
+                      variant="secondary"
+                      className="!w-full !justify-center !border-slate-200 !bg-white !text-navy hover:!bg-offwhite"
+                    >
+                      Go to My Portal
+                    </ButtonLink>
+                  </>
+                ) : (
+                  <>
+                    <ButtonLink to="/register" variant="primary" className="!w-full !justify-center">
+                      {t('home.hero.registerInterest', 'Register Interest')}
+                    </ButtonLink>
+                    <ButtonLink
+                      to="/partners"
+                      variant="secondary"
+                      className="!w-full !justify-center !border-slate-200 !bg-white !text-navy hover:!bg-offwhite"
+                    >
+                      {t('home.hero.becomePartner', 'Become a Partner')}
+                    </ButtonLink>
+                  </>
+                )}
               </div>
             </div>
           </Reveal>

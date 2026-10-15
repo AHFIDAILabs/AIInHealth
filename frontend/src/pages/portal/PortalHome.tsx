@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { CheckCircle2, Clock, Bell, BellOff, Users2, Pencil, Check, X, Mail, CalendarPlus, Download } from 'lucide-react';
+import { CheckCircle2, Clock, Bell, BellOff, Users2, Trophy, Pencil, Check, X, Mail, CalendarPlus, Download } from 'lucide-react';
 import { useDelegateAuth } from '../../contexts/DelegateAuthContext';
 import {
   fetchTicketQr,
   resendTicketEmail,
   updateDirectoryOptIn,
+  updateLeaderboardOptIn,
   updateDelegateProfile,
   enableDelegatePush,
   disableDelegatePush,
@@ -29,6 +30,16 @@ const STATUS_LABEL: Record<string, string> = {
   declined: 'Declined',
 };
 
+// Directory is hidden (not deleted) for now — see PortalLayout.tsx/App.tsx's
+// matching flag.
+const DIRECTORY_ENABLED = import.meta.env.VITE_DIRECTORY_ENABLED === 'true';
+const LEADERBOARD_ENABLED = import.meta.env.VITE_LEADERBOARD_ENABLED === 'true';
+// Mirrors backend/src/utils/engagementScoring.ts's SENSITIVE_LEADERBOARD_CATEGORIES
+// — copy-only here (the actual visibility decision is fully server-computed),
+// so this delegate sees an accurate "your category is private by default"
+// message instead of a generic one.
+const SENSITIVE_LEADERBOARD_CATEGORIES = ['vip', 'government_official', 'speaker'];
+
 export const PortalHome = () => {
   const { delegate, refresh } = useDelegateAuth();
   const toast = useToast();
@@ -38,6 +49,7 @@ export const PortalHome = () => {
   const [pushBusy, setPushBusy] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [optInBusy, setOptInBusy] = useState(false);
+  const [leaderboardOptInBusy, setLeaderboardOptInBusy] = useState(false);
   const [resendingTicket, setResendingTicket] = useState(false);
 
   const [editingProfile, setEditingProfile] = useState(false);
@@ -130,6 +142,33 @@ export const PortalHome = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setOptInBusy(false);
+    }
+  };
+
+  // isCurrentlyVisible reads the server-resolved leaderboardVisible (team
+  // exclusion + category default + this flag already collapsed into one
+  // boolean by the scoring job) rather than the raw leaderboardOptIn flag, so
+  // the button's own label always matches reality instead of a sensitive
+  // delegate's un-set flag reading as "hidden" when they'd already opted in.
+  const toggleLeaderboard = async () => {
+    if (!delegate) return;
+    setLeaderboardOptInBusy(true);
+    try {
+      await updateLeaderboardOptIn(!delegate.leaderboardVisible);
+      await refresh();
+      // The score/rank itself only updates on the next scheduled recompute
+      // (every ~10 min) — the opt-in choice is saved immediately, but it's
+      // honest to say "within a few minutes" rather than implying it's live.
+      toast(
+        'success',
+        delegate.leaderboardVisible
+          ? "You'll be off the public leaderboard within a few minutes"
+          : "You'll appear on the public leaderboard within a few minutes"
+      );
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setLeaderboardOptInBusy(false);
     }
   };
 
@@ -318,14 +357,30 @@ export const PortalHome = () => {
               {pushEnabled ? <Bell size={15} className="text-orange" /> : <BellOff size={15} className="text-slate-400" />}
               {pushEnabled ? 'Event push notifications on' : 'Enable event push notifications'}
             </button>
-            <button
-              onClick={toggleDirectory}
-              disabled={optInBusy}
-              className="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 px-3.5 py-2.5 text-left text-[13px] font-medium text-navy transition-colors hover:border-orange/40 disabled:opacity-60"
-            >
-              <Users2 size={15} className={delegate.directoryOptIn ? 'text-orange' : 'text-slate-400'} />
-              {delegate.directoryOptIn ? 'Listed in delegate directory' : 'Join the delegate directory'}
-            </button>
+            {DIRECTORY_ENABLED && (
+              <button
+                onClick={toggleDirectory}
+                disabled={optInBusy}
+                className="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 px-3.5 py-2.5 text-left text-[13px] font-medium text-navy transition-colors hover:border-orange/40 disabled:opacity-60"
+              >
+                <Users2 size={15} className={delegate.directoryOptIn ? 'text-orange' : 'text-slate-400'} />
+                {delegate.directoryOptIn ? 'Listed in delegate directory' : 'Join the delegate directory'}
+              </button>
+            )}
+            {LEADERBOARD_ENABLED && (
+              <button
+                onClick={toggleLeaderboard}
+                disabled={leaderboardOptInBusy}
+                className="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 px-3.5 py-2.5 text-left text-[13px] font-medium text-navy transition-colors hover:border-orange/40 disabled:opacity-60"
+              >
+                <Trophy size={15} className={delegate.leaderboardVisible ? 'text-orange' : 'text-slate-400'} />
+                {delegate.leaderboardVisible
+                  ? 'Listed on the public leaderboard'
+                  : SENSITIVE_LEADERBOARD_CATEGORIES.includes(delegate.ticketCategory ?? '')
+                    ? 'Your category is private by default — join the leaderboard'
+                    : 'Join the public leaderboard'}
+              </button>
+            )}
           </div>
         </div>
       </div>

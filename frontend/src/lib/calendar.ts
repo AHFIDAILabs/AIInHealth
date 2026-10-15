@@ -92,3 +92,74 @@ export const outlookCalendarUrl = (): string => {
   });
   return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
 };
+
+// Plain "YYYY-MM-DD" per real Summit day — kept in sync with
+// SessionsListTab.tsx's own DAY_TO_DATE and jobs/sessionReminder.job.ts.
+// Lagos is fixed UTC+1 year-round (no DST), so a session's real start/end
+// instant is just string concatenation, no timezone-component extraction.
+const DAY_ISO_DATE: Record<'day1' | 'day2', string> = { day1: '2026-10-19', day2: '2026-10-20' };
+
+// Shared by Agenda.tsx (one session's "add to calendar") and the delegate
+// portal's "download my bookmarked sessions" export — both need the same
+// day-key + "HH:MM" pair turned into real Date instants.
+export const sessionDateRange = (day: 'day1' | 'day2', startTime: string, endTime: string): { start: Date; end: Date } => {
+  const isoDate = DAY_ISO_DATE[day];
+  return {
+    start: new Date(`${isoDate}T${startTime}:00+01:00`),
+    end: new Date(`${isoDate}T${endTime}:00+01:00`),
+  };
+};
+
+// --- Generic multi-event building blocks ---
+// Shared by Agenda.tsx's single-session "add to calendar" (one VEVENT) and
+// the delegate portal's "download my bookmarked sessions" export (one
+// VEVENT per bookmarked session, in one file) — rather than each keeping its
+// own private copy of the same ICS-escaping/stamping logic the single-event
+// helpers above already needed.
+export interface IcsEvent {
+  /** Stable across re-downloads of the SAME event, so a calendar app that
+   * dedupes by UID updates the existing entry instead of duplicating it. */
+  uid: string;
+  start: Date;
+  end: Date;
+  summary: string;
+  description?: string;
+  location?: string;
+}
+
+export const buildMultiEventIcs = (events: IcsEvent[], prodId = '-//AI in Health Summit 2026//Delegate Portal//EN'): string => {
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', `PRODID:${prodId}`, 'CALSCALE:GREGORIAN'];
+  const now = toUtcStamp(new Date());
+  for (const e of events) {
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:${e.uid}`,
+      `DTSTAMP:${now}`,
+      `DTSTART:${toUtcStamp(e.start)}`,
+      `DTEND:${toUtcStamp(e.end)}`,
+      `SUMMARY:${escapeIcsText(e.summary)}`,
+      ...(e.description ? [`DESCRIPTION:${escapeIcsText(e.description)}`] : []),
+      ...(e.location ? [`LOCATION:${escapeIcsText(e.location)}`] : []),
+      'END:VEVENT'
+    );
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+};
+
+// Triggers a browser download of an arbitrary .ics file's already-built text
+// content — the same download mechanics as downloadSummitIcs above, just
+// parameterized over the content/filename instead of this one fixed event.
+export const downloadIcsFile = (icsContent: string, filename: string): void => {
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Safari starts a blob download asynchronously — revoking in the same tick
+  // sometimes wins the race and silently cancels the download there.
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+};

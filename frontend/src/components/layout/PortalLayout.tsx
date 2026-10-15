@@ -1,14 +1,23 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Ticket, Users, Handshake, LogOut, Share2, Mail } from 'lucide-react';
+import { Ticket, Users, Handshake, LogOut, Share2, Mail, CalendarDays, Trophy } from 'lucide-react';
 import { useDelegateAuth } from '../../contexts/DelegateAuthContext';
 import summitMark from '../../assets/images/summit_logo_mark.png';
 
 // On by default — see App.tsx's own EVENT_EXTRAS_ENABLED check.
 const EVENT_EXTRAS_ENABLED = import.meta.env.VITE_EVENT_EXTRAS_ENABLED === 'true';
+// Directory is asked to be hidden (not deleted) for now — flip this on to
+// bring the nav entry + route back with zero data/migration changes (see
+// App.tsx's matching flag and PortalHome.tsx's directoryOptIn toggle).
+const DIRECTORY_ENABLED = import.meta.env.VITE_DIRECTORY_ENABLED === 'true';
+// A brand-new public-facing feature landing days before the Summit — an
+// instant kill switch is worth having from day one.
+const LEADERBOARD_ENABLED = import.meta.env.VITE_LEADERBOARD_ENABLED === 'true';
 
 const NAV_ITEMS = [
   { label: 'My Ticket', to: '/portal', icon: Ticket, end: true },
-  { label: 'Directory', to: '/portal/directory', icon: Users, end: false },
+  { label: 'My Agenda', to: '/portal/my-agenda', icon: CalendarDays, end: false },
+  ...(LEADERBOARD_ENABLED ? [{ label: 'Leaderboard', to: '/portal/leaderboard', icon: Trophy, end: false }] : []),
+  ...(DIRECTORY_ENABLED ? [{ label: 'Directory', to: '/portal/directory', icon: Users, end: false }] : []),
   { label: 'Meetings', to: '/portal/meetings', icon: Handshake, end: false },
   { label: 'Messages', to: '/portal/messages', icon: Mail, end: false },
   ...(EVENT_EXTRAS_ENABLED ? [{ label: 'My Card', to: '/portal/my-card', icon: Share2, end: false }] : []),
