@@ -38,6 +38,13 @@ export const updateDirectoryOptInSchema = z.object({
 });
 export type UpdateDirectoryOptInInput = z.infer<typeof updateDirectoryOptInSchema>['body'];
 
+export const updateLeaderboardOptInSchema = z.object({
+  body: z.object({
+    leaderboardOptIn: z.boolean(),
+  }),
+});
+export type UpdateLeaderboardOptInInput = z.infer<typeof updateLeaderboardOptInSchema>['body'];
+
 // Email is deliberately excluded — it's the access-code identity anchor, so changing
 // it would need its own re-verification flow, not a plain profile edit.
 export const updateDelegateProfileSchema = z.object({

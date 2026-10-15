@@ -11,6 +11,7 @@ import {
   delegatePushSubscribeSchema,
   delegatePushUnsubscribeSchema,
   updateDirectoryOptInSchema,
+  updateLeaderboardOptInSchema,
   updateDelegateProfileSchema,
 } from '../../validations/delegate.validation.js';
 import { createMeetingRequestSchema, respondMeetingRequestSchema } from '../../validations/meeting.validation.js';
@@ -30,12 +31,18 @@ router.post('/logout', delegateController.logout);
 router.get('/ticket/qr', delegateController.ticketQr);
 router.post('/resend-ticket', delegateController.resendTicket);
 router.patch('/directory-opt-in', validate(updateDirectoryOptInSchema), delegateController.updateDirectoryOptIn);
+router.patch('/leaderboard-opt-in', validate(updateLeaderboardOptInSchema), delegateController.updateLeaderboardOptIn);
+router.get('/leaderboard', delegateController.leaderboard);
 router.patch('/profile', validate(updateDelegateProfileSchema), delegateController.updateProfile);
 router.post('/uploads/image', uploadImage, uploadController.uploadImage);
 
 router.get('/push/public-key', delegateController.pushPublicKey);
 router.post('/push/subscribe', validate(delegatePushSubscribeSchema), delegateController.pushSubscribe);
 router.post('/push/unsubscribe', validate(delegatePushUnsubscribeSchema), delegateController.pushUnsubscribe);
+
+router.get('/bookmarks', delegateController.bookmarks);
+router.post('/sessions/:id/bookmark', delegateController.bookmarkSession);
+router.delete('/sessions/:id/bookmark', delegateController.unbookmarkSession);
 
 router.get('/directory', meetingController.directory);
 router.get('/meetings', meetingController.listRequests);

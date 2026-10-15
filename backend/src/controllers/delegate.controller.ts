@@ -1,10 +1,12 @@
 import type { Request, Response } from 'express';
+import { isValidObjectId } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Registration } from '../models/Registration.model.js';
 import { Speaker } from '../models/Speaker.model.js';
 import { Session } from '../models/Session.model.js';
+import { LeaderboardMeta } from '../models/LeaderboardMeta.model.js';
 import { DelegatePushSubscription } from '../models/DelegatePushSubscription.model.js';
 import { PortalMessage } from '../models/PortalMessage.model.js';
 import { env } from '../config/env.js';
@@ -12,11 +14,13 @@ import { setDelegateCookie, clearDelegateCookie } from '../utils/cookies.js';
 import { signDelegateSessionToken } from '../services/delegateToken.service.js';
 import { qrDataUrlForToken } from '../services/qr.service.js';
 import { resendAccessCodeAndTicket } from '../services/registrationNotification.service.js';
+import { publicTranslations } from '../utils/translations.js';
 import type {
   DelegateLoginInput,
   DelegatePushSubscribeInput,
   DelegatePushUnsubscribeInput,
   UpdateDirectoryOptInInput,
+  UpdateLeaderboardOptInInput,
   UpdateDelegateProfileInput,
 } from '../validations/delegate.validation.js';
 
@@ -82,6 +86,18 @@ export const me = catchAsync(async (req: Request, res: Response) => {
       hasTicket: Boolean(registration.qrToken),
       directoryOptIn: registration.directoryOptIn,
       avatarUrl: registration.avatarUrl,
+      // Lightweight — just ids, so every page that renders a session card
+      // (the public Agenda, "Build My Day") can show bookmark state without
+      // its own round trip. Full session data for the "My Agenda" portal
+      // page itself comes from GET /delegate/bookmarks below.
+      bookmarkedSessionIds: (registration.bookmarkedSessions ?? []).map((id) => id.toString()),
+      // Gamification — Engagement Score + public Leaderboard. Zero extra
+      // query cost: these are already on the doc me() fetches, precomputed
+      // by jobs/engagementScore.job.ts on a schedule, never computed here.
+      leaderboardOptIn: registration.leaderboardOptIn ?? null,
+      leaderboardVisible: registration.leaderboardVisible,
+      engagementScore: registration.engagementScore,
+      engagementRank: registration.engagementRank ?? null,
       // Volunteer only — admin manages these on RegistrationsPage.tsx, but until
       // now a volunteer had no way to see their own assignment except by asking
       // staff directly.
@@ -246,4 +262,117 @@ export const pushUnsubscribe = catchAsync(async (req: Request, res: Response) =>
 
 export const pushPublicKey = catchAsync(async (_req: Request, res: Response) => {
   res.json(new ApiResponse({ publicKey: env.VAPID_PUBLIC_KEY, configured: Boolean(env.VAPID_PUBLIC_KEY) }));
+});
+
+// Mirrors session.controller.ts's public list() field selection exactly —
+// kept as its own copy (not imported) since that module doesn't export
+// these, same decoupling tradeoff as sanitizeAbstractHtml.ts's two copies.
+const SPEAKER_FIELDS = 'fullName title photoUrl';
+const PARTNER_FIELDS = 'name logoUrl website';
+
+// POST /delegate/sessions/:id/bookmark — $addToSet is idempotent: bookmarking
+// an already-bookmarked session is a harmless no-op, not an error (a toggle
+// button firing twice from a slow network shouldn't surface anything to the
+// delegate). 404s on an unpublished/nonexistent session rather than silently
+// "succeeding" — nothing to actually save otherwise.
+export const bookmarkSession = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
+  const session = await Session.findOne({ _id: req.params.id, isPublished: true }).select('_id');
+  if (!session) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
+
+  await Registration.updateOne({ _id: req.delegate!.registrationId }, { $addToSet: { bookmarkedSessions: session._id } });
+  res.json(new ApiResponse({ ok: true }));
+});
+
+// DELETE /delegate/sessions/:id/bookmark — $pull is equally idempotent;
+// un-bookmarking something that was never bookmarked (or no longer exists)
+// is just as much a no-op success as removing it for real.
+export const unbookmarkSession = catchAsync(async (req: Request, res: Response) => {
+  if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
+  await Registration.updateOne({ _id: req.delegate!.registrationId }, { $pull: { bookmarkedSessions: req.params.id } });
+  res.json(new ApiResponse({ ok: true }));
+});
+
+// GET /delegate/bookmarks — full session data (not just the ids `me()`
+// carries) for the "My Agenda" portal page and its "download my schedule"
+// .ics export, neither of which can render anything useful from an id alone.
+// isPublished:true again here — a since-unpublished session just quietly
+// drops off this list, same as it would from the public Agenda.
+export const bookmarks = catchAsync(async (req: Request, res: Response) => {
+  const registration = await Registration.findById(req.delegate!.registrationId).select('bookmarkedSessions');
+  if (!registration) throw new ApiError(401, 'Session invalid', 'UNAUTHENTICATED');
+
+  const sessions = await Session.find({ _id: { $in: registration.bookmarkedSessions ?? [] }, isPublished: true })
+    .select('-rsvpList')
+    .sort({ day: 1, startTime: 1 })
+    .populate({ path: 'speakers', select: SPEAKER_FIELDS, match: { isPublished: true } })
+    .populate({ path: 'moderator', select: SPEAKER_FIELDS, match: { isPublished: true } })
+    .populate({ path: 'partners', select: PARTNER_FIELDS, match: { isPublished: true } })
+    .populate('tracks', 'name color');
+  const sanitized = sessions.map((s) => ({ ...s.toObject(), translations: publicTranslations(s.translations) }));
+  res.json(new ApiResponse(sanitized));
+});
+
+// PATCH /delegate/leaderboard-opt-in — exact mirror of updateDirectoryOptIn
+// above. The actual visibility decision (team exclusion, sensitive-category
+// default, this flag's override) is resolved server-side by
+// utils/engagementScoring.ts's resolveLeaderboardVisibility, run inside
+// jobs/engagementScore.job.ts — this endpoint only ever records the
+// delegate's own explicit choice, it never computes visibility itself.
+export const updateLeaderboardOptIn = catchAsync(async (req: Request, res: Response) => {
+  const { leaderboardOptIn } = req.body as UpdateLeaderboardOptInInput;
+  const registration = await Registration.findByIdAndUpdate(
+    req.delegate!.registrationId,
+    { leaderboardOptIn },
+    { new: true }
+  ).select('leaderboardOptIn');
+  if (!registration) throw new ApiError(401, 'Session invalid', 'UNAUTHENTICATED');
+  res.json(new ApiResponse({ leaderboardOptIn: registration.leaderboardOptIn }));
+});
+
+// GET /delegate/leaderboard — the Portal's public Engagement Score board.
+// Both queries below are cheap and indexed; no live aggregation ever runs on
+// this read path — the only aggregate-shaped work in this whole feature is
+// jobs/engagementScore.job.ts's scheduled recompute, which already wrote
+// every field this endpoint reads.
+export const leaderboard = catchAsync(async (req: Request, res: Response) => {
+  const [meta, top, you] = await Promise.all([
+    LeaderboardMeta.findOne().select('lastComputedAt'),
+    Registration.find({ leaderboardVisible: true })
+      .sort({ engagementRank: 1 })
+      .limit(50)
+      .select('fullName contactName companyName organization avatarUrl engagementScore engagementRank engagementBadges'),
+    Registration.findById(req.delegate!.registrationId).select(
+      'engagementScore engagementRank engagementBreakdown engagementBadges previousEngagementRank leaderboardVisible leaderboardOptIn ticketCategory type'
+    ),
+  ]);
+
+  if (!you) throw new ApiError(401, 'Session invalid', 'UNAUTHENTICATED');
+
+  res.json(
+    new ApiResponse({
+      computedAt: meta?.lastComputedAt ?? null,
+      top: top.map((r) => ({
+        id: r.id,
+        name: delegateName(r),
+        organization: r.organization || r.companyName || null,
+        avatarUrl: r.avatarUrl ?? null,
+        score: r.engagementScore,
+        rank: r.engagementRank,
+        badges: r.engagementBadges ?? [],
+        isYou: r.id === req.delegate!.registrationId,
+      })),
+      you: {
+        rank: you.engagementRank ?? null,
+        score: you.engagementScore,
+        breakdown: you.engagementBreakdown ?? { checkIn: 0, meetings: 0, bookmarks: 0, profile: 0 },
+        badges: you.engagementBadges ?? [],
+        previousRank: you.previousEngagementRank ?? null,
+        visible: you.leaderboardVisible,
+        leaderboardOptIn: you.leaderboardOptIn ?? null,
+        ticketCategory: you.ticketCategory,
+        type: you.type,
+      },
+    })
+  );
 });

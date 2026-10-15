@@ -240,6 +240,45 @@ const registrationSchema = new Schema(
     // recognition at the event.
     avatarUrl: { type: String, trim: true },
 
+    // Delegate portal's "bookmark this session" feature (delegate.controller.ts's
+    // bookmarkSession/unbookmarkSession/bookmarks) — which sessions this person
+    // has saved from the public Agenda, surfaced back on their own "My Agenda"
+    // portal page and as the source list for its "download my schedule" .ics
+    // export. Same ref-array shape as Session.model.ts's own speakers field.
+    bookmarkedSessions: [{ type: Schema.Types.ObjectId, ref: 'Session' }],
+
+    // Gamification — Engagement Score + public Leaderboard (portal-only,
+    // visible to every logged-in delegate). Tri-state, unlike directoryOptIn's
+    // flat default:false above — undefined means "inherit the category-based
+    // default" (computed in utils/engagementScoring.ts), since most
+    // registrations already exist days before the Summit and a flat default
+    // would need a backfill. An explicit true/false always wins over the
+    // category default in either direction — anyone can opt out, not just the
+    // sensitive categories (vip/government_official/speaker) that default to
+    // hidden and opt IN instead.
+    leaderboardOptIn: { type: Boolean },
+    // Precomputed by jobs/engagementScore.job.ts on a schedule — never
+    // computed live on a page view (see that job's own comment on why).
+    engagementScore: { type: Number, default: 0 },
+    engagementBreakdown: {
+      _id: false,
+      checkIn: { type: Number, default: 0 },
+      meetings: { type: Number, default: 0 },
+      bookmarks: { type: Number, default: 0 },
+      profile: { type: Number, default: 0 },
+    },
+    engagementBadges: { type: [String], default: [] },
+    // The job's own resolved visibility decision (category rule +
+    // leaderboardOptIn collapsed into one boolean) — what GET
+    // /delegate/leaderboard's query actually filters on, so a visibility-rule
+    // change only ever needs a re-run of the job, never a query change.
+    leaderboardVisible: { type: Boolean, default: false },
+    // Only ever set for leaderboardVisible:true docs — a 1..N sequence over
+    // the visible subset, not the whole collection (see the job for why).
+    engagementRank: { type: Number },
+    previousEngagementRank: { type: Number },
+    previousEngagementScore: { type: Number },
+
     // Present ONLY on registrations that originated from (or were ever touched
     // by) scripts/syncFlootRegistrations.ts, during the transition period where
     // Floot and this system both take live registrations. Its purpose is to let
@@ -313,6 +352,10 @@ registrationSchema.index(
 // no TTL here, unlike ContactMessage/PartnershipInquiry's quarantine indexes;
 // flagged registrations are never auto-deleted.
 registrationSchema.index({ emailCanonical: 1, createdAt: -1 });
+// Backs the Leaderboard's one read-path query — a cheap indexed find+sort+
+// limit (jobs/engagementScore.job.ts writes engagementRank; nothing computes
+// it live on a request).
+registrationSchema.index({ leaderboardVisible: 1, engagementRank: 1 });
 
 export type RegistrationDoc = InferSchemaType<typeof registrationSchema>;
 export const Registration = model('Registration', registrationSchema);
