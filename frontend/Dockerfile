@@ -16,6 +16,15 @@ ARG VITE_COMPENDIUM_ENABLED=true
 ENV VITE_COMPENDIUM_ENABLED=$VITE_COMPENDIUM_ENABLED
 ARG VITE_EVENT_EXTRAS_ENABLED=true
 ENV VITE_EVENT_EXTRAS_ENABLED=$VITE_EVENT_EXTRAS_ENABLED
+# Engagement Score + public Leaderboard (Portal) — on by default, same
+# posture as the two flags above. Directory is NOT declared here on
+# purpose: it's deliberately hidden for now (see PortalLayout.tsx/App.tsx's
+# own VITE_DIRECTORY_ENABLED check) — an undeclared ARG is simply absent
+# from the build, which is exactly "hidden by default" with no extra line
+# needed. Add the matching ARG/ENV pair here (and set it in Render's
+# dashboard) if Directory is ever brought back.
+ARG VITE_LEADERBOARD_ENABLED=true
+ENV VITE_LEADERBOARD_ENABLED=$VITE_LEADERBOARD_ENABLED
 RUN npm run build
 
 # --- production: static files served by nginx ---

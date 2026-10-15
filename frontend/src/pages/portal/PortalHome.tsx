@@ -1,6 +1,21 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { CheckCircle2, Clock, Bell, BellOff, Users2, Trophy, Pencil, Check, X, Mail, CalendarPlus, Download } from 'lucide-react';
+import {
+  CheckCircle2,
+  Clock,
+  Bell,
+  BellOff,
+  Users2,
+  Trophy,
+  Pencil,
+  Check,
+  X,
+  Mail,
+  CalendarPlus,
+  Download,
+  MapPin,
+  ChevronDown,
+} from 'lucide-react';
 import { useDelegateAuth } from '../../contexts/DelegateAuthContext';
 import {
   fetchTicketQr,
@@ -11,10 +26,17 @@ import {
   enableDelegatePush,
   disableDelegatePush,
   isDelegatePushSupported,
+  fetchMyBookmarks,
 } from '../../services/delegate.service';
 import { getApiErrorMessage } from '../../services/api';
 import { getCachedTicketQr, setCachedTicketQr } from '../../lib/ticketQrCache';
 import { downloadSummitIcs, googleCalendarUrl, outlookCalendarUrl } from '../../lib/calendar';
+import {
+  fromRealSession,
+  googleCalendarUrl as sessionGoogleCalendarUrl,
+  outlookCalendarUrl as sessionOutlookCalendarUrl,
+  downloadSessionIcs,
+} from '../../components/agenda/sessionDisplay';
 import { useToast } from '../../contexts/ToastContext';
 import { LightField } from '../../components/ui/LightField';
 import { Button } from '../../components/ui/Button';
@@ -60,6 +82,9 @@ export const PortalHome = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState('');
 
+  const [bookmarkedSessions, setBookmarkedSessions] = useState<Awaited<ReturnType<typeof fetchMyBookmarks>> | null>(null);
+  const [openCalendarFor, setOpenCalendarFor] = useState<string | null>(null);
+
   useEffect(() => {
     if (!delegate?.hasTicket) return;
     // Reset before refetching — otherwise a stale QR or stale error from a previous
@@ -99,6 +124,21 @@ export const PortalHome = () => {
       setPushEnabled(Boolean(sub));
     });
   }, []);
+
+  // Full session data for whatever this delegate has bookmarked from the
+  // public Agenda / "My Agenda" portal page — re-fetched whenever the bookmark
+  // COUNT changes (bookmarking/un-bookmarking elsewhere only updates the id
+  // list on `delegate`, not this page's own full-session copy).
+  const bookmarkedCount = delegate?.bookmarkedSessionIds?.length ?? 0;
+  useEffect(() => {
+    if (bookmarkedCount === 0) {
+      setBookmarkedSessions([]);
+      return;
+    }
+    fetchMyBookmarks()
+      .then(setBookmarkedSessions)
+      .catch(() => setBookmarkedSessions([]));
+  }, [bookmarkedCount]);
 
   const togglePush = async () => {
     setPushBusy(true);
@@ -418,6 +458,101 @@ export const PortalHome = () => {
             >
               <Download size={15} className="text-orange" /> Apple / Download .ics
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bookmarked sessions — same compact row style as the public
+          homepage's Summit Programme preview (SummitProgramme.tsx), so a
+          delegate sees their own saved sessions rendered the same familiar
+          way rather than the denser full card used on the Agenda/My Agenda
+          pages. Each row gets its own Add to Calendar menu (the per-SESSION
+          calendar helpers from sessionDisplay.tsx, not the whole-Summit ones
+          the RSVP card above uses). */}
+      {bookmarkedSessions && bookmarkedSessions.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">My Sessions</p>
+          <p className="mt-1.5 text-sm text-slate-500">Sessions you&rsquo;ve bookmarked — add any of them to your own calendar.</p>
+
+          <div className="mt-4 space-y-3">
+            {bookmarkedSessions.map((real) => {
+              const session = fromRealSession(real, 'en');
+              const dayKey = real.day;
+              const menuOpen = openCalendarFor === session.key;
+              return (
+                <div
+                  key={session.key}
+                  className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-offwhite p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    {session.tracks[0]?.color && (
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: session.tracks[0].color }} />
+                    )}
+                    <div>
+                      <p className="font-display text-[15px] font-semibold text-navy">{session.title}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{session.tracks[0]?.name ?? session.format}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                      <Clock size={13} className="text-orange" /> {session.startTime}&ndash;{session.endTime}
+                    </span>
+                    {session.room && (
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                        <MapPin size={13} className="text-orange" /> {session.room}
+                      </span>
+                    )}
+
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setOpenCalendarFor(menuOpen ? null : session.key)}
+                        className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-navy hover:border-orange/40"
+                      >
+                        <CalendarPlus size={13} className="text-orange" /> Add to Calendar
+                        <ChevronDown size={12} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      {menuOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setOpenCalendarFor(null)} />
+                          <div className="absolute right-0 top-full z-20 mt-1.5 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                            <a
+                              href={sessionGoogleCalendarUrl(session, dayKey)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => setOpenCalendarFor(null)}
+                              className="block px-4 py-2.5 text-sm font-medium text-navy hover:bg-offwhite"
+                            >
+                              Google Calendar
+                            </a>
+                            <a
+                              href={sessionOutlookCalendarUrl(session, dayKey)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => setOpenCalendarFor(null)}
+                              className="block border-t border-slate-100 px-4 py-2.5 text-sm font-medium text-navy hover:bg-offwhite"
+                            >
+                              Outlook Calendar
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                downloadSessionIcs(session, dayKey);
+                                setOpenCalendarFor(null);
+                              }}
+                              className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-sm font-medium text-navy hover:bg-offwhite"
+                            >
+                              Apple / Download .ics
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
