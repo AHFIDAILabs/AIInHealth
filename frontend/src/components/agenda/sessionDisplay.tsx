@@ -580,7 +580,7 @@ export const SessionDetailModal = ({
                       <a
                         href={googleCalendarUrl(session, dayKey)}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         onClick={() => setCalendarMenuOpen(false)}
                         className="block px-4 py-2.5 text-sm font-medium text-navy hover:bg-offwhite"
                       >
@@ -589,7 +589,7 @@ export const SessionDetailModal = ({
                       <a
                         href={outlookCalendarUrl(session, dayKey)}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         onClick={() => setCalendarMenuOpen(false)}
                         className="block border-t border-slate-100 px-4 py-2.5 text-sm font-medium text-navy hover:bg-offwhite"
                       >

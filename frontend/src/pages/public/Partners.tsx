@@ -19,6 +19,7 @@ import { listPublicPartners, type AdminPartner } from '../../services/partner.se
 import { listPublicPackages, type PublicSponsorshipPackage } from '../../services/sponsorshipPackage.service';
 import { SEO } from '../../components/seo/SEO';
 import { GENERIC_FORM_INVALID_MESSAGE } from '../../lib/siteInfo';
+import { safeExternalUrl } from '../../lib/safeExternalUrl';
 
 // Purely decorative — cycles across however many real packages come back,
 // so the card grid still reads well regardless of how many an admin defines.
@@ -165,8 +166,9 @@ export const Partners = () => {
                   </button>
                 );
               }
-              return partner.website ? (
-                <a key={partner._id} href={partner.website} target="_blank" rel="noopener noreferrer" aria-label={partner.name}>
+              const safeWebsite = safeExternalUrl(partner.website);
+              return safeWebsite ? (
+                <a key={partner._id} href={safeWebsite} target="_blank" rel="noopener noreferrer" aria-label={partner.name}>
                   {img}
                 </a>
               ) : (
@@ -336,9 +338,9 @@ export const Partners = () => {
             {activePartner.description && (
               <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-slate-600">{activePartner.description}</p>
             )}
-            {activePartner.website && (
+            {safeExternalUrl(activePartner.website) && (
               <a
-                href={activePartner.website}
+                href={safeExternalUrl(activePartner.website)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"

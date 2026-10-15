@@ -11,6 +11,7 @@ import {
   type InnovationShowcaseEntry,
 } from '../../services/innovationShowcaseEntry.service';
 import { getApiErrorMessage } from '../../services/api';
+import { safeExternalUrl } from '../../lib/safeExternalUrl';
 import { SEO } from '../../components/seo/SEO';
 
 // Full-width banner — used both on the grid card (top ~45%, see the card
@@ -322,9 +323,9 @@ export const InnovationShowcaseConfirmed = () => {
                   </div>
                 )}
 
-                {active.website && (
+                {safeExternalUrl(active.website) && (
                   <a
-                    href={active.website}
+                    href={safeExternalUrl(active.website)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"

@@ -3,6 +3,7 @@ import { Reveal } from '../ui/Reveal';
 import { ButtonLink } from '../ui/Button';
 import ahfidMark from '../../assets/images/Icon@4x.png';
 import { listPublicPartners, type AdminPartner } from '../../services/partner.service';
+import { safeExternalUrl } from '../../lib/safeExternalUrl';
 
 // Real partner logos, auto-scrolling marquee (pauses on hover). Backed by the real
 // GET /partners (published-only) — a partner added and published in the admin
@@ -49,8 +50,9 @@ export const ConvenedWith = () => {
                   {partner.name}
                 </span>
               );
-              return partner.website ? (
-                <a key={partner._id} href={partner.website} target="_blank" rel="noopener noreferrer" aria-label={partner.name}>
+              const safeWebsite = safeExternalUrl(partner.website);
+              return safeWebsite ? (
+                <a key={partner._id} href={safeWebsite} target="_blank" rel="noopener noreferrer" aria-label={partner.name}>
                   {img}
                 </a>
               ) : (

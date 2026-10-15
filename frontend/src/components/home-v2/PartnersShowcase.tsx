@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Reveal } from '../ui/Reveal';
 import { listPublicPartners, type AdminPartner } from '../../services/partner.service';
+import { safeExternalUrl } from '../../lib/safeExternalUrl';
 
 interface PackageGroup {
   label: string;
@@ -49,8 +50,9 @@ const Swatch = ({ p, isTopTier, dense = false }: { p: AdminPartner; isTopTier: b
   const swatchClass = `group flex items-center justify-center rounded-2xl border bg-white transition-all duration-300 hover:border-orange/40 hover:shadow-md ${
     isTopTier ? 'border-slate-200 p-4' : 'border-slate-100 p-3'
   }`;
-  return p.website ? (
-    <a href={p.website} target="_blank" rel="noopener noreferrer" aria-label={p.name} className={swatchClass}>
+  const safeWebsite = safeExternalUrl(p.website);
+  return safeWebsite ? (
+    <a href={safeWebsite} target="_blank" rel="noopener noreferrer" aria-label={p.name} className={swatchClass}>
       {logo}
     </a>
   ) : (

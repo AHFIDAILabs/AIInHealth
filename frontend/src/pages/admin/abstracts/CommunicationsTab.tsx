@@ -14,6 +14,7 @@ import { SkeletonRows } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
 import { AdminInput, AdminTextarea } from '../../../components/ui/AdminField';
 import { useToast } from '../../../contexts/ToastContext';
+import { sanitizeEmailHtml } from '../../../lib/sanitizeEmailHtml';
 
 const STATUS_OPTIONS: CommunicationStatus[] = ['draft', 'sent', 'failed', 'cancelled'];
 
@@ -256,7 +257,10 @@ export const CommunicationsTab = () => {
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Subject</p>
                     <p className="mt-1 text-sm text-navy">{active.subject}</p>
                     <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Body</p>
-                    <div className="mt-1 rounded-lg border border-slate-200 p-3 text-sm text-slate-600" dangerouslySetInnerHTML={{ __html: active.body }} />
+                    <div
+                      className="mt-1 rounded-lg border border-slate-200 p-3 text-sm text-slate-600"
+                      dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(active.body) }}
+                    />
                   </div>
                 )}
               </div>

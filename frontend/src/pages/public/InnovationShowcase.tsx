@@ -10,6 +10,7 @@ import { Banner } from '../../components/ui/Banner';
 import { listInnovations, type Innovation } from '../../services/innovation.service';
 import { getApiErrorMessage } from '../../services/api';
 import { SEO } from '../../components/seo/SEO';
+import { safeExternalUrl } from '../../lib/safeExternalUrl';
 
 export const InnovationShowcase = () => {
   const { t } = useTranslation();
@@ -233,9 +234,9 @@ export const InnovationShowcase = () => {
                   </div>
                 )}
               </dl>
-              {active.website && (
+              {safeExternalUrl(active.website) && (
                 <a
-                  href={active.website}
+                  href={safeExternalUrl(active.website)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-orange hover:text-orange-hover"
