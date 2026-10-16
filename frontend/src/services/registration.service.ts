@@ -12,7 +12,8 @@ export type TicketCategory =
   | 'staff'
   | 'abstract_presenter'
   | 'abstract_reviewer'
-  | 'invited_delegate';
+  | 'invited_delegate'
+  | 'speaker';
 
 export type BoothSize = 'small' | 'medium' | 'large';
 
