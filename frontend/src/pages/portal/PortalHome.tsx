@@ -353,21 +353,21 @@ export const PortalHome = () => {
         {/* E-ticket / QR */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Your E-Ticket</p>
-          {delegate.checkedIn ? (
-            <div className="mt-4 flex flex-col items-center gap-2 py-8">
-              <CheckCircle2 size={40} className="text-success" />
-              <p className="font-display text-lg font-semibold text-navy">Checked In</p>
-              {delegate.checkedInAt && (
-                <p className="text-sm text-slate-500">{new Date(delegate.checkedInAt).toLocaleString('en-GB')}</p>
-              )}
+          {delegate.checkedIn && (
+            <div className="mx-auto mt-3 flex w-fit items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+              <CheckCircle2 size={13} />
+              Checked in{delegate.checkedInAt && ` — ${new Date(delegate.checkedInAt).toLocaleString('en-GB')}`}
             </div>
-          ) : qrDataUrl ? (
+          )}
+          {qrDataUrl ? (
             <>
               <img src={qrDataUrl} alt="Your check-in QR code" className="mx-auto mt-4 h-48 w-48 rounded-xl border border-slate-100" />
               <p className="mt-3 text-xs text-slate-400">
-                {qrIsCached
-                  ? "Showing your last saved ticket. You're offline right now, but this still works at the desk."
-                  : 'Show this at the registration desk on event day.'}
+                {delegate.checkedIn
+                  ? 'This is a 2-day event — keep this QR code for re-entry on day 2.'
+                  : qrIsCached
+                    ? "Showing your last saved ticket. You're offline right now, but this still works at the desk."
+                    : 'Show this at the registration desk on event day.'}
               </p>
               <button
                 onClick={resendTicket}
