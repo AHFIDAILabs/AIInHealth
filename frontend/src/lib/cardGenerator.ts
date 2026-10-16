@@ -36,7 +36,7 @@
 import { EVENT_DATE_RANGE, VENUE_SHORT } from './siteInfo';
 import templateUrl from '../assets/images/card-attending-template.png';
 
-export type EventCardKind = 'attending' | 'presenting' | 'speaking' | 'showcase';
+export type EventCardKind = 'attending' | 'presenting' | 'speaking' | 'showcase' | 'exhibiting';
 
 export interface EventCardData {
   kind: EventCardKind;
@@ -63,6 +63,7 @@ const ROLE_DEFAULT: Record<EventCardKind, string> = {
   presenting: 'Presenter',
   speaking: 'Speaker',
   showcase: 'Innovator',
+  exhibiting: 'Exhibitor',
 };
 
 // The template's own native resolution — used as the canvas size directly so
@@ -360,16 +361,19 @@ const drawRoleLabel = (ctx: CanvasRenderingContext2D, roleLabel: string) => {
   ctx.fillText(roleLabel.toUpperCase(), ROLE_BLOT.x, ROLE_TEXT_Y);
 };
 
-const HEADLINE_TEXT: Record<'presenting' | 'speaking' | 'showcase', [string, string]> = {
+type NonAttendingKind = Exclude<EventCardKind, 'attending'>;
+
+const HEADLINE_TEXT: Record<NonAttendingKind, [string, string]> = {
   presenting: ['I will be', 'presenting'],
   speaking: ['I am', 'speaking'],
   showcase: ["I'm", 'showcasing'],
+  exhibiting: ["We're", 'exhibiting'],
 };
 
 const HEADLINE_CREAM = '#E8E0A8'; // the template's own cream/pale-gold second-line color
 const HEADLINE_SWISH_GRAY = '#8A8F98'; // matches the template's own gray swish-arrow stroke
 
-const drawReplacementHeadline = async (ctx: CanvasRenderingContext2D, kind: 'presenting' | 'speaking' | 'showcase') => {
+const drawReplacementHeadline = async (ctx: CanvasRenderingContext2D, kind: NonAttendingKind) => {
   await ensureHeadlineFont();
   blotRegion(ctx, HEADLINE_BLOT.x, HEADLINE_BLOT.y, HEADLINE_BLOT.w, HEADLINE_BLOT.h);
   const [line1, line2] = HEADLINE_TEXT[kind];
@@ -399,17 +403,14 @@ const THEME_FONT = '800 34px Sora, sans-serif';
 const THEME_LINE_HEIGHT = 44;
 const THEME_MAX_WIDTH = THEME_BLOT.w - 32;
 
-const THEME_BADGE_TEXT: Record<'presenting' | 'speaking' | 'showcase', string> = {
+const THEME_BADGE_TEXT: Record<NonAttendingKind, string> = {
   presenting: 'SESSION',
   speaking: 'SESSION',
   showcase: 'SHOWCASE',
+  exhibiting: 'BOOTH',
 };
 
-const drawReplacementThemeBlock = (
-  ctx: CanvasRenderingContext2D,
-  kind: 'presenting' | 'speaking' | 'showcase',
-  rawLines: string[]
-) => {
+const drawReplacementThemeBlock = (ctx: CanvasRenderingContext2D, kind: NonAttendingKind, rawLines: string[]) => {
   // A flat near-white fill, not blotRegion's sampled gradient — this region
   // sits on the bottom card's near-white background, and live testing showed
   // the sampled gradient occasionally picking up a mismatched gray-blue tone

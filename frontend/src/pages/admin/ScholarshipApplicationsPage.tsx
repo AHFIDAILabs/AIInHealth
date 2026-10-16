@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, X, GraduationCap, Paperclip, Check, Ban, Download, Sparkles } from 'lucide-react';
+import { Search, X, GraduationCap, Paperclip, Check, Ban, Download, Sparkles, Send } from 'lucide-react';
 import {
   fetchScholarshipApplications,
   decideScholarshipApplication,
   adminAnalyzeApplications,
+  sendScholarshipRsvpReminders,
   exportScholarshipApplicationsUrl,
   SCHOLARSHIP_APPLICATION_STATUSES,
   SCHOLARSHIP_DISCOUNTS,
@@ -17,6 +18,7 @@ import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 import { AdminSelect, AdminTextarea } from '../../components/ui/AdminField';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../contexts/ToastContext';
 
 const STATUS_STYLE: Record<ScholarshipApplicationStatus, string> = {
@@ -57,6 +59,8 @@ export const ScholarshipApplicationsPage = () => {
   const [deciding, setDeciding] = useState<'approved' | 'rejected' | null>(null);
   const [decideError, setDecideError] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
+  const [rsvpConfirmOpen, setRsvpConfirmOpen] = useState(false);
+  const [sendingRsvp, setSendingRsvp] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -75,6 +79,23 @@ export const ScholarshipApplicationsPage = () => {
     const id = setTimeout(load, q ? 350 : 0);
     return () => clearTimeout(id);
   }, [load, q]);
+
+  const sendRsvpReminders = async () => {
+    setSendingRsvp(true);
+    try {
+      const result = await sendScholarshipRsvpReminders();
+      toast(
+        'success',
+        `Sent to ${result.sent} of ${result.targeted} pending applicant${result.targeted === 1 ? '' : 's'}${result.failed ? ` — ${result.failed} failed` : ''}.`
+      );
+      setRsvpConfirmOpen(false);
+      load();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingRsvp(false);
+    }
+  };
 
   const analyzeWithAi = async () => {
     setAnalyzing(true);
@@ -130,6 +151,13 @@ export const ScholarshipApplicationsPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setRsvpConfirmOpen(true)}
+            title="Email every still-pending applicant a reserved-seat RSVP offer — clicking it in their email immediately approves them, no further review needed"
+            className="flex items-center gap-2 rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-orange-hover"
+          >
+            <Send size={16} /> Send RSVP Deadline Email
+          </button>
           <button
             onClick={analyzeWithAi}
             disabled={analyzing}
@@ -424,6 +452,17 @@ export const ScholarshipApplicationsPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={rsvpConfirmOpen}
+        title="Send RSVP deadline email?"
+        description="This emails EVERY still-pending application (not just this page) a reserved-seat offer with a confirm-by deadline. The moment someone clicks the link in their email, they are immediately approved and issued a registration access code — there's no further review step after that."
+        confirmLabel={sendingRsvp ? 'Sending…' : 'Send to all pending'}
+        danger={false}
+        loading={sendingRsvp}
+        onConfirm={sendRsvpReminders}
+        onCancel={() => setRsvpConfirmOpen(false)}
+      />
     </div>
   );
 };

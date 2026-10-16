@@ -38,6 +38,7 @@ import { ScholarshipApplication } from './pages/public/ScholarshipApplication';
 import { TeamRegistration } from './pages/public/TeamRegistration';
 import { WaiHealthBreakfast } from './pages/public/WaiHealthBreakfast';
 import { WaiHealthRsvp } from './pages/public/WaiHealthRsvp';
+import { ScholarshipRsvp } from './pages/public/ScholarshipRsvp';
 import { AttendeeRsvpConfirm } from './pages/public/AttendeeRsvpConfirm';
 import { RapporteurForm } from './pages/public/RapporteurForm';
 import { KnowledgeProductView } from './pages/public/KnowledgeProductView';
@@ -159,6 +160,7 @@ function App() {
             <Route path="/promo/claim" element={<PromoClaim />} />
             <Route path="/abstracts/submit" element={<AbstractSubmission />} />
             <Route path="/sponsored-delegates" element={<ScholarshipApplication />} />
+            <Route path="/sponsored-delegates/rsvp/:token" element={<ScholarshipRsvp />} />
             <Route path="/team/register" element={<TeamRegistration />} />
             <Route path="/wai-health-breakfast" element={<WaiHealthBreakfast />} />
             <Route path="/wai-health-breakfast/rsvp/:token" element={<WaiHealthRsvp />} />

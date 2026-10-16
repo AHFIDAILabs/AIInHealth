@@ -249,7 +249,7 @@ export const IntegrationsPage = () => {
                 {onevieBusy && <p className="mt-1 text-xs text-slate-400">Saving…</p>}
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              <div className="mt-4 grid grid-cols-4 gap-2 text-center">
                 <div className="rounded-lg bg-offwhite px-2 py-2.5">
                   <p className="font-display text-lg font-semibold text-navy">{onevie.pendingCount}</p>
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Pending</p>
@@ -263,6 +263,10 @@ export const IntegrationsPage = () => {
                     {onevie.failedCount}
                   </p>
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Failed</p>
+                </div>
+                <div className="rounded-lg bg-offwhite px-2 py-2.5">
+                  <p className="font-display text-lg font-semibold text-slate-500">{onevie.skippedCount}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Skipped</p>
                 </div>
               </div>
 
@@ -282,15 +286,16 @@ export const IntegrationsPage = () => {
               </button>
               {!onevie.isEnabled && <p className="mt-2 text-xs text-slate-400">Turn sync on above to sync manually or on schedule.</p>}
 
-              {onevie.recentFailures.length > 0 && (
+              {onevie.recentIssues.length > 0 && (
                 <div className="mt-4 rounded-lg bg-danger/5 px-3.5 py-2.5">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-danger">
-                    Recent failures ({onevie.recentFailures.length})
+                    Recent issues ({onevie.recentIssues.length})
                   </p>
                   <ul className="mt-1.5 space-y-1">
-                    {onevie.recentFailures.slice(0, 5).map((f) => (
+                    {onevie.recentIssues.slice(0, 5).map((f) => (
                       <li key={f.id} className="text-xs text-slate-600">
-                        <span className="font-semibold text-navy">{f.name}</span> ({f.type}) — {f.error ?? 'Unknown error'}
+                        <span className="font-semibold text-navy">{f.name}</span> ({f.type}
+                        {f.status === 'skipped' ? ', skipped' : ''}) — {f.error ?? 'Unknown error'}
                       </li>
                     ))}
                   </ul>

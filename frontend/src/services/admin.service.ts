@@ -26,6 +26,9 @@ export interface AdminRegistration {
   contactPhone?: string;
   website?: string;
   boothSize?: BoothSize;
+  // The physical booth assignment (e.g. "A12") — admin-set, distinct from
+  // boothSize (a size preference stated at registration).
+  boothNumber?: string;
   productsDescription?: string;
   // Exhibitor only — answers to admin-defined custom fields, keyed by field _id.
   customFieldAnswers?: Record<string, string>;
@@ -298,6 +301,7 @@ export interface UpdateRegistrationDetailsInput {
   contactPhone?: string;
   website?: string;
   boothSize?: BoothSize;
+  boothNumber?: string;
   productsDescription?: string;
   customFieldAnswers?: Record<string, string>;
   // Innovator only.
@@ -352,6 +356,7 @@ export interface AdminCreateExhibitorPayload {
   contactPhone?: string;
   website?: string;
   boothSize?: BoothSize;
+  boothNumber?: string;
   productsDescription?: string;
   customFieldAnswers?: Record<string, string>;
 }

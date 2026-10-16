@@ -113,3 +113,31 @@ export const decideScholarshipApplication = async (
   );
   return res.data.data;
 };
+
+// Seat-absorption RSVP round — ids omitted targets every still-pending
+// application. Sending this does NOT decide anything; approval only happens
+// if/when the applicant clicks through (confirmScholarshipRsvp below).
+export const sendScholarshipRsvpReminders = async (ids?: string[]): Promise<{ targeted: number; sent: number; failed: number }> => {
+  const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
+    '/admin/scholarship-applications/rsvp/send-reminders',
+    { ids }
+  );
+  return res.data.data;
+};
+
+export type ScholarshipRsvpStatus = 'confirmed' | 'already_decided';
+
+export interface ScholarshipRsvpResult {
+  status: ScholarshipRsvpStatus;
+  applicationStatus?: ScholarshipApplicationStatus;
+}
+
+// POST /scholarship-applications/rsvp/:token — public. The real decision:
+// clicking this immediately approves the application (unlike Registration's
+// own pending-attendee RSVP, which only records interest). A 404 (invalid
+// token) surfaces as a thrown error; 'confirmed'/'already_decided' are
+// normal 200s the caller renders its own state for.
+export const confirmScholarshipRsvp = async (token: string): Promise<ScholarshipRsvpResult> => {
+  const res = await api.post<{ success: true; data: ScholarshipRsvpResult }>(`/scholarship-applications/rsvp/${token}`);
+  return res.data.data;
+};

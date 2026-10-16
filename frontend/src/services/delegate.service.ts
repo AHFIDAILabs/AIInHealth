@@ -7,7 +7,7 @@ export interface DelegateMe {
   // 'team' included — registration.controller.ts's requestAccessCode has no
   // type filter, so a team/staff/organizer registration logs into this same
   // portal too (used by PortalMyCard.tsx to show the right role label).
-  type: 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer' | 'team';
+  type: 'attendee' | 'exhibitor' | 'sponsor' | 'volunteer' | 'team' | 'innovator';
   name: string;
   email: string | null;
   phone?: string;
@@ -34,6 +34,17 @@ export interface DelegateMe {
   tshirtSize?: string;
   trackSelected?: string;
   trackAssigned?: string;
+  // Exhibitor only — backs the "Visit Our Booth" card (PortalMyCard.tsx).
+  companyName?: string;
+  boothSize?: string;
+  // Admin-assigned physical booth, distinct from boothSize — see
+  // Registration.model.ts's own comment on the two fields' difference.
+  boothNumber?: string;
+  productsDescription?: string;
+  website?: string;
+  // Company logo, self-uploaded on "My Card" — separate from avatarUrl,
+  // which is the contact person's own photo.
+  logoUrl?: string;
   // Admin replies waiting in /portal/messages — see fetchPortalMessages.
   unreadPortalMessages: number;
   // Gamification — Engagement Score + public Leaderboard. leaderboardOptIn is
@@ -120,6 +131,7 @@ export interface UpdateDelegateProfileInput {
   organization?: string;
   avatarUrl?: string;
   gender?: Gender;
+  logoUrl?: string;
 }
 
 // Email is deliberately not editable here — it's the access-code identity anchor.

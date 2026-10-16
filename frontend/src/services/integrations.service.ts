@@ -21,11 +21,14 @@ export const sendTestPush = async (): Promise<number> => {
   return res.data.data.sentTo;
 };
 
-export interface OnevieFailure {
+export interface OnevieIssue {
   id: string;
   name: string;
   email: string | null;
   type: string;
+  // 'skipped' = a duplicate-email conflict with another registration, not an
+  // error — see onevieSync.job.ts's resolveEmailConflicts.
+  status: 'failed' | 'skipped';
   error: string | null;
   lastAttemptAt: string | null;
 }
@@ -40,7 +43,8 @@ export interface OnevieStatus {
   pendingCount: number;
   syncedCount: number;
   failedCount: number;
-  recentFailures: OnevieFailure[];
+  skippedCount: number;
+  recentIssues: OnevieIssue[];
 }
 
 export const fetchOnevieStatus = async (): Promise<OnevieStatus> => {

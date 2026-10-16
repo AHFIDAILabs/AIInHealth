@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 import { useDelegateAuth } from '../../contexts/DelegateAuthContext';
-import { fetchSpeakerSessions, type SpeakerSession } from '../../services/delegate.service';
+import { fetchSpeakerSessions, updateDelegateProfile, type SpeakerSession } from '../../services/delegate.service';
+import { uploadDelegateImage } from '../../services/upload.service';
 import type { EventCardData } from '../../lib/cardGenerator';
 import { SESSION_DAY_LABEL } from '../../lib/siteInfo';
 import { CardPanel } from '../../components/cards/CardPanel';
+import { ImagePicker } from '../../components/ui/ImagePicker';
 import { getApiErrorMessage } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 
 const sessionDetailLine = (s: SpeakerSession): string => `${SESSION_DAY_LABEL[s.day]} · ${s.startTime}–${s.endTime} · ${s.room}`;
 
@@ -16,12 +19,14 @@ const sessionDetailLine = (s: SpeakerSession): string => `${SESSION_DAY_LABEL[s.
 // photo or does image processing on the backend, so this feature can't slow
 // the rest of the site down no matter how many delegates use it at once.
 export const PortalMyCard = () => {
-  const { delegate } = useDelegateAuth();
+  const { delegate, refresh } = useDelegateAuth();
+  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SpeakerSession[]>([]);
   const [isSpeaker, setIsSpeaker] = useState(false);
   const [sessionsError, setSessionsError] = useState('');
+  const [savingLogo, setSavingLogo] = useState(false);
 
   useEffect(() => {
     fetchSpeakerSessions()
@@ -44,6 +49,21 @@ export const PortalMyCard = () => {
     if (!file) return;
     if (localPhotoUrl) URL.revokeObjectURL(localPhotoUrl);
     setLocalPhotoUrl(URL.createObjectURL(file));
+  };
+
+  // Unlike the personal photo above (local-only, never uploaded), the
+  // company logo is a real hosted asset — it needs to persist across visits
+  // and devices, so this uploads immediately and saves it to the profile.
+  const onLogoChange = async (url: string) => {
+    setSavingLogo(true);
+    try {
+      await updateDelegateProfile({ logoUrl: url });
+      await refresh();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err, 'Could not save your logo.'));
+    } finally {
+      setSavingLogo(false);
+    }
   };
 
   if (!delegate) return null;
@@ -101,6 +121,31 @@ export const PortalMyCard = () => {
         line2: sessionDetailLine(s),
       },
     })),
+    // Exhibitor-only — a separate "Visit Our Booth" card alongside their
+    // "I Will Be Attending" one above. companyName/productsDescription
+    // aren't on every registration type, so this card is skipped entirely
+    // rather than rendering with blank/awkward fallback text. Prefers the
+    // uploaded company logo over the shared personal photo — falls back to
+    // it so the card isn't photo-less before a logo's been added.
+    ...(delegate.type === 'exhibitor' && delegate.companyName
+      ? [
+          {
+            key: 'exhibiting',
+            heading: 'Visit Our Booth',
+            filename: 'aihs-2026-visit-our-booth.png',
+            shareText: `We're exhibiting at the AI in Health Summit 2026 — visit us! #AIHS2026`,
+            data: {
+              kind: 'exhibiting' as const,
+              name: delegate.companyName,
+              photoUrl: delegate.logoUrl ?? effectivePhotoUrl,
+              line1: delegate.productsDescription || undefined,
+              line2: [delegate.boothNumber ? `Booth ${delegate.boothNumber}` : null, delegate.website]
+                .filter(Boolean)
+                .join(' · ') || undefined,
+            },
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -123,6 +168,23 @@ export const PortalMyCard = () => {
         </button>
         <p className="text-xs text-slate-400">Used on every card below — never uploaded, stays on this device.</p>
       </div>
+
+      {delegate.type === 'exhibitor' && (
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+          <ImagePicker
+            value={delegate.logoUrl}
+            onChange={onLogoChange}
+            upload={uploadDelegateImage}
+            shape="square"
+            size={52}
+            fallbackText={delegate.companyName || delegate.name}
+          />
+          <div>
+            <p className="text-xs font-semibold text-navy">{savingLogo ? 'Saving…' : 'Company logo'}</p>
+            <p className="text-xs text-slate-400">Used on your "Visit Our Booth" card below — saved to your profile.</p>
+          </div>
+        </div>
+      )}
 
       {sessionsError && <p className="text-xs text-danger">{sessionsError}</p>}
 

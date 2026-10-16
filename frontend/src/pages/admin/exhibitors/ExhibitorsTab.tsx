@@ -35,6 +35,7 @@ interface ExhibitorFormState {
   contactPhone: string;
   website: string;
   boothSize: '' | BoothSize;
+  boothNumber: string;
   productsDescription: string;
   customFieldAnswers: Record<string, string>;
 }
@@ -46,6 +47,7 @@ const EMPTY_FORM: ExhibitorFormState = {
   contactPhone: '',
   website: '',
   boothSize: '',
+  boothNumber: '',
   productsDescription: '',
   customFieldAnswers: {},
 };
@@ -133,6 +135,7 @@ export const ExhibitorsTab = () => {
       contactPhone: exhibitor.contactPhone ?? '',
       website: exhibitor.website ?? '',
       boothSize: exhibitor.boothSize ?? '',
+      boothNumber: exhibitor.boothNumber ?? '',
       productsDescription: exhibitor.productsDescription ?? '',
       customFieldAnswers: { ...(exhibitor.customFieldAnswers ?? {}) },
     });
@@ -161,6 +164,7 @@ export const ExhibitorsTab = () => {
         contactPhone: form.contactPhone.trim() || undefined,
         website: form.website.trim() || undefined,
         boothSize: form.boothSize || undefined,
+        boothNumber: form.boothNumber.trim() || undefined,
         productsDescription: form.productsDescription.trim() || undefined,
         customFieldAnswers: Object.keys(form.customFieldAnswers).length ? form.customFieldAnswers : undefined,
       };
@@ -411,6 +415,7 @@ export const ExhibitorsTab = () => {
                   {active.contactPhone && <DetailRow label="Phone" value={active.contactPhone} />}
                   {active.website && <DetailRow label="Website" value={active.website} />}
                   {active.boothSize && <DetailRow label="Booth Size" value={active.boothSize} />}
+                  {active.boothNumber && <DetailRow label="Booth Number" value={active.boothNumber} />}
                   {active.productsDescription && <DetailRow label="Products" value={active.productsDescription} />}
                   {customFields.map((f) =>
                     active.customFieldAnswers?.[f._id] ? <DetailRow key={f._id} label={f.label} value={active.customFieldAnswers[f._id]} /> : null
@@ -549,14 +554,22 @@ export const ExhibitorsTab = () => {
                   <AdminInput label="Contact Phone" type="tel" value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} />
                   <AdminInput label="Website" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} className="col-span-2" />
                 </div>
-                <AdminSelect label="Booth Size" value={form.boothSize} onChange={(e) => setForm({ ...form, boothSize: e.target.value as BoothSize | '' })}>
-                  <option value="">Not set</option>
-                  {BOOTH_SIZES.map((b) => (
-                    <option key={b} value={b}>
-                      {b[0].toUpperCase() + b.slice(1)}
-                    </option>
-                  ))}
-                </AdminSelect>
+                <div className="grid grid-cols-2 gap-3">
+                  <AdminSelect label="Booth Size" value={form.boothSize} onChange={(e) => setForm({ ...form, boothSize: e.target.value as BoothSize | '' })}>
+                    <option value="">Not set</option>
+                    {BOOTH_SIZES.map((b) => (
+                      <option key={b} value={b}>
+                        {b[0].toUpperCase() + b.slice(1)}
+                      </option>
+                    ))}
+                  </AdminSelect>
+                  <AdminInput
+                    label="Booth Number"
+                    value={form.boothNumber}
+                    onChange={(e) => setForm({ ...form, boothNumber: e.target.value })}
+                    placeholder="e.g. A12"
+                  />
+                </div>
                 <AdminTextarea label="Products" value={form.productsDescription} onChange={(e) => setForm({ ...form, productsDescription: e.target.value })} />
 
                 {customFields.length > 0 && (
