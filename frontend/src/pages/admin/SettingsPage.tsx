@@ -14,6 +14,11 @@ import { fetchAdminVolunteerSettings, setVolunteerApplicationsOpen } from '../..
 import { fetchAdminInnovatorSettings, setInnovatorApplicationsOpen } from '../../services/innovatorSettings.service';
 import { fetchAdminScholarshipSettings, setScholarshipApplicationsOpen } from '../../services/scholarshipSettings.service';
 import { adminFetchPromoStatus, adminLaunchPromoCampaign, adminSetPromoActive, type PromoStatus } from '../../services/promo.service';
+import {
+  fetchAdminLivestreamSettings,
+  setAdminLivestreamSettings,
+  type LivestreamSettings,
+} from '../../services/livestreamSettings.service';
 
 // Same roles that manage Volunteers elsewhere (Registrations' Volunteers
 // filter, Volunteer Tracks) — not the personal-account roles above, this is
@@ -26,6 +31,9 @@ const INNOVATOR_SETTINGS_ROLES = ['super_admin', 'admin', 'innovator_lead'];
 // registrations_officer's existing area, same as every other scholarship-
 // application admin route (admin.routes.ts).
 const SCHOLARSHIP_SETTINGS_ROLES = ['super_admin', 'admin', 'registrations_officer'];
+// Site-wide, not scoped to any one registration pipeline — same shape as the
+// QR Promo Campaign card below.
+const LIVESTREAM_SETTINGS_ROLES = ['super_admin', 'admin'];
 
 const EVENT_LABEL: Record<NotificationEvent, string> = {
   'registration.new': 'New registration submitted',
@@ -156,6 +164,15 @@ export const SettingsPage = () => {
   const [scholarshipOpen, setScholarshipOpenState] = useState<boolean | null>(null);
   const [scholarshipBusy, setScholarshipBusy] = useState(false);
 
+  const canManageLivestream = !!user && LIVESTREAM_SETTINGS_ROLES.includes(user.role);
+  const [livestream, setLivestreamState] = useState<LivestreamSettings | null>(null);
+  const [livestreamBusy, setLivestreamBusy] = useState(false);
+  // URLs are edited as a local draft (committed on "Save Stream Links", not
+  // per keystroke) — unlike the plain on/off toggles elsewhere on this page,
+  // typing a URL one character at a time shouldn't fire a save per key.
+  const [day1UrlDraft, setDay1UrlDraft] = useState('');
+  const [day2UrlDraft, setDay2UrlDraft] = useState('');
+
   // A real, uncapped-quantity 100%-off giveaway running for a fixed 10 days
   // once launched — restricted to super_admin, distinct from the broader
   // registrations_officer/admin scope every other card above allows.
@@ -230,6 +247,33 @@ export const SettingsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setScholarshipBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!canManageLivestream) return;
+    fetchAdminLivestreamSettings()
+      .then((s) => {
+        setLivestreamState(s);
+        setDay1UrlDraft(s.day1Url);
+        setDay2UrlDraft(s.day2Url);
+      })
+      .catch((err) => toast('error', getApiErrorMessage(err)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManageLivestream]);
+
+  const saveLivestreamSettings = async (next: LivestreamSettings) => {
+    setLivestreamBusy(true);
+    try {
+      const saved = await setAdminLivestreamSettings(next);
+      setLivestreamState(saved);
+      setDay1UrlDraft(saved.day1Url);
+      setDay2UrlDraft(saved.day2Url);
+      toast('success', 'Live stream settings saved');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setLivestreamBusy(false);
     }
   };
 
@@ -499,6 +543,57 @@ export const SettingsPage = () => {
                 <p className="mt-2 text-xs text-slate-400">
                   Starts the landing page's drifting QR banner and its fixed 10-day claim window immediately. The launch
                   itself can't be undone, but you'll be able to pause or stop the campaign early afterward.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Site-wide "Watch Live" page/homepage section (frontend/src/pages/
+          public/LiveStream.tsx, components/home/WatchLiveSection.tsx) — each
+          day gets its own YouTube Live link; the public side figures out
+          which one is "live now" on its own from the Summit's fixed dates,
+          nothing date-dependent happens here. */}
+      {canManageLivestream && (
+        <div className="mt-6 rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Live Stream</p>
+          <div className="mt-4 space-y-4">
+            {livestream === null ? (
+              <p className="text-sm text-slate-400">Loading…</p>
+            ) : (
+              <>
+                <AdminToggle
+                  label={livestreamBusy ? 'Live stream page enabled (updating…)' : 'Live stream page enabled'}
+                  checked={livestream.isEnabled}
+                  onChange={(checked) => saveLivestreamSettings({ ...livestream, isEnabled: checked })}
+                />
+                <p className="text-xs text-slate-400">
+                  Turn this on once you have real stream links — until then, /live and the homepage section both show a
+                  "coming soon" message instead of a blank/broken player.
+                </p>
+                <AdminInput
+                  label="Day 1 (19 Oct) YouTube Live link"
+                  value={day1UrlDraft}
+                  onChange={(e) => setDay1UrlDraft(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=…"
+                />
+                <AdminInput
+                  label="Day 2 (20 Oct) YouTube Live link"
+                  value={day2UrlDraft}
+                  onChange={(e) => setDay2UrlDraft(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=…"
+                />
+                <button
+                  onClick={() => saveLivestreamSettings({ ...livestream, day1Url: day1UrlDraft, day2Url: day2UrlDraft })}
+                  disabled={livestreamBusy}
+                  className="rounded-xl bg-orange px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-orange-hover disabled:opacity-60"
+                >
+                  {livestreamBusy ? 'Saving…' : 'Save Stream Links'}
+                </button>
+                <p className="text-xs text-slate-400">
+                  Paste the normal YouTube link from your browser's address bar or Share button — any format works. The
+                  public page automatically switches to Day 2's link once Day 1 ends, with no action needed from you.
                 </p>
               </>
             )}

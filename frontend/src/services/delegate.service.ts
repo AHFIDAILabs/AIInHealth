@@ -1,5 +1,6 @@
 import { api } from './api';
 import type { AdminSession } from './session.service';
+import type { Gender } from './registration.service';
 
 export interface DelegateMe {
   id: string;
@@ -19,6 +20,11 @@ export interface DelegateMe {
   hasTicket: boolean;
   directoryOptIn: boolean;
   avatarUrl?: string;
+  // Self-reported, optional — see backend/src/types/enums.ts's GENDERS
+  // comment on why the portal is one of three chances to catch this. `null`
+  // (not just missing) means "hasn't answered yet," so the portal can show a
+  // one-time prompt rather than silently never asking.
+  gender: Gender | null;
   // Just ids — enough for any page rendering a session card (the public
   // Agenda, "Build My Day") to show bookmark state without its own fetch.
   // Full session data for the "My Agenda" portal page comes from
@@ -113,6 +119,7 @@ export interface UpdateDelegateProfileInput {
   phone?: string;
   organization?: string;
   avatarUrl?: string;
+  gender?: Gender;
 }
 
 // Email is deliberately not editable here — it's the access-code identity anchor.

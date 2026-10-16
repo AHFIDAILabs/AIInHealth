@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { User, Users, Globe2, Briefcase, GraduationCap, Crown, Landmark, Newspaper, Mic, ClipboardCheck, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Banner } from '../ui/Banner';
-import { LightField } from '../ui/LightField';
+import { LightField, LightSelect } from '../ui/LightField';
 import { HoneypotField } from '../ui/HoneypotField';
 import { RegisterSuccess } from './RegisterSuccess';
 import { IdCardUpload } from './IdCardUpload';
@@ -63,6 +63,9 @@ const schema = z
     organization: z.string().trim().optional(),
     jobTitle: z.string().trim().optional(),
     country: z.string().trim().min(2, 'Enter your country'),
+    // Optional — see backend/src/types/enums.ts's GENDERS comment on why
+    // this is asked here in addition to the portal and check-in desk.
+    gender: z.enum(['male', 'female', 'prefer_not_to_say']).optional().or(z.literal('')),
     groupAttendees: z.array(groupAttendeeSchema).optional(),
     // Optional — see the note above the field for why.
     accessCode: z.string().trim().max(32).optional().or(z.literal('')),
@@ -157,6 +160,9 @@ export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
         type: 'attendee',
         ...values,
         accessCode: accessCode ? accessCode.toUpperCase() : undefined,
+        // The LightSelect's own "Prefer not to answer" placeholder option is
+        // an empty string, not a real enum value — never send that through.
+        gender: values.gender ? values.gender : undefined,
         formToken,
       });
       if (requiresPayment) {
@@ -361,6 +367,14 @@ export const AttendeeForm = ({ defaultAccessCode }: AttendeeFormProps = {}) => {
                 <LightField label="Country" error={errors.country?.message} {...register('country')} />
                 <LightField label="Organization" error={errors.organization?.message} {...register('organization')} />
                 <LightField label="Job Title" error={errors.jobTitle?.message} {...register('jobTitle')} />
+                <LightSelect label="Gender (optional)" error={errors.gender?.message} defaultValue="" {...register('gender')}>
+                  <option value="" disabled>
+                    Select…
+                  </option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                  <option value="prefer_not_to_say">Prefer not to say</option>
+                </LightSelect>
               </div>
             </div>
 

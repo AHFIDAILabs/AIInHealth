@@ -16,6 +16,12 @@ export type TicketCategory =
 
 export type BoothSize = 'small' | 'medium' | 'large';
 
+// Mirrors backend/src/types/enums.ts's GENDERS — self-reported, always
+// optional. See that file's own comment on why this is now asked in three
+// separate places (this form, the delegate portal, and the check-in desk)
+// rather than just one.
+export type Gender = 'male' | 'female' | 'prefer_not_to_say';
+
 // Mirrors backend/src/types/enums.ts's ID_VERIFICATION_TICKET_CATEGORIES —
 // these were the free/discounted categories being self-selected with no
 // verification to skip or cut the registration fee. The attendee form
@@ -67,6 +73,7 @@ export interface AttendeePayload extends SpamHardeningFields {
   organization?: string;
   jobTitle?: string;
   country: string;
+  gender?: Gender;
   groupAttendees?: GroupAttendee[];
   // Optional scholarship/discount code (10%, 25%, 50%, or 100% off) — verified
   // against the AccessCode collection server-side; a discount is applied to the

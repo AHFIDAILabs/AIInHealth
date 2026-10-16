@@ -28,6 +28,7 @@ import {
   isDelegatePushSupported,
   fetchMyBookmarks,
 } from '../../services/delegate.service';
+import type { Gender } from '../../services/registration.service';
 import { getApiErrorMessage } from '../../services/api';
 import { getCachedTicketQr, setCachedTicketQr } from '../../lib/ticketQrCache';
 import { downloadSummitIcs, googleCalendarUrl, outlookCalendarUrl } from '../../lib/calendar';
@@ -84,6 +85,7 @@ export const PortalHome = () => {
 
   const [bookmarkedSessions, setBookmarkedSessions] = useState<Awaited<ReturnType<typeof fetchMyBookmarks>> | null>(null);
   const [openCalendarFor, setOpenCalendarFor] = useState<string | null>(null);
+  const [genderBusy, setGenderBusy] = useState(false);
 
   useEffect(() => {
     if (!delegate?.hasTicket) return;
@@ -212,6 +214,22 @@ export const PortalHome = () => {
     }
   };
 
+  // One-tap answer, no need to open the full edit-profile panel for a single
+  // optional field — see backend/src/types/enums.ts's GENDERS comment on why
+  // the portal is one of three chances to catch this (most attendees are
+  // already registered, so a registration-form-only change would miss them).
+  const submitGender = async (gender: Gender) => {
+    setGenderBusy(true);
+    try {
+      await updateDelegateProfile({ gender });
+      await refresh();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setGenderBusy(false);
+    }
+  };
+
   const openEditProfile = () => {
     if (!delegate) return;
     setProfileName(delegate.name);
@@ -308,6 +326,26 @@ export const PortalHome = () => {
             complete your profile
           </button>
           .
+        </Banner>
+      )}
+
+      {delegate.gender === null && (
+        <Banner variant="info">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span>Help with our event planning — what&rsquo;s your gender? (optional)</span>
+            <div className="flex flex-wrap gap-1.5">
+              {(['female', 'male', 'prefer_not_to_say'] as const).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => submitGender(option)}
+                  disabled={genderBusy}
+                  className="rounded-full border border-info/40 bg-white px-3 py-1 text-xs font-semibold text-info hover:bg-info/10 disabled:opacity-60"
+                >
+                  {option === 'prefer_not_to_say' ? 'Prefer not to say' : option === 'female' ? 'Female' : 'Male'}
+                </button>
+              ))}
+            </div>
+          </div>
         </Banner>
       )}
 

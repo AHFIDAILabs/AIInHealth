@@ -9,6 +9,7 @@ export const PUBLIC_ROUTES = [
   { path: '/', priority: '1.0', changefreq: 'weekly' },
   { path: '/about', priority: '0.7', changefreq: 'monthly' },
   { path: '/agenda', priority: '0.9', changefreq: 'weekly' },
+  { path: '/live', priority: '0.8', changefreq: 'weekly' },
   { path: '/speakers', priority: '0.9', changefreq: 'weekly' },
   { path: '/volunteers', priority: '0.5', changefreq: 'monthly' },
   { path: '/innovation-showcase', priority: '0.7', changefreq: 'weekly' },

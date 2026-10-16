@@ -19,6 +19,7 @@ import { NewHome } from './pages/public/NewHome';
 import { HomeMain } from './pages/public/HomeMain';
 import { About } from './pages/public/About';
 import { Agenda } from './pages/public/Agenda';
+import { LiveStream } from './pages/public/LiveStream';
 import { Speakers } from './pages/public/Speakers';
 import { Volunteers } from './pages/public/Volunteers';
 import { InnovationShowcase } from './pages/public/InnovationShowcase';
@@ -142,6 +143,7 @@ function App() {
             <Route path="/home-v2" element={<NewHome />} />
             <Route path="/about" element={<About />} />
             <Route path="/agenda" element={<Agenda />} />
+            <Route path="/live" element={<LiveStream />} />
             <Route path="/speakers" element={<Speakers />} />
             <Route path="/volunteers" element={<Volunteers />} />
             <Route path="/innovation-showcase" element={<InnovationShowcase />} />

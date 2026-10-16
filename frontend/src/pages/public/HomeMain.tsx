@@ -10,6 +10,7 @@ import { PromoBanner } from '../../components/home/PromoBanner';
 import { SummitProgramme } from '../../components/home/SummitProgramme';
 import { WaiHealthSpotlight } from '../../components/home/WaiHealthSpotlight';
 import { LeaderboardJoinPopup } from '../../components/home/LeaderboardJoinPopup';
+import { WatchLiveSection } from '../../components/home/WatchLiveSection';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase';
 import { CountdownCard } from '../../components/home-v2/CountdownCard';
 import { VENUE_NAME, VENUE_STREET_ADDRESS, VENUE_CITY } from '../../lib/siteInfo';
@@ -187,6 +188,7 @@ export const HomeMain = () => {
         </div>
       </section>
 
+      <WatchLiveSection />
       <WaiHealthSpotlight />
       <SpeakersGrid />
       <SummitProgramme />

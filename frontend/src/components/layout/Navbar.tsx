@@ -67,6 +67,7 @@ export const Navbar = () => {
   const NAV_ITEMS: NavItem[] = [
     { id: 'home', label: t('nav.home', 'Home'), to: '/' },
     { id: 'agenda', label: t('nav.agenda', 'Agenda'), to: '/agenda' },
+    { id: 'live', label: t('nav.live', 'Watch Live'), to: '/live' },
     { id: 'speakers', label: t('nav.speakers', 'Speakers'), to: '/speakers' },
     { id: 'abstracts', label: t('nav.abstracts', 'Abstracts'), to: '/abstracts/confirmed' },
     { id: 'innovations', label: t('nav.innovations', 'Innovations'), to: '/innovation-showcase/confirmed' },
