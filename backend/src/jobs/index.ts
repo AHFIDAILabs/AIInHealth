@@ -3,6 +3,7 @@ import { scheduleSessionReminder } from './sessionReminder.job.js';
 import { schedulePolicyTrackerRefresh } from './policyTrackerRefresh.job.js';
 import { scheduleEngagementScoreRecompute } from './engagementScore.job.js';
 import { scheduleOnevieSync } from './onevieSync.job.js';
+import { scheduleSummitReminders } from './summitReminder.job.js';
 
 export const startScheduledJobs = (): void => {
   scheduleRegistrationDigest();
@@ -10,4 +11,5 @@ export const startScheduledJobs = (): void => {
   schedulePolicyTrackerRefresh();
   scheduleEngagementScoreRecompute();
   scheduleOnevieSync();
+  scheduleSummitReminders();
 };

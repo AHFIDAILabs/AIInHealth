@@ -235,6 +235,15 @@ const registrationSchema = new Schema(
     // confirmed since the last send, rather than re-emailing everyone again.
     waiHealthInviteSentAt: { type: Date },
 
+    // Two-wave pre-Summit countdown reminder (jobs/summitReminder.job.ts) —
+    // wave 1 "2 days to go" sends 09:00 WAT on 17 Oct 2026, wave 2 "tomorrow's
+    // the day" on 18 Oct 2026, to every confirmed registration regardless of
+    // type. Named "wave", not "day1"/"day2", to avoid colliding with the
+    // Summit's own Day 1/Day 2 (19/20 Oct) used throughout Session/Agenda —
+    // both reminder waves go out BEFORE either actual event day.
+    summitReminderWave1SentAt: { type: Date },
+    summitReminderWave2SentAt: { type: Date },
+
     // Delegate portal login credential — generated once (lazily, on first
     // confirmation email or resend request) and reused for the registration's
     // whole lifetime, same pattern as Reviewer.model.ts's accessCode. Replaces

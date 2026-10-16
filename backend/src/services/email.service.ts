@@ -994,3 +994,54 @@ export const sendRegistrationDigestEmail = async (to: string, fullName: string, 
     `,
   });
 };
+
+// jobs/summitReminder.job.ts's wave 1 — sent 09:00 WAT, 17 October 2026 (two
+// days before Day 1) to every confirmed registration regardless of type.
+export const sendSummitReminderWave1Email = async (to: string, fullName: string): Promise<void> => {
+  const portalUrl = `${env.FRONTEND_ORIGIN}/portal/login`;
+  const agendaUrl = `${env.FRONTEND_ORIGIN}/agenda`;
+  await sendEmail({
+    to,
+    subject: '2 Days to Go — Your AI in Health Summit 2026 Countdown Starts Now',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>The AI in Health Summit 2026 is just two days away, and we can't wait to welcome you to Abuja.</p>
+      <p><strong>When:</strong> 19&ndash;20 October 2026<br /><strong>Where:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
+      <p><strong>Before you arrive:</strong></p>
+      <ul>
+        <li>Registration &amp; badge collection opens from <strong>7:00 AM</strong> both mornings &mdash; arriving early means a shorter queue and more time to network before sessions begin.</li>
+        <li>Your check-in QR code is in your confirmation email and always available in your delegate portal &mdash; it's valid for both days, so you only need it once.</li>
+        <li>Two full days of plenaries, oral abstract sessions, innovation showcases, and dedicated networking time await &mdash; view the full agenda to start planning which sessions you don't want to miss.</li>
+      </ul>
+      ${emailButton(portalUrl, 'Open my portal')}
+      <p><a href="${agendaUrl}">View the full agenda</a></p>
+      <p>If anything changes on your end or you have questions before the big day, reach us at ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+      <p>See you in Abuja!<br />The AI in Health Summit 2026 Team</p>
+    `,
+  });
+};
+
+// jobs/summitReminder.job.ts's wave 2 — sent 09:00 WAT, 18 October 2026 (the
+// day before Day 1).
+export const sendSummitReminderWave2Email = async (to: string, fullName: string): Promise<void> => {
+  const portalUrl = `${env.FRONTEND_ORIGIN}/portal/login`;
+  const agendaUrl = `${env.FRONTEND_ORIGIN}/agenda`;
+  await sendEmail({
+    to,
+    subject: "Tomorrow's the Day — Final Details for AI in Health Summit 2026",
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>This is it &mdash; the AI in Health Summit 2026 kicks off tomorrow, 19 October, and runs through 20 October at the ${VENUE_SHORT}.</p>
+      <p><strong>Your final checklist:</strong></p>
+      <ul>
+        <li>&#9989; QR ticket ready &mdash; open your portal now so it's one tap away tomorrow morning (works for both days).</li>
+        <li>&#9989; Plan to arrive from <strong>7:00 AM</strong> for registration and badge collection.</li>
+        <li>&#9989; <a href="${VENUE_MAPS_LINK}">Get directions to the venue</a> so you're not searching for it in the morning rush.</li>
+        <li>&#9989; Take one more look at the <a href="${agendaUrl}">full agenda</a> so you know exactly where to be and when.</li>
+      </ul>
+      ${emailButton(portalUrl, 'Open my portal')}
+      <p>We've had an incredible response from speakers, innovators, and delegates across the continent and beyond &mdash; tomorrow is going to be a great two days of conversation on the future of AI in health.</p>
+      <p>Safe travels, and see you at the venue!<br />The AI in Health Summit 2026 Team</p>
+    `,
+  });
+};
