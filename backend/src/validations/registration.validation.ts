@@ -78,6 +78,11 @@ const exhibitorSchema = z.object({
   contactPhone: z.string().trim().optional(),
   website: optionalUrlField,
   boothSize: z.enum(BOOTH_SIZES).optional(),
+  // Admin-only in practice (never shown on the public form) — see
+  // Registration.model.ts's own comment on why this is separate from
+  // boothSize. Included here only so adminCreateRegistration (which reuses
+  // this exact schema) can set it at creation time.
+  boothNumber: z.string().trim().max(50).optional(),
   productsDescription: z.string().trim().max(2000).optional(),
   // Answers to whatever CustomFormField questions are currently configured
   // (see customFormField.controller.ts's public list) — keyed by field _id,
@@ -252,6 +257,7 @@ export const updateRegistrationStatusSchema = z.object({
       contactPhone: z.string().trim().optional(),
       website: optionalUrlField,
       boothSize: z.enum(BOOTH_SIZES).optional(),
+      boothNumber: z.string().trim().max(50).optional(),
       productsDescription: z.string().trim().max(2000).optional(),
       solutionDescription: z.string().trim().max(2000).optional(),
       customFieldAnswers: z.record(z.string(), z.string()).optional(),

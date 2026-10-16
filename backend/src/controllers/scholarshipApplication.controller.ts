@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
 import { isValidObjectId, type FilterQuery } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
@@ -9,10 +10,16 @@ import { getOrCreateScholarshipSettings } from '../models/ScholarshipSettings.mo
 import { AccessCode } from '../models/AccessCode.model.js';
 import { generateCode } from './accessCode.controller.js';
 import { recordAudit } from '../services/audit.service.js';
-import { sendSponsorshipApprovedEmail, sendSponsorshipReceivedEmail, sendSponsorshipDeclinedEmail } from '../services/email.service.js';
+import {
+  sendSponsorshipApprovedEmail,
+  sendSponsorshipReceivedEmail,
+  sendSponsorshipDeclinedEmail,
+  sendScholarshipRsvpReminderEmail,
+} from '../services/email.service.js';
 import { cloudinaryConfigured } from '../config/cloudinary.js';
 import { uploadRawToCloudinary } from '../services/cloudinary.service.js';
 import { logger } from '../config/logger.js';
+import { env } from '../config/env.js';
 import { emitAdminNotification } from '../services/notification.service.js';
 import { scoreApplication } from '../services/ai/scholarshipTriage.service.js';
 import { runInBatches } from '../utils/batch.js';
@@ -21,7 +28,10 @@ import type {
   DecideScholarshipApplicationInput,
   ListScholarshipApplicationsQuery,
   AdminAnalyzeApplicationsInput,
+  AdminSendRsvpRemindersInput,
 } from '../validations/scholarshipApplication.validation.js';
+
+const generateRsvpToken = (): string => crypto.randomBytes(24).toString('base64url');
 
 const SUBMISSION_MESSAGE = "Thanks for applying — our team will review your application and follow up by email.";
 
@@ -168,6 +178,40 @@ export const adminAnalyze = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
+// Shared by adminDecide's approved branch and the public rsvp() below — both
+// end in exactly the same outcome (a real scholarship AccessCode, emailed to
+// the applicant), just reached via a different trigger: an admin's explicit
+// decision, or the applicant's own RSVP click against a reserved-seat offer.
+// createdBy is left unset for the self-service path — there's no acting User
+// for a public endpoint to attribute it to.
+const approveApplication = async (
+  application: InstanceType<typeof ScholarshipApplication>,
+  { discountPercent = 100, createdBy }: { discountPercent?: number; createdBy?: string }
+): Promise<{ code: string }> => {
+  let code = generateCode('scholarship');
+  // eslint-disable-next-line no-await-in-loop
+  while (await AccessCode.exists({ code })) code = generateCode('scholarship');
+
+  const accessCode = await AccessCode.create({
+    code,
+    type: 'scholarship',
+    issuedTo: application.email,
+    discountPercent,
+    ...(createdBy ? { createdBy } : {}),
+  });
+
+  application.status = 'approved';
+  application.issuedAccessCode = accessCode._id;
+  application.decidedAt = new Date();
+  await application.save();
+
+  sendSponsorshipApprovedEmail(application.email, application.fullName, accessCode.code, discountPercent)
+    .then(() => AccessCode.updateOne({ _id: accessCode._id }, { $set: { sentAt: new Date() } }))
+    .catch((err) => logger.error({ err }, 'Failed to send sponsorship approved email'));
+
+  return { code: accessCode.code };
+};
+
 // PATCH /admin/scholarship-applications/:id/decide
 export const adminDecide = catchAsync(async (req: Request, res: Response) => {
   if (!isValidObjectId(req.params.id)) throw new ApiError(404, 'Application not found', 'NOT_FOUND');
@@ -179,29 +223,9 @@ export const adminDecide = catchAsync(async (req: Request, res: Response) => {
   const before = { status: application.status };
 
   if (input.status === 'approved') {
-    const discountPercent = input.discountPercent ?? 100;
-    let code = generateCode('scholarship');
-    // eslint-disable-next-line no-await-in-loop
-    while (await AccessCode.exists({ code })) code = generateCode('scholarship');
-
-    const accessCode = await AccessCode.create({
-      code,
-      type: 'scholarship',
-      issuedTo: application.email,
-      discountPercent,
-      createdBy: req.user!.sub,
-    });
-
-    application.status = 'approved';
-    application.issuedAccessCode = accessCode._id;
     application.reviewNotes = input.reviewNotes;
     application.decidedBy = req.user!.sub as unknown as ScholarshipApplicationDoc['decidedBy'];
-    application.decidedAt = new Date();
-    await application.save();
-
-    sendSponsorshipApprovedEmail(application.email, application.fullName, accessCode.code, discountPercent)
-      .then(() => AccessCode.updateOne({ _id: accessCode._id }, { $set: { sentAt: new Date() } }))
-      .catch((err) => logger.error({ err }, 'Failed to send sponsorship approved email'));
+    await approveApplication(application, { discountPercent: input.discountPercent, createdBy: req.user!.sub });
   } else {
     application.status = 'rejected';
     application.reviewNotes = input.reviewNotes;
@@ -224,4 +248,64 @@ export const adminDecide = catchAsync(async (req: Request, res: Response) => {
   });
 
   res.json(new ApiResponse(application));
+});
+
+// The exact deadline communicated in today's RSVP reminder email — 5:00 PM
+// WAT, Friday 16 October 2026 (today). Hardcoded to this one send rather
+// than computed, since it's a one-off absorption round with a specific
+// stated cutoff, not a recurring/generic reminder template.
+const RSVP_DEADLINE_LABEL = '5:00 PM Today';
+
+// POST /admin/scholarship-applications/rsvp/send-reminders — ids omitted ->
+// every still-pending application. Generates each one's rsvpToken (if it
+// doesn't already have one) and emails the reserved-seat offer; it does NOT
+// decide anything itself — approval only happens when/if the applicant
+// clicks through (rsvp() below).
+export const adminSendRsvpReminders = catchAsync(async (req: Request, res: Response) => {
+  const { ids }: AdminSendRsvpRemindersInput = req.body;
+
+  const filter: FilterQuery<ScholarshipApplicationDoc> = ids && ids.length > 0 ? { _id: { $in: ids }, status: 'pending' } : { status: 'pending' };
+  const applications = await ScholarshipApplication.find(filter);
+  if (applications.length === 0) throw new ApiError(404, 'No pending applications to notify', 'NOT_FOUND');
+
+  const { succeeded, failed } = await runInBatches(applications, 3, async (application) => {
+    if (!application.rsvpToken) application.rsvpToken = generateRsvpToken();
+    application.rsvpEmailSentAt = new Date();
+    await application.save();
+
+    const rsvpUrl = `${env.FRONTEND_ORIGIN}/sponsored-delegates/rsvp/${application.rsvpToken}`;
+    await sendScholarshipRsvpReminderEmail(application.email, application.fullName, rsvpUrl, RSVP_DEADLINE_LABEL);
+  });
+
+  await recordAudit({
+    req,
+    action: 'scholarship_application.rsvp_reminders_sent',
+    resourceType: 'ScholarshipApplication',
+    resourceId: 'bulk',
+    before: null,
+    after: { targeted: applications.length, sent: succeeded, failed: failed.length },
+  });
+
+  res.json(new ApiResponse({ targeted: applications.length, sent: succeeded, failed: failed.length }));
+});
+
+// POST /scholarship-applications/rsvp/:token — public. Deliberately
+// different from Registration's own pending-attendee RSVP (which only
+// records interest and still needs an admin to confirm): clicking this link
+// immediately approves the application via the exact same path adminDecide's
+// approved branch uses, since management's ask here was specifically
+// "the moment they click RSVP, they are picked and confirmed."
+export const rsvp = catchAsync(async (req: Request, res: Response) => {
+  const { token } = req.params;
+  const application = await ScholarshipApplication.findOne({ rsvpToken: token });
+  if (!application) throw new ApiError(404, 'This RSVP link is invalid.', 'NOT_FOUND');
+
+  if (application.status !== 'pending') {
+    res.json(new ApiResponse({ status: 'already_decided', applicationStatus: application.status }));
+    return;
+  }
+
+  const { code } = await approveApplication(application, {});
+
+  res.json(new ApiResponse({ status: 'confirmed', code }));
 });

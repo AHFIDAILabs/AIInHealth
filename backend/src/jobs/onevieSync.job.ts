@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { logger } from '../config/logger.js';
 import { Registration, type RegistrationDoc } from '../models/Registration.model.js';
 import { getOrCreateOnevieSettings } from '../models/OnevieSettings.model.js';
-import { onevieConfigured, syncRegistrationToOnevie, mapOnevieTicketTypeId, OnevieApiError } from '../services/onevie.service.js';
+import { onevieConfigured, syncRegistrationToOnevie, mapOnevieTicketTypeId, getOnevieEmail, OnevieApiError } from '../services/onevie.service.js';
 import type { HydratedDocument } from 'mongoose';
 
 // Pushes confirmed registrations to the check-in vendor on a schedule — see
@@ -69,16 +69,93 @@ const syncOne = async (registration: HydratedDocument<RegistrationDoc>): Promise
   }
 };
 
-// Runs with light concurrency and a pause between chunks — NOT runInBatches
-// (every other job using that fires chunk after chunk back to back). The
-// very first sync after this feature shipped pushed ~560 historical
-// registrations in one run at batch-of-3-no-delay and tripped Onevie's rate
-// limit on roughly two-thirds of them. A 429 anywhere in a chunk doubles the
-// pause before the next one (capped), since hammering right back after
-// "too many requests" just produces more of the same.
-const CHUNK_SIZE = 2;
-const BASE_DELAY_MS = 500;
-const MAX_DELAY_MS = 5000;
+// Onevie rejects a second registration under an email already in use — "one
+// email = one ticket" on their side, with no documented way for us to
+// delete/replace an entry once accepted. Two of our registration types can
+// legitimately share a person's email (e.g. someone registers as an
+// attendee, then separately as an innovator) — confirmed live when 3 such
+// pairs all hit real "email already registered" 400s. The fix has two parts:
+// a non-'attendee' registration is preferred when a conflict is still open
+// (decided with the team — the more specific role is more likely the one
+// they'll actually use at check-in), and a conflict already resolved in
+// Onevie's favor of the "wrong" sibling can only be undone by deleting that
+// entry on Onevie's own side — there is nothing left for this code to retry.
+const isPreferred = (a: HydratedDocument<RegistrationDoc>, b: HydratedDocument<RegistrationDoc>): boolean => {
+  if (a.type === 'attendee' && b.type !== 'attendee') return false;
+  if (a.type !== 'attendee' && b.type === 'attendee') return true;
+  return a.id < b.id; // deterministic tie-break between two same-preference siblings
+};
+
+const markSkipped = async (registration: HydratedDocument<RegistrationDoc>, reason: string): Promise<void> => {
+  if (registration.onevieSync?.status === 'skipped' && registration.onevieSync.lastError === reason) return; // already recorded, no-op write
+  registration.onevieSync = { ...registration.onevieSync, status: 'skipped', lastAttemptAt: new Date(), lastError: reason };
+  registration.markModified('onevieSync');
+  await registration.save();
+};
+
+// Splits this run's candidates into who actually gets an API call vs who's
+// skipped for an email conflict — recomputed fresh every tick from current
+// DB state (not cached), so a skip is never permanent in itself: if the
+// winning sibling later fails for an unrelated reason, the loser is
+// reconsidered on the very next tick.
+const resolveEmailConflicts = async (
+  candidates: HydratedDocument<RegistrationDoc>[]
+): Promise<HydratedDocument<RegistrationDoc>[]> => {
+  if (candidates.length === 0) return candidates;
+
+  const allConfirmed = await Registration.find({ status: 'confirmed', qrToken: { $exists: true, $ne: null } }).select(
+    'type email contactEmail onevieSync.status'
+  );
+
+  const byEmail = new Map<string, HydratedDocument<RegistrationDoc>[]>();
+  for (const reg of allConfirmed) {
+    const email = getOnevieEmail(reg);
+    if (!email) continue;
+    const group = byEmail.get(email) ?? [];
+    group.push(reg);
+    byEmail.set(email, group);
+  }
+
+  const toSync: HydratedDocument<RegistrationDoc>[] = [];
+  for (const candidate of candidates) {
+    const email = getOnevieEmail(candidate);
+    const group = email ? (byEmail.get(email) ?? []) : [];
+    const siblings = group.filter((r) => r.id !== candidate.id);
+
+    const alreadySyncedSibling = siblings.find((s) => s.onevieSync?.status === 'synced');
+    if (alreadySyncedSibling) {
+      // eslint-disable-next-line no-await-in-loop
+      await markSkipped(
+        candidate,
+        `Skipped — email already registered to a ${alreadySyncedSibling.type} registration (${alreadySyncedSibling.id}) in Onevie`
+      );
+      continue;
+    }
+
+    const unsyncedSiblingsInThisRun = siblings.filter((s) => candidates.some((c) => c.id === s.id));
+    const isOutranked = unsyncedSiblingsInThisRun.some((s) => isPreferred(s, candidate));
+    if (isOutranked) {
+      // eslint-disable-next-line no-await-in-loop
+      await markSkipped(candidate, 'Skipped this run — a preferred sibling registration shares this email and goes first');
+      continue;
+    }
+
+    toSync.push(candidate);
+  }
+
+  return toSync;
+};
+
+// Fully serial with a pause between each call — NOT runInBatches (every
+// other job using that fires chunk after chunk back to back). The first two
+// syncs after this feature shipped (560 historical registrations in one run)
+// hit 429 on most of them — first at 3-concurrent-no-delay, then still ~70
+// at 2-concurrent/500ms. Onevie's real limit is evidently tighter than
+// either, so this runs one at a time. Delay decays gradually rather than
+// snapping straight back to base after one clean call, so a run settles near
+// the actual limit instead of oscillating between "too fast" and "too slow".
+const BASE_DELAY_MS = 1000;
+const MAX_DELAY_MS = 15000;
 
 const syncAll = async (
   candidates: HydratedDocument<RegistrationDoc>[]
@@ -87,21 +164,14 @@ const syncAll = async (
   let failed = 0;
   let delay = BASE_DELAY_MS;
 
-  for (let i = 0; i < candidates.length; i += CHUNK_SIZE) {
-    const chunk = candidates.slice(i, i + CHUNK_SIZE);
+  for (let i = 0; i < candidates.length; i += 1) {
     // eslint-disable-next-line no-await-in-loop
-    const results = await Promise.allSettled(chunk.map(syncOne));
-    let hitRateLimit = false;
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value.ok) {
-        succeeded += 1;
-      } else {
-        failed += 1;
-        if (r.status === 'fulfilled' && r.value.rateLimited) hitRateLimit = true;
-      }
-    }
-    delay = hitRateLimit ? Math.min(delay * 2, MAX_DELAY_MS) : BASE_DELAY_MS;
-    if (i + CHUNK_SIZE < candidates.length) {
+    const result = await syncOne(candidates[i]);
+    if (result.ok) succeeded += 1;
+    else failed += 1;
+
+    delay = result.rateLimited ? Math.min(delay * 2, MAX_DELAY_MS) : Math.max(delay * 0.8, BASE_DELAY_MS);
+    if (i + 1 < candidates.length) {
       // eslint-disable-next-line no-await-in-loop
       await sleep(delay);
     }
@@ -130,7 +200,8 @@ export const runOnevieSync = async (): Promise<{ skipped: boolean; synced: numbe
     }
 
     const candidates = await Registration.find(needsSyncFilter);
-    const { succeeded, failed } = await syncAll(candidates);
+    const toSync = await resolveEmailConflicts(candidates);
+    const { succeeded, failed } = await syncAll(toSync);
 
     const durationMs = Date.now() - startedAt;
     settings.set({ lastRunAt: new Date(), lastRunSynced: succeeded, lastRunFailed: failed, lastRunDurationMs: durationMs });

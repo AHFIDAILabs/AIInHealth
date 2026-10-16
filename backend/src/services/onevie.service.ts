@@ -62,6 +62,18 @@ export const mapOnevieTicketTypeId = (registration: Pick<RegistrationDoc, 'type'
   }
 };
 
+// Strips everything except digits and a leading '+' — confirmed necessary
+// against a real "Invalid phone number format" 400 caused by an invisible
+// Unicode bidi-control character (U+202C) stuck onto an otherwise normal
+// number, almost certainly from a copy-paste at registration time. Spaces,
+// dashes and brackets get the same treatment since they'd fail the same way.
+const sanitizePhone = (raw: string): string => {
+  const trimmed = raw.trim();
+  const hasPlus = trimmed.startsWith('+');
+  const digits = trimmed.replace(/[^0-9]/g, '');
+  return (hasPlus ? '+' : '') + digits;
+};
+
 // Onevie requires 1-50 char first/last name; our registrations only ever
 // collect one free-text full name field. First token is the first name,
 // everything else the last name — a single-token name repeats itself so
@@ -93,6 +105,13 @@ interface OneviePayload {
 // — innovator was never listed there in the schema comments, but shares the
 // exact same fields in practice).
 const COMPANY_CONTACT_TYPES = new Set(['exhibitor', 'sponsor', 'innovator']);
+export const isCompanyContactType = (type: string): boolean => COMPANY_CONTACT_TYPES.has(type);
+
+// Exported so onevieSync.job.ts's duplicate-email detection resolves the
+// exact same email Onevie will actually see — any drift between the two
+// would silently defeat that check.
+export const getOnevieEmail = (registration: Pick<RegistrationHydrated, 'type' | 'email' | 'contactEmail'>): string =>
+  ((isCompanyContactType(registration.type) ? registration.contactEmail : registration.email) || '').toLowerCase().trim();
 
 // Onevie's docs list `phone` as optional, but its live validation actually
 // rejects a request with no phone at all ("phone is required") — confirmed
@@ -104,11 +123,12 @@ const PHONE_FALLBACK = '0000000000';
 // Builds the exact request body — the one place that decides which of the
 // two contact-field shapes this registration uses.
 export const buildOneviePayload = (registration: RegistrationHydrated): OneviePayload => {
-  const isCompanyContact = COMPANY_CONTACT_TYPES.has(registration.type);
+  const isCompanyContact = isCompanyContactType(registration.type);
   const rawName = (isCompanyContact ? registration.contactName : registration.fullName) || 'Guest';
   const { firstName, lastName } = splitFullName(rawName);
-  const email = (isCompanyContact ? registration.contactEmail : registration.email) || '';
-  const phone = (isCompanyContact ? registration.contactPhone : registration.phone) || PHONE_FALLBACK;
+  const email = getOnevieEmail(registration);
+  const rawPhone = (isCompanyContact ? registration.contactPhone : registration.phone) || '';
+  const phone = sanitizePhone(rawPhone) || PHONE_FALLBACK;
   const organization = (isCompanyContact ? registration.companyName : registration.organization) || 'Not specified';
   // Exhibitor/Sponsor/Innovator have no job-title-equivalent field at all.
   const jobTitle = (isCompanyContact ? 'Representative' : registration.jobTitle) || 'Not specified';

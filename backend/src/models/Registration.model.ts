@@ -69,6 +69,18 @@ const registrationSchema = new Schema(
     // Exhibitor only
     boothSize: { type: String, enum: BOOTH_SIZES },
     productsDescription: { type: String, trim: true },
+    // The physical booth assignment (e.g. "A12") — distinct from boothSize
+    // above (a size preference the exhibitor states at registration). Always
+    // admin-set after the fact, once booths are actually laid out, so it's
+    // never part of the public registration form — only the admin Exhibitors
+    // edit form (updateRegistrationStatusSchema) and adminCreateRegistration
+    // ever write it.
+    boothNumber: { type: String, trim: true, maxlength: 50 },
+    // Company logo, uploaded by the exhibitor through the portal's "My Card"
+    // page (same Cloudinary upload path as avatarUrl) — kept separate from
+    // avatarUrl since that field holds the CONTACT PERSON's own photo, used
+    // on their personal "I Will Be Attending" card.
+    logoUrl: { type: String, trim: true },
 
     // Sponsor only
     message: { type: String, trim: true },
@@ -316,10 +328,14 @@ const registrationSchema = new Schema(
     // leaderboardOptIn above. `status` is informational only (drives the
     // admin dashboard's counts); the job itself decides what needs (re)sync
     // by comparing `syncedAt` against this document's own `updatedAt`, not
-    // by reading `status` — see onevieSync.job.ts.
+    // by reading `status` — see onevieSync.job.ts. 'skipped' is distinct from
+    // 'failed': it means this registration shares an email with another
+    // confirmed registration and will never be accepted by Onevie (one
+    // email = one ticket, enforced on their side) — not a transient error
+    // worth retrying forever.
     onevieSync: {
       _id: false,
-      status: { type: String, enum: ['pending', 'synced', 'failed'] },
+      status: { type: String, enum: ['pending', 'synced', 'failed', 'skipped'] },
       ticketTypeId: { type: String, trim: true },
       syncedAt: { type: Date },
       lastAttemptAt: { type: Date },

@@ -84,7 +84,11 @@ import { toggleOnevieSchema } from '../../validations/onevieIntegration.validati
 import { setInnovatorSettingsSchema } from '../../validations/innovatorSettings.validation.js';
 import { setPromoActiveSchema } from '../../validations/promo.validation.js';
 import { setWaiHealthCapacitySchema } from '../../validations/waiHealth.validation.js';
-import { decideScholarshipApplicationSchema, adminAnalyzeApplicationsSchema } from '../../validations/scholarshipApplication.validation.js';
+import {
+  decideScholarshipApplicationSchema,
+  adminAnalyzeApplicationsSchema,
+  adminSendRsvpRemindersSchema,
+} from '../../validations/scholarshipApplication.validation.js';
 import { setScholarshipSettingsSchema } from '../../validations/scholarshipSettings.validation.js';
 
 const router = Router();
@@ -235,6 +239,12 @@ router.patch(
   requireRole('super_admin', 'admin', 'registrations_officer'),
   validate(decideScholarshipApplicationSchema),
   scholarshipApplicationController.adminDecide
+);
+router.post(
+  '/scholarship-applications/rsvp/send-reminders',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  validate(adminSendRsvpRemindersSchema),
+  scholarshipApplicationController.adminSendRsvpReminders
 );
 
 router.get('/scholarship-settings', requireRole('super_admin', 'admin', 'registrations_officer'), scholarshipSettingsController.adminGet);

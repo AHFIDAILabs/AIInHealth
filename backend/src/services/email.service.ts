@@ -395,6 +395,33 @@ export const sendSponsorshipApprovedEmail = async (
   });
 };
 
+// scholarshipApplication.controller.ts's adminSendRsvpReminders — a
+// reserved-seat offer to a still-pending applicant, with a hard confirm-by
+// deadline. Unlike sendSponsorshipReceivedEmail above, clicking the button
+// here auto-approves on the spot (rsvp() below) — there's no further admin
+// review step for whoever confirms in time.
+export const sendScholarshipRsvpReminderEmail = async (
+  to: string,
+  fullName: string,
+  rsvpUrl: string,
+  deadlineLabel: string
+): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: `Action Required: Confirm Your Seat at the AI in Health Nigeria Summit 2026 by ${deadlineLabel}`,
+    html: `
+      <p>Dear ${fullName},</p>
+      <p>Thank you for your interest in attending the AI in Health Nigeria Summit 2026.</p>
+      <p>We received an overwhelming number of applications for the Sponsored Delegate Pass and, unfortunately, are unable to accommodate every applicant. However, we are pleased to offer you a reserved seat, subject to your confirmation of physical attendance.</p>
+      <p>To secure your place, kindly RSVP using the button below and confirm that you will attend the Summit in person:</p>
+      ${emailButton(rsvpUrl, 'Confirm My Seat')}
+      <p>The RSVP closes at <strong>${deadlineLabel}</strong>. Please note that this confirmation is required to secure your seat, and unconfirmed reservations will be released after the deadline.</p>
+      <p>We look forward to welcoming you to the AI in Health Nigeria Summit 2026, taking place on 19&ndash;20 October 2026 at the TY Danjuma Foundation Building, Abuja, for insightful conversations on the future of AI in healthcare.</p>
+      <p>Warm regards,<br />The AI in Health Nigeria Summit 2026 Team</p>
+    `,
+  });
+};
+
 // scholarshipApplication.controller.ts's adminDecide() rejection branch.
 export const sendSponsorshipDeclinedEmail = async (to: string, fullName: string): Promise<void> => {
   await sendEmail({

@@ -57,6 +57,10 @@ export const updateDelegateProfileSchema = z.object({
     // The portal's own chance to catch this for everyone already registered
     // before the Attendee form ever asked — see GENDERS' own comment.
     gender: z.enum(GENDERS).optional(),
+    // Exhibitor only — their company logo, uploaded on the "My Card" page.
+    // Accepted from any delegate for the same reason every field here is:
+    // harmless to send on a non-exhibitor registration, just unused.
+    logoUrl: optionalUrlField,
   }),
 });
 export type UpdateDelegateProfileInput = z.infer<typeof updateDelegateProfileSchema>['body'];

@@ -108,6 +108,15 @@ export const me = catchAsync(async (req: Request, res: Response) => {
       tshirtSize: registration.tshirtSize,
       trackSelected: registration.trackSelected,
       trackAssigned: registration.trackAssigned,
+      // Exhibitor only — backs the "Visit Our Booth" card (PortalMyCard.tsx).
+      // Previously only reachable folded into `organization` above with no
+      // way to tell a real company name from an attendee's org field.
+      companyName: registration.companyName,
+      boothSize: registration.boothSize,
+      boothNumber: registration.boothNumber,
+      productsDescription: registration.productsDescription,
+      website: registration.website,
+      logoUrl: registration.logoUrl,
     })
   );
 });
@@ -230,6 +239,11 @@ export const updateProfile = catchAsync(async (req: Request, res: Response) => {
   if (input.gender !== undefined) {
     registration.gender = input.gender;
   }
+  // Exhibitor's company logo — always theirs to update, unlike companyName
+  // itself (registered business identity, not self-service editable here).
+  if (input.logoUrl !== undefined) {
+    registration.logoUrl = input.logoUrl;
+  }
 
   await registration.save();
   res.json(
@@ -239,6 +253,7 @@ export const updateProfile = catchAsync(async (req: Request, res: Response) => {
       organization: registration.organization || registration.companyName,
       avatarUrl: registration.avatarUrl,
       gender: registration.gender ?? null,
+      logoUrl: registration.logoUrl,
     })
   );
 });

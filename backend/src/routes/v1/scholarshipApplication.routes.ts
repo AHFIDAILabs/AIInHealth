@@ -11,5 +11,6 @@ const router = Router();
 router.get('/applications-status', scholarshipSettingsController.status);
 router.post('/', scholarshipLimiter, validate(submitScholarshipApplicationSchema), scholarshipApplicationController.submit);
 router.post('/upload-document', scholarshipUploadLimiter, uploadDocument, scholarshipApplicationController.uploadSupportingDocument);
+router.post('/rsvp/:token', scholarshipApplicationController.rsvp);
 
 export default router;

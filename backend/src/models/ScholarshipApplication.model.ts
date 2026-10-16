@@ -45,6 +45,16 @@ const scholarshipApplicationSchema = new Schema(
     aiScore: { type: Number, min: 0, max: 100 },
     aiRationale: { type: String, trim: true, maxlength: 500 },
     aiScoredAt: { type: Date },
+    // Deadline-RSVP absorption (scholarshipApplication.controller.ts's
+    // adminSendRsvpReminders/rsvp) — a reserved-seat offer with a hard
+    // confirm-by deadline, sent to applications still sitting in the pending
+    // pool. Clicking the link in rsvpEmailSentAt's email runs the EXACT SAME
+    // approve path as adminDecide's approved branch (generates a real
+    // scholarship AccessCode), with no admin review step in between — this
+    // is a deliberately different shape from Registration.rsvpToken (which
+    // only records interest and still requires an admin to confirm).
+    rsvpToken: { type: String, unique: true, sparse: true },
+    rsvpEmailSentAt: { type: Date },
   },
   { timestamps: true }
 );

@@ -18,14 +18,15 @@ import type { ToggleOnevieInput } from '../validations/onevieIntegration.validat
 export const status = catchAsync(async (_req: Request, res: Response) => {
   const settings = await getOrCreateOnevieSettings();
 
-  const [pendingCount, syncedCount, failedCount, recentFailures] = await Promise.all([
+  const [pendingCount, syncedCount, failedCount, skippedCount, recentFailures] = await Promise.all([
     Registration.countDocuments({ status: 'confirmed', qrToken: { $exists: true, $ne: null }, onevieSync: { $exists: false } }),
     Registration.countDocuments({ 'onevieSync.status': 'synced' }),
     Registration.countDocuments({ 'onevieSync.status': 'failed' }),
-    Registration.find({ 'onevieSync.status': 'failed' })
+    Registration.countDocuments({ 'onevieSync.status': 'skipped' }),
+    Registration.find({ 'onevieSync.status': { $in: ['failed', 'skipped'] } })
       .sort({ 'onevieSync.lastAttemptAt': -1 })
       .limit(20)
-      .select('fullName contactName email contactEmail type onevieSync.lastError onevieSync.lastAttemptAt'),
+      .select('fullName contactName email contactEmail type onevieSync.status onevieSync.lastError onevieSync.lastAttemptAt'),
   ]);
 
   res.json(
@@ -39,11 +40,13 @@ export const status = catchAsync(async (_req: Request, res: Response) => {
       pendingCount,
       syncedCount,
       failedCount,
-      recentFailures: recentFailures.map((r) => ({
+      skippedCount,
+      recentIssues: recentFailures.map((r) => ({
         id: r.id,
         name: r.fullName || r.contactName || '(no name)',
         email: r.email || r.contactEmail || null,
         type: r.type,
+        status: r.onevieSync?.status ?? 'failed',
         error: r.onevieSync?.lastError ?? null,
         lastAttemptAt: r.onevieSync?.lastAttemptAt ?? null,
       })),

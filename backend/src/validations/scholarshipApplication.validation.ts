@@ -71,6 +71,16 @@ export const adminAnalyzeApplicationsSchema = z.object({
 });
 export type AdminAnalyzeApplicationsInput = z.infer<typeof adminAnalyzeApplicationsSchema>['body'];
 
+// POST /admin/scholarship-applications/rsvp/send-reminders — ids omitted ->
+// every still-pending application, same ids-or-filter shape as adminAnalyze
+// above.
+export const adminSendRsvpRemindersSchema = z.object({
+  body: z.object({
+    ids: z.array(z.string().trim()).max(500).optional(),
+  }),
+});
+export type AdminSendRsvpRemindersInput = z.infer<typeof adminSendRsvpRemindersSchema>['body'];
+
 export const listScholarshipApplicationsQuerySchema = z.object({
   status: z.enum(SCHOLARSHIP_APPLICATION_STATUSES).optional(),
   q: z.string().trim().max(200).optional(),
