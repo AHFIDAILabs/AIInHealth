@@ -37,6 +37,7 @@ import * as reconciliationController from '../../controllers/reconciliation.cont
 import * as paymentController from '../../controllers/payment.controller.js';
 import * as analyticsController from '../../controllers/analytics.controller.js';
 import * as integrationsController from '../../controllers/integrations.controller.js';
+import * as onevieIntegrationController from '../../controllers/onevieIntegration.controller.js';
 import * as newsletterController from '../../controllers/newsletter.controller.js';
 import * as uploadController from '../../controllers/upload.controller.js';
 import * as searchController from '../../controllers/search.controller.js';
@@ -79,6 +80,7 @@ import { createPartnerInteractionSchema } from '../../validations/partnerInterac
 import { blockIpSchema, setLockdownSchema } from '../../validations/security.validation.js';
 import { setVolunteerSettingsSchema } from '../../validations/volunteerSettings.validation.js';
 import { setLivestreamSettingsSchema } from '../../validations/livestreamSettings.validation.js';
+import { toggleOnevieSchema } from '../../validations/onevieIntegration.validation.js';
 import { setInnovatorSettingsSchema } from '../../validations/innovatorSettings.validation.js';
 import { setPromoActiveSchema } from '../../validations/promo.validation.js';
 import { setWaiHealthCapacitySchema } from '../../validations/waiHealth.validation.js';
@@ -631,6 +633,15 @@ router.delete('/event-team/:id', requireRole('super_admin'), eventTeamController
 router.get('/integrations/status', requireRole('super_admin'), integrationsController.status);
 router.post('/integrations/test-email', requireRole('super_admin'), integrationsController.testEmail);
 router.post('/integrations/test-push', requireRole('super_admin'), integrationsController.testPush);
+
+router.get('/integrations/onevie/status', requireRole('super_admin'), onevieIntegrationController.status);
+router.patch(
+  '/integrations/onevie/toggle',
+  requireRole('super_admin'),
+  validate(toggleOnevieSchema),
+  onevieIntegrationController.toggle
+);
+router.post('/integrations/onevie/sync-now', requireRole('super_admin'), onevieIntegrationController.syncNow);
 
 router.get('/analytics', requireRole(...allRoles), analyticsController.overview);
 router.get('/analytics-registrations', requireRole(...allRoles), analyticsController.registrations);

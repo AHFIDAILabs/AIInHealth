@@ -180,6 +180,16 @@ const envSchema = z.object({
   // locking out real submitters over a missing env var the moment this ships.
   FORM_TOKEN_SECRET: z.string().optional().default(''),
 
+  // Onevie check-in sync (onevie.service.ts / jobs/onevieSync.job.ts) — pushes
+  // confirmed registrations to the check-in vendor's API on a schedule. Empty
+  // key means onevieConfigured is false, same graceful-degrade convention as
+  // Groq/Paystack above: the job no-ops rather than failing startup, since
+  // this integration also has its own admin on/off switch
+  // (OnevieSettings.model.ts) on top of being configured or not.
+  ONEVIE_API_KEY: z.string().optional().default(''),
+  ONEVIE_EVENT_ID: z.string().optional().default('2ec93f1d-d40a-49dc-801e-cfb77b3a7917'),
+  ONEVIE_API_BASE_URL: z.string().optional().default('https://api.prod.onevie.app'),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   SEED_SUPER_ADMIN_NAME: z.string().optional().default('Super Admin'),

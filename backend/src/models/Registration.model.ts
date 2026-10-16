@@ -307,6 +307,24 @@ const registrationSchema = new Schema(
       gatewayReference: { type: String, trim: true },
       rawNotes: { type: String, trim: true },
     },
+
+    // Onevie check-in sync (onevie.service.ts / jobs/onevieSync.job.ts) — door
+    // scanning happens entirely on Onevie's side against the QR we already
+    // emailed; this just tracks whether THIS record's details have been
+    // pushed there. No default object — stays undefined until the job's
+    // first attempt, same "genuinely absent, not false" convention as
+    // leaderboardOptIn above. `status` is informational only (drives the
+    // admin dashboard's counts); the job itself decides what needs (re)sync
+    // by comparing `syncedAt` against this document's own `updatedAt`, not
+    // by reading `status` — see onevieSync.job.ts.
+    onevieSync: {
+      _id: false,
+      status: { type: String, enum: ['pending', 'synced', 'failed'] },
+      ticketTypeId: { type: String, trim: true },
+      syncedAt: { type: Date },
+      lastAttemptAt: { type: Date },
+      lastError: { type: String, trim: true, maxlength: 500 },
+    },
   },
   { timestamps: true }
 );
@@ -326,6 +344,11 @@ registrationSchema.index({ previousPaymentReferences: 1 });
 // uniqueness per ELEMENT across the whole collection, same guarantee the
 // top-level qrToken's own unique index gives the primary contact.
 registrationSchema.index({ 'groupAttendees.qrToken': 1 }, { unique: true, sparse: true });
+// Sparse — only ever set once a sync attempt happens. Backs the Onevie
+// admin dashboard's pending/synced/failed counts and the sync job's own
+// eligibility scan (status:'confirmed' AND qrToken set, filtered further in
+// JS by comparing syncedAt/updatedAt — see onevieSync.job.ts).
+registrationSchema.index({ 'onevieSync.status': 1 }, { sparse: true });
 
 // At most one registration per (type, email/contactEmail) — closes the gap that
 // let delegate.controller.ts's requestAccessCode silently pick the *most recent*
