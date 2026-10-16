@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Ticket, Users, Handshake, LogOut, Share2, Mail, CalendarDays, Trophy } from 'lucide-react';
+import { Ticket, Users, Handshake, LogOut, Share2, Mail, CalendarDays, Trophy, Star } from 'lucide-react';
 import { useDelegateAuth } from '../../contexts/DelegateAuthContext';
 import summitMark from '../../assets/images/summit_logo_mark.png';
 
@@ -21,6 +21,11 @@ const NAV_ITEMS = [
   { label: 'Meetings', to: '/portal/meetings', icon: Handshake, end: false },
   { label: 'Messages', to: '/portal/messages', icon: Mail, end: false },
   ...(EVENT_EXTRAS_ENABLED ? [{ label: 'My Card', to: '/portal/my-card', icon: Share2, end: false }] : []),
+  // Reuses the same anonymous public Feedback form (Feedback.tsx) — general
+  // event feedback, not tied to this delegate's identity or any one session.
+  // Previously only reachable via a QR code printed at the venue; this gives
+  // logged-in delegates a direct path without needing to scan anything.
+  ...(EVENT_EXTRAS_ENABLED ? [{ label: 'Feedback', to: '/portal/feedback', icon: Star, end: false }] : []),
 ];
 
 export const PortalLayout = () => {

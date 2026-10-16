@@ -318,6 +318,7 @@ function App() {
               <Route path="/portal/meetings" element={<PortalMeetings />} />
               <Route path="/portal/messages" element={<PortalMessages />} />
               {EVENT_EXTRAS_ENABLED && <Route path="/portal/my-card" element={<PortalMyCard />} />}
+              {EVENT_EXTRAS_ENABLED && <Route path="/portal/feedback" element={<Feedback />} />}
             </Route>
           </Route>
 
