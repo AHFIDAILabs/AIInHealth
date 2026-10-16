@@ -80,25 +80,37 @@ interface OneviePayload {
   first_name: string;
   last_name: string;
   email: string;
-  phone?: string;
+  phone: string;
   send_confirmation_email: false;
   form_answers: { job_title: string; organization: string };
 }
 
-const EXHIBITOR_SPONSOR_TYPES = new Set(['exhibitor', 'sponsor']);
+// Exhibitor, Sponsor AND Innovator all carry the company-contact field shape
+// (companyName/contactName/contactEmail/contactPhone) — confirmed against
+// live data after innovator registrations synced with a blank email because
+// this set originally missed 'innovator', which has no fullName/email of its
+// own at all (see Registration.model.ts's "Exhibitor & Sponsor shared" block
+// — innovator was never listed there in the schema comments, but shares the
+// exact same fields in practice).
+const COMPANY_CONTACT_TYPES = new Set(['exhibitor', 'sponsor', 'innovator']);
+
+// Onevie's docs list `phone` as optional, but its live validation actually
+// rejects a request with no phone at all ("phone is required") — confirmed
+// against real 400s from registrations with no phone on file. Falling back
+// to a placeholder rather than omitting the field entirely, since we have no
+// real number to send for the ~15 registrations missing one.
+const PHONE_FALLBACK = '0000000000';
 
 // Builds the exact request body — the one place that decides which of the
-// two contact-field shapes this registration uses (see Registration.model.ts:
-// exhibitor/sponsor carry companyName/contactName/contactEmail/contactPhone,
-// everything else carries fullName/email/phone/organization/jobTitle).
+// two contact-field shapes this registration uses.
 export const buildOneviePayload = (registration: RegistrationHydrated): OneviePayload => {
-  const isCompanyContact = EXHIBITOR_SPONSOR_TYPES.has(registration.type);
+  const isCompanyContact = COMPANY_CONTACT_TYPES.has(registration.type);
   const rawName = (isCompanyContact ? registration.contactName : registration.fullName) || 'Guest';
   const { firstName, lastName } = splitFullName(rawName);
   const email = (isCompanyContact ? registration.contactEmail : registration.email) || '';
-  const phone = (isCompanyContact ? registration.contactPhone : registration.phone) || undefined;
+  const phone = (isCompanyContact ? registration.contactPhone : registration.phone) || PHONE_FALLBACK;
   const organization = (isCompanyContact ? registration.companyName : registration.organization) || 'Not specified';
-  // Exhibitor/Sponsor have no job-title-equivalent field at all.
+  // Exhibitor/Sponsor/Innovator have no job-title-equivalent field at all.
   const jobTitle = (isCompanyContact ? 'Representative' : registration.jobTitle) || 'Not specified';
 
   if (!registration.qrToken) {
@@ -112,7 +124,7 @@ export const buildOneviePayload = (registration: RegistrationHydrated): OneviePa
     first_name: firstName,
     last_name: lastName,
     email,
-    ...(phone ? { phone } : {}),
+    phone,
     send_confirmation_email: false,
     form_answers: { job_title: jobTitle, organization },
   };

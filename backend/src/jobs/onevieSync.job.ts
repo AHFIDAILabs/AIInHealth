@@ -2,7 +2,6 @@ import cron from 'node-cron';
 import { logger } from '../config/logger.js';
 import { Registration, type RegistrationDoc } from '../models/Registration.model.js';
 import { getOrCreateOnevieSettings } from '../models/OnevieSettings.model.js';
-import { runInBatches } from '../utils/batch.js';
 import { onevieConfigured, syncRegistrationToOnevie, mapOnevieTicketTypeId, OnevieApiError } from '../services/onevie.service.js';
 import type { HydratedDocument } from 'mongoose';
 
@@ -32,7 +31,17 @@ const needsSyncFilter = {
   },
 };
 
-const syncOne = async (registration: HydratedDocument<RegistrationDoc>): Promise<void> => {
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+interface SyncOneResult {
+  ok: boolean;
+  // Onevie's own doc says 429 means "wait and retry" — surfaced separately
+  // from `ok` so the caller can back off before the next chunk rather than
+  // hammering straight back in and producing more of the same.
+  rateLimited: boolean;
+}
+
+const syncOne = async (registration: HydratedDocument<RegistrationDoc>): Promise<SyncOneResult> => {
   const attemptedAt = new Date();
   try {
     await syncRegistrationToOnevie(registration);
@@ -45,6 +54,7 @@ const syncOne = async (registration: HydratedDocument<RegistrationDoc>): Promise
     };
     registration.markModified('onevieSync');
     await registration.save();
+    return { ok: true, rateLimited: false };
   } catch (err) {
     const message = err instanceof OnevieApiError ? `[${err.status}] ${err.message}` : (err as Error).message;
     registration.onevieSync = {
@@ -55,8 +65,49 @@ const syncOne = async (registration: HydratedDocument<RegistrationDoc>): Promise
     };
     registration.markModified('onevieSync');
     await registration.save();
-    throw err;
+    return { ok: false, rateLimited: err instanceof OnevieApiError && err.status === 429 };
   }
+};
+
+// Runs with light concurrency and a pause between chunks — NOT runInBatches
+// (every other job using that fires chunk after chunk back to back). The
+// very first sync after this feature shipped pushed ~560 historical
+// registrations in one run at batch-of-3-no-delay and tripped Onevie's rate
+// limit on roughly two-thirds of them. A 429 anywhere in a chunk doubles the
+// pause before the next one (capped), since hammering right back after
+// "too many requests" just produces more of the same.
+const CHUNK_SIZE = 2;
+const BASE_DELAY_MS = 500;
+const MAX_DELAY_MS = 5000;
+
+const syncAll = async (
+  candidates: HydratedDocument<RegistrationDoc>[]
+): Promise<{ succeeded: number; failed: number }> => {
+  let succeeded = 0;
+  let failed = 0;
+  let delay = BASE_DELAY_MS;
+
+  for (let i = 0; i < candidates.length; i += CHUNK_SIZE) {
+    const chunk = candidates.slice(i, i + CHUNK_SIZE);
+    // eslint-disable-next-line no-await-in-loop
+    const results = await Promise.allSettled(chunk.map(syncOne));
+    let hitRateLimit = false;
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value.ok) {
+        succeeded += 1;
+      } else {
+        failed += 1;
+        if (r.status === 'fulfilled' && r.value.rateLimited) hitRateLimit = true;
+      }
+    }
+    delay = hitRateLimit ? Math.min(delay * 2, MAX_DELAY_MS) : BASE_DELAY_MS;
+    if (i + CHUNK_SIZE < candidates.length) {
+      // eslint-disable-next-line no-await-in-loop
+      await sleep(delay);
+    }
+  }
+
+  return { succeeded, failed };
 };
 
 export const runOnevieSync = async (): Promise<{ skipped: boolean; synced: number; failed: number; durationMs: number }> => {
@@ -79,21 +130,17 @@ export const runOnevieSync = async (): Promise<{ skipped: boolean; synced: numbe
     }
 
     const candidates = await Registration.find(needsSyncFilter);
-    // Batch size 3 — same conservative concurrency as every other job that
-    // fans out to a third-party API (abstractTriage, email sends), well
-    // under Onevie's unspecified-but-real rate limit (429s are expected to
-    // happen under abuse, not under light, batched traffic).
-    const { succeeded, failed } = await runInBatches(candidates, 3, syncOne);
+    const { succeeded, failed } = await syncAll(candidates);
 
     const durationMs = Date.now() - startedAt;
-    settings.set({ lastRunAt: new Date(), lastRunSynced: succeeded, lastRunFailed: failed.length, lastRunDurationMs: durationMs });
+    settings.set({ lastRunAt: new Date(), lastRunSynced: succeeded, lastRunFailed: failed, lastRunDurationMs: durationMs });
     await settings.save();
 
-    if (failed.length > 0) {
-      logger.warn({ failedCount: failed.length }, 'onevieSync: some registrations failed to sync this run');
+    if (failed > 0) {
+      logger.warn({ failedCount: failed }, 'onevieSync: some registrations failed to sync this run');
     }
 
-    return { skipped: false, synced: succeeded, failed: failed.length, durationMs };
+    return { skipped: false, synced: succeeded, failed, durationMs };
   } finally {
     running = false;
   }
