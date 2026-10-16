@@ -7,6 +7,7 @@ import {
   PAYMENT_STATUSES,
   PAYMENT_METHODS,
   ID_VERIFICATION_TICKET_CATEGORIES,
+  GENDERS,
 } from '../types/enums.js';
 import { optionalUrlField } from './common.js';
 import { REGISTRATION_CHANNELS } from '../utils/registrationChannel.js';
@@ -43,6 +44,12 @@ const attendeeSchema = z.object({
   organization: z.string().trim().optional(),
   jobTitle: z.string().trim().optional(),
   country: z.string().trim().min(2, 'Enter your country'),
+  // Optional, same as everywhere else this field is ever asked — see
+  // GENDERS' own comment. Previously only ever captured at the check-in desk
+  // (checkin.controller.ts); now also offered here and in the portal
+  // (delegate.controller.ts's updateProfile) as two earlier, vendor-
+  // independent chances to collect it ahead of the event.
+  gender: z.enum(GENDERS).optional(),
   groupAttendees: z.array(groupAttendeeSchema).max(50).optional(),
   // Optional scholarship/discount code — shape-validated only here, same as
   // volunteerSchema's accessCode. Verified against the AccessCode collection (must

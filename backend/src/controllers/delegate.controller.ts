@@ -86,6 +86,10 @@ export const me = catchAsync(async (req: Request, res: Response) => {
       hasTicket: Boolean(registration.qrToken),
       directoryOptIn: registration.directoryOptIn,
       avatarUrl: registration.avatarUrl,
+      // Self-reported, optional — see GENDERS' own comment on why the portal
+      // is one of three chances to catch this. `null` (not omitted) when
+      // unset, so the frontend can tell "hasn't answered" from a real value.
+      gender: registration.gender ?? null,
       // Lightweight — just ids, so every page that renders a session card
       // (the public Agenda, "Build My Day") can show bookmark state without
       // its own round trip. Full session data for the "My Agenda" portal
@@ -221,6 +225,11 @@ export const updateProfile = catchAsync(async (req: Request, res: Response) => {
   if (input.avatarUrl !== undefined) {
     registration.avatarUrl = input.avatarUrl;
   }
+  // Same "personal, applies across every type" reasoning as avatarUrl — see
+  // GENDERS' own comment on why the portal is one of three chances to ask.
+  if (input.gender !== undefined) {
+    registration.gender = input.gender;
+  }
 
   await registration.save();
   res.json(
@@ -229,6 +238,7 @@ export const updateProfile = catchAsync(async (req: Request, res: Response) => {
       phone: isContactStyle ? registration.contactPhone : registration.phone,
       organization: registration.organization || registration.companyName,
       avatarUrl: registration.avatarUrl,
+      gender: registration.gender ?? null,
     })
   );
 });

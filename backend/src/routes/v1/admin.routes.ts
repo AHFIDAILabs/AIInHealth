@@ -50,6 +50,7 @@ import * as confirmedAbstractController from '../../controllers/confirmedAbstrac
 import * as innovationShowcaseEntryController from '../../controllers/innovationShowcaseEntry.controller.js';
 import * as volunteerTrackController from '../../controllers/volunteerTrack.controller.js';
 import * as volunteerSettingsController from '../../controllers/volunteerSettings.controller.js';
+import * as livestreamSettingsController from '../../controllers/livestreamSettings.controller.js';
 import * as innovatorSettingsController from '../../controllers/innovatorSettings.controller.js';
 import * as leadController from '../../controllers/lead.controller.js';
 import * as customFormFieldController from '../../controllers/customFormField.controller.js';
@@ -77,6 +78,7 @@ import { createDeliverableSchema, updateDeliverableSchema } from '../../validati
 import { createPartnerInteractionSchema } from '../../validations/partnerInteraction.validation.js';
 import { blockIpSchema, setLockdownSchema } from '../../validations/security.validation.js';
 import { setVolunteerSettingsSchema } from '../../validations/volunteerSettings.validation.js';
+import { setLivestreamSettingsSchema } from '../../validations/livestreamSettings.validation.js';
 import { setInnovatorSettingsSchema } from '../../validations/innovatorSettings.validation.js';
 import { setPromoActiveSchema } from '../../validations/promo.validation.js';
 import { setWaiHealthCapacitySchema } from '../../validations/waiHealth.validation.js';
@@ -354,6 +356,16 @@ router.delete('/volunteer-tracks/:id', requireRole('super_admin', 'admin', 'regi
 
 router.get('/volunteer-settings', requireRole('super_admin', 'admin', 'registrations_officer'), volunteerSettingsController.adminGet);
 router.put('/volunteer-settings', requireRole('super_admin', 'admin', 'registrations_officer'), validate(setVolunteerSettingsSchema), volunteerSettingsController.adminSet);
+
+// Site-wide (not scoped to any one registration pipeline), same role shape
+// as the QR Promo Campaign below rather than a *_lead role.
+router.get('/livestream-settings', requireRole('super_admin', 'admin'), livestreamSettingsController.adminGet);
+router.put(
+  '/livestream-settings',
+  requireRole('super_admin', 'admin'),
+  validate(setLivestreamSettingsSchema),
+  livestreamSettingsController.adminSet
+);
 
 // innovator_lead owns this (same "full control of their own area" shape as
 // elsewhere in this file) — opening/closing applications is a distinct,

@@ -37,6 +37,14 @@ app.use(
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'],
         connectSrc: ["'self'", env.FRONTEND_ORIGIN],
+        // The "Watch Live" page/homepage section embeds a YouTube Live
+        // player in an <iframe> — without this, helmet's implicit
+        // frame-src (falls back to default-src 'self') silently blocks it:
+        // the browser just never loads the iframe, no visible error outside
+        // the console. youtube-nocookie.com is YouTube's own privacy-
+        // enhanced embed domain, allowed alongside the regular one since
+        // either could be pasted in as the embed URL.
+        frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'],
       },
     },
   })

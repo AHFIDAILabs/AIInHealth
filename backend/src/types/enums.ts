@@ -48,9 +48,15 @@ export type RegistrationStatus = (typeof REGISTRATION_STATUSES)[number];
 export const REGISTRATION_MODES = ['individual', 'group'] as const;
 export type RegistrationMode = (typeof REGISTRATION_MODES)[number];
 
-// Self-reported at the door, not on the original registration form — see
-// checkin.controller.ts's scan()/manualCheckIn(). Optional and never blocks
-// check-in; a busy entrance can't afford a queue-stopping required field.
+// Self-reported, always optional, never required to complete any flow it
+// appears in — three places now ask for it, each a chance to catch it before
+// the event: the Attendee registration form (registration.validation.ts),
+// the delegate portal (delegate.controller.ts's updateProfile, since most
+// attendees are already registered by the time this was added — a form
+// change alone would miss them), and the check-in desk itself
+// (checkin.controller.ts's scan()/manualCheckIn(), the original and still-
+// available capture point — a busy entrance can't afford a queue-stopping
+// required field, hence optional there too).
 export const GENDERS = ['male', 'female', 'prefer_not_to_say'] as const;
 export type Gender = (typeof GENDERS)[number];
 

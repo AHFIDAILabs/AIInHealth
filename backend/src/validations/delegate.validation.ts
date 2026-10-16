@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { optionalUrlField } from './common.js';
+import { GENDERS } from '../types/enums.js';
 
 // Email-only login — no code to request/verify. Logs straight into the
 // portal for any confirmed, active registration matching this email (see
@@ -53,6 +54,9 @@ export const updateDelegateProfileSchema = z.object({
     phone: z.string().trim().min(6, 'Enter a valid phone number').optional(),
     organization: z.string().trim().optional(),
     avatarUrl: optionalUrlField,
+    // The portal's own chance to catch this for everyone already registered
+    // before the Attendee form ever asked — see GENDERS' own comment.
+    gender: z.enum(GENDERS).optional(),
   }),
 });
 export type UpdateDelegateProfileInput = z.infer<typeof updateDelegateProfileSchema>['body'];
