@@ -217,9 +217,17 @@ export const SessionCard = ({ s, onRsvp, onSpeakerClick, resolveSpeaker, onCardC
           the title/badges down to one word per line while the partner logos
           held their ground, and the track badge's rounded-full pill ballooned
           into visual overlap with the logos next to it. Only sm+ and up
-          reverts to sitting the partner logos beside the content. */}
+          reverts to sitting the partner logos beside the content.
+          sm:min-w on the content column gives flex-wrap something concrete to
+          measure against — a plain flex-1 has no "natural" width of its own,
+          so the browser never considers the row too cramped (it can always
+          shrink text further, down to one word per line) and the
+          shrink-0 partner-logos block never drops to its own row. A card
+          with 4 partner logos (a wide, non-shrinking block) reproduced
+          exactly this: title squeezed to ~1 word/line while a 2-logo card
+          alongside it wrapped normally. */}
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 sm:min-w-[260px]">
           <div className="flex flex-wrap items-center gap-1.5">
             <span
               className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${

@@ -51,9 +51,29 @@ export interface ApiErrorShape {
   error: { code: string; message: string; details?: Record<string, string[]> };
 }
 
+// Turns a snake/camelCase field name into something readable in an error
+// message — "contactPhone" -> "Contact Phone" — since the backend's
+// validation `details` are keyed by the raw schema field name, not a label.
+const humanizeFieldName = (field: string): string =>
+  field
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/_/g, ' ')
+    .replace(/^./, (c) => c.toUpperCase());
+
 export const getApiErrorMessage = (err: unknown, fallback = 'Something went wrong. Please try again.'): string => {
   if (axios.isAxiosError(err)) {
     const data = err.response?.data as ApiErrorShape | undefined;
+    // The backend's generic "Validation failed" (validate.middleware.ts) is
+    // the same for every field-level rejection — the ACTUAL reason lives in
+    // `error.details` (zod's per-field messages), which this previously
+    // never surfaced, leaving forms like "Add Exhibitor" showing only
+    // "Validation failed" with no way to tell which field was the problem.
+    const details = data?.error?.details;
+    if (details && Object.keys(details).length > 0) {
+      return Object.entries(details)
+        .map(([field, messages]) => `${humanizeFieldName(field)}: ${messages?.[0] ?? 'Invalid value'}`)
+        .join(' · ');
+    }
     return data?.error?.message ?? fallback;
   }
   return fallback;
