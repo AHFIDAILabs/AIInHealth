@@ -10,6 +10,7 @@ import { PromoBanner } from '../../components/home/PromoBanner';
 import { SummitProgramme } from '../../components/home/SummitProgramme';
 import { WaiHealthSpotlight } from '../../components/home/WaiHealthSpotlight';
 import { LeaderboardJoinPopup } from '../../components/home/LeaderboardJoinPopup';
+import { LeaderboardTicker } from '../../components/home/LeaderboardTicker';
 import { WatchLiveSection } from '../../components/home/WatchLiveSection';
 import { PartnersShowcase } from '../../components/home-v2/PartnersShowcase';
 import { CountdownCard } from '../../components/home-v2/CountdownCard';
@@ -188,6 +189,7 @@ export const HomeMain = () => {
         </div>
       </section>
 
+      <LeaderboardTicker />
       <WatchLiveSection />
       <WaiHealthSpotlight />
       <SpeakersGrid />
