@@ -1,0 +1,21 @@
+{
+  "name": "speaker-analytics",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "One-off 'Who's Speaking' analytics graphic for the AI in Health Nigeria Summit 2026 pre-event email. Self-contained — see README.md. Never touches the main Backend/Frontend or any database.",
+  "scripts": {
+    "categorize": "tsx src/categorize.ts",
+    "render": "tsx src/render.ts"
+  },
+  "dependencies": {
+    "papaparse": "^5.4.1",
+    "playwright": "^1.48.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "@types/papaparse": "^5.3.14",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}

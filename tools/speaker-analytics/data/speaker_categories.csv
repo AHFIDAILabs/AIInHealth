@@ -1,0 +1,99 @@
+id,name,organisation,sector,seniority,notes
+6ad3ebeab489e51a5f5e82c8,Yerima Abubakar,CHAI,Implementing Partners & NGOs,Senior Leader,
+6ad3ebf9b489e51a5f5e8300,Shalewa Oyelaran,US Department of State Health Assistance Office,Bilateral Donors,Expert / Practitioner,No title on file — defaulted to Expert/Practitioner.
+6ad3ebf8b489e51a5f5e82fe,Dr. Fatima Hussaini,GIZ,Bilateral Donors,Senior Leader,
+6ad3ebf8b489e51a5f5e82fc,Dr. Ayeke Anthony,European Union Delegation to Nigeria and ECOWAS,Multilateral & UN,Expert / Practitioner,"EU Delegation is a supranational diplomatic mission, not literally a UN body — closest fit. No title on file either."
+6ad3ebf6b489e51a5f5e82f6,Dr. Olumide Okunola,World Bank,Multilateral & UN,Expert / Practitioner,No title on file — defaulted to Expert/Practitioner; please confirm seniority.
+6ad3ebf6b489e51a5f5e82f4,John Chinonyerem Njoku,Results for Development Nigeria Country Office,Implementing Partners & NGOs,Senior Leader,
+6ad3ebf4b489e51a5f5e82ee,Professor Olayinka David-West,AI Scaling Hub,Academia & Research,Head of Organisation,
+6ad3ebf2b489e51a5f5e82e8,Steve Job Pam,APIN Public Health Initiatives,Implementing Partners & NGOs,Senior Leader,
+6ad3ebf0b489e51a5f5e82e2,Johnson Alonge,APIN Public Health Initiatives,Implementing Partners & NGOs,Senior Leader,
+6ad3ebefb489e51a5f5e82dc,Gibril Gomez,APIN Public Health Initiatives,Implementing Partners & NGOs,Senior Leader,
+6ad3ebedb489e51a5f5e82d6,Dr Gbenga Ijaodola,APIN Public Health Initiatives,Federal Government & Agencies,Senior Leader,Title references a Federal Ministry of Health directorship (DPRS) though organisation on file says APIN (PHIS3) — classified by actual role. Please confirm.
+6ad3ebecb489e51a5f5e82d2,Boluwatito Adeyemi,CHAI,Implementing Partners & NGOs,Senior Leader,
+6ad3ebecb489e51a5f5e82ce,Kehinde Muraina,CHAI,Implementing Partners & NGOs,Expert / Practitioner,
+6ad3ebfab489e51a5f5e8306,Senator (Dr.) Olanrewaju Adeyemi Tejuoso,,Legislature,Minister / Legislator / Presidential Adviser,
+6ad3ebe8b489e51a5f5e82c2,Jibrin Kama,CHAI,Implementing Partners & NGOs,Senior Leader,
+6ad3ebe7b489e51a5f5e82bc,Dr. Lilian Mutea,CHAI,Implementing Partners & NGOs,Senior Leader,
+6ad3ebe5b489e51a5f5e82b6,Mr Akolade Jimoh,Sydani Group,"Private Sector, Startups & Industry",Expert / Practitioner,Sydani Group does NGO-style health-systems implementation work too — could fit Implementing Partners & NGOs. No title on file.
+6ad3ebe5b489e51a5f5e82b4,Dr. Victor Fatimehin,RCSDC,Federal Government & Agencies,Senior Leader,RCSDC acronym not expanded in source data — best guess is a government-affiliated disease-surveillance body. Please confirm.
+6ad3ebe4b489e51a5f5e82b2,Charles Balogun,NHTDAO,Federal Government & Agencies,Expert / Practitioner,NHTDAO = National Health Technology & Data Analytics Office (same agency as Dr. Obi Adigwe). No title on file.
+6ad3ebe2b489e51a5f5e82ac,Prof. Ifeoma Okoye,Breasts Without Spots,Implementing Partners & NGOs,Head of Organisation,
+6ad3ebe1b489e51a5f5e82a6,Dr. Zainab Kwaru,Medical Women's Association of Nigeria (MWAN),Networks & Associations,Head of Organisation,
+6ad3ebdfb489e51a5f5e82a0,Nadia Albanna,Value-N-Action Consulting,"Private Sector, Startups & Industry",Head of Organisation,
+6ad3ebdbb489e51a5f5e8295,Kemisola Bolarinwa,Nextwear Technologies LLC,"Private Sector, Startups & Industry",Head of Organisation,
+6ad24139ac8ff5e79beee306,"KUSSIY, WANZA M.",,,,INCOMPLETE — no real title/organisation on file yet.
+6ad24138ac8ff5e79beee302,Oluwasanmi Adedokun,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad3ec05b489e51a5f5e8332,Dr. Iyore James,RoboMed Global,"Private Sector, Startups & Industry",Head of Organisation,
+6ad3ec1ab489e51a5f5e837a,Engr. Kazeem Sulaiman,Galaxy Backbone,Federal Government & Agencies,Senior Leader,Galaxy Backbone is a federal government-owned ICT infrastructure company.
+6ad3ec18b489e51a5f5e8374,Dr. Bayo Mohammed Onimode,TechnoDev Project Limited,"Private Sector, Startups & Industry",Senior Leader,
+6ad3ec16b489e51a5f5e836e,Elisabeth Wamcha,Strathmore University Kenya,Academia & Research,Expert / Practitioner,
+6ad3ec14b489e51a5f5e8368,A. Ogbesor,NISA Premier,"Private Sector, Startups & Industry",Expert / Practitioner,No title on file.
+6ad3ec12b489e51a5f5e8362,Moji Makanjuola,International Society of Media in Public Health,Networks & Associations,Head of Organisation,
+6ad3ec11b489e51a5f5e835c,G. Benjamin,NISA Premier,"Private Sector, Startups & Industry",Expert / Practitioner,No title on file.
+6ad3ec0fb489e51a5f5e8356,Kshitij Joshi,UNICEF,Multilateral & UN,Senior Leader,
+6ad3ec0db489e51a5f5e8350,Wesley Ekeruo,RoboMed Global,"Private Sector, Startups & Industry",Expert / Practitioner,No title on file.
+6ad3ec0cb489e51a5f5e834a,Joseph Oteri,Gates Foundation,Multilateral & UN,Senior Leader,"Gates Foundation is a major philanthropic global-health funder, not literally UN/multilateral, but operates in that space similarly to Gavi. Please confirm."
+6ad3ec0ab489e51a5f5e8344,Tagbo Azubike,RoboMed Global,"Private Sector, Startups & Industry",Senior Leader,
+6ad3ec08b489e51a5f5e833e,Efosa Eluma,RoboMed Global,"Private Sector, Startups & Industry",Expert / Practitioner,No title on file.
+6ad3ec07b489e51a5f5e8338,Daniel Oyaole,Vaccine Network For Disease Control,Multilateral & UN,Senior Leader,"Organisation on file says ""Vaccine Network For Disease Control"" but email domain is gavi.org — likely a Gavi-affiliated programme. Please confirm."
+6ad24137ac8ff5e79beee2fe,Tahir Buhari,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad3ec03b489e51a5f5e832c,Abdul Argungu Abubakar,WIPO Nigeria Office,Multilateral & UN,Expert / Practitioner,
+6ad3ec03b489e51a5f5e832a,Japhet Gaius Yakubu,Georgetown Global Health Nigeria (GGHN),Implementing Partners & NGOs,Expert / Practitioner,
+6ad3ec01b489e51a5f5e8324,Mansura Yahaya Haruna,Georgetown Global Health Nigeria (GGHN),Implementing Partners & NGOs,Head of Organisation,
+6ad3ec01b489e51a5f5e8322,Mr. Dauda Majanbu,VillageReach,Implementing Partners & NGOs,Head of Organisation,
+6ad3ec01b489e51a5f5e8320,Dr. Ofem Obeten,Development Delivery Partners (DDP),"Private Sector, Startups & Industry",Expert / Practitioner,
+6ad3ec00b489e51a5f5e831e,Ebubechi Nwaononiwu,Development Delivery Partners (DDP),"Private Sector, Startups & Industry",Senior Leader,
+6ad3ec00b489e51a5f5e831c,Dayo Adeyanju,Mortality Reduction innovation Initiatives (MAMII),Implementing Partners & NGOs,Expert / Practitioner,No title on file.
+6ad3ebfeb489e51a5f5e8316,Dr. Chukwunonso Nwaokorie,SCIDaR,Implementing Partners & NGOs,Expert / Practitioner,No title on file.
+6ad3ebfdb489e51a5f5e8310,Godwin Adegbehingbe,Data Science Nigeria (DSN),"Private Sector, Startups & Industry",Senior Leader,
+6ad3ebfcb489e51a5f5e830e,Ahmad Ibrahim,Data Science Nigeria (DSN),"Private Sector, Startups & Industry",Expert / Practitioner,
+6ad3ebfbb489e51a5f5e8308,Chinazo Anebelundu,Data Science Nigeria (DSN),"Private Sector, Startups & Industry",Senior Leader,
+6ad24121ac8ff5e79beee2d6,Abimbola Adebakin,,,,INCOMPLETE — no real title/organisation on file yet.
+6ab7b73af3247d6b5608c019,Dr. Iziaq Adekunle Salako,Federal Ministry of Health and Social Welfare,Federal Government & Agencies,Minister / Legislator / Presidential Adviser,
+6ad2411eac8ff5e79beee2bc,Stephanie Okpere,CcHub,"Private Sector, Startups & Industry",Senior Leader,
+6ad2411eac8ff5e79beee2c4,Ogorry Otse,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad2411fac8ff5e79beee2ca,Chika Offor,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad24120ac8ff5e79beee2ce,Hinda Ruton,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad24121ac8ff5e79beee2d2,Bodunde O. Onifade,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad24122ac8ff5e79beee2da,Dr. Emmanuel Emedo,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad24123ac8ff5e79beee2de,Dr. Abiola Oshunniyi,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad24124ac8ff5e79beee2e2,Oluwaleke Jegede,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad24126ac8ff5e79beee2e6,Prof. Chimezie Anyakora,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad24129ac8ff5e79beee2ea,Dr. Ebere Anyachukwu,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad2412cac8ff5e79beee2ee,Shivani Haria,,,,INCOMPLETE — no real title/organisation on file yet.
+6ad24131ac8ff5e79beee2f2,Adetola Olateju,Seam Health Innovations,"Private Sector, Startups & Industry",Head of Organisation,
+6ad24134ac8ff5e79beee2f6,Dr. Mariam Abdullahi,NCAIR,Federal Government & Agencies,Senior Leader,
+6ad24135ac8ff5e79beee2fa,Dr. Ufuma Omo-Obi,Jacaranda Health,Implementing Partners & NGOs,Expert / Practitioner,"Real title still not on file (placeholder ""Details pending"") — only organisation (Jacaranda Health) is confirmed. Please confirm seniority once title is known."
+6ac806e03acdc4e3563a183d,Dr. 'Bosun Tijani,Federal Republic of Nigeria,Federal Government & Agencies,Minister / Legislator / Presidential Adviser,
+6aaeaf8edfd437617e0b6323,Dr. Salma Ibrahim Anas,The President of Nigeria,Federal Government & Agencies,Minister / Legislator / Presidential Adviser,Special Adviser to the President — presidential adviser tier.
+6ab632684d8fc19a4c8844cf,"Kashifu Inuwa Abdullahi, CCIE",National Information Technology Development Agency (NITDA),Federal Government & Agencies,Head of Organisation,"Organisation (NITDA) missing from source CSV row — inferred from title only, not shown in chart grid since org field is blank."
+6a99b0668712c3e199571181,Lacina Koné,Smart Africa,Multilateral & UN,Head of Organisation,"Smart Africa is a Pan-African intergovernmental digital alliance, not literally a UN body — closest fit to the listed Multilateral & UN examples. Please confirm."
+6aaeaea6dfd437617e0b630b,Dr. Olubunmi Ajala,National Centre for AI & Robotics,Federal Government & Agencies,Head of Organisation,"""National Director"" of a national centre read as its top executive — please confirm vs. Senior Leader."
+6aaeb1d4dfd437617e0b6397,Pavel Ursu,World Health Organization (WHO),Multilateral & UN,Head of Organisation,WHO Country Representative is the top WHO official for Nigeria.
+6aaeb1fcdfd437617e0b639d,Jean Philbert,Africa Health Tech Summit (AHTS),Networks & Associations,Head of Organisation,
+6ab6332b4d8fc19a4c884506,Dr. Olufunke Fasawe,Clinton Health Access Initiative (CHAI),Implementing Partners & NGOs,Head of Organisation,
+6ab634f04d8fc19a4c884594,Ben Brockman,Clinton Health Access Initiative (CHAI),Implementing Partners & NGOs,Senior Leader,
+6ab6362a4d8fc19a4c8845c3,Prof. Augustine Nonso Odili,"College of Health Sciences, University of Abuja",Academia & Research,Senior Leader,"Professor + Lead Investigator, no head-of-unit title given — please confirm vs. Expert/Practitioner."
+6abdec1330c3b6f6b3278852,Marelize Gorgens,World Bank,Multilateral & UN,Senior Leader,
+6abdec8930c3b6f6b3278865,Dr. Olubayo Adekanmbi,Data Science Nigeria (DSN),"Private Sector, Startups & Industry",Head of Organisation,Data Science Nigeria is a tech/AI capacity-building social enterprise — could also read as Implementing Partners & NGOs. Please confirm.
+6ab1261e9f24233412e49be6,"Dr. Jay Osi Samuels, MBBS, MS (Harvard)",APIN Public Health Initiatives,Implementing Partners & NGOs,Head of Organisation,
+6ab633884d8fc19a4c884520,Dr. Ibrahim Gobir,Georgetown Global Health Nigeria (GGHN),Implementing Partners & NGOs,Head of Organisation,
+6a99827723bf521fb723bcf3,Dr Kunle Kakanfo,Artificial Intelligence for Social Impact & Development (AI4SID),"Private Sector, Startups & Industry",Head of Organisation,AI4SID reads as a founder-led initiative/venture rather than a large NGO — could also fit Implementing Partners & NGOs. Please confirm.
+6ab633b04d8fc19a4c88452d,Dr. Njide Ndili,Healthcare Federation of Nigeria (HFN),Networks & Associations,Head of Organisation,
+6acbfe93c6b6a1fb16382248,Dr. Mories Atoki,African Business Coalition for Health (ABCHealth),Networks & Associations,Head of Organisation,
+6ab633f24d8fc19a4c884546,Tajudeen Ibrahim,Global Fund Nigeria,Networks & Associations,Head of Organisation,Executive Secretary heads the CCM secretariat.
+6ab634884d8fc19a4c884573,Dr. Oluwatobiloba Moody,World Intellectual Property Organization (WIPO),Multilateral & UN,Senior Leader,"WIPO Director (divisional), not the agency's overall head."
+6ab632d14d8fc19a4c8844ed,Dr. Francis Ohanyido,West African Institute of Public Health (WAIPH),Academia & Research,Head of Organisation,
+6aaeb066dfd437617e0b6363,Dr. Leke Ezekiel Ojewale,National Digital Health Initiative,Federal Government & Agencies,Senior Leader,"Senior Technical Adviser to a national programme, not a ministerial/presidential adviser."
+6ab636874d8fc19a4c8845d5,Tosin Oshinubi,Salient Advisory,"Private Sector, Startups & Industry",Senior Leader,
+6ab636c44d8fc19a4c8845e2,Emeka Chukwu,Digital Health Interoperability Network (DHIN) / HealthEnabled,Networks & Associations,Head of Organisation,"""Co-Convener"" of DHIN read as a founding/leading role — please confirm vs. Senior Leader (Technology Lead alone)."
+6ab636ff4d8fc19a4c8845eb,Pharm. Nkiru Ukor,World Health Organization (WHO),Multilateral & UN,Expert / Practitioner,National Professional Officer is a standard WHO technical staff grade.
+6ab637554d8fc19a4c88461d,Professor Gelan Ayadie,University of Toronto,Academia & Research,Senior Leader,
+6acbff9ac6b6a1fb16382269,Maruchi Wotogbe,Development Delivery Partners (DDP),"Private Sector, Startups & Industry",Senior Leader,"""Representative / Executive Lead"" doesn't clearly confirm top-of-organisation — please confirm vs. Head of Organisation."
+6ab16422a46cb1eb9db11eed,Olasupo Oyedepo,Oyedepo & Associates (OO&A Ltd.),"Private Sector, Startups & Industry",Head of Organisation,
+6aaeaf2bdfd437617e0b631d,Dr. Adedolapo Fasawe,,Federal Government & Agencies,Minister / Legislator / Presidential Adviser,"FCT Mandate Secretary is a territorial-cabinet-equivalent role. Organisation left blank — not on file; inferring ""FCT Administration"" would be a guess."
+6aaeb19bdfd437617e0b638c,Ipalibo Banigo,,Legislature,Minister / Legislator / Presidential Adviser,"Organisation left blank — not on file (role is Senate Committee Chairman, not tied to a named external organisation)."
+6ab637904d8fc19a4c884634,Dr. Comfort Peace Ayikoru,BuriCare Limited / APIN (PHIS3),"Private Sector, Startups & Industry",Head of Organisation,
+6ab637b84d8fc19a4c884641,Dr. Chinonso Egemba (Aproko Doctor),Aproko Doctor Global,"Private Sector, Startups & Industry",Head of Organisation,
+6ab637d54d8fc19a4c884649,Dr. Kelechi Okoro,Heal for Wellness / Plan Am Well,"Private Sector, Startups & Industry",Head of Organisation,

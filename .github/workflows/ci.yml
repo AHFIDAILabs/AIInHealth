@@ -19,6 +19,10 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
+      # Fails the build on high/critical advisories; moderate/low are left
+      # non-blocking so a new low-severity transitive advisory doesn't stall
+      # every PR — still visible in the job log either way.
+      - run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
@@ -36,6 +40,14 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      # react-router-dom's fix requires the 6->7 major (a real breaking
+      # migration, not something to force through a security patch) — its one
+      # "high" advisory is an open-redirect via a backslash-prefixed path
+      # passed to navigate()/<Link>, and this app never passes user-controlled
+      # input into either (every navigate() call here uses a static route or a
+      # server-built path). Tracked as an accepted risk; threshold left at
+      # critical here until the v7 migration is scheduled on its own.
+      - run: npm audit --audit-level=critical
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
