@@ -125,23 +125,31 @@ export const confirmPaymentByReference = async (reference: string, options: { al
     return;
   }
 
-  // Paystack's checkout page amount is generated server-side from what WE sent
-  // at initialize, so a legitimate flow never diverges — a mismatch means
-  // something is wrong (reference confusion, a stale/reused reference, direct
-  // tampering) and must never silently confirm a seat for the wrong price.
-  // Surfaced through the existing Reconciliations mismatch flag
-  // (reconciliation.controller.ts) for a human to actually look at, instead.
+  // Paystack's checkout amount is generated server-side from what WE sent at
+  // initialize, BUT some channels (bank transfer especially, when the
+  // account/payer is set up to bear the fee) charge the payer a grossed-up
+  // total so Paystack's own cut comes out of THEM rather than our
+  // settlement — gross amount minus Paystack's own reported fee is what we
+  // actually receive, and that net figure is what must match our expected
+  // price, not the gross charge. Confirmed against two real stuck payments
+  // (bank_transfer channel) where gross-amount comparison alone flagged a
+  // 100%-successful, correctly-priced payment as a "mismatch" purely because
+  // the fee was added on top. A real mismatch (reference confusion, a stale
+  // reference, tampering) still fails this check and goes to the
+  // Reconciliations page for manual review, same as before.
   // Skipped when Paystack isn't configured (local dev/test) — verifyTransaction's
   // dev fallback always reports amountKobo: 0, which isn't a real amount to
   // compare against and would otherwise permanently "mismatch" every dev payment.
+  const netReceivedKobo = result.amountKobo - result.feesKobo;
   if (
     paystack.paystackConfigured &&
     !options.allowAmountMismatch &&
     registration.amountKobo != null &&
-    result.amountKobo !== registration.amountKobo
+    result.amountKobo !== registration.amountKobo &&
+    netReceivedKobo !== registration.amountKobo
   ) {
     logger.error(
-      { reference, expectedKobo: registration.amountKobo, verifiedKobo: result.amountKobo, registrationId: registration.id },
+      { reference, expectedKobo: registration.amountKobo, verifiedKobo: result.amountKobo, feesKobo: result.feesKobo, registrationId: registration.id },
       'Payment amount mismatch — refusing to auto-confirm; awaiting manual reconciliation'
     );
     await emitAdminNotification({

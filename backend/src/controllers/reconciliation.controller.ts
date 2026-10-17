@@ -33,7 +33,14 @@ export const list = catchAsync(async (req: Request, res: Response) => {
     const local = byReference.get(t.reference);
     const localPaid = local?.paymentStatus === 'paid';
     const paystackSucceeded = t.status === 'success';
-    const amountMismatch = localPaid && local?.amountKobo != null && local.amountKobo !== t.amountKobo;
+    // Some channels (bank transfer especially) pass Paystack's own fee on to
+    // the payer, so the gross amount Paystack shows is legitimately higher
+    // than what we expected/netted — see payment.controller.ts's
+    // confirmPaymentByReference for the full reasoning. Net-of-fees is what
+    // must match our expected price, not the gross charge.
+    const netReceivedKobo = t.amountKobo - t.feesKobo;
+    const amountMismatch =
+      localPaid && local?.amountKobo != null && local.amountKobo !== t.amountKobo && local.amountKobo !== netReceivedKobo;
     return {
       reference: t.reference,
       paystackStatus: t.status,

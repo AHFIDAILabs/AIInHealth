@@ -65,6 +65,14 @@ export const initializeTransaction = async (params: InitializeParams): Promise<I
 export interface VerifyResult {
   status: 'success' | 'failed' | 'abandoned' | 'pending';
   amountKobo: number;
+  // Paystack's own reported fee on this transaction — present whenever the
+  // payer's channel (bank transfer especially) passes Paystack's fee on to
+  // them rather than the merchant absorbing it. `amountKobo - feesKobo` is
+  // what the merchant actually nets, which is what should be compared
+  // against our own expected price — see payment.controller.ts's
+  // confirmPaymentByReference for why comparing gross amountKobo alone
+  // produces false "amount mismatch" flags on genuine, successful payments.
+  feesKobo: number;
   reference: string;
   paidAt: string | null;
 }
@@ -72,7 +80,7 @@ export interface VerifyResult {
 export const verifyTransaction = async (reference: string): Promise<VerifyResult> => {
   if (!configured) {
     logger.info({ reference }, '💳 [DEV PAYSTACK — auto-verifying as successful, PAYSTACK_SECRET_KEY unset]');
-    return { status: 'success', amountKobo: 0, reference, paidAt: new Date().toISOString() };
+    return { status: 'success', amountKobo: 0, feesKobo: 0, reference, paidAt: new Date().toISOString() };
   }
 
   const res = await fetch(`${BASE_URL}/transaction/verify/${encodeURIComponent(reference)}`, {
@@ -82,7 +90,7 @@ export const verifyTransaction = async (reference: string): Promise<VerifyResult
   const data = (await res.json()) as {
     status: boolean;
     message: string;
-    data?: { status: VerifyResult['status']; amount: number; reference: string; paid_at: string | null };
+    data?: { status: VerifyResult['status']; amount: number; fees?: number | null; reference: string; paid_at: string | null };
   };
 
   if (!res.ok || !data.status || !data.data) {
@@ -92,6 +100,7 @@ export const verifyTransaction = async (reference: string): Promise<VerifyResult
   return {
     status: data.data.status,
     amountKobo: data.data.amount,
+    feesKobo: data.data.fees ?? 0,
     reference: data.data.reference,
     paidAt: data.data.paid_at,
   };
@@ -101,6 +110,10 @@ export interface TransactionListItem {
   reference: string;
   status: 'success' | 'failed' | 'abandoned' | 'pending';
   amountKobo: number;
+  // See VerifyResult's own comment — some channels (bank transfer especially)
+  // pass Paystack's fee on to the payer, so amountKobo alone isn't what we
+  // actually net.
+  feesKobo: number;
   paidAt: string | null;
   customerEmail: string | null;
 }
@@ -132,7 +145,14 @@ export const listTransactions = async (params: { perPage?: number; page?: number
   const data = (await res.json()) as {
     status: boolean;
     message: string;
-    data?: Array<{ reference: string; status: TransactionListItem['status']; amount: number; paid_at: string | null; customer?: { email?: string } }>;
+    data?: Array<{
+      reference: string;
+      status: TransactionListItem['status'];
+      amount: number;
+      fees?: number | null;
+      paid_at: string | null;
+      customer?: { email?: string };
+    }>;
     meta?: { total?: number; page?: number; perPage?: number; pageCount?: number };
   };
 
@@ -145,6 +165,7 @@ export const listTransactions = async (params: { perPage?: number; page?: number
       reference: t.reference,
       status: t.status,
       amountKobo: t.amount,
+      feesKobo: t.fees ?? 0,
       paidAt: t.paid_at,
       customerEmail: t.customer?.email ?? null,
     })),
