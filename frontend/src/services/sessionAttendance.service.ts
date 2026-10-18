@@ -64,14 +64,36 @@ export const adminListAttendanceSessions = async (): Promise<AdminAttendanceSess
   return res.data.data;
 };
 
+export interface CreatedAttendanceToken {
+  tokenId: string;
+  volunteerName: string;
+  portalUrl: string;
+  emailed: boolean;
+  deliveredToPortal: boolean;
+}
+
 export const adminCreateAttendanceTokens = async (
   sessionId: string,
-  volunteers: { name: string; email?: string }[]
-): Promise<{ sessionId: string; sessionTitle: string; tokens: { tokenId: string; volunteerName: string; portalUrl: string }[] }> => {
-  const res = await api.post<{
-    success: true;
-    data: { sessionId: string; sessionTitle: string; tokens: { tokenId: string; volunteerName: string; portalUrl: string }[] };
-  }>('/admin/session-attendance/tokens', { sessionId, volunteers });
+  volunteers: { name: string; email?: string; registrationId?: string }[]
+): Promise<{ sessionId: string; sessionTitle: string; tokens: CreatedAttendanceToken[] }> => {
+  const res = await api.post<{ success: true; data: { sessionId: string; sessionTitle: string; tokens: CreatedAttendanceToken[] } }>(
+    '/admin/session-attendance/tokens',
+    { sessionId, volunteers }
+  );
+  return res.data.data;
+};
+
+export interface VolunteerSearchResult {
+  registrationId: string;
+  name: string;
+  email: string;
+  organization?: string;
+}
+
+export const adminSearchVolunteers = async (q: string): Promise<VolunteerSearchResult[]> => {
+  const res = await api.get<{ success: true; data: VolunteerSearchResult[] }>('/admin/session-attendance/search-volunteers', {
+    params: { q },
+  });
   return res.data.data;
 };
 

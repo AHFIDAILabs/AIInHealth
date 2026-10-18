@@ -79,6 +79,10 @@ export const delegateLogout = async (): Promise<void> => {
 export interface PortalMessage {
   id: string;
   body: string;
+  // Set for a message carrying a call-to-action link (e.g. a session
+  // attendance scanning link) — see PortalMessage.model.ts's actionUrl.
+  actionUrl: string | null;
+  actionLabel: string | null;
   createdAt: string;
 }
 

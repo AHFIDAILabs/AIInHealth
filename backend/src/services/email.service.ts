@@ -1,6 +1,6 @@
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
-import { REVIEWER_ACCESS_CODE_EXPIRES_AT, RAPPORTEUR_TOKEN_EXPIRES_AT } from '../config/event.js';
+import { REVIEWER_ACCESS_CODE_EXPIRES_AT, RAPPORTEUR_TOKEN_EXPIRES_AT, SESSION_ATTENDANCE_TOKEN_EXPIRES_AT } from '../config/event.js';
 import { VENUE_SHORT, VENUE_FULL_ADDRESS, VENUE_MAPS_LINK } from '../config/venue.js';
 
 const graphConfigured = Boolean(env.MS_TENANT_ID && env.MS_CLIENT_ID && env.MS_CLIENT_SECRET && env.MS_SENDER_EMAIL);
@@ -675,6 +675,31 @@ export const sendRapporteurAssignmentEmail = async (
       <p>${data.day}, ${data.startTime} &middot; ${data.room}</p>
       <p><a href="${data.portalUrl}">Click here to open your rapporteur notes page</a> — no sign-in needed, this link is your access. Jot down key points, decisions, action items, and notable quotes during the session; your notes save automatically as you type, even if your connection drops. When the session ends, submit your notes and we'll polish them into a clean session report for you.</p>
       <p>This link works through ${expiresLabel}. Keep it to yourself — anyone with the link can edit this session's notes.</p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
+export const sendAttendanceLinkEmail = async (
+  to: string,
+  volunteerName: string,
+  data: { sessionTitle: string; day: string; startTime: string; room: string; portalUrl: string }
+): Promise<void> => {
+  const expiresLabel = SESSION_ATTENDANCE_TOKEN_EXPIRES_AT.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  await sendEmail({
+    to,
+    subject: `Your attendance-scanning link — "${data.sessionTitle}", Room ${data.room}`,
+    html: `
+      <p>Hi ${volunteerName},</p>
+      <p>You've been asked to take attendance for:</p>
+      <p style="font-size:16px;font-weight:700;">${data.sessionTitle}</p>
+      <p>${data.day}, ${data.startTime} &middot; Room ${data.room}</p>
+      <p><a href="${data.portalUrl}">Open your scanning link</a> on your phone — no app or sign-in needed, this link is your access. Scan each attendee's e-ticket QR code as they enter the room; re-scanning the same badge is safe, it just shows "already scanned" instead of counting them twice.</p>
+      <p>This link works through ${expiresLabel}. Keep it to yourself — anyone with the link can scan attendance for this room.</p>
       <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
     `,
   });
