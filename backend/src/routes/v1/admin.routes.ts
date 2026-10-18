@@ -23,6 +23,7 @@ import * as whatsappController from '../../controllers/whatsapp.controller.js';
 import * as promoController from '../../controllers/promo.controller.js';
 import * as innovationController from '../../controllers/innovation.controller.js';
 import * as checkinController from '../../controllers/checkin.controller.js';
+import * as sessionAttendanceController from '../../controllers/sessionAttendance.controller.js';
 import * as delegateAnnouncementController from '../../controllers/delegateAnnouncement.controller.js';
 import * as abstractController from '../../controllers/abstract.controller.js';
 import * as rubricController from '../../controllers/rubric.controller.js';
@@ -72,6 +73,7 @@ import { sendAnnouncementSchema } from '../../validations/delegateAnnouncement.v
 import { replaceRubricSchema } from '../../validations/rubric.validation.js';
 import { adminCreateReviewerSchema, adminAssignReviewerSchema } from '../../validations/reviewer.validation.js';
 import { adminAssignRapporteurSchema, adminUpdateReportSchema } from '../../validations/rapporteur.validation.js';
+import { adminCreateAttendanceTokensSchema } from '../../validations/sessionAttendance.validation.js';
 import { knowledgeProductTypeParamSchema, adminUpdateKnowledgeProductSchema } from '../../validations/knowledgeProduct.validation.js';
 import { adminUpdateCommunicationSchema } from '../../validations/communication.validation.js';
 import { createSponsorshipPackageSchema, updateSponsorshipPackageSchema } from '../../validations/sponsorshipPackage.validation.js';
@@ -675,6 +677,30 @@ router.get('/check-in/search', requireRole('super_admin', 'admin', 'registration
 router.post('/check-in/scan', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.scan);
 router.post('/check-in/manual/:id', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.manualCheckIn);
 router.get('/check-in/badge/:id', requireRole('super_admin', 'admin', 'registrations_officer'), checkinController.getBadge);
+
+// Session (breakout-room) attendance — same role scope as the main check-in
+// desk above; this is the per-room counterpart to it, not a separate area.
+router.get(
+  '/session-attendance/sessions',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  sessionAttendanceController.adminListSessions
+);
+router.post(
+  '/session-attendance/tokens',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  validate(adminCreateAttendanceTokensSchema),
+  sessionAttendanceController.adminCreateTokens
+);
+router.post(
+  '/session-attendance/tokens/:id/revoke',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  sessionAttendanceController.adminRevokeToken
+);
+router.get(
+  '/session-attendance/sessions/:id/export',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  sessionAttendanceController.adminExportSession
+);
 
 router.post(
   '/delegate-announcements',

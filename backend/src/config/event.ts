@@ -27,6 +27,12 @@ export const DELEGATE_ACCESS_CODE_EXPIRES_AT = new Date(EVENT_END_DATE.getTime()
 // week like the other two.
 export const RAPPORTEUR_TOKEN_EXPIRES_AT = new Date(EVENT_END_DATE.getTime() + 72 * 60 * 60 * 1000);
 
+// Session attendance-taker links (sessionAttendanceToken.service.ts) — same
+// short-lived shape as the rapporteur token above: a volunteer's whole job
+// (scan people into one room) happens within the event itself, so there's no
+// reason for the link to outlive it by more than a day or two of buffer.
+export const SESSION_ATTENDANCE_TOKEN_EXPIRES_AT = new Date(EVENT_END_DATE.getTime() + 48 * 60 * 60 * 1000);
+
 // QR-banner promo campaign (promo.controller.ts) — fixed 10-day duration once
 // launched. Deliberately NOT a fixed calendar date here: an admin starts the
 // clock explicitly via POST /admin/promo/launch (PromoSettings.model.ts),

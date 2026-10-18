@@ -278,6 +278,33 @@ export const rapporteurTranscribeLimiter = rateLimit({
   handler: onLimitExceeded('rapporteurTranscribeLimiter', 'medium'),
 });
 
+// Session attendance — a volunteer's page polls its own info rarely (just on
+// load), so this stays as tight as rapporteurReadLimiter's shape even though
+// usage is lighter.
+export const attendanceReadLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: tokenKey,
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please try again shortly.' } },
+  handler: onLimitExceeded('attendanceReadLimiter', 'low'),
+});
+
+// Much higher ceiling than any other token-keyed limiter here — a breakout
+// room can fill in under two minutes, with one volunteer's phone scanning a
+// steady stream of badges, so this has to comfortably clear "a scan roughly
+// every second for several minutes straight" without tripping.
+export const attendanceScanLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 400,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: tokenKey,
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many scans — pause a moment and try again.' } },
+  handler: onLimitExceeded('attendanceScanLimiter', 'low'),
+});
+
 // Layer 3 live transcript — cookie-authenticated (admin), keyed by user id
 // rather than token/IP. 200/15min comfortably covers continuous ~25s chunking
 // for the whole window (~36 chunks) with headroom for a retry here and there.
