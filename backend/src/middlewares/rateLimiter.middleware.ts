@@ -101,6 +101,18 @@ export const contactLimiter = rateLimit({
   handler: onLimitExceeded('contactLimiter', 'low'),
 });
 
+// Same email+IP keying/window as contactLimiter — a public, unauthenticated
+// email-capture endpoint, not sensitive enough to need its own shape.
+export const livestreamAccessLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: emailKey,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many attempts. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('livestreamAccessLimiter', 'low'),
+});
+
 export const inquiryLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
