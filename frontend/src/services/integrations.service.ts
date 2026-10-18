@@ -68,3 +68,33 @@ export const syncOnevieNow = async (): Promise<OnevieSyncResult> => {
   const res = await api.post<{ success: true; data: OnevieSyncResult }>('/admin/integrations/onevie/sync-now');
   return res.data.data;
 };
+
+// WAI-Health Breakfast's own separate Onevie event ("AIHS-women delegate
+// sync") — same three calls, mirrored, against its own endpoints.
+export interface OnevieWaiStatus {
+  configured: boolean;
+  isEnabled: boolean;
+  lastRunAt: string | null;
+  lastRunSynced: number | null;
+  lastRunFailed: number | null;
+  lastRunDurationMs: number | null;
+  eligibleCount: number;
+  pendingCount: number;
+  syncedCount: number;
+  failedCount: number;
+}
+
+export const fetchOnevieWaiStatus = async (): Promise<OnevieWaiStatus> => {
+  const res = await api.get<{ success: true; data: OnevieWaiStatus }>('/admin/integrations/onevie-wai/status');
+  return res.data.data;
+};
+
+export const toggleOnevieWaiSync = async (isEnabled: boolean): Promise<boolean> => {
+  const res = await api.patch<{ success: true; data: { isEnabled: boolean } }>('/admin/integrations/onevie-wai/toggle', { isEnabled });
+  return res.data.data.isEnabled;
+};
+
+export const syncOnevieWaiNow = async (): Promise<OnevieSyncResult> => {
+  const res = await api.post<{ success: true; data: OnevieSyncResult }>('/admin/integrations/onevie-wai/sync-now');
+  return res.data.data;
+};

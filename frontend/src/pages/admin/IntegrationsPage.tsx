@@ -7,8 +7,12 @@ import {
   fetchOnevieStatus,
   toggleOnevieSync,
   syncOnevieNow,
+  fetchOnevieWaiStatus,
+  toggleOnevieWaiSync,
+  syncOnevieWaiNow,
   type IntegrationsStatus,
   type OnevieStatus,
+  type OnevieWaiStatus,
 } from '../../services/integrations.service';
 import { getApiErrorMessage } from '../../services/api';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -28,13 +32,19 @@ export const IntegrationsPage = () => {
   const [onevieBusy, setOnevieBusy] = useState(false);
   const [syncingNow, setSyncingNow] = useState(false);
 
+  const [onevieWai, setOnevieWai] = useState<OnevieWaiStatus | null>(null);
+  const [onevieWaiBusy, setOnevieWaiBusy] = useState(false);
+  const [syncingWaiNow, setSyncingWaiNow] = useState(false);
+
   const loadOnevie = () => fetchOnevieStatus().then(setOnevie).catch((err) => setError(getApiErrorMessage(err)));
+  const loadOnevieWai = () => fetchOnevieWaiStatus().then(setOnevieWai).catch((err) => setError(getApiErrorMessage(err)));
 
   useEffect(() => {
     fetchIntegrationsStatus()
       .then(setStatus)
       .catch((err) => setError(getApiErrorMessage(err)));
     loadOnevie();
+    loadOnevieWai();
   }, []);
 
   const handleToggleOnevie = async (next: boolean) => {
@@ -61,6 +71,33 @@ export const IntegrationsPage = () => {
       toast('error', getApiErrorMessage(err));
     } finally {
       setSyncingNow(false);
+    }
+  };
+
+  const handleToggleOnevieWai = async (next: boolean) => {
+    if (!onevieWai) return;
+    setOnevieWaiBusy(true);
+    try {
+      const isEnabled = await toggleOnevieWaiSync(next);
+      setOnevieWai({ ...onevieWai, isEnabled });
+      toast('success', isEnabled ? 'Onevie WAI sync turned on — next run within 5 minutes.' : 'Onevie WAI sync turned off.');
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setOnevieWaiBusy(false);
+    }
+  };
+
+  const handleSyncWaiNow = async () => {
+    setSyncingWaiNow(true);
+    try {
+      const result = await syncOnevieWaiNow();
+      toast('success', `Synced ${result.synced}${result.failed ? `, ${result.failed} failed` : ''} — Breakfast check-in data is up to date.`);
+      await loadOnevieWai();
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSyncingWaiNow(false);
     }
   };
 
@@ -301,6 +338,77 @@ export const IntegrationsPage = () => {
                   </ul>
                 </div>
               )}
+            </>
+          )}
+        </div>
+
+        {/* Onevie WAI-Health Breakfast check-in sync — a SEPARATE Onevie
+            event ("AIHS-women delegate sync") from the main one above, its
+            own API key, one fixed "Women Delegate" ticket type. */}
+        <div className="rounded-2xl border border-slate-100 bg-white shadow-card transition-shadow hover:shadow-card-hover p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-secondary text-orange">
+                <QrCode size={18} />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-navy">Onevie WAI-Health Breakfast sync</p>
+                <p className="text-xs text-slate-500">Pushes confirmed Breakfast RSVPs to the room's own limited-seating door scanner</p>
+              </div>
+            </div>
+            {!onevieWai ? (
+              <Skeleton className="h-6 w-24" />
+            ) : onevieWai.configured ? (
+              <span className="flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+                <CheckCircle2 size={13} /> Connected
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                <XCircle size={13} /> Not configured
+              </span>
+            )}
+          </div>
+
+          {onevieWai && (
+            <>
+              <div className="mt-4">
+                <AdminToggle label="Sync to Onevie (WAI)" checked={onevieWai.isEnabled} onChange={handleToggleOnevieWai} />
+                {onevieWaiBusy && <p className="mt-1 text-xs text-slate-400">Saving…</p>}
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg bg-offwhite px-2 py-2.5">
+                  <p className="font-display text-lg font-semibold text-navy">{onevieWai.pendingCount}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Pending</p>
+                </div>
+                <div className="rounded-lg bg-offwhite px-2 py-2.5">
+                  <p className="font-display text-lg font-semibold text-success">{onevieWai.syncedCount}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Synced</p>
+                </div>
+                <div className="rounded-lg bg-offwhite px-2 py-2.5">
+                  <p className={`font-display text-lg font-semibold ${onevieWai.failedCount > 0 ? 'text-danger' : 'text-navy'}`}>
+                    {onevieWai.failedCount}
+                  </p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Failed</p>
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs text-slate-400">
+                {onevieWai.eligibleCount} confirmed RSVP{onevieWai.eligibleCount === 1 ? '' : 's'} total &middot;{' '}
+                {onevieWai.lastRunAt
+                  ? `Last run ${new Date(onevieWai.lastRunAt).toLocaleString()} — ${onevieWai.lastRunSynced ?? 0} synced, ${onevieWai.lastRunFailed ?? 0} failed`
+                  : 'No sync has run yet.'}
+              </p>
+
+              <button
+                onClick={handleSyncWaiNow}
+                disabled={!onevieWai.configured || !onevieWai.isEnabled || syncingWaiNow}
+                className="mt-4 flex items-center gap-1.5 rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-semibold text-navy transition-colors hover:border-orange/40 disabled:opacity-40"
+              >
+                <RefreshCw size={13} className={syncingWaiNow ? 'animate-spin' : ''} />
+                {syncingWaiNow ? 'Syncing…' : 'Sync now'}
+              </button>
+              {!onevieWai.isEnabled && <p className="mt-2 text-xs text-slate-400">Turn sync on above to sync manually or on schedule.</p>}
             </>
           )}
         </div>
