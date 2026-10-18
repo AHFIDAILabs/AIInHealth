@@ -17,3 +17,10 @@ export const setLivestreamSettingsSchema = z.object({
   }),
 });
 export type SetLivestreamSettingsInput = z.infer<typeof setLivestreamSettingsSchema>['body'];
+
+export const requestLivestreamAccessSchema = z.object({
+  body: z.object({
+    email: z.string().trim().toLowerCase().email('Enter a valid email'),
+  }),
+});
+export type RequestLivestreamAccessInput = z.infer<typeof requestLivestreamAccessSchema>['body'];

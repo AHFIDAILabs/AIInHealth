@@ -1,8 +1,76 @@
 import { useEffect, useState } from 'react';
-import { Radio, ExternalLink, CalendarClock } from 'lucide-react';
-import { fetchLivestreamStatus, type LivestreamSettings } from '../../services/livestreamSettings.service';
+import { Radio, ExternalLink, CalendarClock, Mail, Loader2 } from 'lucide-react';
+import { fetchLivestreamStatus, requestLivestreamAccess, type LivestreamSettings } from '../../services/livestreamSettings.service';
+import { getApiErrorMessage } from '../../services/api';
 import { extractYouTubeVideoId, youTubeEmbedUrl } from '../../lib/youtube';
 import { DAY_DATES } from '../agenda/sessionDisplay';
+
+// Per-browser, not per-session — once granted, a returning viewer on the same
+// device isn't asked again for the rest of the Summit. This never actually
+// blocks anyone from watching (see livestreamSettings.controller.ts's
+// requestAccess) — it just makes sure every viewer leaves an email behind,
+// matched against Registration if they're already a real attendee.
+const ACCESS_STORAGE_KEY = 'ahs2026_livestream_access_email';
+
+const AccessGate = ({ onGranted }: { onGranted: () => void }) => {
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async () => {
+    if (!email.trim()) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await requestLivestreamAccess(email.trim());
+      try {
+        localStorage.setItem(ACCESS_STORAGE_KEY, email.trim());
+      } catch {
+        // Private window / blocked storage — fine, they'll just be asked
+        // again next visit, access itself already succeeded.
+      }
+      onGranted();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Couldn't verify that email. Try again."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-2xl bg-navy-secondary px-6 text-center">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-orange/15 text-orange">
+        <Mail size={20} />
+      </span>
+      <p className="font-display text-base font-semibold text-white">Enter your email to watch</p>
+      <p className="max-w-xs text-xs text-slate-300">We&rsquo;ll check if you&rsquo;re already registered — if not, no problem, you can still watch.</p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+        className="flex w-full max-w-xs flex-col gap-2 sm:flex-row"
+      >
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          className="min-w-0 flex-1 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:border-orange/50 focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={submitting || !email.trim()}
+          className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-orange px-4 py-2 text-xs font-semibold text-white hover:bg-orange-hover disabled:opacity-50"
+        >
+          {submitting ? <Loader2 size={13} className="animate-spin" /> : 'Watch now'}
+        </button>
+      </form>
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  );
+};
 
 type ActiveDay = 'day1' | 'day2' | null;
 
@@ -34,6 +102,13 @@ interface LiveStreamEmbedProps {
 export const LiveStreamEmbed = ({ compact = false }: LiveStreamEmbedProps) => {
   const [settings, setSettings] = useState<LivestreamSettings | null>(null);
   const [error, setError] = useState(false);
+  const [granted, setGranted] = useState(() => {
+    try {
+      return Boolean(localStorage.getItem(ACCESS_STORAGE_KEY));
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     fetchLivestreamStatus()
@@ -90,6 +165,12 @@ export const LiveStreamEmbed = ({ compact = false }: LiveStreamEmbedProps) => {
         {!compact && <p className="max-w-sm text-sm text-slate-300">Check back shortly — this updates automatically.</p>}
       </div>
     );
+  }
+
+  // Gate only applies once there's an actual stream to show — every
+  // placeholder/waiting state above renders regardless of `granted`.
+  if (!granted) {
+    return <AccessGate onGranted={() => setGranted(true)} />;
   }
 
   if (!videoId) {

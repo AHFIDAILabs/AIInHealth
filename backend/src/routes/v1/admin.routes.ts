@@ -382,6 +382,8 @@ router.put(
   validate(setLivestreamSettingsSchema),
   livestreamSettingsController.adminSet
 );
+router.get('/livestream-viewers/stats', requireRole('super_admin', 'admin'), livestreamSettingsController.adminViewerStats);
+router.get('/livestream-viewers/export', requireRole('super_admin', 'admin'), livestreamSettingsController.adminExportViewers);
 
 // innovator_lead owns this (same "full control of their own area" shape as
 // elsewhere in this file) — opening/closing applications is a distinct,

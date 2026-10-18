@@ -17,7 +17,10 @@ import { adminFetchPromoStatus, adminLaunchPromoCampaign, adminSetPromoActive, t
 import {
   fetchAdminLivestreamSettings,
   setAdminLivestreamSettings,
+  adminFetchLivestreamViewerStats,
+  adminLivestreamViewersExportUrl,
   type LivestreamSettings,
+  type LivestreamViewerStats,
 } from '../../services/livestreamSettings.service';
 
 // Same roles that manage Volunteers elsewhere (Registrations' Volunteers
@@ -172,6 +175,7 @@ export const SettingsPage = () => {
   // typing a URL one character at a time shouldn't fire a save per key.
   const [day1UrlDraft, setDay1UrlDraft] = useState('');
   const [day2UrlDraft, setDay2UrlDraft] = useState('');
+  const [viewerStats, setViewerStats] = useState<LivestreamViewerStats | null>(null);
 
   // A real, uncapped-quantity 100%-off giveaway running for a fixed 10 days
   // once launched — restricted to super_admin, distinct from the broader
@@ -259,6 +263,9 @@ export const SettingsPage = () => {
         setDay2UrlDraft(s.day2Url);
       })
       .catch((err) => toast('error', getApiErrorMessage(err)));
+    adminFetchLivestreamViewerStats()
+      .then(setViewerStats)
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canManageLivestream]);
 
@@ -595,6 +602,31 @@ export const SettingsPage = () => {
                   Paste the normal YouTube link from your browser's address bar or Share button — any format works. The
                   public page automatically switches to Day 2's link once Day 1 ends, with no action needed from you.
                 </p>
+
+                {/* Every viewer is asked for an email before the player shows (LiveStreamEmbed.tsx's
+                    AccessGate) — never blocked, just logged, so this is a view of who's actually
+                    watching rather than a gate's pass/fail list. */}
+                <div className="rounded-xl border border-slate-100 bg-offwhite px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Livestream Viewers</p>
+                  {viewerStats === null ? (
+                    <p className="mt-2 text-xs text-slate-400">Loading…</p>
+                  ) : (
+                    <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-slate-600">
+                      <span>
+                        <strong className="text-navy">{viewerStats.total}</strong> total
+                      </span>
+                      <span>
+                        <strong className="text-navy">{viewerStats.matched}</strong> already registered
+                      </span>
+                      <span>
+                        <strong className="text-navy">{viewerStats.unmatched}</strong> new (email-only)
+                      </span>
+                      <a href={adminLivestreamViewersExportUrl()} className="font-semibold text-orange hover:underline">
+                        Export CSV
+                      </a>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
