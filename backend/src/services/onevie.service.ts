@@ -67,7 +67,7 @@ export const mapOnevieTicketTypeId = (registration: Pick<RegistrationDoc, 'type'
 // Unicode bidi-control character (U+202C) stuck onto an otherwise normal
 // number, almost certainly from a copy-paste at registration time. Spaces,
 // dashes and brackets get the same treatment since they'd fail the same way.
-const sanitizePhone = (raw: string): string => {
+export const sanitizePhone = (raw: string): string => {
   const trimmed = raw.trim();
   const hasPlus = trimmed.startsWith('+');
   const digits = trimmed.replace(/[^0-9]/g, '');
@@ -118,7 +118,7 @@ export const getOnevieEmail = (registration: Pick<RegistrationHydrated, 'type' |
 // against real 400s from registrations with no phone on file. Falling back
 // to a placeholder rather than omitting the field entirely, since we have no
 // real number to send for the ~15 registrations missing one.
-const PHONE_FALLBACK = '0000000000';
+export const PHONE_FALLBACK = '0000000000';
 
 // Builds the exact request body — the one place that decides which of the
 // two contact-field shapes this registration uses.

@@ -53,6 +53,28 @@ const waiHealthRegistrationSchema = new Schema(
     // Registration.model.ts's portalLastLinkSentAt).
     declined: { type: Boolean, default: false },
     notifiedNotEligibleAt: { type: Date },
+
+    // Door check-in for the Breakfast's own limited-seating room — separate
+    // from rsvpToken above (that one's just the web RSVP-link credential,
+    // never shown to a scanner). Generated and emailed only once a seat is
+    // actually confirmed (see waiHealth.controller.ts's rsvp()), same "QR
+    // only exists once there's something real to check in for" shape as the
+    // main Registration flow. onevieWaiSync.job.ts pushes this exact value to
+    // Onevie's separate "AIHS-women delegate sync" event (its own event
+    // ID/API key — see services/onevieWai.service.ts) so the door scanner can
+    // only admit people who actually hold a confirmed seat.
+    checkinQrToken: { type: String, unique: true, sparse: true },
+    checkinQrSentAt: { type: Date },
+    // Same shape/reasoning as Registration.model.ts's onevieSync — informational
+    // only, the job itself decides what needs (re)sync by comparing syncedAt
+    // against this document's updatedAt.
+    onevieWaiSync: {
+      _id: false,
+      status: { type: String, enum: ['pending', 'synced', 'failed'] },
+      syncedAt: { type: Date },
+      lastAttemptAt: { type: Date },
+      lastError: { type: String, trim: true, maxlength: 500 },
+    },
   },
   { timestamps: true }
 );

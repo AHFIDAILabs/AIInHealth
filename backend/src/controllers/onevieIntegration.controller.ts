@@ -3,11 +3,15 @@ import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Registration } from '../models/Registration.model.js';
+import { WaiHealthRegistration } from '../models/WaiHealthRegistration.model.js';
 import { getOrCreateOnevieSettings } from '../models/OnevieSettings.model.js';
+import { getOrCreateOnevieWaiSettings } from '../models/OnevieWaiSettings.model.js';
 import { onevieConfigured } from '../services/onevie.service.js';
+import { onevieWaiConfigured } from '../services/onevieWai.service.js';
 import { runOnevieSyncNow } from '../jobs/onevieSync.job.js';
+import { runOnevieWaiSyncNow } from '../jobs/onevieWaiSync.job.js';
 import { recordAudit } from '../services/audit.service.js';
-import type { ToggleOnevieInput } from '../validations/onevieIntegration.validation.js';
+import type { ToggleOnevieInput, ToggleOnevieWaiInput } from '../validations/onevieIntegration.validation.js';
 
 // GET /admin/integrations/onevie/status — the Integrations page's Onevie
 // card. Counts are computed live (cheap at Summit scale, hundreds not
@@ -86,5 +90,68 @@ export const syncNow = catchAsync(async (_req: Request, res: Response) => {
   if (!onevieConfigured) throw new ApiError(400, 'Onevie is not configured on the server (ONEVIE_API_KEY unset).', 'NOT_CONFIGURED');
 
   const result = await runOnevieSyncNow();
+  res.json(new ApiResponse(result));
+});
+
+// --- WAI-Health Breakfast's separate Onevie event ("AIHS-women delegate
+// sync") — same three endpoints, mirrored, against WaiHealthRegistration
+// instead of Registration. ---
+
+export const waiStatus = catchAsync(async (_req: Request, res: Response) => {
+  const settings = await getOrCreateOnevieWaiSettings();
+
+  const [eligibleCount, pendingCount, syncedCount, failedCount] = await Promise.all([
+    WaiHealthRegistration.countDocuments({ rsvpConfirmedAt: { $exists: true }, declined: { $ne: true } }),
+    WaiHealthRegistration.countDocuments({
+      rsvpConfirmedAt: { $exists: true },
+      declined: { $ne: true },
+      checkinQrToken: { $exists: true, $ne: null },
+      onevieWaiSync: { $exists: false },
+    }),
+    WaiHealthRegistration.countDocuments({ 'onevieWaiSync.status': 'synced' }),
+    WaiHealthRegistration.countDocuments({ 'onevieWaiSync.status': 'failed' }),
+  ]);
+
+  res.json(
+    new ApiResponse({
+      configured: onevieWaiConfigured,
+      isEnabled: settings.isEnabled,
+      lastRunAt: settings.lastRunAt ?? null,
+      lastRunSynced: settings.lastRunSynced ?? null,
+      lastRunFailed: settings.lastRunFailed ?? null,
+      lastRunDurationMs: settings.lastRunDurationMs ?? null,
+      eligibleCount,
+      pendingCount,
+      syncedCount,
+      failedCount,
+    })
+  );
+});
+
+export const waiToggle = catchAsync(async (req: Request, res: Response) => {
+  const { isEnabled } = req.body as ToggleOnevieWaiInput;
+  const settings = await getOrCreateOnevieWaiSettings();
+  const before = { isEnabled: settings.isEnabled };
+  settings.isEnabled = isEnabled;
+  await settings.save();
+
+  await recordAudit({
+    req,
+    action: 'onevieWaiSettings.toggled',
+    resourceType: 'OnevieWaiSettings',
+    resourceId: settings.id,
+    before,
+    after: { isEnabled: settings.isEnabled },
+  });
+
+  res.json(new ApiResponse({ isEnabled: settings.isEnabled }));
+});
+
+export const waiSyncNow = catchAsync(async (_req: Request, res: Response) => {
+  const settings = await getOrCreateOnevieWaiSettings();
+  if (!settings.isEnabled) throw new ApiError(400, 'Onevie WAI sync is turned off — enable it first.', 'DISABLED');
+  if (!onevieWaiConfigured) throw new ApiError(400, 'Onevie WAI is not configured on the server (ONEVIE_WAI_API_KEY unset).', 'NOT_CONFIGURED');
+
+  const result = await runOnevieWaiSyncNow();
   res.json(new ApiResponse(result));
 });
