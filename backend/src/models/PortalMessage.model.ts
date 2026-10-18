@@ -17,6 +17,12 @@ const portalMessageSchema = new Schema(
     // behind it.
     relatedContactMessage: { type: Schema.Types.ObjectId, ref: 'ContactMessage' },
     isRead: { type: Boolean, default: false },
+    // Optional call-to-action, e.g. sessionAttendanceToken.service.ts handing
+    // a volunteer their scan-link via the portal instead of (or alongside)
+    // email. When set, the portal renders body + a dedicated link/copy
+    // button instead of treating the URL as part of the free-text body.
+    actionUrl: { type: String, trim: true },
+    actionLabel: { type: String, trim: true },
   },
   { timestamps: true }
 );

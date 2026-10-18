@@ -3,6 +3,10 @@ import { z } from 'zod';
 const volunteerSchema = z.object({
   name: z.string().trim().min(2, "Enter the volunteer's name"),
   email: z.string().trim().toLowerCase().email('Enter a valid email').optional(),
+  // Set when the admin picked this volunteer from the existing-registrations
+  // search rather than typing a brand-new name — see
+  // sessionAttendanceToken.service.ts's resolveDeliveryRegistration.
+  registrationId: z.string().trim().min(1).optional(),
 });
 
 export const adminCreateAttendanceTokensSchema = z.object({

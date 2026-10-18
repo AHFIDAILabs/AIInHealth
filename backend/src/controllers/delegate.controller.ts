@@ -139,6 +139,8 @@ export const portalMessages = catchAsync(async (req: Request, res: Response) => 
       messages.map((m) => ({
         id: m.id,
         body: m.body,
+        actionUrl: m.actionUrl ?? null,
+        actionLabel: m.actionLabel ?? null,
         createdAt: m.createdAt,
       }))
     )

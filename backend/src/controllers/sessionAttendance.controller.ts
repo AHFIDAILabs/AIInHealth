@@ -151,7 +151,7 @@ export const adminCreateTokens = catchAsync(async (req: Request, res: Response) 
   const input = req.body as AdminCreateAttendanceTokensInput;
   if (!isValidObjectId(input.sessionId)) throw new ApiError(404, 'Session not found', 'NOT_FOUND');
 
-  const { session, tokens } = await createAttendanceTokens(input);
+  const { session, tokens } = await createAttendanceTokens({ ...input, createdByUserId: req.user!.sub });
 
   await recordAudit({
     req,
@@ -162,6 +162,38 @@ export const adminCreateTokens = catchAsync(async (req: Request, res: Response) 
   });
 
   res.status(201).json(new ApiResponse({ sessionId: session.id, sessionTitle: session.title, tokens }));
+});
+
+// GET /admin/session-attendance/search-volunteers?q= — a standalone search
+// over confirmed volunteer registrations, deliberately NOT a reuse of
+// checkin.controller.ts's search (that one is the live main-entrance desk's
+// manual-fallback lookup, running all night before the event — this feature
+// stays fully separate from it, same reasoning as findRegistrationByQrToken
+// above). Also deliberately returns email (checkin's search doesn't) since
+// that's the whole point here: picking a known volunteer auto-fills who to
+// deliver the link to.
+export const adminSearchVolunteers = catchAsync(async (req: Request, res: Response) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  if (q.length < 2) {
+    res.json(new ApiResponse([]));
+    return;
+  }
+  const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  const volunteers = await Registration.find({
+    type: 'volunteer',
+    status: 'confirmed',
+    isActive: true,
+    $or: [{ fullName: rx }, { email: rx }],
+  })
+    .select('fullName email organization')
+    .limit(15)
+    .lean();
+
+  res.json(
+    new ApiResponse(
+      volunteers.map((v) => ({ registrationId: v._id, name: v.fullName, email: v.email, organization: v.organization }))
+    )
+  );
 });
 
 export const adminRevokeToken = catchAsync(async (req: Request, res: Response) => {

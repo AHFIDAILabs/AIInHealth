@@ -685,6 +685,11 @@ router.get(
   requireRole('super_admin', 'admin', 'registrations_officer'),
   sessionAttendanceController.adminListSessions
 );
+router.get(
+  '/session-attendance/search-volunteers',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  sessionAttendanceController.adminSearchVolunteers
+);
 router.post(
   '/session-attendance/tokens',
   requireRole('super_admin', 'admin', 'registrations_officer'),
