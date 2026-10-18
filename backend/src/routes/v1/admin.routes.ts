@@ -24,6 +24,7 @@ import * as promoController from '../../controllers/promo.controller.js';
 import * as innovationController from '../../controllers/innovation.controller.js';
 import * as checkinController from '../../controllers/checkin.controller.js';
 import * as sessionAttendanceController from '../../controllers/sessionAttendance.controller.js';
+import * as masterclassController from '../../controllers/masterclass.controller.js';
 import * as delegateAnnouncementController from '../../controllers/delegateAnnouncement.controller.js';
 import * as abstractController from '../../controllers/abstract.controller.js';
 import * as rubricController from '../../controllers/rubric.controller.js';
@@ -74,6 +75,7 @@ import { replaceRubricSchema } from '../../validations/rubric.validation.js';
 import { adminCreateReviewerSchema, adminAssignReviewerSchema } from '../../validations/reviewer.validation.js';
 import { adminAssignRapporteurSchema, adminUpdateReportSchema } from '../../validations/rapporteur.validation.js';
 import { adminCreateAttendanceTokensSchema } from '../../validations/sessionAttendance.validation.js';
+import { adminSendMasterclassInvitesSchema, listMasterclassQuerySchema } from '../../validations/masterclass.validation.js';
 import { knowledgeProductTypeParamSchema, adminUpdateKnowledgeProductSchema } from '../../validations/knowledgeProduct.validation.js';
 import { adminUpdateCommunicationSchema } from '../../validations/communication.validation.js';
 import { createSponsorshipPackageSchema, updateSponsorshipPackageSchema } from '../../validations/sponsorshipPackage.validation.js';
@@ -705,6 +707,27 @@ router.get(
   '/session-attendance/sessions/:id/export',
   requireRole('super_admin', 'admin', 'registrations_officer'),
   sessionAttendanceController.adminExportSession
+);
+
+// AI in Health Masterclass RSVP (Day 1, 08:00–09:30, registration-only) —
+// same role scope as the registration-pipeline actions above.
+router.post(
+  '/masterclass/send-invites',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  validate(adminSendMasterclassInvitesSchema),
+  masterclassController.adminSendInvites
+);
+router.get('/masterclass/stats', requireRole('super_admin', 'admin', 'registrations_officer'), masterclassController.adminStats);
+router.get(
+  '/masterclass/list',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  validate(listMasterclassQuerySchema),
+  masterclassController.adminList
+);
+router.get(
+  '/masterclass/export',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  masterclassController.adminExport
 );
 
 router.post(
