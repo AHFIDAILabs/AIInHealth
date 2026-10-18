@@ -45,6 +45,7 @@ import {
   Tag,
   MailCheck,
   ClipboardCheck,
+  BookOpen,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -123,6 +124,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       { label: 'Check-In', to: '/admin/check-in', icon: ScanLine, roles: registrationRoles },
       { label: 'Session Attendance', to: '/admin/session-attendance', icon: ClipboardCheck, roles: registrationRoles },
+      { label: 'Masterclass RSVP', to: '/admin/masterclass', icon: BookOpen, roles: registrationRoles },
     ],
   },
   {

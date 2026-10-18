@@ -42,6 +42,7 @@ import { ScholarshipRsvp } from './pages/public/ScholarshipRsvp';
 import { AttendeeRsvpConfirm } from './pages/public/AttendeeRsvpConfirm';
 import { RapporteurForm } from './pages/public/RapporteurForm';
 import { SessionAttendancePortal } from './pages/public/SessionAttendancePortal';
+import { MasterclassRsvp } from './pages/public/MasterclassRsvp';
 import { KnowledgeProductView } from './pages/public/KnowledgeProductView';
 import { Contact } from './pages/public/Contact';
 import { Privacy } from './pages/public/Privacy';
@@ -79,6 +80,7 @@ import { SettingsPage } from './pages/admin/SettingsPage';
 import { PaymentsPage } from './pages/admin/PaymentsPage';
 import { CheckInPage } from './pages/admin/CheckInPage';
 import { SessionAttendancePage } from './pages/admin/SessionAttendancePage';
+import { MasterclassPage } from './pages/admin/MasterclassPage';
 import { ReconciliationsPage } from './pages/admin/ReconciliationsPage';
 import { AbstractsPage } from './pages/admin/AbstractsPage';
 import { MediaPage } from './pages/admin/MediaPage';
@@ -173,6 +175,7 @@ function App() {
             {EVENT_EXTRAS_ENABLED && <Route path="/feedback/:sessionId" element={<Feedback />} />}
             <Route path="/rapporteur/:token" element={<RapporteurForm />} />
             <Route path="/session-attendance/:token" element={<SessionAttendancePortal />} />
+            <Route path="/masterclass/rsvp/:token" element={<MasterclassRsvp />} />
             <Route path="/knowledge-products/:type" element={<KnowledgeProductView />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />
@@ -208,6 +211,7 @@ function App() {
                 <Route path="/admin/scholarship-applications" element={<ScholarshipApplicationsPage />} />
                 <Route path="/admin/check-in" element={<CheckInPage />} />
                 <Route path="/admin/session-attendance" element={<SessionAttendancePage />} />
+                <Route path="/admin/masterclass" element={<MasterclassPage />} />
               </Route>
 
               {/* Deliberately narrowed off registrations_officer — see admin.routes.ts's

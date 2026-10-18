@@ -193,6 +193,16 @@ const registrationSchema = new Schema(
     rsvpRequestedAt: { type: Date }, // last time the reminder email was sent
     rsvpRespondedAt: { type: Date }, // set once they click — the list's own filter
 
+    // "AI in Health Masterclass" (Day 1, 08:00–09:30, registration-only
+    // session) RSVP — masterclass.controller.ts. Separate token/fields from
+    // the generic rsvpToken above (different purpose: this one-click-confirms
+    // a seat at a specific optional session for an already-confirmed
+    // attendee, it doesn't touch `status`). Deliberately uncapped — no
+    // capacity settings model, unlike WaiHealthSettings.
+    masterclassRsvpToken: { type: String, unique: true, sparse: true },
+    masterclassRsvpInviteSentAt: { type: Date },
+    masterclassRsvpConfirmedAt: { type: Date },
+
     // Deal-room — off by default; a delegate opts in from the portal before they
     // appear in the cross-registration directory other delegates can browse.
     directoryOptIn: { type: Boolean, default: false },

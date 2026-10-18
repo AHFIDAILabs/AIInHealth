@@ -36,6 +36,7 @@ import feedbackRoutes from './feedback.routes.js';
 import livestreamRoutes from './livestream.routes.js';
 import leaderboardRoutes from './leaderboard.routes.js';
 import sessionAttendanceRoutes from './sessionAttendance.routes.js';
+import masterclassRoutes from './masterclass.routes.js';
 
 const router = Router();
 
@@ -68,6 +69,7 @@ router.use('/scholarship-applications', scholarshipApplicationRoutes);
 router.use('/promo', promoRoutes);
 router.use('/rapporteur', rapporteurRoutes);
 router.use('/session-attendance', sessionAttendanceRoutes);
+router.use('/masterclass', masterclassRoutes);
 router.use('/knowledge-products', knowledgeProductRoutes);
 router.use('/forms', formsRoutes);
 router.use('/wai-health', waiHealthRoutes);

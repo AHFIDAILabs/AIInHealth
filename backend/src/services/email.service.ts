@@ -349,6 +349,38 @@ export const sendWaiHealthRsvpConfirmedEmail = async (to: string, fullName: stri
   });
 };
 
+// masterclass.controller.ts's adminSendInvites — a one-click RSVP for an
+// already-confirmed attendee (no new signup form, unlike the WAI-Health
+// Breakfast invite above), since this session is open to everyone already
+// registered rather than a separate audience that needs to self-identify.
+export const sendMasterclassRsvpInviteEmail = async (to: string, fullName: string, rsvpUrl: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'RSVP: AI in Health Masterclass — Day 1, 08:00–09:30',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>As part of Day 1 of the AI in Health Summit 2026, we're running the <strong>AI in Health Masterclass</strong> — a registration-only session before the main programme begins.</p>
+      <p><strong>When:</strong> 08:00&ndash;09:30, Day 1 (19 October 2026)<br /><strong>Where:</strong> Main Hall, ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
+      <p>Since it's registration-only, please let us know you're coming so we can plan the room accordingly.</p>
+      ${emailButton(rsvpUrl, "Yes, I'll be there")}
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
+export const sendMasterclassRsvpConfirmedEmail = async (to: string, fullName: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "You're confirmed: AI in Health Masterclass",
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>You're confirmed for the AI in Health Masterclass, Day 1 of the AI in Health Summit 2026.</p>
+      <p><strong>When:</strong> 08:00&ndash;09:30, Day 1 (19 October 2026)<br /><strong>Where:</strong> Main Hall, ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
+      <p>We look forward to seeing you there. Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 // adminNotifyNotEligible/adminBulkNotifyNotEligible (waiHealth.controller.ts)
 // — the Breakfast session is reserved for women leaders; this only ever goes
 // to a registrant whose gender was recorded as 'male'. Explicitly says any
