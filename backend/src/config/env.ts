@@ -189,6 +189,12 @@ const envSchema = z.object({
   ONEVIE_API_KEY: z.string().optional().default(''),
   ONEVIE_EVENT_ID: z.string().optional().default('2ec93f1d-d40a-49dc-801e-cfb77b3a7917'),
   ONEVIE_API_BASE_URL: z.string().optional().default('https://api.prod.onevie.app'),
+  // A separate Onevie EVENT ("AIHS-women delegate sync") for the WAI-Health
+  // Breakfast's own limited-seating room — the main ONEVIE_API_KEY above was
+  // created for the main Summit event and is explicitly rejected (401) by
+  // this one; it needs its own key created in Bravo for this event.
+  ONEVIE_WAI_API_KEY: z.string().optional().default(''),
+  ONEVIE_WAI_EVENT_ID: z.string().optional().default('786a5c20-09b8-4ba9-a554-048e1bd5c324'),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 

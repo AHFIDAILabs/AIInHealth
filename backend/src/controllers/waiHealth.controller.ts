@@ -8,10 +8,12 @@ import { WaiHealthRegistration, type WaiHealthRegistrationDoc } from '../models/
 import { WaiHealthSettings, getOrCreateWaiHealthSettings } from '../models/WaiHealthSettings.model.js';
 import { Registration } from '../models/Registration.model.js';
 import { verifyFormToken } from '../services/formToken.service.js';
+import { generateQrToken, qrPngBufferForToken } from '../services/qr.service.js';
 import {
   sendWaiHealthConfirmationEmail,
   sendWaiHealthRsvpConfirmedEmail,
   sendWaiHealthNotEligibleEmail,
+  sendWaiHealthCheckinQrEmail,
 } from '../services/email.service.js';
 import { recordAudit } from '../services/audit.service.js';
 import { runInBatches } from '../utils/batch.js';
@@ -122,8 +124,16 @@ export const rsvp = catchAsync(async (req: Request, res: Response) => {
   }
 
   waiHealthReg.rsvpConfirmedAt = new Date();
+  if (!waiHealthReg.checkinQrToken) waiHealthReg.checkinQrToken = generateQrToken();
   await waiHealthReg.save();
   sendWaiHealthRsvpConfirmedEmail(waiHealthReg.email, waiHealthReg.fullName).catch(() => {});
+  qrPngBufferForToken(waiHealthReg.checkinQrToken)
+    .then((buf) => sendWaiHealthCheckinQrEmail(waiHealthReg.email, waiHealthReg.fullName, buf))
+    .then(() => {
+      waiHealthReg.checkinQrSentAt = new Date();
+      return waiHealthReg.save();
+    })
+    .catch(() => {});
 
   res.json(new ApiResponse({ status: 'confirmed', confirmedAt: waiHealthReg.rsvpConfirmedAt }));
 });

@@ -84,7 +84,7 @@ import { createPartnerInteractionSchema } from '../../validations/partnerInterac
 import { blockIpSchema, setLockdownSchema } from '../../validations/security.validation.js';
 import { setVolunteerSettingsSchema } from '../../validations/volunteerSettings.validation.js';
 import { setLivestreamSettingsSchema } from '../../validations/livestreamSettings.validation.js';
-import { toggleOnevieSchema } from '../../validations/onevieIntegration.validation.js';
+import { toggleOnevieSchema, toggleOnevieWaiSchema } from '../../validations/onevieIntegration.validation.js';
 import { setInnovatorSettingsSchema } from '../../validations/innovatorSettings.validation.js';
 import { setPromoActiveSchema } from '../../validations/promo.validation.js';
 import { setWaiHealthCapacitySchema } from '../../validations/waiHealth.validation.js';
@@ -658,6 +658,15 @@ router.patch(
   onevieIntegrationController.toggle
 );
 router.post('/integrations/onevie/sync-now', requireRole('super_admin'), onevieIntegrationController.syncNow);
+
+router.get('/integrations/onevie-wai/status', requireRole('super_admin'), onevieIntegrationController.waiStatus);
+router.patch(
+  '/integrations/onevie-wai/toggle',
+  requireRole('super_admin'),
+  validate(toggleOnevieWaiSchema),
+  onevieIntegrationController.waiToggle
+);
+router.post('/integrations/onevie-wai/sync-now', requireRole('super_admin'), onevieIntegrationController.waiSyncNow);
 
 router.get('/analytics', requireRole(...allRoles), analyticsController.overview);
 router.get('/analytics-registrations', requireRole(...allRoles), analyticsController.registrations);

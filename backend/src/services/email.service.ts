@@ -349,6 +349,30 @@ export const sendWaiHealthRsvpConfirmedEmail = async (to: string, fullName: stri
   });
 };
 
+// Sent once a Breakfast seat is actually confirmed (waiHealth.controller.ts's
+// rsvp(), right after sendWaiHealthRsvpConfirmedEmail above) — a SEPARATE
+// email, not folded into that one, so the backfill for people who confirmed
+// before this QR step existed can send just this half without re-sending the
+// plain confirmation they already got. Same inline-cid: attachment technique
+// as sendTicketQrEmail, for the same Outlook-strips-data:-URIs reason. This
+// QR is checked at the Breakfast room's own door (a separate Onevie event
+// from the main Summit check-in — see onevieWai.service.ts), not the main
+// entrance.
+export const sendWaiHealthCheckinQrEmail = async (to: string, fullName: string, qrPngBuffer: Buffer): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Your Breakfast check-in QR code — Women in AI & Health',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Here's your check-in QR code for the Women in AI &amp; Health Breakfast — seats are limited, so please have this ready at the door.</p>
+      <p><img src="cid:qrcode" alt="Breakfast check-in QR code" width="220" height="220" /></p>
+      <p><strong>When:</strong> 08:00&ndash;09:30, Day 1 (19 October 2026)<br /><strong>Where:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
+      <p>This is separate from your main Summit check-in QR (if you have one) — keep both handy.</p>
+    `,
+    inlineImages: [{ contentId: 'qrcode', contentBytes: qrPngBuffer, contentType: 'image/png' }],
+  });
+};
+
 // masterclass.controller.ts's adminSendInvites — a one-click RSVP for an
 // already-confirmed attendee (no new signup form, unlike the WAI-Health
 // Breakfast invite above), since this session is open to everyone already
