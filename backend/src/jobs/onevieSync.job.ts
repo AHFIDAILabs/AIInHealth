@@ -2,7 +2,14 @@ import cron from 'node-cron';
 import { logger } from '../config/logger.js';
 import { Registration, type RegistrationDoc } from '../models/Registration.model.js';
 import { getOrCreateOnevieSettings } from '../models/OnevieSettings.model.js';
-import { onevieConfigured, syncRegistrationToOnevie, mapOnevieTicketTypeId, getOnevieEmail, OnevieApiError } from '../services/onevie.service.js';
+import {
+  onevieConfigured,
+  syncRegistrationToOnevie,
+  syncGroupMemberToOnevie,
+  mapOnevieTicketTypeId,
+  getOnevieEmail,
+  OnevieApiError,
+} from '../services/onevie.service.js';
 import type { HydratedDocument } from 'mongoose';
 
 // Pushes confirmed registrations to the check-in vendor on a schedule — see
@@ -180,6 +187,79 @@ const syncAll = async (
   return { succeeded, failed };
 };
 
+// --- Group member sync (added after discovering live that each group
+// member's own individual QR code was never pushed to Onevie — only the
+// primary contact's was, since every candidate/payload/conflict function
+// above only ever looks at the top-level registration). A separate, simpler
+// pass rather than folding into the logic above: group members don't need
+// resolveEmailConflicts' sibling-registration reasoning (a member's email
+// only ever appears once, embedded in their own parent), so reusing that
+// function here would just be dead complexity for a case that can't occur. ---
+
+interface GroupMemberSyncItem {
+  parent: HydratedDocument<RegistrationDoc>;
+  memberIndex: number;
+}
+
+const needsGroupMemberSync = (parent: HydratedDocument<RegistrationDoc>, member: { qrToken?: string | null; onevieSync?: { syncedAt?: Date | null } | null }): boolean => {
+  if (!member.qrToken) return false;
+  if (!member.onevieSync?.syncedAt) return true;
+  return parent.updatedAt > member.onevieSync.syncedAt;
+};
+
+const findGroupMemberSyncItems = async (): Promise<GroupMemberSyncItem[]> => {
+  const parents = await Registration.find({ status: 'confirmed', 'groupAttendees.0': { $exists: true } });
+  const items: GroupMemberSyncItem[] = [];
+  for (const parent of parents) {
+    parent.groupAttendees?.forEach((member, memberIndex) => {
+      if (needsGroupMemberSync(parent, member)) items.push({ parent, memberIndex });
+    });
+  }
+  return items;
+};
+
+const syncGroupMemberOne = async (item: GroupMemberSyncItem): Promise<SyncOneResult> => {
+  const { parent, memberIndex } = item;
+  const member = parent.groupAttendees![memberIndex];
+  const attemptedAt = new Date();
+  try {
+    await syncGroupMemberToOnevie(parent, member);
+    member.onevieSync = { status: 'synced', ticketTypeId: mapOnevieTicketTypeId(parent), syncedAt: attemptedAt, lastAttemptAt: attemptedAt, lastError: undefined };
+    parent.markModified('groupAttendees');
+    await parent.save();
+    return { ok: true, rateLimited: false };
+  } catch (err) {
+    const message = err instanceof OnevieApiError ? `[${err.status}] ${err.message}` : (err as Error).message;
+    member.onevieSync = { ...member.onevieSync, status: 'failed', lastAttemptAt: attemptedAt, lastError: message.slice(0, 500) };
+    parent.markModified('groupAttendees');
+    await parent.save();
+    return { ok: false, rateLimited: err instanceof OnevieApiError && err.status === 429 };
+  }
+};
+
+// Same serial-with-decaying-delay shape as syncAll above — one shared Onevie
+// rate limit across the whole event, not a separate budget for group members.
+const syncAllGroupMembers = async (items: GroupMemberSyncItem[]): Promise<{ succeeded: number; failed: number }> => {
+  let succeeded = 0;
+  let failed = 0;
+  let delay = BASE_DELAY_MS;
+
+  for (let i = 0; i < items.length; i += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    const result = await syncGroupMemberOne(items[i]);
+    if (result.ok) succeeded += 1;
+    else failed += 1;
+
+    delay = result.rateLimited ? Math.min(delay * 2, MAX_DELAY_MS) : Math.max(delay * 0.8, BASE_DELAY_MS);
+    if (i + 1 < items.length) {
+      // eslint-disable-next-line no-await-in-loop
+      await sleep(delay);
+    }
+  }
+
+  return { succeeded, failed };
+};
+
 export const runOnevieSync = async (): Promise<{ skipped: boolean; synced: number; failed: number; durationMs: number }> => {
   if (running) {
     logger.warn('onevieSync: previous run still in progress, skipping this tick');
@@ -201,7 +281,13 @@ export const runOnevieSync = async (): Promise<{ skipped: boolean; synced: numbe
 
     const candidates = await Registration.find(needsSyncFilter);
     const toSync = await resolveEmailConflicts(candidates);
-    const { succeeded, failed } = await syncAll(toSync);
+    const primaryResult = await syncAll(toSync);
+
+    const groupMemberItems = await findGroupMemberSyncItems();
+    const groupMemberResult = await syncAllGroupMembers(groupMemberItems);
+
+    const succeeded = primaryResult.succeeded + groupMemberResult.succeeded;
+    const failed = primaryResult.failed + groupMemberResult.failed;
 
     const durationMs = Date.now() - startedAt;
     settings.set({ lastRunAt: new Date(), lastRunSynced: succeeded, lastRunFailed: failed, lastRunDurationMs: durationMs });

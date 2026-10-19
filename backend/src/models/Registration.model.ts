@@ -56,6 +56,20 @@ const registrationSchema = new Schema(
         checkedIn: { type: Boolean, default: false },
         checkedInAt: { type: Date },
         gender: { type: String, enum: GENDERS },
+        // Onevie check-in sync, per member — onevieSync.job.ts's original
+        // design only ever synced the PRIMARY contact's own qrToken, leaving
+        // every other group member's individual QR code unknown to the door
+        // scanner (discovered live, 19 Oct 2026, from real "my QR doesn't
+        // work" reports). Same shape as the top-level onevieSync above, just
+        // tracked per member instead of per registration.
+        onevieSync: {
+          _id: false,
+          status: { type: String, enum: ['pending', 'synced', 'failed'] },
+          ticketTypeId: { type: String, trim: true },
+          syncedAt: { type: Date },
+          lastAttemptAt: { type: Date },
+          lastError: { type: String, trim: true, maxlength: 500 },
+        },
       },
     ],
 

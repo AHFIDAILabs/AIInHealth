@@ -25,3 +25,15 @@ export const scanAttendanceSchema = z.object({
   }),
 });
 export type ScanAttendanceInput = z.infer<typeof scanAttendanceSchema>['body'];
+
+// Manual fallback for a badge whose QR genuinely won't scan (bad print,
+// damaged badge, poor lighting) — same "search then pick a row" shape as
+// checkin.controller.ts's manual check-in fallback, scoped to this one
+// session instead of the whole event.
+export const manualRecordAttendanceSchema = z.object({
+  body: z.object({
+    registrationId: z.string().trim().min(1, 'registrationId is required'),
+    memberIndex: z.coerce.number().int().min(0).optional(),
+  }),
+});
+export type ManualRecordAttendanceInput = z.infer<typeof manualRecordAttendanceSchema>['body'];
