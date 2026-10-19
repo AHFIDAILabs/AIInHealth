@@ -10,7 +10,11 @@ import { SessionAttendanceRecord } from '../models/SessionAttendanceRecord.model
 import { createAttendanceTokens } from '../services/sessionAttendanceToken.service.js';
 import { recordAudit } from '../services/audit.service.js';
 import { broadcastAdminEvent } from '../sockets/adminNamespace.js';
-import type { AdminCreateAttendanceTokensInput, ScanAttendanceInput } from '../validations/sessionAttendance.validation.js';
+import type {
+  AdminCreateAttendanceTokensInput,
+  ScanAttendanceInput,
+  ManualRecordAttendanceInput,
+} from '../validations/sessionAttendance.validation.js';
 
 interface SessionLike {
   _id: unknown;
@@ -67,19 +71,21 @@ export const getSessionInfo = catchAsync(async (req: Request, res: Response) => 
   );
 });
 
-// POST /:token/scan — body: { qrToken }. Idempotent: scanning the same
-// person into the same room twice returns 'already_recorded' instead of a
-// duplicate row or an error — a volunteer re-scanning by accident (or two
-// volunteers' phones both catching the same badge) shouldn't produce a
-// confusing failure.
-export const scan = catchAsync(async (req: Request, res: Response) => {
-  const { qrToken } = req.body as ScanAttendanceInput;
-  const sessionId = req.sessionAttendance!.sessionId;
-
-  const found = await findRegistrationByQrToken(qrToken);
-  if (!found) throw new ApiError(404, "That QR code doesn't match any confirmed registration.", 'NOT_FOUND');
-  const { registration, memberIndex } = found;
-
+// Shared by scan() and manualRecord() below — looks up (or confirms) the
+// existing record first, same as before, but now also tolerates losing a
+// race to a second simultaneous scan of the same person: the unique index on
+// {session, registration, memberIndex} is the real guarantee against a
+// duplicate row, and a create() that loses that race no longer bubbles up as
+// a raw 409/500 — it's re-read and returned as the same friendly
+// 'already_recorded' response a sequential duplicate scan would get. Two
+// volunteers' phones catching the same badge at the same instant is exactly
+// the scenario this room's "two attendance-takers" staffing plan invites.
+const recordAttendance = async (
+  sessionId: string,
+  registration: InstanceType<typeof Registration>,
+  memberIndex: number | undefined,
+  scannedByToken: string
+) => {
   const attendee = {
     name: personName(registration, memberIndex),
     organization: registration.organization || registration.companyName || undefined,
@@ -92,19 +98,105 @@ export const scan = catchAsync(async (req: Request, res: Response) => {
     memberIndex: memberIndex ?? null,
   });
   if (existing) {
-    res.json(new ApiResponse({ status: 'already_recorded', attendee, scannedAt: existing.scannedAt }));
-    return;
+    return { status: 'already_recorded' as const, attendee, scannedAt: existing.scannedAt };
   }
 
-  const record = await SessionAttendanceRecord.create({
-    session: sessionId,
-    registration: registration.id,
-    memberIndex,
-    scannedByToken: req.sessionAttendance!.tokenId,
-  });
+  try {
+    const record = await SessionAttendanceRecord.create({
+      session: sessionId,
+      registration: registration.id,
+      memberIndex,
+      scannedByToken,
+    });
+    broadcastAdminEvent('session-attendance.scan', { sessionId, attendee, scannedAt: record.scannedAt });
+    return { status: 'recorded' as const, attendee, scannedAt: record.scannedAt };
+  } catch (err) {
+    if ((err as { code?: number }).code !== 11000) throw err;
+    // Lost the race — someone else's request inserted the same
+    // (session, registration, memberIndex) a moment earlier.
+    const winner = await SessionAttendanceRecord.findOne({ session: sessionId, registration: registration.id, memberIndex: memberIndex ?? null });
+    return { status: 'already_recorded' as const, attendee, scannedAt: winner?.scannedAt ?? new Date() };
+  }
+};
 
-  broadcastAdminEvent('session-attendance.scan', { sessionId, attendee, scannedAt: record.scannedAt });
-  res.json(new ApiResponse({ status: 'recorded', attendee, scannedAt: record.scannedAt }));
+// POST /:token/scan — body: { qrToken }. Idempotent: scanning the same
+// person into the same room twice returns 'already_recorded' instead of a
+// duplicate row or an error — a volunteer re-scanning by accident (or two
+// volunteers' phones both catching the same badge) shouldn't produce a
+// confusing failure.
+export const scan = catchAsync(async (req: Request, res: Response) => {
+  const { qrToken } = req.body as ScanAttendanceInput;
+  const sessionId = req.sessionAttendance!.sessionId;
+
+  const found = await findRegistrationByQrToken(qrToken);
+  if (!found) throw new ApiError(404, "That QR code doesn't match any confirmed registration.", 'NOT_FOUND');
+
+  const result = await recordAttendance(sessionId, found.registration, found.memberIndex, req.sessionAttendance!.tokenId);
+  res.json(new ApiResponse(result));
+});
+
+// GET /:token/search?q= — manual fallback when a badge's QR genuinely won't
+// scan (bad print, damaged badge, poor lighting) — same shape as
+// checkin.controller.ts's search, but deliberately a separate, standalone
+// query (not a shared import) for the same reason findRegistrationByQrToken
+// above is: this brand-new, still-being-proven feature should never be able
+// to affect the live main-entrance desk's own code, even by accident.
+export const searchAttendees = catchAsync(async (req: Request, res: Response) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  if (q.length < 2) {
+    res.json(new ApiResponse([]));
+    return;
+  }
+  const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  const items = await Registration.find({
+    status: 'confirmed',
+    isActive: true,
+    $or: [
+      { fullName: rx },
+      { email: rx },
+      { contactName: rx },
+      { companyName: rx },
+      { 'groupAttendees.fullName': rx },
+      { 'groupAttendees.email': rx },
+    ],
+  })
+    .limit(30)
+    .lean();
+
+  const rows: { id: string; name: string; organization?: string; memberIndex?: number }[] = [];
+  for (const r of items) {
+    if (rx.test(r.fullName ?? '') || rx.test(r.email ?? '') || rx.test(r.contactName ?? '') || rx.test(r.companyName ?? '')) {
+      rows.push({ id: String(r._id), name: r.fullName || r.contactName || r.companyName || 'Unknown', organization: (r.organization || r.companyName) ?? undefined });
+    }
+    (r.groupAttendees ?? []).forEach((m, i) => {
+      if (rx.test(m.fullName ?? '') || rx.test(m.email ?? '')) {
+        rows.push({ id: String(r._id), name: m.fullName || 'Group member', organization: (r.organization || r.companyName) ?? undefined, memberIndex: i });
+      }
+    });
+    if (rows.length >= 15) break;
+  }
+
+  res.json(new ApiResponse(rows.slice(0, 15)));
+});
+
+// POST /:token/manual — body: { registrationId, memberIndex? }. The actual
+// record-attendance step once a volunteer has found the right person via
+// search() above — same recordAttendance() helper and same
+// recorded/already_recorded shape as a real scan, so the frontend doesn't
+// need to know which path produced the result.
+export const manualRecord = catchAsync(async (req: Request, res: Response) => {
+  const { registrationId, memberIndex } = req.body as ManualRecordAttendanceInput;
+  if (!isValidObjectId(registrationId)) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
+  const sessionId = req.sessionAttendance!.sessionId;
+
+  const registration = await Registration.findOne({ _id: registrationId, status: 'confirmed', isActive: true });
+  if (!registration) throw new ApiError(404, 'Registration not found', 'NOT_FOUND');
+  if (memberIndex !== undefined && !registration.groupAttendees?.[memberIndex]) {
+    throw new ApiError(404, 'Group member not found', 'NOT_FOUND');
+  }
+
+  const result = await recordAttendance(sessionId, registration, memberIndex, req.sessionAttendance!.tokenId);
+  res.json(new ApiResponse(result));
 });
 
 // --- Admin-side ---

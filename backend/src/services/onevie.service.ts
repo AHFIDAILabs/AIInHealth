@@ -159,13 +159,14 @@ export class OnevieApiError extends Error {
   }
 }
 
-// POSTs one registration. Throws OnevieApiError on any non-2xx response —
-// the job decides how to record that against the registration; this
-// function has no DB access of its own.
-export const syncRegistrationToOnevie = async (registration: RegistrationHydrated): Promise<{ idempotentReplay: boolean }> => {
+// Shared POST + response validation — both the primary-contact sync below
+// and syncGroupMemberToOnevie hit the same endpoint with the same shape of
+// payload, just built from a different source (the registration itself vs.
+// one of its groupAttendees). `logContext` is only for the "Onevie returned a
+// different qr_payload" error log, so it's traceable back to whichever
+// person's sync produced it.
+const postOneviePayload = async (payload: OneviePayload, logContext: Record<string, unknown>): Promise<{ idempotentReplay: boolean }> => {
   if (!configured) throw new Error('Onevie is not configured (ONEVIE_API_KEY unset)');
-
-  const payload = buildOneviePayload(registration);
 
   const res = await fetch(REGISTRATIONS_URL, {
     method: 'POST',
@@ -187,10 +188,60 @@ export const syncRegistrationToOnevie = async (registration: RegistrationHydrate
     // code instead of using ours, which is exactly what this integration
     // exists to prevent.
     logger.error(
-      { registrationId: registration.id, sent: payload.qr_secret, returned: body.data.qr_payload },
+      { ...logContext, sent: payload.qr_secret, returned: body.data.qr_payload },
       'Onevie returned a different qr_payload than the qr_secret we sent'
     );
   }
 
   return { idempotentReplay: Boolean(body?.data?.idempotent_replay) };
+};
+
+// POSTs one registration's PRIMARY contact. Throws OnevieApiError on any
+// non-2xx response — the job decides how to record that against the
+// registration; this function has no DB access of its own.
+export const syncRegistrationToOnevie = async (registration: RegistrationHydrated): Promise<{ idempotentReplay: boolean }> => {
+  const payload = buildOneviePayload(registration);
+  return postOneviePayload(payload, { registrationId: registration.id });
+};
+
+export interface OnevieGroupMember {
+  fullName?: string | null;
+  email?: string | null;
+  qrToken?: string | null;
+}
+
+// Builds a group member's OWN Onevie payload — their own qrToken as
+// qr_secret (never the parent registration's), their own name/email, the
+// same ticket type the parent registration itself would get (group members
+// don't have an independent ticketCategory of their own), and always the
+// phone fallback since groupAttendees has no phone field at all to sanitize.
+export const buildOnevieGroupMemberPayload = (parent: RegistrationHydrated, member: OnevieGroupMember): OneviePayload => {
+  if (!member.qrToken) {
+    throw new Error(`Group member of registration ${parent.id} has no qrToken — cannot build a qr_secret`);
+  }
+  const { firstName, lastName } = splitFullName(member.fullName || 'Guest');
+  const isCompanyContact = isCompanyContactType(parent.type);
+  const organization = (isCompanyContact ? parent.companyName : parent.organization) || 'Not specified';
+
+  return {
+    external_reference: member.qrToken,
+    qr_secret: member.qrToken,
+    ticket_type_id: mapOnevieTicketTypeId(parent),
+    first_name: firstName,
+    last_name: lastName,
+    email: (member.email || '').toLowerCase().trim(),
+    phone: PHONE_FALLBACK,
+    send_confirmation_email: false,
+    form_answers: { job_title: 'Not specified', organization },
+  };
+};
+
+// Same contract as syncRegistrationToOnevie, for one group member instead of
+// the primary contact.
+export const syncGroupMemberToOnevie = async (
+  parent: RegistrationHydrated,
+  member: OnevieGroupMember
+): Promise<{ idempotentReplay: boolean }> => {
+  const payload = buildOnevieGroupMemberPayload(parent, member);
+  return postOneviePayload(payload, { parentRegistrationId: parent.id, memberEmail: member.email });
 };

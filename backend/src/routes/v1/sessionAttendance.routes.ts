@@ -3,7 +3,7 @@ import * as sessionAttendanceController from '../../controllers/sessionAttendanc
 import { requireSessionAttendanceToken } from '../../middlewares/sessionAttendance.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { attendanceReadLimiter, attendanceScanLimiter } from '../../middlewares/rateLimiter.middleware.js';
-import { scanAttendanceSchema } from '../../validations/sessionAttendance.validation.js';
+import { scanAttendanceSchema, manualRecordAttendanceSchema } from '../../validations/sessionAttendance.validation.js';
 
 const router = Router();
 
@@ -16,6 +16,17 @@ router.post(
   requireSessionAttendanceToken,
   validate(scanAttendanceSchema),
   sessionAttendanceController.scan
+);
+// Manual fallback for a badge whose QR genuinely won't scan — same read
+// limiter as the session-info GET above (a search-as-you-type, not a
+// high-volume scan loop).
+router.get('/:token/search', attendanceReadLimiter, requireSessionAttendanceToken, sessionAttendanceController.searchAttendees);
+router.post(
+  '/:token/manual',
+  attendanceScanLimiter,
+  requireSessionAttendanceToken,
+  validate(manualRecordAttendanceSchema),
+  sessionAttendanceController.manualRecord
 );
 
 export default router;

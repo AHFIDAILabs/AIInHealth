@@ -39,6 +39,31 @@ export const scanSessionAttendance = async (token: string, qrToken: string): Pro
   return res.data.data;
 };
 
+// Manual fallback for a badge whose QR genuinely won't scan.
+export interface AttendeeSearchResult {
+  id: string;
+  name: string;
+  organization?: string;
+  memberIndex?: number;
+}
+
+export const searchSessionAttendees = async (token: string, q: string): Promise<AttendeeSearchResult[]> => {
+  const res = await api.get<{ success: true; data: AttendeeSearchResult[] }>(`/session-attendance/${token}/search`, { params: { q } });
+  return res.data.data;
+};
+
+export const manualRecordSessionAttendance = async (
+  token: string,
+  registrationId: string,
+  memberIndex?: number
+): Promise<ScanAttendanceResult> => {
+  const res = await api.post<{ success: true; data: ScanAttendanceResult }>(`/session-attendance/${token}/manual`, {
+    registrationId,
+    memberIndex,
+  });
+  return res.data.data;
+};
+
 // --- Admin ---
 
 export interface AdminAttendanceToken {

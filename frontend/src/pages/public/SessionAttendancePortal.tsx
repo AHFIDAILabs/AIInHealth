@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { CheckCircle2, AlertCircle, Users } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Users, Search, UserCheck } from 'lucide-react';
 import { SEO } from '../../components/seo/SEO';
 import { Banner } from '../../components/ui/Banner';
 import { QrScanner } from '../../components/admin/QrScanner';
 import {
   fetchSessionAttendanceInfo,
   scanSessionAttendance,
+  searchSessionAttendees,
+  manualRecordSessionAttendance,
   type SessionAttendanceInfo,
   type ScannedAttendee,
+  type ScanAttendanceResult,
+  type AttendeeSearchResult,
 } from '../../services/sessionAttendance.service';
 import { getApiErrorMessage } from '../../services/api';
 
@@ -27,6 +31,11 @@ export const SessionAttendancePortal = () => {
   const [loadError, setLoadError] = useState('');
   const [flash, setFlash] = useState<Flash>(null);
   const scanLockRef = useRef(false);
+  const [showManual, setShowManual] = useState(false);
+  const [manualQuery, setManualQuery] = useState('');
+  const [manualResults, setManualResults] = useState<AttendeeSearchResult[]>([]);
+  const [manualSearching, setManualSearching] = useState(false);
+  const [manualBusyId, setManualBusyId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     fetchSessionAttendanceInfo(token)
@@ -39,6 +48,20 @@ export const SessionAttendancePortal = () => {
   const describeAttendee = (attendee: ScannedAttendee): string | undefined =>
     [attendee.organization, attendee.ticketCategory].filter(Boolean).join(' · ') || undefined;
 
+  // Shared by a real scan and a manual-search pick below — same flash/count
+  // update either way, so the volunteer sees identical feedback regardless
+  // of which path actually recorded the person.
+  const applyResult = useCallback((res: ScanAttendanceResult) => {
+    setFlash({
+      kind: res.status,
+      text: res.status === 'recorded' ? res.attendee.name : `${res.attendee.name} — already scanned`,
+      sub: describeAttendee(res.attendee),
+    });
+    if (res.status === 'recorded') {
+      setInfo((prev) => (prev ? { ...prev, count: prev.count + 1 } : prev));
+    }
+  }, []);
+
   const handleScan = useCallback(
     async (qrToken: string) => {
       // Same 2s cooldown as the main check-in desk's QrScanner usage — the
@@ -49,14 +72,7 @@ export const SessionAttendancePortal = () => {
       scanLockRef.current = true;
       try {
         const res = await scanSessionAttendance(token, qrToken);
-        setFlash({
-          kind: res.status,
-          text: res.status === 'recorded' ? res.attendee.name : `${res.attendee.name} — already scanned`,
-          sub: describeAttendee(res.attendee),
-        });
-        if (res.status === 'recorded') {
-          setInfo((prev) => (prev ? { ...prev, count: prev.count + 1 } : prev));
-        }
+        applyResult(res);
       } catch (err) {
         setFlash({ kind: 'error', text: getApiErrorMessage(err, "That code didn't scan.") });
       } finally {
@@ -65,8 +81,36 @@ export const SessionAttendancePortal = () => {
         }, 2000);
       }
     },
-    [token]
+    [token, applyResult]
   );
+
+  const runManualSearch = (q: string) => {
+    setManualQuery(q);
+    if (q.trim().length < 2) {
+      setManualResults([]);
+      return;
+    }
+    setManualSearching(true);
+    searchSessionAttendees(token, q.trim())
+      .then(setManualResults)
+      .catch(() => setManualResults([]))
+      .finally(() => setManualSearching(false));
+  };
+
+  const pickManualResult = async (result: AttendeeSearchResult) => {
+    const busyKey = result.memberIndex !== undefined ? `${result.id}-${result.memberIndex}` : result.id;
+    setManualBusyId(busyKey);
+    try {
+      const res = await manualRecordSessionAttendance(token, result.id, result.memberIndex);
+      applyResult(res);
+      setManualQuery('');
+      setManualResults([]);
+    } catch (err) {
+      setFlash({ kind: 'error', text: getApiErrorMessage(err, "Couldn't record that person.") });
+    } finally {
+      setManualBusyId(null);
+    }
+  };
 
   if (loadError) {
     return (
@@ -106,6 +150,69 @@ export const SessionAttendancePortal = () => {
 
         <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
           <QrScanner onScan={handleScan} />
+        </div>
+
+        <div className="mt-4">
+          {!showManual ? (
+            <button
+              type="button"
+              onClick={() => setShowManual(true)}
+              className="w-full rounded-xl border border-dashed border-slate-300 bg-white py-3 text-center text-sm font-semibold text-slate-500 hover:border-orange/40 hover:text-orange"
+            >
+              Badge won&rsquo;t scan? Find them by name
+            </button>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Search instead</p>
+              <div className="relative mt-2">
+                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  autoFocus
+                  value={manualQuery}
+                  onChange={(e) => runManualSearch(e.target.value)}
+                  placeholder="Search by name or email…"
+                  className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-navy placeholder:text-slate-400 focus:border-orange/40 focus:outline-none"
+                />
+              </div>
+              {manualSearching && <p className="mt-2 text-xs text-slate-400">Searching…</p>}
+              {!manualSearching && manualQuery.trim().length >= 2 && manualResults.length === 0 && (
+                <p className="mt-2 text-xs text-slate-400">No confirmed registration matches.</p>
+              )}
+              {manualResults.length > 0 && (
+                <div className="mt-2 max-h-56 space-y-1.5 overflow-y-auto">
+                  {manualResults.map((r) => {
+                    const key = r.memberIndex !== undefined ? `${r.id}-${r.memberIndex}` : r.id;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        disabled={manualBusyId === key}
+                        onClick={() => pickManualResult(r)}
+                        className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2.5 text-left hover:border-orange/40 hover:bg-offwhite disabled:opacity-50"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium text-navy">{r.name}</span>
+                          {r.organization && <span className="block truncate text-xs text-slate-400">{r.organization}</span>}
+                        </span>
+                        <UserCheck size={16} className="shrink-0 text-orange" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowManual(false);
+                  setManualQuery('');
+                  setManualResults([]);
+                }}
+                className="mt-3 text-xs font-semibold text-slate-400 hover:text-navy"
+              >
+                Back to scanning
+              </button>
+            </div>
+          )}
         </div>
 
         {flash && (
