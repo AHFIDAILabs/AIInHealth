@@ -423,6 +423,32 @@ export const sendMasterclassRoomUpdateEmail = async (to: string, fullName: strin
   });
 };
 
+// Day 2's parallel-breakout reminder — scoped to the 3 real "which room do I
+// go to" moments on the agenda (blocks with several simultaneous session
+// options), not every single agenda row. A back-to-back run of plenary items
+// sharing one room doesn't need this; the whole point is the room CHOICE.
+// `options` is pulled live from the Session collection at send time, so a
+// last-minute room swap is always reflected correctly.
+export const sendParallelSessionBlockReminderEmail = async (
+  to: string,
+  fullName: string,
+  data: { startTime: string; endTime: string; options: { title: string; room: string; format: string }[] }
+): Promise<void> => {
+  const optionsHtml = data.options
+    .map((o) => `<li style="margin-bottom:8px;"><strong>${o.room}</strong> &mdash; ${o.title} <span style="color:#64748B;">(${o.format})</span></li>`)
+    .join('');
+  await sendEmail({
+    to,
+    subject: `Starting now (${data.startTime}): choose your room — AI in Health Summit 2026`,
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>The ${data.startTime}&ndash;${data.endTime} session block is starting now, with a few rooms running in parallel:</p>
+      <ul style="padding-left:20px;margin:16px 0;">${optionsHtml}</ul>
+      <p>Check your own agenda/bookmarks in the delegate portal if you're not sure which one you'd planned to attend. See you there!</p>
+    `,
+  });
+};
+
 // adminNotifyNotEligible/adminBulkNotifyNotEligible (waiHealth.controller.ts)
 // — the Breakfast session is reserved for women leaders; this only ever goes
 // to a registrant whose gender was recorded as 'male'. Explicitly says any

@@ -4,10 +4,12 @@ import { broadcastAdminEvent } from '../sockets/adminNamespace.js';
 import { logger } from '../config/logger.js';
 import type { SessionDay } from '../types/enums.js';
 
-// Real summit dates — see the Concept Note / System Design Document. Kept local to
-// this job rather than in the shared enums file since nothing else needs an actual
-// calendar date for "day1"/"day2", only this reminder scheduler does.
-const DAY_DATES: Record<SessionDay, string> = {
+// Real summit dates — see the Concept Note / System Design Document. Kept
+// local to this file rather than the shared enums file since nothing else
+// needs an actual calendar date for "day1"/"day2" — exported for
+// parallelSessionReminder.job.ts, the one other job that also needs to
+// resolve a session's real start Date, so the two never drift apart.
+export const DAY_DATES: Record<SessionDay, string> = {
   day1: '2026-10-19',
   day2: '2026-10-20',
 };
