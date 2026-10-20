@@ -47,6 +47,12 @@ const sessionSchema = new Schema(
     // Set by the session-reminder cron job once it's fired for this session, so a
     // 5-minute polling loop never sends the same reminder twice.
     reminderSent: { type: Boolean, default: false },
+    // Set by parallelSessionReminder.job.ts once the whole parallel-options
+    // block this session belongs to has been emailed to confirmed attendees —
+    // distinct from reminderSent above (that one's the staff-facing admin
+    // broadcast; this is the delegate-facing "choose your room" email, and
+    // only fires for a block with 2+ simultaneous sessions, never a lone one).
+    parallelBlockReminderSent: { type: Boolean, default: false },
     // AI-Assisted Rapporteur System Stage 2, Layer 3 — continuous plenary live
     // transcript, admin-only internal monitoring (liveTranscript.controller.ts).
     // isLiveTranscribed flips true the first time an admin starts a capture for

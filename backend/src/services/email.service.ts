@@ -405,6 +405,50 @@ export const sendMasterclassRsvpConfirmedEmail = async (to: string, fullName: st
   });
 };
 
+// Room-change notice to everyone who already RSVP'd yes for the Masterclass
+// (masterclassRsvpConfirmedAt set) — the invite/confirmation emails above
+// both said "Main Hall"; the session has since moved to Room 1, upstairs.
+// No link, no env-dependent value of any kind — just a plain update.
+export const sendMasterclassRoomUpdateEmail = async (to: string, fullName: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Room Update: AI in Health Masterclass — Room 1 (Upstairs)',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>A quick update on the AI in Health Masterclass you RSVP'd for: the session will now be held in <strong>Room 1, upstairs</strong> (not the Main Hall as previously mentioned).</p>
+      <p><strong>When:</strong> 08:00&ndash;09:30, Day 1 (19 October 2026)<br /><strong>Where:</strong> Room 1 (Upstairs), ${VENUE_FULL_ADDRESS}</p>
+      <p><strong>Please note:</strong> space in the room is limited, and seats are first come, first served — we'd encourage arriving a few minutes early to make sure you get a spot.</p>
+      <p>See you there. Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
+// Day 2's parallel-breakout reminder — scoped to the 3 real "which room do I
+// go to" moments on the agenda (blocks with several simultaneous session
+// options), not every single agenda row. A back-to-back run of plenary items
+// sharing one room doesn't need this; the whole point is the room CHOICE.
+// `options` is pulled live from the Session collection at send time, so a
+// last-minute room swap is always reflected correctly.
+export const sendParallelSessionBlockReminderEmail = async (
+  to: string,
+  fullName: string,
+  data: { startTime: string; endTime: string; options: { title: string; room: string; format: string }[] }
+): Promise<void> => {
+  const optionsHtml = data.options
+    .map((o) => `<li style="margin-bottom:8px;"><strong>${o.room}</strong> &mdash; ${o.title} <span style="color:#64748B;">(${o.format})</span></li>`)
+    .join('');
+  await sendEmail({
+    to,
+    subject: `Starting now (${data.startTime}): choose your room — AI in Health Summit 2026`,
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>The ${data.startTime}&ndash;${data.endTime} session block is starting now, with a few rooms running in parallel:</p>
+      <ul style="padding-left:20px;margin:16px 0;">${optionsHtml}</ul>
+      <p>Check your own agenda/bookmarks in the delegate portal if you're not sure which one you'd planned to attend. See you there!</p>
+    `,
+  });
+};
+
 // adminNotifyNotEligible/adminBulkNotifyNotEligible (waiHealth.controller.ts)
 // — the Breakfast session is reserved for women leaders; this only ever goes
 // to a registrant whose gender was recorded as 'male'. Explicitly says any
