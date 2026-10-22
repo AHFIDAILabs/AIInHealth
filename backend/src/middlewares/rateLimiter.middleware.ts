@@ -382,6 +382,19 @@ export const feedbackLimiter = rateLimit({
   handler: onLimitExceeded('feedbackLimiter', 'low'),
 });
 
+// GET /feedback/invite/:token — personalizes the otherwise-anonymous feedback
+// form with the invitee's name. Same shape as attendanceReadLimiter: keyed on
+// the token itself, not IP.
+export const feedbackInviteReadLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: tokenKey,
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please try again shortly.' } },
+  handler: onLimitExceeded('feedbackInviteReadLimiter', 'low'),
+});
+
 export const askAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

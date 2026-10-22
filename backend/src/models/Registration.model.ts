@@ -217,6 +217,17 @@ const registrationSchema = new Schema(
     masterclassRsvpInviteSentAt: { type: Date },
     masterclassRsvpConfirmedAt: { type: Date },
 
+    // Post-event feedback request (feedback.controller.ts's adminSendInvites/
+    // inviteInfo) — a personal link to the existing anonymous Feedback form
+    // (Feedback.model.ts). The token only identifies the INVITE, so the admin
+    // can see who's been asked and who's responded; the Feedback submission it
+    // leads to still carries no identity of its own, same as every other
+    // feedback entry. Same crypto.randomBytes(24).toString('base64url') idiom
+    // as masterclassRsvpToken above.
+    feedbackInviteToken: { type: String, unique: true, sparse: true },
+    feedbackInviteSentAt: { type: Date },
+    feedbackRespondedAt: { type: Date },
+
     // Deal-room — off by default; a delegate opts in from the portal before they
     // appear in the cross-registration directory other delegates can browse.
     directoryOptIn: { type: Boolean, default: false },

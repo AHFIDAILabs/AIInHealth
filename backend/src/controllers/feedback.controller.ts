@@ -1,19 +1,32 @@
 import type { Request, Response } from 'express';
+import crypto from 'node:crypto';
 import type { FilterQuery } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Feedback, type FeedbackDoc } from '../models/Feedback.model.js';
 import { Session } from '../models/Session.model.js';
+import { Registration } from '../models/Registration.model.js';
 import {
   createFeedbackSchema,
   listFeedbackQuerySchema,
   feedbackQrQuerySchema,
+  sendFeedbackInvitesSchema,
   type CreateFeedbackInput,
+  type FeedbackInviteParams,
+  type SendFeedbackInvitesInput,
 } from '../validations/feedback.validation.js';
 import { verifyFormToken } from '../services/formToken.service.js';
 import { qrPngBufferForUrl } from '../services/qr.service.js';
+import { sendFeedbackRequestEmail } from '../services/email.service.js';
+import { runInBatches } from '../utils/batch.js';
+import { recordAudit } from '../services/audit.service.js';
 import { env } from '../config/env.js';
+
+// Opaque, random — same crypto.randomBytes(24).toString('base64url') idiom as
+// every other invite/magic-link token in this app (see
+// registrationRsvp.controller.ts's generateRsvpToken).
+const generateFeedbackInviteToken = (): string => crypto.randomBytes(24).toString('base64url');
 
 // POST /feedback — public, anonymous (see Feedback.model.ts's own comment on
 // why there's no identity field to spam-score/velocity-bump the way Contact/
@@ -21,7 +34,7 @@ import { env } from '../config/env.js';
 // time-trap is the full extent of abuse protection here, proportionate to
 // how low-stakes an anonymous rating submission is).
 export const create = catchAsync(async (req: Request, res: Response) => {
-  const { formMeta: _honeypot, formToken, sessionRef, rating, comment }: CreateFeedbackInput = createFeedbackSchema.parse({
+  const { formMeta: _honeypot, formToken, sessionRef, rating, comment, inviteToken }: CreateFeedbackInput = createFeedbackSchema.parse({
     body: req.body,
   }).body;
   if (!verifyFormToken(formToken)) {
@@ -33,7 +46,79 @@ export const create = catchAsync(async (req: Request, res: Response) => {
   }
 
   await Feedback.create({ sessionRef: sessionRef || undefined, rating, comment });
+
+  // Best-effort — marks the INVITE as responded (so a resend campaign can
+  // skip them); never blocks or fails the anonymous submission above, and
+  // never attaches any identity to the Feedback document itself.
+  if (inviteToken) {
+    await Registration.updateOne(
+      { feedbackInviteToken: inviteToken, feedbackRespondedAt: { $exists: false } },
+      { $set: { feedbackRespondedAt: new Date() } }
+    ).catch(() => undefined);
+  }
+
   res.status(201).json(new ApiResponse({ message: 'Thanks for your feedback!' }));
+});
+
+// GET /feedback/invite/:token — public. Personalizes the (still anonymous)
+// feedback form with the invitee's name; tells the frontend if they've
+// already responded so it can show a friendlier note instead of blocking
+// them from submitting again.
+export const inviteInfo = catchAsync(async (req: Request, res: Response) => {
+  const { token } = req.params as unknown as FeedbackInviteParams;
+  const registration = await Registration.findOne({ feedbackInviteToken: token }).select('fullName feedbackRespondedAt');
+  if (!registration) throw new ApiError(404, 'This feedback link is invalid or has expired.', 'NOT_FOUND');
+
+  res.json(
+    new ApiResponse({
+      fullName: registration.fullName ?? null,
+      alreadyResponded: !!registration.feedbackRespondedAt,
+    })
+  );
+});
+
+// POST /admin/feedback/send-invites — ids omitted -> every confirmed attendee
+// not yet invited. ids given -> resend to exactly those (e.g. a follow-up
+// nudge), regardless of whether they were invited before.
+export const adminSendInvites = catchAsync(async (req: Request, res: Response) => {
+  const { ids }: SendFeedbackInvitesInput = sendFeedbackInvitesSchema.parse({ body: req.body }).body;
+
+  const registrations = await Registration.find({
+    type: 'attendee',
+    status: 'confirmed',
+    ...(ids && ids.length > 0 ? { _id: { $in: ids } } : { feedbackInviteSentAt: { $exists: false } }),
+  });
+  const targetable = registrations.filter((r) => !!r.email);
+
+  const { succeeded, failed } = await runInBatches(targetable, 3, async (registration) => {
+    if (!registration.feedbackInviteToken) registration.feedbackInviteToken = generateFeedbackInviteToken();
+    registration.feedbackInviteSentAt = new Date();
+    await registration.save();
+
+    const feedbackUrl = `${env.FRONTEND_ORIGIN}/feedback/invite/${registration.feedbackInviteToken}`;
+    await sendFeedbackRequestEmail(registration.email!, registration.fullName ?? 'there', feedbackUrl);
+  });
+
+  await recordAudit({
+    req,
+    action: 'feedback.invites_sent',
+    resourceType: 'Registration',
+    resourceId: 'bulk',
+    after: { targeted: targetable.length, sent: succeeded, failed: failed.length },
+  });
+
+  res.json(new ApiResponse({ targeted: targetable.length, sent: succeeded, failed: failed.length }));
+});
+
+// GET /admin/feedback/invite-stats — progress for the admin Feedback page's
+// "Send Feedback Request" panel.
+export const adminInviteStats = catchAsync(async (_req: Request, res: Response) => {
+  const [confirmedAttendees, invited, responded] = await Promise.all([
+    Registration.countDocuments({ type: 'attendee', status: 'confirmed' }),
+    Registration.countDocuments({ type: 'attendee', status: 'confirmed', feedbackInviteSentAt: { $exists: true } }),
+    Registration.countDocuments({ type: 'attendee', status: 'confirmed', feedbackRespondedAt: { $exists: true } }),
+  ]);
+  res.json(new ApiResponse({ confirmedAttendees, invited, responded }));
 });
 
 // GET /admin/feedback/summary — one row per session that has at least one

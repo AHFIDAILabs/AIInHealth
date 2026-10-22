@@ -8,7 +8,7 @@ import { SEO } from '../../components/seo/SEO';
 import { Button } from '../../components/ui/Button';
 import { LightTextArea } from '../../components/ui/LightField';
 import { HoneypotField } from '../../components/ui/HoneypotField';
-import { submitFeedback } from '../../services/feedback.service';
+import { submitFeedback, fetchFeedbackInvite } from '../../services/feedback.service';
 import { listPublicSessions } from '../../services/session.service';
 import { getApiErrorMessage } from '../../services/api';
 import { useFormToken } from '../../hooks/useFormToken';
@@ -26,10 +26,12 @@ type FormValues = z.infer<typeof schema>;
 // `sessionId` present means feedback for one specific session, absent means
 // general event feedback. No sign-in, no identity collected at all.
 export const Feedback = () => {
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const { sessionId, token: inviteToken } = useParams<{ sessionId?: string; token?: string }>();
   const formToken = useFormToken();
   const [sessionTitle, setSessionTitle] = useState('');
   const [submitError, setSubmitError] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [alreadyResponded, setAlreadyResponded] = useState(false);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -40,6 +42,19 @@ export const Feedback = () => {
       })
       .catch(() => undefined);
   }, [sessionId]);
+
+  // Personalizes the (still anonymous) form when reached via a feedback-
+  // request email — an invalid/expired token just falls back to the generic
+  // form rather than blocking submission.
+  useEffect(() => {
+    if (!inviteToken) return;
+    fetchFeedbackInvite(inviteToken)
+      .then((invite) => {
+        if (invite.fullName) setInviteName(invite.fullName.split(' ')[0]);
+        setAlreadyResponded(invite.alreadyResponded);
+      })
+      .catch(() => undefined);
+  }, [inviteToken]);
 
   const {
     register,
@@ -61,6 +76,7 @@ export const Feedback = () => {
         comment: values.comment,
         formMeta: values.formMeta ?? '',
         formToken,
+        inviteToken,
       });
       reset(undefined, { keepIsSubmitSuccessful: true });
     } catch (err) {
@@ -84,9 +100,18 @@ export const Feedback = () => {
             {sessionId ? 'Session Feedback' : 'Event Feedback'}
           </p>
           <h1 className="mt-2 font-display text-2xl font-semibold text-navy">
-            {sessionId ? sessionTitle || 'How was this session?' : 'How is the Summit going for you?'}
+            {sessionId
+              ? sessionTitle || 'How was this session?'
+              : inviteName
+                ? `Thanks for being there, ${inviteName}`
+                : 'How was the Summit for you?'}
           </h1>
           <p className="mt-2 text-sm text-slate-500">Anonymous — takes about 10 seconds.</p>
+          {alreadyResponded && !isSubmitSuccessful && (
+            <p className="mt-3 rounded-lg border border-orange/20 bg-orange/5 px-4 py-3 text-sm text-slate-600">
+              Looks like you've already shared feedback — thank you! Feel free to send more below.
+            </p>
+          )}
 
           {isSubmitSuccessful ? (
             <p className="mt-8 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success">

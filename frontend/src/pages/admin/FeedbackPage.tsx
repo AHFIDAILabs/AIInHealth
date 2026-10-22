@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Star, Download, Eye, X } from 'lucide-react';
+import { Star, Download, Eye, X, Send } from 'lucide-react';
 import {
   adminFeedbackSummary,
   adminListFeedback,
   adminFeedbackQrUrl,
+  adminFeedbackInviteStats,
+  adminSendFeedbackInvites,
   type FeedbackSummaryRow,
   type AdminFeedbackItem,
+  type FeedbackInviteStats,
 } from '../../services/feedback.service';
 import { adminListSessions, type AdminSession } from '../../services/session.service';
 import { getApiErrorMessage } from '../../services/api';
@@ -35,6 +38,10 @@ export const FeedbackPage = () => {
   const [items, setItems] = useState<AdminFeedbackItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
   const [itemsError, setItemsError] = useState('');
+  const [inviteStats, setInviteStats] = useState<FeedbackInviteStats | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState('');
+  const [sendError, setSendError] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -45,7 +52,29 @@ export const FeedbackPage = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  const loadInviteStats = useCallback(() => {
+    adminFeedbackInviteStats().then(setInviteStats).catch(() => undefined);
+  }, []);
+
   useEffect(load, [load]);
+  useEffect(loadInviteStats, [loadInviteStats]);
+
+  const notYetInvited = inviteStats ? inviteStats.confirmedAttendees - inviteStats.invited : 0;
+
+  const sendInvites = async () => {
+    setSending(true);
+    setSendError('');
+    setSendResult('');
+    try {
+      const res = await adminSendFeedbackInvites();
+      setSendResult(`Sent to ${res.sent} of ${res.targeted} attendees${res.failed ? ` (${res.failed} failed)` : ''}.`);
+      loadInviteStats();
+    } catch (err) {
+      setSendError(getApiErrorMessage(err));
+    } finally {
+      setSending(false);
+    }
+  };
 
   useEffect(() => {
     adminListSessions({ limit: 300 })
@@ -71,6 +100,39 @@ export const FeedbackPage = () => {
     <div className="mx-auto max-w-5xl">
       <h1 className="font-display text-2xl font-semibold text-navy">Feedback</h1>
       <p className="text-sm text-slate-500">Anonymous ratings and comments collected via QR codes at the venue.</p>
+
+      <div className="mt-6 rounded-2xl border border-slate-100 bg-white p-5 shadow-card">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Send Feedback Request</p>
+        <p className="mt-1 text-xs text-slate-400">
+          Emails every confirmed attendee a personal link to the same feedback form above.
+        </p>
+        {inviteStats && (
+          <p className="mt-3 text-sm text-slate-600">
+            {inviteStats.invited} of {inviteStats.confirmedAttendees} confirmed attendees invited &middot;{' '}
+            {inviteStats.responded} responded
+          </p>
+        )}
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            onClick={sendInvites}
+            disabled={sending || notYetInvited <= 0}
+            className="flex items-center gap-1.5 rounded-lg bg-orange px-3.5 py-2 text-xs font-semibold text-white hover:bg-orange/90 disabled:opacity-50"
+          >
+            <Send size={13} />
+            {sending
+              ? 'Sending…'
+              : notYetInvited > 0
+                ? `Send to ${notYetInvited} Not Yet Invited`
+                : 'Everyone Confirmed Has Been Invited'}
+          </button>
+          {sendResult && <span className="text-xs text-slate-500">{sendResult}</span>}
+        </div>
+        {sendError && (
+          <div className="mt-3">
+            <Banner variant="error">{sendError}</Banner>
+          </div>
+        )}
+      </div>
 
       <div className="mt-6 grid gap-5 sm:grid-cols-2">
         <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-card">

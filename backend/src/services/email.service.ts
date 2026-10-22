@@ -429,6 +429,25 @@ export const sendMasterclassRoomUpdateEmail = async (to: string, fullName: strin
 // sharing one room doesn't need this; the whole point is the room CHOICE.
 // `options` is pulled live from the Session collection at send time, so a
 // last-minute room swap is always reflected correctly.
+// Post-event feedback request (registrationRsvp-style bulk send, feedback.
+// controller.ts's adminSendInvites) — feedbackUrl carries the attendee's
+// personal invite token, but the form it leads to is the same anonymous
+// Feedback page everyone else sees (Feedback.model.ts's own comment on why).
+export const sendFeedbackRequestEmail = async (to: string, fullName: string, feedbackUrl: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'A 2-minute favor? Tell us about the Summit',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>Thank you for joining us at the AI in Health Summit 2026 &mdash; we hope it was time well spent.</p>
+      <p>We're reviewing what worked and what to improve for next year, and your take matters more than almost anyone else's. Could you spare two minutes to share it?</p>
+      ${emailButton(feedbackUrl, 'Share My Feedback')}
+      <p>It's just a quick rating and an optional comment &mdash; no sign-in needed.</p>
+      <p>Thank you again for being part of this.</p>
+    `,
+  });
+};
+
 export const sendParallelSessionBlockReminderEmail = async (
   to: string,
   fullName: string,
@@ -908,6 +927,27 @@ export const sendInnovatorConfirmedEmail = async (to: string, companyName: strin
 // already IS the confirmation; no portal/payment language at all. Same
 // inline-cid: attachment technique as sendTicketQrEmail, for the same
 // Outlook-strips-data:-URIs reason.
+// For a distinguished guest added specifically for the High-Level Political
+// Roundtable Dialogue (or any other VIP-only invite) who isn't presenting a
+// session themselves — sendSpeakerAccessEmail's "thank you for speaking"
+// wording would misrepresent their role, so this is its own, honestly-worded
+// counterpart. Same inline-cid: QR attachment either way.
+export const sendVipAccessEmail = async (to: string, fullName: string, data: { qrPngBuffer: Buffer }): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Your VIP access — AI in Health Summit 2026',
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>You've been invited as a distinguished guest for the High-Level Political Roundtable Dialogue at the AI in Health Summit 2026 (Day 2, 14:30&ndash;15:45, Roundtable Room) — we're looking forward to welcoming you.</p>
+      <p>Attached is your personal check-in QR code. Show it at the registration desk to access the venue on either day (19&ndash;20 October 2026) — it's yours for both days.</p>
+      <p><img src="cid:qrcode" alt="Check-in QR code" width="220" height="220" /></p>
+      <p><strong>Venue:</strong> ${VENUE_FULL_ADDRESS}<br /><a href="${VENUE_MAPS_LINK}">Get directions on Google Maps</a></p>
+      <p>Questions? Contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+    inlineImages: [{ contentId: 'qrcode', contentBytes: data.qrPngBuffer, contentType: 'image/png' }],
+  });
+};
+
 export const sendSpeakerAccessEmail = async (
   to: string,
   fullName: string,
