@@ -77,14 +77,18 @@ export const inviteInfo = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
-// POST /admin/feedback/send-invites — ids omitted -> every confirmed attendee
-// not yet invited. ids given -> resend to exactly those (e.g. a follow-up
-// nudge), regardless of whether they were invited before.
+// POST /admin/feedback/send-invites — ids omitted -> every confirmed
+// registration not yet invited, of ANY type (attendee, speaker/VIP ticket
+// categories included since those are still type:'attendee', plus
+// volunteer/exhibitor/innovator/sponsor/team) — this is a new feedback
+// channel, so it deliberately reaches everyone who was part of the Summit,
+// not just the general public "attendee" type. ids given -> resend to
+// exactly those (e.g. a follow-up nudge), regardless of whether they were
+// invited before.
 export const adminSendInvites = catchAsync(async (req: Request, res: Response) => {
   const { ids }: SendFeedbackInvitesInput = sendFeedbackInvitesSchema.parse({ body: req.body }).body;
 
   const registrations = await Registration.find({
-    type: 'attendee',
     status: 'confirmed',
     ...(ids && ids.length > 0 ? { _id: { $in: ids } } : { feedbackInviteSentAt: { $exists: false } }),
   });
@@ -114,9 +118,9 @@ export const adminSendInvites = catchAsync(async (req: Request, res: Response) =
 // "Send Feedback Request" panel.
 export const adminInviteStats = catchAsync(async (_req: Request, res: Response) => {
   const [confirmedAttendees, invited, responded] = await Promise.all([
-    Registration.countDocuments({ type: 'attendee', status: 'confirmed' }),
-    Registration.countDocuments({ type: 'attendee', status: 'confirmed', feedbackInviteSentAt: { $exists: true } }),
-    Registration.countDocuments({ type: 'attendee', status: 'confirmed', feedbackRespondedAt: { $exists: true } }),
+    Registration.countDocuments({ status: 'confirmed' }),
+    Registration.countDocuments({ status: 'confirmed', feedbackInviteSentAt: { $exists: true } }),
+    Registration.countDocuments({ status: 'confirmed', feedbackRespondedAt: { $exists: true } }),
   ]);
   res.json(new ApiResponse({ confirmedAttendees, invited, responded }));
 });

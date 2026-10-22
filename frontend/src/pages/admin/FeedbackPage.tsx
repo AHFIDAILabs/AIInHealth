@@ -104,11 +104,12 @@ export const FeedbackPage = () => {
       <div className="mt-6 rounded-2xl border border-slate-100 bg-white p-5 shadow-card">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Send Feedback Request</p>
         <p className="mt-1 text-xs text-slate-400">
-          Emails every confirmed attendee a personal link to the same feedback form above.
+          Emails every confirmed registrant &mdash; attendees, speakers, VIPs, volunteers, exhibitors, innovators,
+          sponsors and staff alike &mdash; a personal link to the same feedback form above.
         </p>
         {inviteStats && (
           <p className="mt-3 text-sm text-slate-600">
-            {inviteStats.invited} of {inviteStats.confirmedAttendees} confirmed attendees invited &middot;{' '}
+            {inviteStats.invited} of {inviteStats.confirmedAttendees} confirmed registrants invited &middot;{' '}
             {inviteStats.responded} responded
           </p>
         )}
