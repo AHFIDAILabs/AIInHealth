@@ -340,6 +340,8 @@ router.post('/speakers/:id/send-access-email', requireRole(...adminOnlyRoles), s
 router.get('/feedback/summary', requireRole(...adminOnlyRoles), feedbackController.adminSummary);
 router.get('/feedback', requireRole(...adminOnlyRoles), feedbackController.adminList);
 router.get('/feedback/qr', requireRole(...adminOnlyRoles), feedbackController.qr);
+router.get('/feedback/invite-stats', requireRole(...adminOnlyRoles), feedbackController.adminInviteStats);
+router.post('/feedback/send-invites', requireRole(...adminOnlyRoles), feedbackController.adminSendInvites);
 
 router.get('/sessions', requireRole(...adminOnlyRoles), sessionController.adminList);
 router.post('/sessions/check-conflict', requireRole(...adminOnlyRoles), sessionController.checkConflict);

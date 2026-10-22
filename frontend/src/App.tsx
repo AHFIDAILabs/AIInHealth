@@ -172,6 +172,7 @@ function App() {
             {EVENT_EXTRAS_ENABLED && <Route path="/presenting/:token" element={<PresentingCard />} />}
             {EVENT_EXTRAS_ENABLED && <Route path="/showcase/:token" element={<ShowcaseCard />} />}
             {EVENT_EXTRAS_ENABLED && <Route path="/feedback" element={<Feedback />} />}
+            {EVENT_EXTRAS_ENABLED && <Route path="/feedback/invite/:token" element={<Feedback />} />}
             {EVENT_EXTRAS_ENABLED && <Route path="/feedback/:sessionId" element={<Feedback />} />}
             <Route path="/rapporteur/:token" element={<RapporteurForm />} />
             <Route path="/session-attendance/:token" element={<SessionAttendancePortal />} />

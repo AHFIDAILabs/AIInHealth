@@ -14,8 +14,27 @@ export const createFeedbackSchema = z.object({
     // something autofill-prone like "website".
     formMeta: z.string().max(0).optional(),
     formToken: z.string().optional(),
+    // Present only when reached via a personal feedback-request email link
+    // (feedback.controller.ts's inviteInfo/adminSendInvites) — marks that
+    // registration's invite as responded. Never stored on the Feedback
+    // document itself; the submission stays anonymous either way.
+    inviteToken: z.string().optional(),
   }),
 });
+
+// GET /feedback/invite/:token — public, personalizes the form.
+export const feedbackInviteParamsSchema = z.object({
+  params: z.object({ token: z.string().min(1) }),
+});
+
+// POST /admin/feedback/send-invites — ids omitted -> every confirmed
+// attendee not yet invited.
+export const sendFeedbackInvitesSchema = z.object({
+  body: z.object({ ids: z.array(objectId).max(2000).optional() }),
+});
+
+export type FeedbackInviteParams = z.infer<typeof feedbackInviteParamsSchema>['params'];
+export type SendFeedbackInvitesInput = z.infer<typeof sendFeedbackInvitesSchema>['body'];
 
 // GET /admin/feedback — sessionRef='general' means the un-tied bucket;
 // omitted means every submission across every session + general.
