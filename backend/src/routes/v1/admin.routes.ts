@@ -338,6 +338,7 @@ router.post('/speakers/:id/send-access-email', requireRole(...adminOnlyRoles), s
 // via a venue QR code. Not tied to an existing per-area role, same reasoning
 // as the other adminOnlyRoles-gated areas above.
 router.get('/feedback/summary', requireRole(...adminOnlyRoles), feedbackController.adminSummary);
+router.get('/feedback/stats', requireRole(...adminOnlyRoles), feedbackController.adminStats);
 router.get('/feedback', requireRole(...adminOnlyRoles), feedbackController.adminList);
 router.get('/feedback/qr', requireRole(...adminOnlyRoles), feedbackController.qr);
 router.get('/feedback/invite-stats', requireRole(...adminOnlyRoles), feedbackController.adminInviteStats);

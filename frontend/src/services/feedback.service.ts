@@ -56,15 +56,29 @@ export const adminFeedbackSummary = async (): Promise<FeedbackSummaryRow[]> => {
   return res.data.data;
 };
 
+export interface FeedbackStats {
+  count: number;
+  averageRating: number;
+  distribution: { rating: number; count: number }[];
+  byDay: { date: string; count: number }[];
+}
+
+export const adminFeedbackStats = async (): Promise<FeedbackStats> => {
+  const res = await api.get<{ success: true; data: FeedbackStats }>('/admin/feedback/stats');
+  return res.data.data;
+};
+
 // sessionRef: a real session id, or 'general' for the untied bucket.
 export const adminListFeedback = async (params: {
   sessionRef: string;
+  rating?: number;
+  hasComment?: boolean;
   page?: number;
   limit?: number;
 }): Promise<Paginated<AdminFeedbackItem>> => {
   const res = await api.get<{ success: true; data: AdminFeedbackItem[]; meta: Omit<Paginated<never>, 'items'> }>(
     '/admin/feedback',
-    { params }
+    { params: { ...params, hasComment: params.hasComment === undefined ? undefined : String(params.hasComment) } }
   );
   return { items: res.data.data, ...res.data.meta };
 };

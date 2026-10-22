@@ -150,6 +150,34 @@ export const adminSummary = catchAsync(async (_req: Request, res: Response) => {
   res.json(new ApiResponse(items));
 });
 
+// GET /admin/feedback/stats — overall count/average, the 1-5 rating
+// distribution, and a daily trend, for the admin Feedback page's charts.
+// Per-session breakdown is adminSummary above, unchanged.
+export const adminStats = catchAsync(async (_req: Request, res: Response) => {
+  const [overallAgg, distributionAgg, byDayAgg] = await Promise.all([
+    Feedback.aggregate<{ _id: null; count: number; averageRating: number }>([
+      { $group: { _id: null, count: { $sum: 1 }, averageRating: { $avg: '$rating' } } },
+    ]),
+    Feedback.aggregate<{ _id: number; count: number }>([{ $group: { _id: '$rating', count: { $sum: 1 } } }]),
+    Feedback.aggregate<{ _id: string; count: number }>([
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]),
+  ]);
+
+  const distributionByRating = new Map(distributionAgg.map((d) => [d._id, d.count]));
+  const distribution = [1, 2, 3, 4, 5].map((rating) => ({ rating, count: distributionByRating.get(rating) ?? 0 }));
+
+  res.json(
+    new ApiResponse({
+      count: overallAgg[0]?.count ?? 0,
+      averageRating: overallAgg[0] ? Math.round(overallAgg[0].averageRating * 10) / 10 : 0,
+      distribution,
+      byDay: byDayAgg.map((d) => ({ date: d._id, count: d.count })),
+    })
+  );
+});
+
 // GET /admin/feedback — the raw list (rating + comment + date) for one
 // bucket: a specific session, or sessionRef=general for the untied bucket.
 export const adminList = catchAsync(async (req: Request, res: Response) => {
@@ -157,6 +185,9 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
   const filter: FilterQuery<FeedbackDoc> = {};
   if (query.sessionRef === 'general') filter.sessionRef = { $exists: false };
   else if (query.sessionRef) filter.sessionRef = query.sessionRef;
+  if (query.rating) filter.rating = query.rating;
+  if (query.hasComment === 'true') filter.comment = { $exists: true, $ne: '' };
+  else if (query.hasComment === 'false') filter.comment = { $in: [null, undefined, ''] };
 
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([

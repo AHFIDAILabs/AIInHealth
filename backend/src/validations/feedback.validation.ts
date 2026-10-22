@@ -40,6 +40,8 @@ export type SendFeedbackInvitesInput = z.infer<typeof sendFeedbackInvitesSchema>
 // omitted means every submission across every session + general.
 export const listFeedbackQuerySchema = z.object({
   sessionRef: z.string().trim().optional(),
+  rating: z.coerce.number().int().min(1).max(5).optional(),
+  hasComment: z.enum(['true', 'false']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
