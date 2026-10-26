@@ -448,6 +448,24 @@ export const sendFeedbackRequestEmail = async (to: string, fullName: string, fee
   });
 };
 
+// A softer-toned resend (feedback.controller.ts's adminSendReminders) for
+// people who were already asked once but haven't responded — deliberately
+// distinct copy from sendFeedbackRequestEmail above, which reads like a
+// first ask ("thank you for joining us"); this reads like a nudge.
+export const sendFeedbackReminderEmail = async (to: string, fullName: string, feedbackUrl: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: "Still have 2 minutes? We'd love your feedback",
+    html: `
+      <p>Hi ${fullName},</p>
+      <p>We haven't heard from you yet, and we'd really love to know how the AI in Health Summit 2026 was for you &mdash; good, bad, or in between.</p>
+      ${emailButton(feedbackUrl, 'Share My Feedback')}
+      <p>It only takes two minutes, and every response helps us make next year better.</p>
+      <p>Thank you for being part of the Summit.</p>
+    `,
+  });
+};
+
 export const sendParallelSessionBlockReminderEmail = async (
   to: string,
   fullName: string,
