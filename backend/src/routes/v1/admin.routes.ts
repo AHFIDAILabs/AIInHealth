@@ -343,6 +343,7 @@ router.get('/feedback', requireRole(...adminOnlyRoles), feedbackController.admin
 router.get('/feedback/qr', requireRole(...adminOnlyRoles), feedbackController.qr);
 router.get('/feedback/invite-stats', requireRole(...adminOnlyRoles), feedbackController.adminInviteStats);
 router.post('/feedback/send-invites', requireRole(...adminOnlyRoles), feedbackController.adminSendInvites);
+router.get('/feedback/export', requireRole(...adminOnlyRoles), feedbackController.exportCsv);
 
 router.get('/sessions', requireRole(...adminOnlyRoles), sessionController.adminList);
 router.post('/sessions/check-conflict', requireRole(...adminOnlyRoles), sessionController.checkConflict);

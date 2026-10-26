@@ -21,6 +21,7 @@ import { qrPngBufferForUrl } from '../services/qr.service.js';
 import { sendFeedbackRequestEmail } from '../services/email.service.js';
 import { runInBatches } from '../utils/batch.js';
 import { recordAudit } from '../services/audit.service.js';
+import { toCsv } from '../utils/toCsv.js';
 import { env } from '../config/env.js';
 
 // Opaque, random — same crypto.randomBytes(24).toString('base64url') idiom as
@@ -178,16 +179,25 @@ export const adminStats = catchAsync(async (_req: Request, res: Response) => {
   );
 });
 
-// GET /admin/feedback — the raw list (rating + comment + date) for one
-// bucket: a specific session, or sessionRef=general for the untied bucket.
-export const adminList = catchAsync(async (req: Request, res: Response) => {
-  const query = listFeedbackQuerySchema.parse(req.query);
+// Shared by adminList and exportCsv below — sessionRef='general' means the
+// un-tied bucket, omitted means every submission across every session +
+// general; rating/hasComment narrow further. Pagination (page/limit) is
+// handled separately by each caller, not part of this filter.
+const buildAdminFeedbackFilter = (query: { sessionRef?: string; rating?: number; hasComment?: 'true' | 'false' }): FilterQuery<FeedbackDoc> => {
   const filter: FilterQuery<FeedbackDoc> = {};
   if (query.sessionRef === 'general') filter.sessionRef = { $exists: false };
   else if (query.sessionRef) filter.sessionRef = query.sessionRef;
   if (query.rating) filter.rating = query.rating;
   if (query.hasComment === 'true') filter.comment = { $exists: true, $ne: '' };
   else if (query.hasComment === 'false') filter.comment = { $in: [null, undefined, ''] };
+  return filter;
+};
+
+// GET /admin/feedback — the raw list (rating + comment + date) for one
+// bucket: a specific session, or sessionRef=general for the untied bucket.
+export const adminList = catchAsync(async (req: Request, res: Response) => {
+  const query = listFeedbackQuerySchema.parse(req.query);
+  const filter = buildAdminFeedbackFilter(query);
 
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([
@@ -198,6 +208,36 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
   res.json(
     new ApiResponse(items, { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) || 1 })
   );
+});
+
+const EXPORT_CSV_COLUMNS = ['createdAt', 'sessionTitle', 'rating', 'comment'];
+
+// GET /admin/feedback/export — every row matching the current view's filters
+// (same sessionRef/rating/hasComment as adminList, page/limit ignored on
+// purpose — export always returns everything that matches, same convention
+// as registration.controller.ts's adminExport). Still anonymous: no identity
+// field exists on Feedback to export in the first place.
+export const exportCsv = catchAsync(async (req: Request, res: Response) => {
+  const query = listFeedbackQuerySchema.parse(req.query);
+  const filter = buildAdminFeedbackFilter(query);
+
+  const items = await Feedback.find(filter).sort({ createdAt: -1 }).lean();
+
+  const sessionIds = [...new Set(items.map((i) => i.sessionRef).filter(Boolean).map(String))];
+  const sessions = await Session.find({ _id: { $in: sessionIds } }).select('title');
+  const titleById = new Map(sessions.map((s) => [s.id, s.title]));
+
+  const rows = items.map((item) => ({
+    createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : '',
+    sessionTitle: item.sessionRef ? titleById.get(String(item.sessionRef)) ?? 'Unknown session' : 'General Event Feedback',
+    rating: item.rating,
+    comment: item.comment ?? '',
+  }));
+
+  const csv = toCsv(rows, EXPORT_CSV_COLUMNS);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="feedback-${Date.now()}.csv"`);
+  res.send(csv);
 });
 
 // GET /admin/feedback/qr — a printable PNG for venue signage. sessionRef

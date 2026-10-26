@@ -11,8 +11,14 @@ const escapeCell = (value: unknown): string => {
   return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 };
 
+// Leading BOM so Excel (which otherwise guesses the system codepage instead
+// of UTF-8) renders accented/non-Latin characters correctly on open, instead
+// of the classic mojibake "Ã©" garbling. Harmless for every other consumer —
+// every CSV parser either strips it automatically or ignores it.
+const BOM = '﻿';
+
 export const toCsv = (rows: Record<string, unknown>[], columns: string[]): string => {
   const header = columns.join(',');
   const body = rows.map((row) => columns.map((col) => escapeCell(row[col])).join(',')).join('\n');
-  return `${header}\n${body}`;
+  return `${BOM}${header}\n${body}`;
 };
