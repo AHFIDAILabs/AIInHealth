@@ -5,6 +5,7 @@ import {
   adminFeedbackStats,
   adminListFeedback,
   adminFeedbackQrUrl,
+  adminFeedbackExportUrl,
   adminFeedbackInviteStats,
   adminSendFeedbackInvites,
   type FeedbackSummaryRow,
@@ -252,7 +253,20 @@ export const FeedbackPage = () => {
       </div>
 
       <div className="mt-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-card">
-        <p className="text-sm font-semibold text-navy">Responses</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-navy">Responses</p>
+          <a
+            href={adminFeedbackExportUrl({
+              sessionRef: bucket.sessionRef,
+              rating: ratingFilter ? Number(ratingFilter) : undefined,
+              hasComment: commentFilter ? commentFilter === 'true' : undefined,
+            })}
+            download={`aihs-2026-feedback-${bucket.sessionRef}.csv`}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-navy hover:border-orange/40"
+          >
+            <Download size={13} /> Download CSV ({total})
+          </a>
+        </div>
 
         {/* Bucket chips */}
         <div className="mt-4 flex flex-wrap gap-2">

@@ -91,6 +91,18 @@ export const adminFeedbackQrUrl = (sessionRef?: string): string => {
   return sessionRef ? `${base}/admin/feedback/qr?sessionRef=${sessionRef}` : `${base}/admin/feedback/qr`;
 };
 
+// A direct, cookie-authenticated download URL (same pattern as
+// adminFeedbackQrUrl above) — exports every row matching the given filters,
+// Excel-ready (the backend's toCsv util adds a UTF-8 BOM so accented
+// characters in comments don't get mangled when opened in Excel).
+export const adminFeedbackExportUrl = (params: { sessionRef: string; rating?: number; hasComment?: boolean }): string => {
+  const base = (import.meta.env.VITE_API_URL as string) ?? '/api/v1';
+  const search = new URLSearchParams({ sessionRef: params.sessionRef });
+  if (params.rating) search.set('rating', String(params.rating));
+  if (params.hasComment !== undefined) search.set('hasComment', String(params.hasComment));
+  return `${base}/admin/feedback/export?${search.toString()}`;
+};
+
 export interface FeedbackInviteStats {
   confirmedAttendees: number;
   invited: number;
