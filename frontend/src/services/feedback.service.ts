@@ -107,6 +107,7 @@ export interface FeedbackInviteStats {
   confirmedAttendees: number;
   invited: number;
   responded: number;
+  notResponded: number;
 }
 
 export const adminFeedbackInviteStats = async (): Promise<FeedbackInviteStats> => {
@@ -120,6 +121,18 @@ export const adminSendFeedbackInvites = async (
 ): Promise<{ targeted: number; sent: number; failed: number }> => {
   const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
     '/admin/feedback/send-invites',
+    { ids }
+  );
+  return res.data.data;
+};
+
+// A softer-toned resend — ids omitted -> every confirmed registration that
+// hasn't RESPONDED yet (regardless of whether they were invited before).
+export const adminSendFeedbackReminders = async (
+  ids?: string[]
+): Promise<{ targeted: number; sent: number; failed: number }> => {
+  const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
+    '/admin/feedback/send-reminders',
     { ids }
   );
   return res.data.data;

@@ -18,7 +18,7 @@ import {
 } from '../validations/feedback.validation.js';
 import { verifyFormToken } from '../services/formToken.service.js';
 import { qrPngBufferForUrl } from '../services/qr.service.js';
-import { sendFeedbackRequestEmail } from '../services/email.service.js';
+import { sendFeedbackRequestEmail, sendFeedbackReminderEmail } from '../services/email.service.js';
 import { runInBatches } from '../utils/batch.js';
 import { recordAudit } from '../services/audit.service.js';
 import { toCsv } from '../utils/toCsv.js';
@@ -115,6 +115,41 @@ export const adminSendInvites = catchAsync(async (req: Request, res: Response) =
   res.json(new ApiResponse({ targeted: targetable.length, sent: succeeded, failed: failed.length }));
 });
 
+// POST /admin/feedback/send-reminders — a softer-toned resend to everyone who
+// hasn't RESPONDED yet, regardless of whether they were invited before (so
+// this also catches anyone who slipped through the first send-invites run).
+// ids omitted -> every confirmed registration without feedbackRespondedAt.
+// ids given -> remind exactly those, regardless of status (manual override,
+// same shape as adminSendInvites above).
+export const adminSendReminders = catchAsync(async (req: Request, res: Response) => {
+  const { ids }: SendFeedbackInvitesInput = sendFeedbackInvitesSchema.parse({ body: req.body }).body;
+
+  const registrations = await Registration.find({
+    status: 'confirmed',
+    ...(ids && ids.length > 0 ? { _id: { $in: ids } } : { feedbackRespondedAt: { $exists: false } }),
+  });
+  const targetable = registrations.filter((r) => !!r.email);
+
+  const { succeeded, failed } = await runInBatches(targetable, 3, async (registration) => {
+    if (!registration.feedbackInviteToken) registration.feedbackInviteToken = generateFeedbackInviteToken();
+    registration.feedbackInviteSentAt = new Date();
+    await registration.save();
+
+    const feedbackUrl = `${env.FRONTEND_ORIGIN}/feedback/invite/${registration.feedbackInviteToken}`;
+    await sendFeedbackReminderEmail(registration.email!, registration.fullName ?? 'there', feedbackUrl);
+  });
+
+  await recordAudit({
+    req,
+    action: 'feedback.reminders_sent',
+    resourceType: 'Registration',
+    resourceId: 'bulk',
+    after: { targeted: targetable.length, sent: succeeded, failed: failed.length },
+  });
+
+  res.json(new ApiResponse({ targeted: targetable.length, sent: succeeded, failed: failed.length }));
+});
+
 // GET /admin/feedback/invite-stats — progress for the admin Feedback page's
 // "Send Feedback Request" panel.
 export const adminInviteStats = catchAsync(async (_req: Request, res: Response) => {
@@ -123,7 +158,7 @@ export const adminInviteStats = catchAsync(async (_req: Request, res: Response) 
     Registration.countDocuments({ status: 'confirmed', feedbackInviteSentAt: { $exists: true } }),
     Registration.countDocuments({ status: 'confirmed', feedbackRespondedAt: { $exists: true } }),
   ]);
-  res.json(new ApiResponse({ confirmedAttendees, invited, responded }));
+  res.json(new ApiResponse({ confirmedAttendees, invited, responded, notResponded: confirmedAttendees - responded }));
 });
 
 // GET /admin/feedback/summary — one row per session that has at least one

@@ -8,6 +8,7 @@ import {
   adminFeedbackExportUrl,
   adminFeedbackInviteStats,
   adminSendFeedbackInvites,
+  adminSendFeedbackReminders,
   type FeedbackSummaryRow,
   type FeedbackStats,
   type AdminFeedbackItem,
@@ -51,6 +52,9 @@ export const FeedbackPage = () => {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState('');
   const [sendError, setSendError] = useState('');
+  const [reminding, setReminding] = useState(false);
+  const [remindResult, setRemindResult] = useState('');
+  const [remindError, setRemindError] = useState('');
 
   const [bucket, setBucket] = useState<Bucket>({ sessionRef: 'general', title: 'General Event Feedback' });
   const [ratingFilter, setRatingFilter] = useState('');
@@ -112,6 +116,8 @@ export const FeedbackPage = () => {
   };
 
   const notYetInvited = inviteStats ? inviteStats.confirmedAttendees - inviteStats.invited : 0;
+  const notYetResponded = inviteStats?.notResponded ?? 0;
+  const responseRate = inviteStats && inviteStats.confirmedAttendees ? Math.round((100 * inviteStats.responded) / inviteStats.confirmedAttendees) : 0;
 
   const sendInvites = async () => {
     setSending(true);
@@ -125,6 +131,21 @@ export const FeedbackPage = () => {
       setSendError(getApiErrorMessage(err));
     } finally {
       setSending(false);
+    }
+  };
+
+  const sendReminders = async () => {
+    setReminding(true);
+    setRemindError('');
+    setRemindResult('');
+    try {
+      const res = await adminSendFeedbackReminders();
+      setRemindResult(`Sent to ${res.sent} of ${res.targeted} registrants${res.failed ? ` (${res.failed} failed)` : ''}.`);
+      loadInviteStats();
+    } catch (err) {
+      setRemindError(getApiErrorMessage(err));
+    } finally {
+      setReminding(false);
     }
   };
 
@@ -149,10 +170,10 @@ export const FeedbackPage = () => {
         {inviteStats && (
           <p className="mt-3 text-sm text-slate-600">
             {inviteStats.invited} of {inviteStats.confirmedAttendees} confirmed registrants invited &middot;{' '}
-            {inviteStats.responded} responded
+            {inviteStats.responded} responded ({responseRate}%)
           </p>
         )}
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             onClick={sendInvites}
             disabled={sending || notYetInvited <= 0}
@@ -172,6 +193,33 @@ export const FeedbackPage = () => {
             <Banner variant="error">{sendError}</Banner>
           </div>
         )}
+
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <p className="text-xs text-slate-400">
+            Response rate low? Send a softer reminder to everyone who hasn&rsquo;t responded yet &mdash; including
+            anyone who missed the first email.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              onClick={sendReminders}
+              disabled={reminding || notYetResponded <= 0}
+              className="flex items-center gap-1.5 rounded-lg border border-orange text-orange px-3.5 py-2 text-xs font-semibold hover:bg-orange/10 disabled:opacity-50"
+            >
+              <Send size={13} />
+              {reminding
+                ? 'Sending…'
+                : notYetResponded > 0
+                  ? `Send Reminder to ${notYetResponded} Not Yet Responded`
+                  : 'Everyone Confirmed Has Responded'}
+            </button>
+            {remindResult && <span className="text-xs text-slate-500">{remindResult}</span>}
+          </div>
+          {remindError && (
+            <div className="mt-3">
+              <Banner variant="error">{remindError}</Banner>
+            </div>
+          )}
+        </div>
       </div>
 
       {error && (
