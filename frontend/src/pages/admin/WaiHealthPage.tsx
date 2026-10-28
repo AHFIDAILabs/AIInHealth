@@ -8,6 +8,7 @@ import {
   adminSetWaiHealthCapacity,
   adminNotifyNotEligible,
   adminBulkNotifyNotEligible,
+  adminSendWaiHealthThankYou,
   type AdminWaiHealthRegistration,
   type WaiHealthGender,
 } from '../../services/waiHealth.service';
@@ -60,6 +61,7 @@ export const WaiHealthPage = () => {
   const [active, setActive] = useState<AdminWaiHealthRegistration | null>(null);
   const [notifying, setNotifying] = useState(false);
   const [bulkNotifying, setBulkNotifying] = useState(false);
+  const [sendingThankYou, setSendingThankYou] = useState(false);
 
   const [capacity, setCapacity] = useState<number | null>(null);
   const [confirmedCount, setConfirmedCount] = useState(0);
@@ -148,6 +150,19 @@ export const WaiHealthPage = () => {
     }
   };
 
+  const sendThankYou = async () => {
+    if (!window.confirm('Send the "thank you for attending" email to every confirmed RSVP not yet thanked?')) return;
+    setSendingThankYou(true);
+    try {
+      const res = await adminSendWaiHealthThankYou();
+      toast('success', `Sent to ${res.sent} of ${res.targeted}${res.failed ? ` (${res.failed} failed)` : ''}`);
+    } catch (err) {
+      toast('error', getApiErrorMessage(err));
+    } finally {
+      setSendingThankYou(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -158,6 +173,15 @@ export const WaiHealthPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {canManage && (
+            <button
+              onClick={sendThankYou}
+              disabled={sendingThankYou}
+              className="flex items-center gap-2 rounded-xl border border-orange/30 bg-white px-4 py-2.5 text-[13px] font-semibold text-orange hover:bg-orange/5 disabled:opacity-50"
+            >
+              <Send size={16} /> {sendingThankYou ? 'Sending…' : 'Send Thank You'}
+            </button>
+          )}
           {canManage && (
             <button
               onClick={notifyAllMale}

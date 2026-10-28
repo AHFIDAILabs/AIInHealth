@@ -373,6 +373,30 @@ export const sendWaiHealthCheckinQrEmail = async (to: string, fullName: string, 
   });
 };
 
+// Post-event thank-you (waiHealth.controller.ts's adminSendThankYou) — sent
+// once, to every confirmed RSVP. Exact copy supplied by Ummi (Strategy &
+// Engagement).
+export const sendWaiHealthThankYouEmail = async (to: string): Promise<void> => {
+  await sendEmail({
+    to,
+    subject: 'Thank you for joining the Women in AI & Health Breakfast',
+    html: `
+      <p>Dear Participant,</p>
+      <p>On behalf of Dr. Kunle Kakanfo and the whole AHFID team, thank you for joining us at the Women in AI &amp; Health (WAI-HEALTH) Breakfast, which opened the AI in Health Summit 2026 in Abuja.</p>
+      <p>The room was full, and your presence and contributions made the conversation about women's voices in AI and health richer and more honest. The breakfast was the start of WAI-HEALTH, a network of women leaders in AI and health that continues beyond the Summit, and we hope you will remain part of it.</p>
+      <p>You can find photographs of the session here: <a href="https://www.flickr.com/photos/aiinhealthsummit2026/sets/72177720336267648/">DAY 1 - Women in AI Health Special Session</a></p>
+      <p>We will share a summary of the session and the next steps for the WAI-HEALTH network in due course. If you would like to give feedback, or have ideas for what the network should do next, please email ummi@ahfid.org. We would be glad to hear from you.</p>
+      <p>Thank you again for being part of it.</p>
+      <p>
+        With warm regards,<br />
+        Ummi<br />
+        Strategy and Engagement<br />
+        Africa Hub for Innovation and Development (AHFID)
+      </p>
+    `,
+  });
+};
+
 // masterclass.controller.ts's adminSendInvites — a one-click RSVP for an
 // already-confirmed attendee (no new signup form, unlike the WAI-Health
 // Breakfast invite above), since this session is open to everyone already

@@ -14,16 +14,19 @@ import {
   sendWaiHealthRsvpConfirmedEmail,
   sendWaiHealthNotEligibleEmail,
   sendWaiHealthCheckinQrEmail,
+  sendWaiHealthThankYouEmail,
 } from '../services/email.service.js';
 import { recordAudit } from '../services/audit.service.js';
 import { runInBatches } from '../utils/batch.js';
 import { toCsv } from '../utils/toCsv.js';
+import { sendWaiHealthThankYouSchema } from '../validations/waiHealth.validation.js';
 import type {
   CreateWaiHealthRegistrationInput,
   LinkWaiHealthRegistrationInput,
   ListWaiHealthQuery,
   RsvpParams,
   SetWaiHealthCapacityInput,
+  SendWaiHealthThankYouInput,
 } from '../validations/waiHealth.validation.js';
 
 // Opaque, random, unrelated to the QR check-in token generated elsewhere
@@ -301,4 +304,34 @@ export const adminBulkNotifyNotEligible = catchAsync(async (req: Request, res: R
   });
 
   res.json(new ApiResponse({ attempted: targets.length, sent: succeeded, failed: failed.length }));
+});
+
+// POST /admin/wai-health/send-thank-you — ids omitted -> every confirmed RSVP
+// not yet thanked (declined registrants excluded, since they never held a
+// seat). ids given -> resend to exactly those, regardless of prior status —
+// same ids-or-filter shape as feedback.controller.ts's adminSendInvites.
+export const adminSendThankYou = catchAsync(async (req: Request, res: Response) => {
+  const { ids }: SendWaiHealthThankYouInput = sendWaiHealthThankYouSchema.parse({ body: req.body }).body;
+
+  const targets = await WaiHealthRegistration.find({
+    ...(ids && ids.length > 0
+      ? { _id: { $in: ids } }
+      : { rsvpConfirmedAt: { $exists: true }, declined: { $ne: true }, thankYouSentAt: { $exists: false } }),
+  });
+
+  const { succeeded, failed } = await runInBatches(targets, 3, async (reg) => {
+    await sendWaiHealthThankYouEmail(reg.email);
+    reg.thankYouSentAt = new Date();
+    await reg.save();
+  });
+
+  await recordAudit({
+    req,
+    action: 'waiHealth.thank_you_sent',
+    resourceType: 'WaiHealthRegistration',
+    resourceId: 'bulk',
+    after: { targeted: targets.length, sent: succeeded, failed: failed.length },
+  });
+
+  res.json(new ApiResponse({ targeted: targets.length, sent: succeeded, failed: failed.length }));
 });
