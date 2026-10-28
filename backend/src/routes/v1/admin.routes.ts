@@ -295,6 +295,11 @@ router.post(
   requireRole('super_admin', 'admin', 'wai_health_lead'),
   waiHealthController.adminBulkNotifyNotEligible
 );
+router.post(
+  '/wai-health/send-thank-you',
+  requireRole('super_admin', 'admin', 'wai_health_lead'),
+  waiHealthController.adminSendThankYou
+);
 
 // WhatsApp Concierge — new area, not registrations_officer's territory,
 // consistent with how WAI-Health/Access Codes/Payments were scoped above.

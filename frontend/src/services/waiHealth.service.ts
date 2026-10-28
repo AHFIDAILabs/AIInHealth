@@ -117,6 +117,19 @@ export const adminBulkNotifyNotEligible = async (): Promise<AdminBulkResult> => 
   return res.data.data;
 };
 
+export interface SendThankYouResult {
+  targeted: number;
+  sent: number;
+  failed: number;
+}
+
+// POST /admin/wai-health/send-thank-you — ids omitted -> every confirmed RSVP
+// not yet thanked.
+export const adminSendWaiHealthThankYou = async (ids?: string[]): Promise<SendThankYouResult> => {
+  const res = await api.post<{ success: true; data: SendThankYouResult }>('/admin/wai-health/send-thank-you', { ids });
+  return res.data.data;
+};
+
 export const adminExportWaiHealthUrl = (params: { q?: string } = {}): string => {
   const search = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {

@@ -65,6 +65,13 @@ const waiHealthRegistrationSchema = new Schema(
     // only admit people who actually hold a confirmed seat.
     checkinQrToken: { type: String, unique: true, sparse: true },
     checkinQrSentAt: { type: Date },
+    // Post-event "thank you for attending" email (waiHealth.controller.ts's
+    // adminSendThankYou) — idempotency marker only, same role as
+    // notifiedNotEligibleAt above. Sent to everyone with a confirmed RSVP;
+    // the database has no record of who actually showed up (door check-in for
+    // this session runs through Onevie's separate WAI event, never synced
+    // back here), so rsvpConfirmedAt is the best available proxy.
+    thankYouSentAt: { type: Date },
     // Same shape/reasoning as Registration.model.ts's onevieSync — informational
     // only, the job itself decides what needs (re)sync by comparing syncedAt
     // against this document's updatedAt.

@@ -59,3 +59,10 @@ export const setWaiHealthCapacitySchema = z.object({
   }),
 });
 export type SetWaiHealthCapacityInput = z.infer<typeof setWaiHealthCapacitySchema>['body'];
+
+// POST /admin/wai-health/send-thank-you — ids omitted -> every confirmed RSVP
+// not yet thanked.
+export const sendWaiHealthThankYouSchema = z.object({
+  body: z.object({ ids: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id')).max(1000).optional() }),
+});
+export type SendWaiHealthThankYouInput = z.infer<typeof sendWaiHealthThankYouSchema>['body'];
