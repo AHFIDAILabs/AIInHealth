@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, type Variants } from 'framer-motion';
 import { CalendarDays, MapPin, ArrowRight } from 'lucide-react';
@@ -16,6 +16,8 @@ import { HeroVideoBackground, useHeroVideos } from '../../features/recap/compone
 import { AlbumGrid, useAlbumIndex, useAlbum } from '../../features/gallery';
 import { VideoEmbed } from '../../design-system/primitives';
 import { VENUE_NAME, VENUE_STREET_ADDRESS, VENUE_CITY } from '../../lib/siteInfo';
+import { fetchPublicConfirmedCount } from '../../services/registration.service';
+import { useCountUp } from '../../hooks/useCountUp';
 import homePageBg from '../../assets/images/AI in Health Summit 2026 - Website.webp';
 
 const VIDEOS_ALBUM_ID = '72177720336311834';
@@ -66,6 +68,20 @@ export const HomeRecap = () => {
   );
   const previewAlbums = (albums ?? []).filter((a) => a.day !== 'special').slice(0, 8);
 
+  // Real, live count — never a hardcoded figure (brief's "no fabricated
+  // content" rule). Rounded DOWN (never up — a "+" figure must always be
+  // truthfully exceeded, not just close) to the nearest 50 for a clean "N+"
+  // headline that still stays close to the real number; renders nothing at
+  // all until a real, positive count has loaded.
+  const [confirmedCount, setConfirmedCount] = useState<number | null>(null);
+  useEffect(() => {
+    fetchPublicConfirmedCount()
+      .then(setConfirmedCount)
+      .catch(() => setConfirmedCount(null));
+  }, []);
+  const roundedCount = confirmedCount && confirmedCount >= 50 ? Math.floor(confirmedCount / 50) * 50 : (confirmedCount ?? 0);
+  const animatedCount = useCountUp(roundedCount);
+
   return (
     <>
       <SEO
@@ -100,16 +116,35 @@ export const HomeRecap = () => {
             />
           </motion.h1>
 
-          <motion.p
-            custom={1}
-            variants={fadeUp}
-            className="mx-auto mt-4 max-w-xl text-lg font-semibold leading-snug text-slate-100 sm:text-xl"
-          >
-            {t(
-              'home.hero.subtitle',
-              'Harnessing Artificial Intelligence to Strengthen Health Systems and Accelerate Universal Health Coverage in Nigeria and Africa.'
-            )}
-          </motion.p>
+          {/* Real, live confirmed-attendee count (registration.service.ts's
+              fetchPublicConfirmedCount) — falls back to the original mission
+              subtitle only for the brief moment before it's loaded, never a
+              placeholder/invented figure. */}
+          {roundedCount > 0 ? (
+            <motion.div custom={1} variants={fadeUp} className="mx-auto mt-5 max-w-2xl">
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-orange">Thank You</p>
+              <p className="mt-2 font-display text-4xl font-black leading-none text-white [text-shadow:0_0_40px_rgba(249,115,22,0.35)] sm:text-5xl">
+                {animatedCount.toLocaleString()}
+                <span className="text-orange">+</span>
+              </p>
+              <p className="mt-2 text-sm font-bold uppercase tracking-[0.25em] text-slate-200 sm:text-base">Attendees</p>
+              <p className="mx-auto mt-4 max-w-xl text-base font-medium leading-relaxed text-slate-300 sm:text-lg">
+                Over two incredible days, you came together from across Nigeria and beyond to shape the future of AI
+                in health. We couldn&rsquo;t have done it without you.
+              </p>
+            </motion.div>
+          ) : (
+            <motion.p
+              custom={1}
+              variants={fadeUp}
+              className="mx-auto mt-4 max-w-xl text-lg font-semibold leading-snug text-slate-100 sm:text-xl"
+            >
+              {t(
+                'home.hero.subtitle',
+                'Harnessing Artificial Intelligence to Strengthen Health Systems and Accelerate Universal Health Coverage in Nigeria and Africa.'
+              )}
+            </motion.p>
+          )}
 
           <motion.div custom={2} variants={fadeUp} className="mt-6 flex flex-wrap items-stretch justify-center gap-3 sm:gap-4">
             <span className="flex max-w-[220px] items-start gap-2 rounded-tl-3xl rounded-br-3xl border border-navy/15 bg-white px-4 py-3">
