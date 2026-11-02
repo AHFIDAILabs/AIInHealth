@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Send, Paperclip, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PageHero } from '../../components/ui/PageHero';
+import { PageHero } from '../../design-system/patterns/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Button } from '../../components/ui/Button';
 import { Banner } from '../../components/ui/Banner';

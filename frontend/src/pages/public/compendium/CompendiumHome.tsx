@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import MiniSearch from 'minisearch';
 import { SEO } from '../../../components/seo/SEO';
-import { PageHero } from '../../../components/ui/PageHero';
+import { PageHero } from '../../../design-system/patterns/PageHero';
 import { fetchCompendiumSearchIndexRaw } from '../../../services/compendium.service';
 import { citeEdition, citeUrlForEdition } from '../../../lib/citation';
 import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT, PresenterPhoto } from './shared';

@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { REDIRECTS } from './config/redirects';
 import { PageViewTracker } from './components/analytics/PageViewTracker';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -14,8 +15,6 @@ import { RequireRole } from './routes/RequireRole';
 import { RequireRootAdmin } from './routes/RequireRootAdmin';
 import { PortalProtectedRoute } from './routes/PortalProtectedRoute';
 import { ReviewerProtectedRoute } from './routes/ReviewerProtectedRoute';
-import { Home } from './pages/public/Home';
-import { NewHome } from './pages/public/NewHome';
 import { HomeMain } from './pages/public/HomeMain';
 import { About } from './pages/public/About';
 import { Agenda } from './pages/public/Agenda';
@@ -144,8 +143,11 @@ function App() {
         <Routes>
           <Route element={<PublicLayout />}>
             <Route path="/" element={<HomeMain />} />
-            <Route path="/classic" element={<Home />} />
-            <Route path="/home-v2" element={<NewHome />} />
+            {/* Retired homepage variants (pages/public/Home.tsx, NewHome.tsx) — kept in the
+                repo, just no longer routable. See config/redirects.ts for why each exists. */}
+            {REDIRECTS.map((r) => (
+              <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />
+            ))}
             <Route path="/about" element={<About />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/live" element={<LiveStream />} />

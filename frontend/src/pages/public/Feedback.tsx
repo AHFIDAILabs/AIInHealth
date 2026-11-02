@@ -7,7 +7,7 @@ import { Star, Send } from 'lucide-react';
 import { SEO } from '../../components/seo/SEO';
 import { Button } from '../../components/ui/Button';
 import { LightTextArea } from '../../components/ui/LightField';
-import { HoneypotField } from '../../components/ui/HoneypotField';
+import { HoneypotField } from '../../design-system/primitives/HoneypotField';
 import { submitFeedback, fetchFeedbackInvite } from '../../services/feedback.service';
 import { listPublicSessions } from '../../services/session.service';
 import { getApiErrorMessage } from '../../services/api';

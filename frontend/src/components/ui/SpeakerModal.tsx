@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { InitialsAvatar } from './InitialsAvatar';
+import { InitialsAvatar } from '../../design-system/primitives/InitialsAvatar';
 import { ButtonLink } from './Button';
 import type { AdminSpeaker } from '../../services/speaker.service';
 import { useOptionalLanguage } from '../../contexts/LanguageContext';

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { PageHero } from '../../components/ui/PageHero';
+import { PageHero } from '../../design-system/patterns/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { SEO } from '../../components/seo/SEO';
 import { NotFound } from './NotFound';

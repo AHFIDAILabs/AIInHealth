@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Reveal } from '../ui/Reveal';
 import { ButtonLink } from '../ui/Button';
-import { InitialsAvatar } from '../ui/InitialsAvatar';
+import { InitialsAvatar } from '../../design-system/primitives/InitialsAvatar';
 import { SpeakerModal } from '../ui/SpeakerModal';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 

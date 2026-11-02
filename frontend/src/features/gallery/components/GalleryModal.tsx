@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Share2, Link2, Check } from 'lucide-react';
-import type { AdminMedia, MediaDay } from '../../services/media.service';
+import type { AdminMedia, MediaDay } from '../../../services/media.service';
 
 const DAY_LABEL: Record<MediaDay, string> = { day1: 'Day 1', day2: 'Day 2', general: 'General' };
 

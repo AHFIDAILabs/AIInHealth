@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AhfidBadge } from '../ui/AhfidBadge';
+import { AhfidBadge } from '../../design-system/primitives/AhfidBadge';
 import summitMark from '../../assets/images/summit_logo_mark.png';
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../lib/siteInfo';
 

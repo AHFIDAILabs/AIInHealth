@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { AbujaSkyline } from './AbujaSkyline';
+import { AbujaSkyline } from '../../components/ui/AbujaSkyline';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import heroBg from '../../assets/images/hero_bg.webp';
 

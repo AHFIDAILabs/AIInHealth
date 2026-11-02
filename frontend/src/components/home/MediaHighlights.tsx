@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { PlayCircle, ArrowRight } from 'lucide-react';
 import { Reveal } from '../ui/Reveal';
 import { ButtonLink } from '../ui/Button';
-import { GalleryModal } from '../ui/GalleryModal';
+import { GalleryModal } from '../../features/gallery';
 import { listPublicMedia, type AdminMedia } from '../../services/media.service';
 
 const PREVIEW_COUNT = 8;

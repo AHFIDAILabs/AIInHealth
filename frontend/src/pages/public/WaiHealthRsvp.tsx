@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Clock, Ban, AlertCircle } from 'lucide-react';
-import { PageHero } from '../../components/ui/PageHero';
+import { PageHero } from '../../design-system/patterns/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Banner } from '../../components/ui/Banner';
 import { confirmWaiHealthRsvp, type WaiHealthRsvpStatus } from '../../services/waiHealth.service';

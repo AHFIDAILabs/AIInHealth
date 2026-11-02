@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
-import { PageHero } from '../../components/ui/PageHero';
+import { PageHero } from '../../design-system/patterns/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Banner } from '../../components/ui/Banner';
 import { redeemMasterclassRsvp, type MasterclassRsvpStatus } from '../../services/masterclass.service';

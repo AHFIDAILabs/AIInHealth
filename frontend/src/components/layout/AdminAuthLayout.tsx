@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AhfidLockup } from '../ui/AhfidBadge';
+import { AhfidLockup } from '../../design-system/primitives/AhfidBadge';
 
 interface AdminAuthLayoutProps {
   title: string;

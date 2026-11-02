@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PlayCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PageHero } from '../../components/ui/PageHero';
+import { PageHero } from '../../design-system/patterns/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { GalleryModal } from '../../components/ui/GalleryModal';
+import { GalleryModal } from '../../features/gallery';
 import { listPublicMedia, type AdminMedia, type MediaType, type MediaDay } from '../../services/media.service';
 import { SEO } from '../../components/seo/SEO';
 

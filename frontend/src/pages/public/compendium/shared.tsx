@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { InitialsAvatar } from '../../../components/ui/InitialsAvatar';
+import { InitialsAvatar } from '../../../design-system/primitives/InitialsAvatar';
 
 // Small cross-page nav shared by all five compendium pages — kept out of
 // Navbar.tsx entirely (that's the site-wide nav; this is a local section
