@@ -25,6 +25,7 @@ export const NOTIFICATION_EVENTS = [
   'abstract.reviewer_declined',
   'scholarship_application.new',
   'whatsapp.handoff_requested',
+  'interest2027.new',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 

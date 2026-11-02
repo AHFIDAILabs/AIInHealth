@@ -395,6 +395,30 @@ export const feedbackInviteReadLimiter = rateLimit({
   handler: onLimitExceeded('feedbackInviteReadLimiter', 'low'),
 });
 
+// /2027-interest public submit — same email+IP keying/window as
+// waiHealthLimiter/registrationLimiter above.
+export const interest2027Limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: emailKey,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many submissions. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('interest2027Limiter', 'low'),
+});
+
+// GET /2027-interest/invite/:token — same shape as feedbackInviteReadLimiter:
+// keyed on the token itself, not IP.
+export const interest2027InviteReadLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: tokenKey,
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please try again shortly.' } },
+  handler: onLimitExceeded('interest2027InviteReadLimiter', 'low'),
+});
+
 export const askAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

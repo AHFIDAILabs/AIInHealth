@@ -228,6 +228,14 @@ const registrationSchema = new Schema(
     feedbackInviteSentAt: { type: Date },
     feedbackRespondedAt: { type: Date },
 
+    // Personalised "come back for 2027" link (interest2027.controller.ts) —
+    // generated on demand, one per registration, never bulk-sent as part of
+    // this checkpoint. Lets the /2027 interest form prefill name/email for
+    // someone arriving from this specific link, while the anonymous public
+    // form itself never sees or exposes any registration data. Same opaque
+    // crypto.randomBytes(24).toString('base64url') idiom as the tokens above.
+    interest2027Token: { type: String, unique: true, sparse: true },
+
     // Deal-room — off by default; a delegate opts in from the portal before they
     // appear in the cross-registration directory other delegates can browse.
     directoryOptIn: { type: Boolean, default: false },

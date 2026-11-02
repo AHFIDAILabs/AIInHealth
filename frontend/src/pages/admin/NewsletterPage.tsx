@@ -10,11 +10,10 @@ import { getApiErrorMessage } from '../../services/api';
 import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 
-const SOURCE_OPTIONS: NewsletterSource[] = ['updates', 'concept_note', 'summit_2027_interest'];
+const SOURCE_OPTIONS: NewsletterSource[] = ['updates', 'concept_note'];
 const SOURCE_LABEL: Record<NewsletterSource, string> = {
   updates: 'Summit Updates',
   concept_note: 'Concept Note Download',
-  summit_2027_interest: '2027 "Stay in Touch" Signup',
 };
 
 export const NewsletterPage = () => {

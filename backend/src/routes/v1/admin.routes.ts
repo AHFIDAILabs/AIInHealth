@@ -41,6 +41,7 @@ import * as analyticsController from '../../controllers/analytics.controller.js'
 import * as integrationsController from '../../controllers/integrations.controller.js';
 import * as onevieIntegrationController from '../../controllers/onevieIntegration.controller.js';
 import * as newsletterController from '../../controllers/newsletter.controller.js';
+import * as interest2027Controller from '../../controllers/interest2027.controller.js';
 import * as uploadController from '../../controllers/upload.controller.js';
 import * as searchController from '../../controllers/search.controller.js';
 import * as mediaController from '../../controllers/media.controller.js';
@@ -182,6 +183,13 @@ router.post(
   '/registrations/:id/mark-paid',
   requireRole('super_admin', 'admin', 'registrations_officer'),
   registrationController.adminMarkPaid
+);
+// Lazily generates this registration's personalised /2027 interest-list link
+// — see interest2027.controller.ts's adminGenerateInviteLink.
+router.post(
+  '/registrations/:id/2027-interest-link',
+  requireRole('super_admin', 'admin', 'registrations_officer'),
+  interest2027Controller.adminGenerateInviteLink
 );
 // Pending-attendee RSVP reconfirmation — sending the nudge is the only new
 // endpoint; actually confirming (singly or in bulk) reuses the existing
@@ -643,6 +651,9 @@ router.patch('/messages/:id/reply', requireRole(...adminOnlyRoles), contactContr
 
 router.get('/newsletter-subscribers', requireRole(...adminOnlyRoles), newsletterController.adminList);
 router.get('/newsletter-subscribers/export', requireRole(...adminOnlyRoles), newsletterController.adminExport);
+
+router.get('/2027-interest', requireRole(...adminOnlyRoles), interest2027Controller.adminList);
+router.get('/2027-interest/export', requireRole(...adminOnlyRoles), interest2027Controller.adminExport);
 
 router.get('/audit-logs', requireRole('super_admin', 'admin', 'viewer'), auditLogController.adminList);
 

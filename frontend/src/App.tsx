@@ -77,6 +77,7 @@ import { WhatsAppConversationsPage } from './pages/admin/WhatsAppConversationsPa
 import { InquiriesPage } from './pages/admin/InquiriesPage';
 import { MessagesPage } from './pages/admin/MessagesPage';
 import { NewsletterPage } from './pages/admin/NewsletterPage';
+import { Interest2027Page } from './pages/admin/Interest2027Page';
 import { AuditLogPage } from './pages/admin/AuditLogPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
@@ -278,6 +279,7 @@ function App() {
                 <Route path="/admin/inquiries" element={<InquiriesPage />} />
                 <Route path="/admin/messages" element={<MessagesPage />} />
                 <Route path="/admin/newsletter" element={<NewsletterPage />} />
+                <Route path="/admin/2027-interest" element={<Interest2027Page />} />
                 <Route path="/admin/media" element={<MediaPage />} />
                 <Route path="/admin/knowledge-base" element={<KnowledgeBasePage />} />
                 <Route path="/admin/policy-tracker" element={<PolicyTrackerPage />} />
