@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 import { SITE_URL } from '../../lib/siteInfo';
+import { SITE_NAME, getPageTitle } from '../../config/routes';
 
-const SITE_NAME = 'AI in Health Summit 2026';
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.png`;
 
 interface SEOProps {
@@ -24,7 +24,7 @@ interface SEOProps {
 // description/OG tags, so sharing a link to any specific page (or Google
 // indexing it) always surfaced the homepage's copy instead of that page's own.
 export const SEO = ({ title, description, path, image, noindex, structuredData, titleIsFull }: SEOProps) => {
-  const fullTitle = titleIsFull ? title : `${title} | ${SITE_NAME}`;
+  const fullTitle = titleIsFull ? title : getPageTitle(title);
   const url = `${SITE_URL}${path}`;
   const resolvedImage = image ?? DEFAULT_IMAGE;
   const jsonLdBlocks = structuredData ? (Array.isArray(structuredData) ? structuredData : [structuredData]) : [];

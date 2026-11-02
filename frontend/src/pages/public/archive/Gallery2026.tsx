@@ -6,6 +6,7 @@ import { AlbumGrid, useAlbumIndex } from '../../../features/gallery';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
 import { SEO } from '../../../components/seo/SEO';
+import { trackEvent } from '../../../lib/analytics';
 import type { Album } from '../../../features/gallery';
 
 const DAY_TABS: { value: Album['day'] | 'all'; label: string }[] = [
@@ -38,7 +39,13 @@ export const Gallery2026 = () => {
           {failed && (
             <Banner variant="error">
               We couldn&rsquo;t load the photo index right now.{' '}
-              <a href={FLICKR_COLLECTION_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold underline">
+              <a
+                href={FLICKR_COLLECTION_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => void trackEvent('outbound_flickr', { context: 'gallery_index_fallback' })}
+                className="inline-flex items-center gap-1 font-semibold underline"
+              >
                 Browse the collection directly on Flickr <ExternalLink size={13} />
               </a>
             </Banner>

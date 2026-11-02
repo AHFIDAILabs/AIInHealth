@@ -5,6 +5,7 @@ import MiniSearch from 'minisearch';
 import { SEO } from '../../../components/seo/SEO';
 import { PageHero } from '../../../design-system/patterns/PageHero';
 import { fetchCompendiumSearchIndexRaw } from '../../../services/compendium.service';
+import { trackEvent } from '../../../lib/analytics';
 import { citeEdition, citeUrlForEdition } from '../../../lib/citation';
 import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT, PresenterPhoto } from './shared';
 import { useCompendiumData } from './useCompendiumData';
@@ -39,6 +40,13 @@ export const CompendiumHome = () => {
   const [matchingCodes, setMatchingCodes] = useState<Set<string> | null>(null);
 
   const published = useMemo(() => abstracts.filter((a) => a.status === 'published'), [abstracts]);
+
+  useEffect(() => {
+    // Fires once per successful landing on /compendium — edition only
+    // changes if the admin publishes a new compendium edition, not per render.
+    if (!edition) return;
+    void trackEvent('compendium_open', { abstractCount: published.length });
+  }, [edition, published.length]);
 
   useEffect(() => {
     if (!current) return;
@@ -100,7 +108,6 @@ export const CompendiumHome = () => {
         eyebrow="Open Access"
         title={title}
         subtitle="Browse, search, and cite the abstracts accepted for presentation at the AI in Health Summit 2026 — free for researchers, students, and policymakers to read and reuse."
-        documentTitle="Open Access Compendium"
       >
         <div className="flex flex-wrap items-center justify-center gap-2.5">
           <StatPill label="Abstracts" value={published.length} />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { useAlbum, useAlbumIndex, AlbumLightbox } from '../../../features/gallery';
@@ -6,6 +6,7 @@ import { RemoteImage } from '../../../design-system/primitives';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
 import { SEO } from '../../../components/seo/SEO';
+import { trackEvent } from '../../../lib/analytics';
 
 const FLICKR_COLLECTION_URL = 'https://www.flickr.com/photos/aiinhealthsummit2026/collections/72157726991550631/';
 
@@ -20,6 +21,11 @@ export const Album2026 = () => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const album = albums?.find((a) => a.id === albumId);
+
+  useEffect(() => {
+    if (!albumId || !photos || photos.length === 0) return;
+    void trackEvent('album_open', { albumId, photoCount: photos.length });
+  }, [albumId, photos]);
 
   return (
     <>
@@ -42,7 +48,13 @@ export const Album2026 = () => {
             <div className="mt-8">
               <Banner variant="error">
                 We couldn&rsquo;t load this album right now.{' '}
-                <a href={album?.flickrUrl ?? FLICKR_COLLECTION_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold underline">
+                <a
+                  href={album?.flickrUrl ?? FLICKR_COLLECTION_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => void trackEvent('outbound_flickr', { context: 'album_fallback', albumId })}
+                  className="inline-flex items-center gap-1 font-semibold underline"
+                >
                   View it directly on Flickr <ExternalLink size={13} />
                 </a>
               </Banner>

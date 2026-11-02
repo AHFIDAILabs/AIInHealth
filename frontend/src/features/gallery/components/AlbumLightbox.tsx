@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { RemoteImage } from '../../../design-system/primitives';
+import { trackEvent } from '../../../lib/analytics';
 import type { RawPhotoEntry } from '../types';
 
 interface AlbumLightboxProps {
@@ -97,6 +98,7 @@ export const AlbumLightbox = ({ photos, activeIndex, onClose, onNavigate }: Albu
                 href={photo.flickrPageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => void trackEvent('outbound_flickr', { context: 'lightbox', photoId: photo.id })}
                 className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20"
               >
                 View on Flickr <ExternalLink size={13} />

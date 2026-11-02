@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Play } from 'lucide-react';
+import { trackEvent } from '../../lib/analytics';
 
 export type VideoProvider = 'flickr' | 'youtube';
 
@@ -49,7 +50,10 @@ export const VideoEmbed = ({ provider, videoId, posterUrl, title, className = ''
   return (
     <button
       type="button"
-      onClick={() => setPlaying(true)}
+      onClick={() => {
+        void trackEvent('video_play', { provider, videoId, title });
+        setPlaying(true);
+      }}
       className={`group relative block aspect-video w-full overflow-hidden rounded-xl bg-black ${className}`}
       aria-label={`Play video: ${title}`}
     >

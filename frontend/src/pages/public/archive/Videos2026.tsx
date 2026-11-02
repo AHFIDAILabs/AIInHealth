@@ -5,6 +5,7 @@ import { useAlbum } from '../../../features/gallery';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { Banner } from '../../../components/ui/Banner';
 import { SEO } from '../../../components/seo/SEO';
+import { trackEvent } from '../../../lib/analytics';
 
 // The videos live in the same Flickr collection as the photos (album
 // 72177720336311834, "Highlights, short interviews" — Appendix A), so this
@@ -27,7 +28,13 @@ export const Videos2026 = () => {
           {failed && (
             <Banner variant="error">
               We couldn&rsquo;t load the videos right now.{' '}
-              <a href={FLICKR_COLLECTION_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold underline">
+              <a
+                href={FLICKR_COLLECTION_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => void trackEvent('outbound_flickr', { context: 'videos_fallback' })}
+                className="inline-flex items-center gap-1 font-semibold underline"
+              >
                 Browse the collection directly on Flickr <ExternalLink size={13} />
               </a>
             </Banner>

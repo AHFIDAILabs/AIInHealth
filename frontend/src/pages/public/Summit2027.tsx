@@ -19,6 +19,7 @@ import { getApiErrorMessage } from '../../services/api';
 import { useFormToken } from '../../hooks/useFormToken';
 import { GENERIC_FORM_INVALID_MESSAGE } from '../../lib/siteInfo';
 import { SEO } from '../../components/seo/SEO';
+import { trackEvent } from '../../lib/analytics';
 
 const schema = z.object({
   fullName: z.string().trim().min(1, 'Enter your full name'),
@@ -74,6 +75,7 @@ export const Summit2027 = () => {
     setSubmitError('');
     try {
       await submitInterest2027({ ...values, inviteToken, formToken });
+      void trackEvent('waitlist_signup', { interestTypes: values.interestTypes.join(','), viaInvite: !!inviteToken });
       reset(undefined, { keepIsSubmitSuccessful: true });
     } catch (err) {
       setSubmitError(getApiErrorMessage(err));
