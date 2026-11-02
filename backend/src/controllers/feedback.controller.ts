@@ -22,12 +22,23 @@ import { sendFeedbackRequestEmail, sendFeedbackReminderEmail } from '../services
 import { runInBatches } from '../utils/batch.js';
 import { recordAudit } from '../services/audit.service.js';
 import { toCsv } from '../utils/toCsv.js';
+import { logger } from '../config/logger.js';
 import { env } from '../config/env.js';
 
 // Opaque, random — same crypto.randomBytes(24).toString('base64url') idiom as
 // every other invite/magic-link token in this app (see
 // registrationRsvp.controller.ts's generateRsvpToken).
 const generateFeedbackInviteToken = (): string => crypto.randomBytes(24).toString('base64url');
+
+// Shared between adminSendInvites and adminSendReminders below — both query
+// "not yet invited"/"not yet responded" and background-send from there, so a
+// second click (or a second admin, or a page refresh) while the first batch
+// is still mid-flight would re-target people whose feedbackInviteSentAt
+// hasn't been saved yet, double-emailing them. Same "running" guard shape as
+// onevieSync.job.ts's overlap protection — in-memory is fine here since this
+// is one admin-triggered action on a single-process deployment, not a
+// recurring job that needs to survive a restart.
+let feedbackSendInProgress = false;
 
 // POST /feedback — public, anonymous (see Feedback.model.ts's own comment on
 // why there's no identity field to spam-score/velocity-bump the way Contact/
@@ -86,7 +97,19 @@ export const inviteInfo = catchAsync(async (req: Request, res: Response) => {
 // not just the general public "attendee" type. ids given -> resend to
 // exactly those (e.g. a follow-up nudge), regardless of whether they were
 // invited before.
+//
+// Responds as soon as the target list is known, THEN sends in the
+// background — at a few hundred+ recipients, one real Microsoft Graph call
+// per email (even batched 3-at-a-time) takes minutes, which blows past
+// Render's request timeout if the handler waits for it. The frontend polls
+// GET /admin/feedback/invite-stats afterward to watch `invited` climb,
+// rather than this response ever reporting a final sent/failed count.
 export const adminSendInvites = catchAsync(async (req: Request, res: Response) => {
+  if (feedbackSendInProgress) {
+    res.status(409).json(new ApiResponse({ targeted: 0, started: false, message: 'A feedback send is already in progress — wait for it to finish before starting another.' }));
+    return;
+  }
+
   const { ids }: SendFeedbackInvitesInput = sendFeedbackInvitesSchema.parse({ body: req.body }).body;
 
   const registrations = await Registration.find({
@@ -95,24 +118,34 @@ export const adminSendInvites = catchAsync(async (req: Request, res: Response) =
   });
   const targetable = registrations.filter((r) => !!r.email);
 
-  const { succeeded, failed } = await runInBatches(targetable, 3, async (registration) => {
-    if (!registration.feedbackInviteToken) registration.feedbackInviteToken = generateFeedbackInviteToken();
-    registration.feedbackInviteSentAt = new Date();
-    await registration.save();
+  res.json(new ApiResponse({ targeted: targetable.length, started: true }));
+  if (targetable.length === 0) return;
 
-    const feedbackUrl = `${env.FRONTEND_ORIGIN}/feedback/invite/${registration.feedbackInviteToken}`;
-    await sendFeedbackRequestEmail(registration.email!, registration.fullName ?? 'there', feedbackUrl);
-  });
+  feedbackSendInProgress = true;
+  void (async () => {
+    const { succeeded, failed } = await runInBatches(targetable, 3, async (registration) => {
+      if (!registration.feedbackInviteToken) registration.feedbackInviteToken = generateFeedbackInviteToken();
+      registration.feedbackInviteSentAt = new Date();
+      await registration.save();
 
-  await recordAudit({
-    req,
-    action: 'feedback.invites_sent',
-    resourceType: 'Registration',
-    resourceId: 'bulk',
-    after: { targeted: targetable.length, sent: succeeded, failed: failed.length },
-  });
+      const feedbackUrl = `${env.FRONTEND_ORIGIN}/feedback/invite/${registration.feedbackInviteToken}`;
+      await sendFeedbackRequestEmail(registration.email!, registration.fullName ?? 'there', feedbackUrl);
+    });
 
-  res.json(new ApiResponse({ targeted: targetable.length, sent: succeeded, failed: failed.length }));
+    logger.info({ targeted: targetable.length, succeeded, failed: failed.length }, 'feedback.send-invites background run finished');
+
+    await recordAudit({
+      req,
+      action: 'feedback.invites_sent',
+      resourceType: 'Registration',
+      resourceId: 'bulk',
+      after: { targeted: targetable.length, sent: succeeded, failed: failed.length },
+    });
+  })()
+    .catch((err) => logger.error({ err }, 'feedback.send-invites background run crashed'))
+    .finally(() => {
+      feedbackSendInProgress = false;
+    });
 });
 
 // POST /admin/feedback/send-reminders — a softer-toned resend to everyone who
@@ -122,6 +155,11 @@ export const adminSendInvites = catchAsync(async (req: Request, res: Response) =
 // ids given -> remind exactly those, regardless of status (manual override,
 // same shape as adminSendInvites above).
 export const adminSendReminders = catchAsync(async (req: Request, res: Response) => {
+  if (feedbackSendInProgress) {
+    res.status(409).json(new ApiResponse({ targeted: 0, started: false, message: 'A feedback send is already in progress — wait for it to finish before starting another.' }));
+    return;
+  }
+
   const { ids }: SendFeedbackInvitesInput = sendFeedbackInvitesSchema.parse({ body: req.body }).body;
 
   const registrations = await Registration.find({
@@ -130,24 +168,34 @@ export const adminSendReminders = catchAsync(async (req: Request, res: Response)
   });
   const targetable = registrations.filter((r) => !!r.email);
 
-  const { succeeded, failed } = await runInBatches(targetable, 3, async (registration) => {
-    if (!registration.feedbackInviteToken) registration.feedbackInviteToken = generateFeedbackInviteToken();
-    registration.feedbackInviteSentAt = new Date();
-    await registration.save();
+  res.json(new ApiResponse({ targeted: targetable.length, started: true }));
+  if (targetable.length === 0) return;
 
-    const feedbackUrl = `${env.FRONTEND_ORIGIN}/feedback/invite/${registration.feedbackInviteToken}`;
-    await sendFeedbackReminderEmail(registration.email!, registration.fullName ?? 'there', feedbackUrl);
-  });
+  feedbackSendInProgress = true;
+  void (async () => {
+    const { succeeded, failed } = await runInBatches(targetable, 3, async (registration) => {
+      if (!registration.feedbackInviteToken) registration.feedbackInviteToken = generateFeedbackInviteToken();
+      registration.feedbackInviteSentAt = new Date();
+      await registration.save();
 
-  await recordAudit({
-    req,
-    action: 'feedback.reminders_sent',
-    resourceType: 'Registration',
-    resourceId: 'bulk',
-    after: { targeted: targetable.length, sent: succeeded, failed: failed.length },
-  });
+      const feedbackUrl = `${env.FRONTEND_ORIGIN}/feedback/invite/${registration.feedbackInviteToken}`;
+      await sendFeedbackReminderEmail(registration.email!, registration.fullName ?? 'there', feedbackUrl);
+    });
 
-  res.json(new ApiResponse({ targeted: targetable.length, sent: succeeded, failed: failed.length }));
+    logger.info({ targeted: targetable.length, succeeded, failed: failed.length }, 'feedback.send-reminders background run finished');
+
+    await recordAudit({
+      req,
+      action: 'feedback.reminders_sent',
+      resourceType: 'Registration',
+      resourceId: 'bulk',
+      after: { targeted: targetable.length, sent: succeeded, failed: failed.length },
+    });
+  })()
+    .catch((err) => logger.error({ err }, 'feedback.send-reminders background run crashed'))
+    .finally(() => {
+      feedbackSendInProgress = false;
+    });
 });
 
 // GET /admin/feedback/invite-stats — progress for the admin Feedback page's

@@ -119,14 +119,33 @@ export const FeedbackPage = () => {
   const notYetResponded = inviteStats?.notResponded ?? 0;
   const responseRate = inviteStats && inviteStats.confirmedAttendees ? Math.round((100 * inviteStats.responded) / inviteStats.confirmedAttendees) : 0;
 
+  // Sending to hundreds of people is a real Microsoft Graph call per email —
+  // minutes of work, not something a browser request can wait on. The server
+  // responds the instant it knows who it's sending to and does the actual
+  // sending in the background, so there's never a final sent/failed count
+  // here — this just polls invite-stats for a bit afterward so the "invited"
+  // number visibly climbs instead of looking like nothing happened.
+  const pollInviteStatsFor = (ms: number) => {
+    const stop = Date.now() + ms;
+    const tick = () => {
+      loadInviteStats();
+      if (Date.now() < stop) setTimeout(tick, 5000);
+    };
+    tick();
+  };
+
   const sendInvites = async () => {
     setSending(true);
     setSendError('');
     setSendResult('');
     try {
       const res = await adminSendFeedbackInvites();
-      setSendResult(`Sent to ${res.sent} of ${res.targeted} registrants${res.failed ? ` (${res.failed} failed)` : ''}.`);
-      loadInviteStats();
+      if (!res.started) {
+        setSendError('A feedback send is already in progress — wait for it to finish before starting another.');
+      } else {
+        setSendResult(`Started sending to ${res.targeted} registrant${res.targeted === 1 ? '' : 's'} in the background — this can take a few minutes for large batches.`);
+        pollInviteStatsFor(2 * 60 * 1000);
+      }
     } catch (err) {
       setSendError(getApiErrorMessage(err));
     } finally {
@@ -140,8 +159,12 @@ export const FeedbackPage = () => {
     setRemindResult('');
     try {
       const res = await adminSendFeedbackReminders();
-      setRemindResult(`Sent to ${res.sent} of ${res.targeted} registrants${res.failed ? ` (${res.failed} failed)` : ''}.`);
-      loadInviteStats();
+      if (!res.started) {
+        setRemindError('A feedback send is already in progress — wait for it to finish before starting another.');
+      } else {
+        setRemindResult(`Started sending to ${res.targeted} registrant${res.targeted === 1 ? '' : 's'} in the background — this can take a few minutes for large batches.`);
+        pollInviteStatsFor(2 * 60 * 1000);
+      }
     } catch (err) {
       setRemindError(getApiErrorMessage(err));
     } finally {

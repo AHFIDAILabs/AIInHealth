@@ -115,25 +115,25 @@ export const adminFeedbackInviteStats = async (): Promise<FeedbackInviteStats> =
   return res.data.data;
 };
 
+// The backend responds as soon as the target list is known, then sends in
+// the background (hundreds of real Graph API calls take minutes — far past
+// what a browser request can wait on) — so this never reports a final
+// sent/failed count. Poll adminFeedbackInviteStats() afterward to watch
+// `invited`/`responded` climb instead.
+export interface SendFeedbackResult {
+  targeted: number;
+  started: boolean;
+}
+
 // ids omitted -> every confirmed attendee not yet invited.
-export const adminSendFeedbackInvites = async (
-  ids?: string[]
-): Promise<{ targeted: number; sent: number; failed: number }> => {
-  const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
-    '/admin/feedback/send-invites',
-    { ids }
-  );
+export const adminSendFeedbackInvites = async (ids?: string[]): Promise<SendFeedbackResult> => {
+  const res = await api.post<{ success: true; data: SendFeedbackResult }>('/admin/feedback/send-invites', { ids });
   return res.data.data;
 };
 
 // A softer-toned resend — ids omitted -> every confirmed registration that
 // hasn't RESPONDED yet (regardless of whether they were invited before).
-export const adminSendFeedbackReminders = async (
-  ids?: string[]
-): Promise<{ targeted: number; sent: number; failed: number }> => {
-  const res = await api.post<{ success: true; data: { targeted: number; sent: number; failed: number } }>(
-    '/admin/feedback/send-reminders',
-    { ids }
-  );
+export const adminSendFeedbackReminders = async (ids?: string[]): Promise<SendFeedbackResult> => {
+  const res = await api.post<{ success: true; data: SendFeedbackResult }>('/admin/feedback/send-reminders', { ids });
   return res.data.data;
 };
