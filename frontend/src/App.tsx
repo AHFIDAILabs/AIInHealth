@@ -15,7 +15,7 @@ import { RequireRole } from './routes/RequireRole';
 import { RequireRootAdmin } from './routes/RequireRootAdmin';
 import { PortalProtectedRoute } from './routes/PortalProtectedRoute';
 import { ReviewerProtectedRoute } from './routes/ReviewerProtectedRoute';
-import { PostEventHome } from './pages/public/PostEventHome';
+import { HomeRecap } from './pages/public/HomeRecap';
 import { Gallery2026 } from './pages/public/archive/Gallery2026';
 import { Album2026 } from './pages/public/archive/Album2026';
 import { Videos2026 } from './pages/public/archive/Videos2026';
@@ -148,9 +148,12 @@ function App() {
         <Routes>
           <Route element={<PublicLayout />}>
             {/* The root path always belongs to the current edition (brief section 5) —
-                pages/public/HomeMain.tsx (the pre-event marketing home) is retired the
-                same way as Home.tsx/NewHome.tsx: kept in the repo, no longer routed. */}
-            <Route path="/" element={<PostEventHome />} />
+                pages/public/HomeMain.tsx (the pre-event marketing home) and
+                PostEventHome.tsx (this page's own first-draft predecessor, replaced after
+                direct feedback asking for something closer to HomeMain's own content
+                density) are both retired the same way as Home.tsx/NewHome.tsx: kept in the
+                repo, no longer routed. */}
+            <Route path="/" element={<HomeRecap />} />
             {/* Retired homepage variants (pages/public/Home.tsx, NewHome.tsx) — kept in the
                 repo, just no longer routable. See config/redirects.ts for why each exists. */}
             {REDIRECTS.map((r) => (

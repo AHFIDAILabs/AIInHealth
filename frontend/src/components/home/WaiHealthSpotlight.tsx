@@ -13,18 +13,27 @@ const BACKGROUND_IMAGES: string[] = [wia1, wia2, wia3];
 
 const ROTATE_MS = 6000;
 
+interface WaiHealthSpotlightProps {
+  // Overridable for the post-event homepage (HomeRecap.tsx), where
+  // "Register for the Breakfast" no longer makes sense — defaults preserve
+  // the original pre-event behaviour for HomeMain.tsx exactly as it was.
+  ctaTo?: string;
+  ctaLabel?: string;
+}
+
 // A dedicated homepage spotlight for the Women in AI & Health Breakfast, per
 // the concept brief: this opens Day 1 ahead of the main programme and depends
 // on real visibility to fill the room, so it gets its own section rather than
 // only showing up as one more row inside SummitProgramme's generic session
 // list. Static copy (not live session data) since this needs to be promotable
 // before the real Session entry even exists in the admin panel.
-export const WaiHealthSpotlight = () => {
+export const WaiHealthSpotlight = ({ ctaTo = '/wai-health-breakfast', ctaLabel }: WaiHealthSpotlightProps) => {
   const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     if (BACKGROUND_IMAGES.length < 2) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const id = setInterval(() => setActiveIndex((i) => (i + 1) % BACKGROUND_IMAGES.length), ROTATE_MS);
     return () => clearInterval(id);
   }, []);
@@ -68,8 +77,8 @@ export const WaiHealthSpotlight = () => {
               )}
             </p>
           </div>
-          <ButtonLink to="/wai-health-breakfast" variant="primary">
-            {t('home.waiHealth.cta', 'Register for the Breakfast')} <ArrowRight size={16} />
+          <ButtonLink to={ctaTo} variant="primary">
+            {ctaLabel ?? t('home.waiHealth.cta', 'Register for the Breakfast')} <ArrowRight size={16} />
           </ButtonLink>
         </Reveal>
       </div>
