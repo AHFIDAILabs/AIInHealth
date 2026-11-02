@@ -41,7 +41,31 @@ interface PhotoEntry {
   srcset: { width: number; url: string }[];
   largeUrl: string;
   flickrPageUrl: string;
+  // Video-only — the real playable iframe src, resolved via Flickr's own
+  // oEmbed endpoint (see fetchFlickrEmbedUrl below). The frontend previously
+  // guessed this URL's shape (`/photos/<user>/<id>/player/`) since no real
+  // video ID was available to verify against yet — now that real videos
+  // exist in the manifest, that guess is confirmed wrong (plays as a black
+  // box). oEmbed is Flickr's documented, stable contract for exactly this,
+  // so there's nothing left to guess.
+  embedUrl?: string;
 }
+
+// Flickr's own oEmbed endpoint — the officially documented way to get a
+// working embed for any public photo/video page URL, without needing to know
+// Flickr's internal embed URL scheme (which has changed over the years) or
+// guess at query params/secrets.
+const fetchFlickrEmbedUrl = async (flickrPageUrl: string): Promise<string | null> => {
+  try {
+    const res = await fetch(`https://www.flickr.com/services/oembed/?format=json&url=${encodeURIComponent(flickrPageUrl)}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { html?: string };
+    const match = data.html?.match(/src="([^"]+)"/);
+    return match ? match[1].replace(/&amp;/g, '&') : null;
+  } catch {
+    return null;
+  }
+};
 
 const flickrRest = async (method: string, params: Record<string, string>): Promise<any> => {
   const url = new URL('https://api.flickr.com/services/rest/');
@@ -79,16 +103,25 @@ const buildFromApi = async (): Promise<void> => {
     });
     const photos = photosRes.photoset.photo as Record<string, string>[];
 
-    const photoEntries: PhotoEntry[] = photos.map((p) => ({
-      id: p.id,
-      title: p.title,
-      media: (p.media as 'photo' | 'video') ?? 'photo',
-      width: Number(p.width_o ?? p.width_l ?? 0),
-      height: Number(p.height_o ?? p.height_l ?? 0),
-      srcset: SRCSET_WIDTHS.map((w) => ({ width: w, url: p[`url_${w <= 320 ? 'n' : w <= 640 ? 'z' : w <= 800 ? 'c' : 'l'}`] ?? p.url_l ?? '' })).filter((s) => s.url),
-      largeUrl: p.url_l ?? p.url_c ?? p.url_z ?? p.url_n ?? '',
-      flickrPageUrl: `https://www.flickr.com/photos/aiinhealthsummit2026/${p.id}/`,
-    }));
+    const photoEntries: PhotoEntry[] = [];
+    for (const p of photos) {
+      const media = (p.media as 'photo' | 'video') ?? 'photo';
+      const flickrPageUrl = `https://www.flickr.com/photos/aiinhealthsummit2026/${p.id}/`;
+      photoEntries.push({
+        id: p.id,
+        title: p.title,
+        media,
+        width: Number(p.width_o ?? p.width_l ?? 0),
+        height: Number(p.height_o ?? p.height_l ?? 0),
+        srcset: SRCSET_WIDTHS.map((w) => ({ width: w, url: p[`url_${w <= 320 ? 'n' : w <= 640 ? 'z' : w <= 800 ? 'c' : 'l'}`] ?? p.url_l ?? '' })).filter((s) => s.url),
+        largeUrl: p.url_l ?? p.url_c ?? p.url_z ?? p.url_n ?? '',
+        flickrPageUrl,
+        // Only videos need a real embed URL — fetched one at a time (not
+        // Promise.all) to stay a polite, low-concurrency guest of Flickr's
+        // API, same spirit as the rest of this script's sequential photoset loop.
+        ...(media === 'video' ? { embedUrl: (await fetchFlickrEmbedUrl(flickrPageUrl)) ?? undefined } : {}),
+      });
+    }
 
     fs.writeFileSync(path.join(OUTPUT_DIR, 'albums', `${set.id}.json`), JSON.stringify(photoEntries, null, 2));
 

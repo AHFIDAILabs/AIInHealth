@@ -18,6 +18,10 @@ export interface RawPhotoEntry {
   srcset: { width: number; url: string }[];
   largeUrl: string;
   flickrPageUrl: string;
+  // Video-only — the real playable iframe src, resolved at manifest-build
+  // time via Flickr's oEmbed endpoint. See VideoEmbed.tsx's own comment on
+  // why this replaced a guessed URL that played as a black box.
+  embedUrl?: string;
 }
 
 // What the UI actually renders — the raw manifest entry merged with

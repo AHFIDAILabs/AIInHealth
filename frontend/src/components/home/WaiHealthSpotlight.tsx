@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Users, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Reveal } from '../ui/Reveal';
 import { ButtonLink } from '../ui/Button';
+import { useAlbum } from '../../features/gallery';
 import wia1 from '../../assets/images/WIA.webp';
 import wia2 from '../../assets/images/WIA1.webp';
 import wia3 from '../../assets/images/WIA2.webp';
 
-// Real photos from AHFID's own past women-in-AI events (AI4SID / International
-// Women's Day) — crossfades slowly behind the card below.
-const BACKGROUND_IMAGES: string[] = [wia1, wia2, wia3];
+// Fallback for callers that don't pass backgroundAlbumId (HomeMain.tsx's
+// retired, unrouted usage) — kept exactly as it was so that archived page's
+// behaviour never changes. Real callers should pass backgroundAlbumId
+// instead, for real photos from the actual event.
+const FALLBACK_BACKGROUND_IMAGES: string[] = [wia1, wia2, wia3];
 
 const ROTATE_MS = 6000;
 
@@ -19,6 +22,9 @@ interface WaiHealthSpotlightProps {
   // the original pre-event behaviour for HomeMain.tsx exactly as it was.
   ctaTo?: string;
   ctaLabel?: string;
+  // When provided, the background crossfade pulls real photos from this
+  // Flickr album instead of the static fallback set above.
+  backgroundAlbumId?: string;
 }
 
 // A dedicated homepage spotlight for the Women in AI & Health Breakfast, per
@@ -27,22 +33,29 @@ interface WaiHealthSpotlightProps {
 // only showing up as one more row inside SummitProgramme's generic session
 // list. Static copy (not live session data) since this needs to be promotable
 // before the real Session entry even exists in the admin panel.
-export const WaiHealthSpotlight = ({ ctaTo = '/wai-health-breakfast', ctaLabel }: WaiHealthSpotlightProps) => {
+export const WaiHealthSpotlight = ({ ctaTo = '/wai-health-breakfast', ctaLabel, backgroundAlbumId }: WaiHealthSpotlightProps) => {
   const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
+  const { photos } = useAlbum(backgroundAlbumId ?? null);
+
+  const backgroundImages = useMemo(
+    () => (backgroundAlbumId ? (photos ?? []).slice(0, 6).map((p) => p.largeUrl) : FALLBACK_BACKGROUND_IMAGES),
+    [backgroundAlbumId, photos]
+  );
 
   useEffect(() => {
-    if (BACKGROUND_IMAGES.length < 2) return;
+    setActiveIndex(0);
+    if (backgroundImages.length < 2) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const id = setInterval(() => setActiveIndex((i) => (i + 1) % BACKGROUND_IMAGES.length), ROTATE_MS);
+    const id = setInterval(() => setActiveIndex((i) => (i + 1) % backgroundImages.length), ROTATE_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [backgroundImages]);
 
   return (
     <section className="relative overflow-hidden bg-navy py-16">
-      {BACKGROUND_IMAGES.length > 0 && (
+      {backgroundImages.length > 0 && (
         <div className="absolute inset-0">
-          {BACKGROUND_IMAGES.map((src, i) => (
+          {backgroundImages.map((src, i) => (
             <img
               key={src}
               src={src}

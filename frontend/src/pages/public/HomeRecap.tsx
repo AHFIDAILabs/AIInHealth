@@ -18,6 +18,8 @@ import { VENUE_NAME, VENUE_STREET_ADDRESS, VENUE_CITY } from '../../lib/siteInfo
 import homePageBg from '../../assets/images/AI in Health Summit 2026 - Website.webp';
 
 const VIDEOS_ALBUM_ID = '72177720336311834';
+const THEME_CARD_ALBUM_ID = '72177720336255405';
+const WAI_HEALTH_ALBUM_ID = '72177720336267648';
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },
@@ -45,6 +47,7 @@ export const HomeRecap = () => {
   const navigate = useNavigate();
   const { albums } = useAlbumIndex();
   const { photos: videos } = useAlbum(VIDEOS_ALBUM_ID);
+  const { photos: themeCardPhotos } = useAlbum(THEME_CARD_ALBUM_ID);
 
   const heroPhotos = useMemo(
     () =>
@@ -53,6 +56,12 @@ export const HomeRecap = () => {
         .slice(0, 6)
         .map((a) => a.coverPhotoUrl as string),
     [albums]
+  );
+  // Falls back to the static theme-card image if the album hasn't loaded (or
+  // failed) yet — section 11's resilience rule: never a broken-looking gap.
+  const themeCardImages = useMemo(
+    () => (themeCardPhotos && themeCardPhotos.length > 0 ? themeCardPhotos.slice(0, 6).map((p) => p.largeUrl) : [homePageBg]),
+    [themeCardPhotos]
   );
   const previewAlbums = (albums ?? []).filter((a) => a.day !== 'special').slice(0, 8);
 
@@ -147,7 +156,11 @@ export const HomeRecap = () => {
             <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-white p-0">
               <div className="items-center justify-center rounded-3xl bg-gradient-to-b from-[#dfe9f3] to-[#eef3f8] p-0 text-center">
                 <div>
-                  <img src={homePageBg} alt={t('home.hero.themeCardAlt', 'Theme card')} className="w-full object-fill p-2 lg:rounded-3xl" />
+                  <div className="relative aspect-[4/3] w-full overflow-hidden p-2 lg:rounded-3xl">
+                    <div className="relative h-full w-full overflow-hidden rounded-2xl" role="img" aria-label={t('home.hero.themeCardAlt', 'Theme card')}>
+                      <HeroMediaCarousel photos={themeCardImages} />
+                    </div>
+                  </div>
                   <p className="w-full p-5 text-[15px] font-semibold leading-relaxed text-gray-700">
                     {t(
                       'home.hero.themeCardBody',
@@ -200,7 +213,7 @@ export const HomeRecap = () => {
               <h3 className="text-center font-display text-xl font-bold text-navy">Highlight Videos</h3>
               <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {videos.slice(0, 4).map((video) => (
-                  <VideoEmbed key={video.id} provider="flickr" videoId={video.id} posterUrl={video.largeUrl} title={video.title || 'AI in Health Summit 2026'} />
+                  <VideoEmbed key={video.id} provider="flickr" videoId={video.id} embedSrc={video.embedUrl} posterUrl={video.largeUrl} title={video.title || 'AI in Health Summit 2026'} />
                 ))}
               </div>
               {videos.length > 4 && (
@@ -215,7 +228,11 @@ export const HomeRecap = () => {
         </div>
       </section>
 
-      <WaiHealthSpotlight ctaTo="/2026/gallery" ctaLabel="See the Breakfast in Pictures" />
+      <WaiHealthSpotlight
+        backgroundAlbumId={WAI_HEALTH_ALBUM_ID}
+        ctaTo={`/2026/gallery/${WAI_HEALTH_ALBUM_ID}`}
+        ctaLabel="See the Breakfast in Pictures"
+      />
       <SpeakersGrid />
       <SummitProgramme />
       <PartnersShowcase />

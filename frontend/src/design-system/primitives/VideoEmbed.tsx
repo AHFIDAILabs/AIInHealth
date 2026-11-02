@@ -7,21 +7,24 @@ export type VideoProvider = 'flickr' | 'youtube';
 interface VideoEmbedProps {
   provider: VideoProvider;
   videoId: string;
+  // Flickr-only — the real embed src resolved via Flickr's oEmbed endpoint
+  // at manifest-build time (build-media-manifest.ts). Required in practice
+  // for 'flickr': the previous guessed URL shape (`/photos/<user>/<id>/
+  // player/`) was confirmed to play as a black box once real video IDs
+  // existed to test against.
+  embedSrc?: string;
   posterUrl: string;
   title: string;
   className?: string;
 }
 
-const embedUrl = (provider: VideoProvider, videoId: string): string => {
+const resolveEmbedSrc = (provider: VideoProvider, videoId: string, embedSrc?: string): string => {
   if (provider === 'youtube') {
     // youtube-nocookie.com per section 6.3 — no tracking cookie until the
     // viewer actually presses play, which is also when this iframe mounts.
     return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
   }
-  // Flickr's embeddable video player. NOTE: verify this exact path against a
-  // real video ID once the Flickr API key is available — Appendix A's videos
-  // album hasn't been fetched yet, so this is unverified against a live ID.
-  return `https://www.flickr.com/photos/aiinhealthsummit2026/${videoId}/player/`;
+  return embedSrc ?? `https://www.flickr.com/photos/aiinhealthsummit2026/${videoId}/player/`;
 };
 
 // Section 6.3's facade pattern — a poster image and a play button are all
@@ -30,14 +33,14 @@ const embedUrl = (provider: VideoProvider, videoId: string): string => {
 // two providers, so the hosting choice (stay on Flickr vs. move to YouTube —
 // section 13 asks the owner to decide) can change later without touching
 // any page that uses this.
-export const VideoEmbed = ({ provider, videoId, posterUrl, title, className = '' }: VideoEmbedProps) => {
+export const VideoEmbed = ({ provider, videoId, embedSrc, posterUrl, title, className = '' }: VideoEmbedProps) => {
   const [playing, setPlaying] = useState(false);
 
   if (playing) {
     return (
       <div className={`relative aspect-video overflow-hidden rounded-xl bg-black ${className}`}>
         <iframe
-          src={embedUrl(provider, videoId)}
+          src={resolveEmbedSrc(provider, videoId, embedSrc)}
           title={title}
           className="absolute inset-0 h-full w-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

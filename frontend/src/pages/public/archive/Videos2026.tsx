@@ -51,7 +51,7 @@ export const Videos2026 = () => {
           {videos && videos.length > 0 && (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               {videos.map((video) => (
-                <VideoEmbed key={video.id} provider="flickr" videoId={video.id} posterUrl={video.largeUrl} title={video.title || 'AI in Health Summit 2026'} />
+                <VideoEmbed key={video.id} provider="flickr" videoId={video.id} embedSrc={video.embedUrl} posterUrl={video.largeUrl} title={video.title || 'AI in Health Summit 2026'} />
               ))}
             </div>
           )}
