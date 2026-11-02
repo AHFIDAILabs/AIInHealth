@@ -29,3 +29,7 @@ export { FormField } from '../../components/ui/FormField';
 export { InitialsAvatar } from './InitialsAvatar';
 export { AhfidBadge, AhfidLockup } from './AhfidBadge';
 export { HoneypotField } from './HoneypotField';
+
+// New — section 6.2/6.3's media primitives, built for the Flickr pipeline.
+export { RemoteImage, type RemoteImageSrcsetEntry } from './RemoteImage';
+export { VideoEmbed, type VideoProvider } from './VideoEmbed';
