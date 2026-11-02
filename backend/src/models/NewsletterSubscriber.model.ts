@@ -1,8 +1,12 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
 
-// Backs both Home-page email captures — distinguished only by `source`, since the
+// Backs the Home-page email captures — distinguished only by `source`, since the
 // data shape (email + first name) is identical; the framing/copy differs client-side.
-const SOURCES = ['updates', 'concept_note'] as const;
+// 'summit_2027_interest' is the interim "stay in touch" capture on the new /2027
+// placeholder page — a lighter-weight stand-in until the full 2027 interest-list
+// domain (multi-select interests, consent, WhatsApp opt-in) is built in its own
+// later checkpoint.
+const SOURCES = ['updates', 'concept_note', 'summit_2027_interest'] as const;
 
 const newsletterSubscriberSchema = new Schema(
   {

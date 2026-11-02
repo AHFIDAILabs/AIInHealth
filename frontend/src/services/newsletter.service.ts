@@ -1,6 +1,6 @@
 import { api } from './api';
 
-export type NewsletterSource = 'updates' | 'concept_note';
+export type NewsletterSource = 'updates' | 'concept_note' | 'summit_2027_interest';
 
 // Public — the Home/Footer newsletter signup form.
 export const subscribeNewsletter = async (input: { email: string; firstName: string; source: NewsletterSource }): Promise<void> => {

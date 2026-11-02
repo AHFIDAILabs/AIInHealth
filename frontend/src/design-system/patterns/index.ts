@@ -13,3 +13,4 @@ export { AbujaSkyline } from '../../components/ui/AbujaSkyline';
 // Physically relocated — public-only usage, safe to move outright.
 export { PageHero } from './PageHero';
 export { VenueMap } from './VenueMap';
+export { EmptyState } from './EmptyState';
