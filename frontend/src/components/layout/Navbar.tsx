@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, ArrowUpRight, ArrowRight, LogIn, Globe, ChevronDown } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ArrowRight, LogIn, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import logo from '../../assets/AI_Logo_New_white.png';
@@ -35,12 +35,6 @@ const LanguageSwitcher = ({ className = '' }: { className?: string }) => {
   );
 };
 
-// Ids tucked into the desktop "More" dropdown instead of the flat main row —
-// kept out of NAV_ITEMS' own shape (no per-item "inMoreMenu" flag) since this
-// is purely a desktop-row grouping decision; the mobile menu still lists
-// every item flat, where clutter isn't a concern the same way.
-const MORE_MENU_IDS = ['sponsored-delegates', 'wai-health', 'compendium'];
-
 // On by default — see docs/compendium/PUBLISHING.md. Mirrors App.tsx's own
 // COMPENDIUM_ENABLED check, so the nav link only ever appears when the route
 // it points to actually exists.
@@ -50,36 +44,38 @@ export const Navbar = () => {
   const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(64);
   const location = useLocation();
 
-  // Flat, minimal nav — matches the real production site (aiinhealthsummit.org)
-  // exactly: Home, Register Now, Innovation Showcase, and an external link out
-  // to AHFID's own site. Deliberately not the old mega-menu of every page this
-  // app has (Agenda/Speakers/Partners/Gallery/etc.) — those are all still one
-  // click away via the Footer, this is just what the header itself shows now.
+  // Post-event trim (the Summit ended 20 Oct 2026) — this is the nav for the
+  // interim "recap + 2027 interest" homepage (HomeRecap.tsx), not a permanent
+  // redesign; expect this to change again once the 2027 theme is set. Retired
+  // (unlinked here, routes themselves untouched — still reachable by direct
+  // URL) per direct request: Watch Live (the livestream is over), Abstracts
+  // (superseded by the richer Compendium, now promoted to this top-level row
+  // instead of the old "More" dropdown — the brief itself calls for
+  // Compendium in the main nav), Sponsored Delegates and Women in AI (both
+  // closed/stale programs that used to live in that same "More" dropdown —
+  // now empty, so the dropdown itself is removed too). Gallery now points at
+  // the real Flickr-based /2026/gallery instead of the old admin-uploaded
+  // /gallery. Register Now becomes Join the 2027 List, the one thing on this
+  // site that still has forward momentum — same swap already made in the
+  // hero and the WAI-Health spotlight. Agenda/Speakers/Innovations stay, as
+  // recap content people may still want to browse.
   // Built inside the component (not a module constant) so `label` can go
   // through t() — `id` is the stable, untranslated identifier the filters/
   // keys below actually compare against.
   const NAV_ITEMS: NavItem[] = [
     { id: 'home', label: t('nav.home', 'Home'), to: '/' },
     { id: 'agenda', label: t('nav.agenda', 'Agenda'), to: '/agenda' },
-    { id: 'live', label: t('nav.live', 'Watch Live'), to: '/live' },
     { id: 'speakers', label: t('nav.speakers', 'Speakers'), to: '/speakers' },
-    { id: 'abstracts', label: t('nav.abstracts', 'Abstracts'), to: '/abstracts/confirmed' },
     { id: 'innovations', label: t('nav.innovations', 'Innovations'), to: '/innovation-showcase/confirmed' },
-    { id: 'gallery', label: t('nav.gallery', 'Gallery'), to: '/gallery' },
-    // Tucked into the "More" dropdown below rather than the main row — two
-    // more flat items here made the header read as cluttered.
-    { id: 'sponsored-delegates', label: t('nav.sponsoredDelegates', 'Sponsored Delegates'), to: '/sponsored-delegates' },
-    { id: 'wai-health', label: t('nav.waiHealth', 'Women in AI'), to: '/wai-health-breakfast' },
     ...(COMPENDIUM_ENABLED
       ? [{ id: 'compendium', label: t('nav.compendium', 'Compendium'), to: '/compendium' }]
       : []),
-    { id: 'register', label: t('nav.registerNow', 'Register Now'), to: '/register' },
+    { id: 'gallery', label: t('nav.gallery', 'Gallery'), to: '/2026/gallery' },
+    { id: 'join2027', label: t('nav.join2027', 'Join the 2027 List'), to: '/2027' },
     { id: 'ahfid', label: 'AHFID', to: 'https://ahfid.org/', external: true },
     // Delegate portal sign-in — kept out of the main nav row (see the filter
     // below) and shown instead in the utility strip next to AHFID, and in the
@@ -115,17 +111,7 @@ export const Navbar = () => {
 
   useEffect(() => {
     setMobileOpen(false);
-    setMoreOpen(false);
   }, [location.pathname]);
-
-  useEffect(() => {
-    if (!moreOpen) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [moreOpen]);
 
   return (
     <>
@@ -182,71 +168,30 @@ export const Navbar = () => {
           </Link>
 
           <nav className="hidden items-center gap-1.5 lg:flex">
-            {NAV_ITEMS.filter((i) => i.id !== 'ahfid' && i.id !== 'login' && !MORE_MENU_IDS.includes(i.id)).map((item) => (
-              <Fragment key={item.id}>
-                {item.id === 'register' ? (
-                  <Link
-                    to={item.to}
-                    className="ml-3 flex items-center gap-2 rounded-full bg-orange px-5 py-1.5 text-sm font-bold text-white shadow-lg shadow-orange/30 transition-all hover:scale-[1.03] hover:bg-orange-hover"
-                  >
-                    {item.label} <ArrowRight size={16} />
-                  </Link>
-                ) : (
-                  <NavLink
-                    to={item.to}
-                    end={item.to === '/'}
-                    className={({ isActive }) =>
-                      `rounded-lg px-4 py-2 text-[12px] font-bold uppercase tracking-wide transition-colors ${
-                        isActive ? 'text-orange' : 'text-white hover:text-orange'
-                      }`
-                    }
-                  >
-                    {item.label}
-                  </NavLink>
-                )}
-                {/* "More" (Sponsored Delegates / Women in AI) sits right after
-                    Gallery, rather than at the end of the row, per direct request. */}
-                {item.id === 'gallery' && (
-                  <div className="relative" ref={moreRef}>
-                    <button
-                      onClick={() => setMoreOpen((v) => !v)}
-                      aria-expanded={moreOpen}
-                      className={`flex items-center gap-1 rounded-lg px-4 py-2 text-[12px] font-bold uppercase tracking-wide transition-colors ${
-                        moreOpen || MORE_MENU_IDS.some((id) => location.pathname === NAV_ITEMS.find((i) => i.id === id)?.to)
-                          ? 'text-orange'
-                          : 'text-white hover:text-orange'
-                      }`}
-                    >
-                      {t('nav.more', 'More')} <ChevronDown size={14} className={`transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    <AnimatePresence>
-                      {moreOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -6 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute left-0 top-full mt-2 min-w-[200px] overflow-hidden rounded-xl border border-white/10 bg-navy-nav shadow-xl"
-                        >
-                          {NAV_ITEMS.filter((i) => MORE_MENU_IDS.includes(i.id)).map((moreItem) => (
-                            <NavLink
-                              key={moreItem.id}
-                              to={moreItem.to}
-                              onClick={() => setMoreOpen(false)}
-                              className={({ isActive }) =>
-                                `block px-4 py-3 text-[13px] font-semibold ${isActive ? 'text-orange' : 'text-white hover:bg-white/5 hover:text-orange'}`
-                              }
-                            >
-                              {moreItem.label}
-                            </NavLink>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )}
-              </Fragment>
-            ))}
+            {NAV_ITEMS.filter((i) => i.id !== 'ahfid' && i.id !== 'login').map((item) =>
+              item.id === 'join2027' ? (
+                <Link
+                  key={item.id}
+                  to={item.to}
+                  className="ml-3 flex items-center gap-2 rounded-full bg-orange px-5 py-1.5 text-sm font-bold text-white shadow-lg shadow-orange/30 transition-all hover:scale-[1.03] hover:bg-orange-hover"
+                >
+                  {item.label} <ArrowRight size={16} />
+                </Link>
+              ) : (
+                <NavLink
+                  key={item.id}
+                  to={item.to}
+                  end={item.to === '/'}
+                  className={({ isActive }) =>
+                    `rounded-lg px-4 py-2 text-[12px] font-bold uppercase tracking-wide transition-colors ${
+                      isActive ? 'text-orange' : 'text-white hover:text-orange'
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              )
+            )}
           </nav>
 
           <button
@@ -271,7 +216,7 @@ export const Navbar = () => {
               className="fixed inset-x-0 bottom-0 z-40 flex flex-col gap-1 overflow-y-auto bg-navy-nav px-6 py-6 lg:hidden"
             >
               <LanguageSwitcher className="mb-3 self-start" />
-              {NAV_ITEMS.filter((i) => i.id !== 'register').map((item) =>
+              {NAV_ITEMS.filter((i) => i.id !== 'join2027').map((item) =>
                 item.external ? (
                   <a
                     key={item.id}
@@ -298,11 +243,11 @@ export const Navbar = () => {
                 )
               )}
               <Link
-                to="/register"
+                to="/2027"
                 onClick={() => setMobileOpen(false)}
                 className="mt-6 rounded-full bg-orange px-5 py-3.5 text-center text-sm font-semibold text-white"
               >
-                {t('nav.registerNow', 'Register Now')}
+                {t('nav.join2027', 'Join the 2027 List')}
               </Link>
             </motion.div>
           )}
