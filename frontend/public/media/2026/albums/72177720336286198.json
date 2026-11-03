@@ -1,0 +1,33 @@
+[
+  {
+    "id": "55605385004",
+    "title": "SNT_5254",
+    "media": "photo",
+    "width": 1024,
+    "height": 683,
+    "srcset": [
+      {
+        "width": 320,
+        "url": "https://live.staticflickr.com/65535/55605385004_2bdb56a234_n.jpg"
+      },
+      {
+        "width": 640,
+        "url": "https://live.staticflickr.com/65535/55605385004_2bdb56a234_z.jpg"
+      },
+      {
+        "width": 800,
+        "url": "https://live.staticflickr.com/65535/55605385004_2bdb56a234_c.jpg"
+      },
+      {
+        "width": 1024,
+        "url": "https://live.staticflickr.com/65535/55605385004_2bdb56a234_b.jpg"
+      },
+      {
+        "width": 1600,
+        "url": "https://live.staticflickr.com/65535/55605385004_2bdb56a234_b.jpg"
+      }
+    ],
+    "largeUrl": "https://live.staticflickr.com/65535/55605385004_2bdb56a234_b.jpg",
+    "flickrPageUrl": "https://www.flickr.com/photos/aiinhealthsummit2026/55605385004/"
+  }
+]

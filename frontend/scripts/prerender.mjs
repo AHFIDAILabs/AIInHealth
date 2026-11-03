@@ -91,7 +91,14 @@ const main = async () => {
       const page = await browser.newPage();
       for (const route of PUBLIC_ROUTES) {
         try {
-          await page.goto(`${PREVIEW_URL}${route.path}`, { waitUntil: 'networkidle', timeout: 15000 });
+          // 'load' + a fixed settle buffer, not 'networkidle' — the homepage's
+          // autoplaying hero video (HeroVideoBackground.tsx) keeps streaming/
+          // buffering indefinitely once started, so "no network activity for
+          // 500ms" can never be satisfied there and burns the full timeout on
+          // every run. The page's own data fetches (small local JSON over the
+          // preview server) finish well within this buffer regardless.
+          await page.goto(`${PREVIEW_URL}${route.path}`, { waitUntil: 'load', timeout: 15000 });
+          await page.waitForTimeout(2000);
           const html = await page.content();
           if (route.path === '/') {
             writeFileSync(path.join(distDir, 'index.html'), html, 'utf-8');

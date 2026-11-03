@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { REDIRECTS } from './config/redirects';
 import { PageViewTracker } from './components/analytics/PageViewTracker';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -14,9 +15,11 @@ import { RequireRole } from './routes/RequireRole';
 import { RequireRootAdmin } from './routes/RequireRootAdmin';
 import { PortalProtectedRoute } from './routes/PortalProtectedRoute';
 import { ReviewerProtectedRoute } from './routes/ReviewerProtectedRoute';
-import { Home } from './pages/public/Home';
-import { NewHome } from './pages/public/NewHome';
-import { HomeMain } from './pages/public/HomeMain';
+import { HomeRecap } from './pages/public/HomeRecap';
+import { Gallery2026 } from './pages/public/archive/Gallery2026';
+import { Album2026 } from './pages/public/archive/Album2026';
+import { Videos2026 } from './pages/public/archive/Videos2026';
+import { Summit2027 } from './pages/public/Summit2027';
 import { About } from './pages/public/About';
 import { Agenda } from './pages/public/Agenda';
 import { LiveStream } from './pages/public/LiveStream';
@@ -74,6 +77,7 @@ import { WhatsAppConversationsPage } from './pages/admin/WhatsAppConversationsPa
 import { InquiriesPage } from './pages/admin/InquiriesPage';
 import { MessagesPage } from './pages/admin/MessagesPage';
 import { NewsletterPage } from './pages/admin/NewsletterPage';
+import { Interest2027Page } from './pages/admin/Interest2027Page';
 import { AuditLogPage } from './pages/admin/AuditLogPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
@@ -143,9 +147,22 @@ function App() {
         <ReviewerAuthProvider>
         <Routes>
           <Route element={<PublicLayout />}>
-            <Route path="/" element={<HomeMain />} />
-            <Route path="/classic" element={<Home />} />
-            <Route path="/home-v2" element={<NewHome />} />
+            {/* The root path always belongs to the current edition (brief section 5) —
+                pages/public/HomeMain.tsx (the pre-event marketing home) and
+                PostEventHome.tsx (this page's own first-draft predecessor, replaced after
+                direct feedback asking for something closer to HomeMain's own content
+                density) are both retired the same way as Home.tsx/NewHome.tsx: kept in the
+                repo, no longer routed. */}
+            <Route path="/" element={<HomeRecap />} />
+            {/* Retired homepage variants (pages/public/Home.tsx, NewHome.tsx) — kept in the
+                repo, just no longer routable. See config/redirects.ts for why each exists. */}
+            {REDIRECTS.map((r) => (
+              <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />
+            ))}
+            <Route path="/2026/gallery" element={<Gallery2026 />} />
+            <Route path="/2026/gallery/:albumId" element={<Album2026 />} />
+            <Route path="/2026/videos" element={<Videos2026 />} />
+            <Route path="/2027" element={<Summit2027 />} />
             <Route path="/about" element={<About />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/live" element={<LiveStream />} />
@@ -265,6 +282,7 @@ function App() {
                 <Route path="/admin/inquiries" element={<InquiriesPage />} />
                 <Route path="/admin/messages" element={<MessagesPage />} />
                 <Route path="/admin/newsletter" element={<NewsletterPage />} />
+                <Route path="/admin/2027-interest" element={<Interest2027Page />} />
                 <Route path="/admin/media" element={<MediaPage />} />
                 <Route path="/admin/knowledge-base" element={<KnowledgeBasePage />} />
                 <Route path="/admin/policy-tracker" element={<PolicyTrackerPage />} />

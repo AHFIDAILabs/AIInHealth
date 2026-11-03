@@ -9,6 +9,10 @@ import { createRegistrationSchema, redeemRsvpSchema } from '../../validations/re
 
 const router = Router();
 
+// Public read, no dedicated limiter — same shape as speakers/sessions/
+// partners' own public GETs (relies on the blanket apiLimiter).
+router.get('/public-count', registrationController.publicConfirmedCount);
+
 router.post('/', registrationLimiter, validate(createRegistrationSchema), registrationController.create);
 
 // The pending-attendee RSVP reconfirmation link — registrationRsvp.controller.ts's

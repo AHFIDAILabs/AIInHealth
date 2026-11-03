@@ -88,6 +88,17 @@ export const adminListSpeakers = async (params: ListSpeakersParams): Promise<Pag
   return { items: res.data.data, ...res.data.meta };
 };
 
+// Same filter as adminListSpeakers (search/track/published), plain <a href>
+// download link — same convention as every other admin CSV export.
+export const exportSpeakersUrl = (params: ListSpeakersParams): string => {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') search.set(key, String(value));
+  });
+  const base = (import.meta.env.VITE_API_URL as string) ?? '/api/v1';
+  return `${base}/admin/speakers/export?${search.toString()}`;
+};
+
 export const adminCreateSpeaker = async (input: SpeakerInput): Promise<AdminSpeaker> => {
   const res = await api.post<{ success: true; data: AdminSpeaker }>('/admin/speakers', input);
   return res.data.data;

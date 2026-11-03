@@ -199,6 +199,7 @@ export const NOTIFICATION_EVENTS = [
   'abstract.reviewer_declined',
   'scholarship_application.new',
   'whatsapp.handoff_requested',
+  'interest2027.new',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
@@ -476,3 +477,12 @@ export type CompendiumPublicationStatus = (typeof COMPENDIUM_PUBLICATION_STATUSE
 // alongside a required evidenceNote; there is no default.
 export const COMPENDIUM_CONSENT_METHODS = ['submission_terms', 'email', 'form', 'other'] as const;
 export type CompendiumConsentMethod = (typeof COMPENDIUM_CONSENT_METHODS)[number];
+
+// 2027 interest list (brief section 8.3) — see Interest2027.model.ts. A
+// "support to attend" / financial-assistance option was deliberately left out
+// after asking the owner: that stays a separate process (like 2026's
+// Sponsored Delegates application), not a checkbox here, so this list never
+// repeats 2026's sponsorship-page confusion between "funding the event" and
+// "needing funding to attend".
+export const INTEREST_2027_TYPES = ['attend', 'speak', 'submit_abstract', 'exhibit', 'sponsor_partner', 'volunteer', 'media'] as const;
+export type Interest2027Type = (typeof INTEREST_2027_TYPES)[number];

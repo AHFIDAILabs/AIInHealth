@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   Images,
   Rss,
+  CalendarHeart,
   Rocket,
   ShieldAlert,
   Sparkles,
@@ -172,6 +173,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Messages', to: '/admin/messages', icon: MessageSquare, roles: adminOnlyRoles },
       { label: 'WhatsApp Concierge', to: '/admin/whatsapp', icon: MessageCircle, roles: adminOnlyRoles },
       { label: 'Newsletter', to: '/admin/newsletter', icon: Rss, roles: adminOnlyRoles },
+      { label: '2027 Interest List', to: '/admin/2027-interest', icon: CalendarHeart, roles: adminOnlyRoles },
     ],
   },
   {

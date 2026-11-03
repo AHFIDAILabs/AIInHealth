@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, X, Globe2, Sparkles, Users, Layers, Rocket } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PageHero } from '../../components/ui/PageHero';
+import { PageHero } from '../../design-system/patterns/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
 import { Banner } from '../../components/ui/Banner';

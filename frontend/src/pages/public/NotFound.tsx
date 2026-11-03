@@ -1,10 +1,21 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AbujaSkyline } from '../../components/ui/AbujaSkyline';
 import { ButtonLink } from '../../components/ui/Button';
 import { SEO } from '../../components/seo/SEO';
+import { trackEvent } from '../../lib/analytics';
 
 export const NotFound = () => {
   const { t } = useTranslation();
+  const location = useLocation();
+
+  // Section 8.1 — logs the requested path + referrer so broken links
+  // (the brief cites 276 "Page Not Found" views in the 2026 analytics) can
+  // actually be found and fixed, instead of just counted.
+  useEffect(() => {
+    trackEvent('page_not_found', { path: location.pathname, referrer: document.referrer || null });
+  }, [location.pathname]);
 
   return (
   <div className="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden bg-white px-4 text-center">
@@ -24,9 +35,13 @@ export const NotFound = () => {
     <p className="relative mt-2 max-w-sm text-slate-500">
       {t('notFound.body', 'The page you’re looking for doesn’t exist or has moved.')}
     </p>
-    <ButtonLink to="/" variant="primary" className="relative mt-8">
-      {t('notFound.returnHome', 'Return Home')}
-    </ButtonLink>
+    <div className="relative mt-8 flex flex-wrap items-center justify-center gap-3">
+      <ButtonLink to="/" variant="primary">
+        {t('notFound.returnHome', 'Return Home')}
+      </ButtonLink>
+      <ButtonLink to="/compendium" variant="secondary">Browse the Compendium</ButtonLink>
+      <ButtonLink to="/2027" variant="secondary">Join the 2027 List</ButtonLink>
+    </div>
 
     <AbujaSkyline tone="onLight" className="pointer-events-none absolute bottom-0 left-0 h-24 w-full" opacity={0.18} />
   </div>

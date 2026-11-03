@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Plus, X, Users, Pencil, Trash2, GripVertical, Sparkles, QrCode, Mail, Share2 } from 'lucide-react';
+import { Search, Plus, X, Users, Pencil, Trash2, GripVertical, Sparkles, QrCode, Mail, Share2, Download } from 'lucide-react';
 import {
   adminListSpeakers,
   adminCreateSpeaker,
@@ -13,6 +13,7 @@ import {
   adminRegisterSpeaker,
   adminSendSpeakerAccessEmail,
   adminSendSpeakerCardInvites,
+  exportSpeakersUrl,
   SUPPORTED_TRANSLATION_LANGS,
   type AdminSpeaker,
   type SpeakerInput,
@@ -318,6 +319,12 @@ export const SpeakersPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
+          <a
+            href={exportSpeakersUrl({ track: track || undefined, published: published || undefined, q: q || undefined })}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-sm transition-colors hover:border-orange/40"
+          >
+            <Download size={15} /> Export CSV
+          </a>
           <button
             onClick={sendCardInviteBatch}
             disabled={sendingCardInvites}

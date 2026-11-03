@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Reveal } from '../ui/Reveal';
-import { InitialsAvatar } from '../ui/InitialsAvatar';
+import { InitialsAvatar } from '../../design-system/primitives/InitialsAvatar';
 import { SpeakerModal } from '../ui/SpeakerModal';
 import { listPublicSpeakers, type AdminSpeaker } from '../../services/speaker.service';
 

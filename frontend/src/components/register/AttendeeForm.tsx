@@ -7,7 +7,7 @@ import { User, Users, Globe2, Briefcase, GraduationCap, Crown, Landmark, Newspap
 import { Button } from '../ui/Button';
 import { Banner } from '../ui/Banner';
 import { LightField, LightSelect } from '../ui/LightField';
-import { HoneypotField } from '../ui/HoneypotField';
+import { HoneypotField } from '../../design-system/primitives/HoneypotField';
 import { RegisterSuccess } from './RegisterSuccess';
 import { IdCardUpload } from './IdCardUpload';
 import { submitRegistration, ID_VERIFICATION_TICKET_CATEGORIES, idVerificationRequirementText, type TicketCategory } from '../../services/registration.service';

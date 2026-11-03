@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { PageHero } from '../../components/ui/PageHero';
+import { PageHero } from '../../design-system/patterns/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../lib/siteInfo';
 import { SEO } from '../../components/seo/SEO';

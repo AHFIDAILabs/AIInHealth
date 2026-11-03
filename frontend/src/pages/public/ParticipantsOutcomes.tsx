@@ -16,7 +16,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PageHero } from '../../components/ui/PageHero';
+import { PageHero } from '../../design-system/patterns/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
 import { SEO } from '../../components/seo/SEO';

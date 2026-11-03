@@ -1,6 +1,6 @@
 import { Target, Compass, CalendarDays, MapPin, HeartPulse, Lightbulb, ShieldCheck, Handshake } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PageHero } from '../../components/ui/PageHero';
+import { PageHero } from '../../design-system/patterns/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { RevealText } from '../../components/ui/RevealText';
 import { ButtonLink } from '../../components/ui/Button';

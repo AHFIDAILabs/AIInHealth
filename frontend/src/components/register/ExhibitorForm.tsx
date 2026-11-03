@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { Button } from '../ui/Button';
 import { Banner } from '../ui/Banner';
 import { LightField, LightTextArea, LightSelect } from '../ui/LightField';
-import { HoneypotField } from '../ui/HoneypotField';
+import { HoneypotField } from '../../design-system/primitives/HoneypotField';
 import { RegisterSuccess } from './RegisterSuccess';
 import { submitRegistration } from '../../services/registration.service';
 import { listCustomFormFields, type CustomFormField } from '../../services/customFormField.service';

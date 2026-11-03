@@ -151,6 +151,19 @@ const extractForScoring = (input: CreateRegistrationInput): { name: string; emai
 
 const RECENT_WINDOW_MS = 60 * 60 * 1000;
 
+// GET /registrations/public-count — public, read-only. Backs the post-event
+// homepage's "Thank you" stat (HomeRecap.tsx). { type: 'attendee', status:
+// 'confirmed' } is the same attendee-specific filter analytics.controller.ts
+// already uses for its own "confirmed" figure — deliberately narrower than
+// the unfiltered status:'confirmed' count used elsewhere for whole-
+// registration totals, since 'team'/'exhibitor'/etc. aren't "attendees" for
+// a number phrased that way. No dedicated rate limiter, same as the other
+// cheap public reads (speakers/sessions/partners) — just the blanket apiLimiter.
+export const publicConfirmedCount = catchAsync(async (_req: Request, res: Response) => {
+  const count = await Registration.countDocuments({ type: 'attendee', status: 'confirmed' });
+  res.json(new ApiResponse({ count }));
+});
+
 export const create = catchAsync(async (req: Request, res: Response) => {
   const input = req.body as CreateRegistrationInput;
 

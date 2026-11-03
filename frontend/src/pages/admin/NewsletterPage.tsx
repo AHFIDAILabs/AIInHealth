@@ -11,7 +11,10 @@ import { SkeletonRows } from '../../components/ui/Skeleton';
 import { Banner } from '../../components/ui/Banner';
 
 const SOURCE_OPTIONS: NewsletterSource[] = ['updates', 'concept_note'];
-const SOURCE_LABEL: Record<NewsletterSource, string> = { updates: 'Summit Updates', concept_note: 'Concept Note Download' };
+const SOURCE_LABEL: Record<NewsletterSource, string> = {
+  updates: 'Summit Updates',
+  concept_note: 'Concept Note Download',
+};
 
 export const NewsletterPage = () => {
   const [items, setItems] = useState<AdminNewsletterSubscriber[]>([]);

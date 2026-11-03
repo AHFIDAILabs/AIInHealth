@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { AbujaSkyline } from './AbujaSkyline';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { AbujaSkyline } from '../../components/ui/AbujaSkyline';
 import heroBg from '../../assets/images/hero_bg.webp';
 
 interface PageHeroProps {
@@ -9,19 +8,15 @@ interface PageHeroProps {
   title: ReactNode;
   subtitle?: ReactNode;
   children?: ReactNode;
-  // Only needed when `title` isn't a plain string (e.g. it contains JSX for
-  // formatting) — the browser tab/share title needs plain text either way.
-  documentTitle?: string;
 }
 
 // Shared sub-page header — carries the same photo + navy/brown wash as Home's dark
 // hero panel, scaled down and centered for interior pages, so every page opens on
-// that same photographic beat instead of a flat color block. Also sets the page's
-// <title> (used by all 13 interior pages), which previously all shared the same
-// static title from index.html regardless of which page was open or shared.
-export const PageHero = ({ eyebrow, title, subtitle, children, documentTitle }: PageHeroProps) => {
-  useDocumentTitle(documentTitle ?? (typeof title === 'string' ? title : eyebrow));
-
+// that same photographic beat instead of a flat color block. <title> is set
+// exclusively by the page's own <SEO> element (config/routes.ts's getPageTitle) —
+// this component no longer touches document.title itself (see routes.ts's
+// comment on the duplicated/racing-suffix bug that used to cause).
+export const PageHero = ({ eyebrow, title, subtitle, children }: PageHeroProps) => {
   return (
   <section className="relative isolate overflow-hidden bg-navy-nav pb-20 pt-28 sm:pb-24 sm:pt-32">
     <img src={heroBg} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />

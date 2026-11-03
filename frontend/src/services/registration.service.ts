@@ -182,3 +182,10 @@ export const redeemRsvp = async (token: string): Promise<RsvpRedeemResult> => {
   const res = await api.post<{ success: true; data: RsvpRedeemResult }>(`/registrations/rsvp/${token}`);
   return res.data.data;
 };
+
+// Public — backs the post-event homepage's "Thank you" stat (HomeRecap.tsx).
+// Real, live count of confirmed attendees, not a hardcoded figure.
+export const fetchPublicConfirmedCount = async (): Promise<number> => {
+  const res = await api.get<{ success: true; data: { count: number } }>('/registrations/public-count');
+  return res.data.data.count;
+};

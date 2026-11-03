@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { HeartHandshake } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PageHero } from '../../components/ui/PageHero';
+import { PageHero } from '../../design-system/patterns/PageHero';
 import { Reveal } from '../../components/ui/Reveal';
 import { ButtonLink } from '../../components/ui/Button';
-import { InitialsAvatar } from '../../components/ui/InitialsAvatar';
+import { InitialsAvatar } from '../../design-system/primitives/InitialsAvatar';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { listPublicVolunteers, type PublicVolunteer } from '../../services/volunteer.service';
 import { SEO } from '../../components/seo/SEO';

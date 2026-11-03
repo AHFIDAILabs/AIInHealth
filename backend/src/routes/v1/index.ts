@@ -37,6 +37,7 @@ import livestreamRoutes from './livestream.routes.js';
 import leaderboardRoutes from './leaderboard.routes.js';
 import sessionAttendanceRoutes from './sessionAttendance.routes.js';
 import masterclassRoutes from './masterclass.routes.js';
+import interest2027Routes from './interest2027.routes.js';
 
 const router = Router();
 
@@ -49,6 +50,7 @@ router.use('/partners', partnerRoutes);
 router.use('/inquiries', inquiryRoutes);
 router.use('/contact', contactRoutes);
 router.use('/newsletter', newsletterRoutes);
+router.use('/2027-interest', interest2027Routes);
 router.use('/innovations', innovationRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/delegate', delegateRoutes);

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { SEO } from '../../../components/seo/SEO';
 import { NotFound } from '../NotFound';
@@ -7,6 +7,7 @@ import { sanitizeAbstractHtml } from '../../../lib/sanitizeAbstractHtml';
 import { splitStructuredAbstract } from '../../../lib/structuredAbstract';
 import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT, PresenterPhoto, slugify } from './shared';
 import { useCompendiumData } from './useCompendiumData';
+import { trackEvent } from '../../../lib/analytics';
 
 type CiteFormat = 'apa' | 'bibtex' | 'ris';
 
@@ -23,6 +24,11 @@ export const CompendiumAbstract = () => {
     if (!record || !edition) return null;
     return { apa: citeApa(record, edition), bibtex: citeBibtex(record, edition), ris: citeRis(record, edition) };
   }, [record, edition]);
+
+  useEffect(() => {
+    if (!record) return;
+    void trackEvent('abstract_view', { code: record.code, presentationType: record.presentationType });
+  }, [record]);
 
   if (loading) return <CompendiumLoading label="Loading abstract…" />;
   if (error || !edition) return <CompendiumError message={error ?? 'The compendium could not be loaded.'} />;

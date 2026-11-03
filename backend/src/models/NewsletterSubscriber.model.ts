@@ -1,7 +1,13 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
 
-// Backs both Home-page email captures — distinguished only by `source`, since the
+// Backs the Home-page email captures — distinguished only by `source`, since the
 // data shape (email + first name) is identical; the framing/copy differs client-side.
+// 'summit_2027_interest' used to live here too, as an interim "stay in touch"
+// capture on the /2027 placeholder page — removed now that the full
+// Interest2027 domain (multi-select interests, consent, WhatsApp opt-in) has
+// replaced it (2027 interest list checkpoint). No data existed under that
+// source (the placeholder was never merged past this branch), so nothing to
+// migrate.
 const SOURCES = ['updates', 'concept_note'] as const;
 
 const newsletterSubscriberSchema = new Schema(

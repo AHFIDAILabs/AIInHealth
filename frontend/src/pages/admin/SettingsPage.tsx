@@ -47,6 +47,7 @@ const EVENT_LABEL: Record<NotificationEvent, string> = {
   'abstract.reviewer_declined': 'Reviewer declined an assignment',
   'scholarship_application.new': 'New sponsorship application',
   'whatsapp.handoff_requested': 'WhatsApp: visitor wants a person',
+  'interest2027.new': 'New 2027 interest list signup',
 };
 
 const PASSWORD_RULES = [
