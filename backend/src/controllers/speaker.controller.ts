@@ -24,6 +24,7 @@ import { generateQrToken, qrPngBufferForToken } from '../services/qr.service.js'
 import { sendSpeakerAccessEmail, sendAttendanceCardEmail } from '../services/email.service.js';
 import { runInBatches } from '../utils/batch.js';
 import { env } from '../config/env.js';
+import { toCsv } from '../utils/toCsv.js';
 
 // Shared by adminCreate/adminUpdate — track is free text now (see
 // Speaker.model.ts), so validity is checked here against the live Track
@@ -68,6 +69,22 @@ export const adminList = catchAsync(async (req: Request, res: Response) => {
   res.json(
     new ApiResponse(items, { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) || 1 })
   );
+});
+
+const EXPORT_CSV_COLUMNS = ['fullName', 'title', 'organization', 'track', 'email', 'isPublished', 'order', 'cardEmailSentAt', 'createdAt'];
+
+// GET /admin/speakers/export — same filter as adminList (search/track/
+// published), no pagination — exports every matching row, same convention as
+// every other admin CSV export in this app.
+export const adminExport = catchAsync(async (req: Request, res: Response) => {
+  const query = listSpeakersQuerySchema.parse(req.query);
+  const filter = buildAdminFilter(query);
+  const items = await Speaker.find(filter).select('-bio -photoUrl -photoAlt -hoverPhotoUrl -translations -registration').sort({ order: 1, createdAt: -1 }).lean();
+
+  const csv = toCsv(items as unknown as Record<string, unknown>[], EXPORT_CSV_COLUMNS);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="speakers-${Date.now()}.csv"`);
+  res.send(csv);
 });
 
 export const adminCreate = catchAsync(async (req: Request, res: Response) => {

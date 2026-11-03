@@ -333,6 +333,7 @@ const abstractRoles = ['super_admin', 'admin', 'abstract_lead'] as const;
 const rapporteurRoles = ['super_admin', 'admin', 'rapporteur_lead'] as const;
 
 router.get('/speakers', requireRole(...adminOnlyRoles), speakerController.adminList);
+router.get('/speakers/export', requireRole(...adminOnlyRoles), speakerController.adminExport);
 router.post('/speakers', requireRole(...adminOnlyRoles), speakerController.adminCreate);
 // Must come before the /:id routes below — otherwise Express matches
 // "reorder" as an :id param instead of this route.
