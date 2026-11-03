@@ -97,13 +97,13 @@ export const HomeRecap = () => {
           all the way to the true viewport top. One unified section, centered
           content — no left/right split. */}
       <section
-        className="relative isolate flex min-h-[560px] w-full flex-col items-center justify-center overflow-hidden bg-navy px-4 py-28 text-center sm:px-8 lg:min-h-[640px]"
+        className="relative isolate flex min-h-[560px] w-full flex-col items-start justify-center overflow-hidden bg-navy px-4 py-28 text-left sm:px-8 lg:min-h-[640px] lg:px-16"
         style={{ marginTop: 'calc(var(--header-height, 4rem) * -1)' }}
       >
         {heroVideos ? <HeroVideoBackground videos={heroVideos} /> : <HeroMediaCarousel photos={heroPhotos} />}
         <div className="absolute inset-0 bg-gradient-to-b from-navy/30 to-navy/70" />
 
-        <motion.div initial="hidden" animate="show" className="relative mx-auto max-w-3xl">
+        <motion.div initial="hidden" animate="show" className="relative max-w-3xl">
           <motion.h1
             custom={0}
             variants={fadeUp}
@@ -121,14 +121,16 @@ export const HomeRecap = () => {
               subtitle only for the brief moment before it's loaded, never a
               placeholder/invented figure. */}
           {roundedCount > 0 ? (
-            <motion.div custom={1} variants={fadeUp} className="mx-auto mt-5 max-w-2xl">
+            <motion.div custom={1} variants={fadeUp} className="mt-5 max-w-xl border-l-2 border-orange/60 pl-4">
               <p className="text-xs font-bold uppercase tracking-[0.3em] text-orange">Thank You</p>
-              <p className="mt-2 font-display text-4xl font-black leading-none text-white [text-shadow:0_0_40px_rgba(249,115,22,0.35)] sm:text-5xl">
-                {animatedCount.toLocaleString()}
-                <span className="text-orange">+</span>
+              <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5">
+                <span className="font-display text-3xl font-black leading-none text-white sm:text-4xl">
+                  {animatedCount.toLocaleString()}
+                  <span className="text-orange">+</span>
+                </span>
+                <span className="text-base font-bold uppercase tracking-wide text-slate-200 sm:text-lg">Attendees</span>
               </p>
-              <p className="mt-2 text-sm font-bold uppercase tracking-[0.25em] text-slate-200 sm:text-base">Attendees</p>
-              <p className="mx-auto mt-4 max-w-xl text-base font-medium leading-relaxed text-slate-300 sm:text-lg">
+              <p className="mt-3 max-w-xl text-base font-medium leading-relaxed text-slate-300 sm:text-lg">
                 Over two incredible days, you came together from across Nigeria and beyond to shape the future of AI
                 in health. We couldn&rsquo;t have done it without you.
               </p>
@@ -137,7 +139,7 @@ export const HomeRecap = () => {
             <motion.p
               custom={1}
               variants={fadeUp}
-              className="mx-auto mt-4 max-w-xl text-lg font-semibold leading-snug text-slate-100 sm:text-xl"
+              className="mt-4 max-w-xl text-lg font-semibold leading-snug text-slate-100 sm:text-xl"
             >
               {t(
                 'home.hero.subtitle',
@@ -146,7 +148,7 @@ export const HomeRecap = () => {
             </motion.p>
           )}
 
-          <motion.div custom={2} variants={fadeUp} className="mt-6 flex flex-wrap items-stretch justify-center gap-3 sm:gap-4">
+          <motion.div custom={2} variants={fadeUp} className="mt-6 flex flex-wrap items-stretch justify-start gap-3 sm:gap-4">
             <span className="flex max-w-[220px] items-start gap-2 rounded-tl-3xl rounded-br-3xl border border-navy/15 bg-white px-4 py-3">
               <CalendarDays size={15} className="mt-0.5 shrink-0 text-orange" />
               <span className="min-w-0 text-left">
@@ -171,7 +173,7 @@ export const HomeRecap = () => {
               Interest/Become a Partner buttons — the event already happened
               and 2026 registration is closed, so these are the only CTAs the
               hero needs now. */}
-          <motion.div custom={3} variants={fadeUp} className="relative mt-8 flex flex-wrap justify-center gap-3">
+          <motion.div custom={3} variants={fadeUp} className="relative mt-8 flex flex-wrap justify-start gap-3">
             <ButtonLink to="/2027" variant="primary">
               Join the 2027 List <ArrowRight size={16} className="ml-1" />
             </ButtonLink>
