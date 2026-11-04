@@ -82,6 +82,16 @@ export const HomeRecap = () => {
   const roundedCount = confirmedCount && confirmedCount >= 50 ? Math.floor(confirmedCount / 50) * 50 : (confirmedCount ?? 0);
   const animatedCount = useCountUp(roundedCount);
 
+  // Continuous, subtle float for the hero text column (below) — on top of
+  // its own one-time staggered fade-up entrance, so it keeps a gentle motion
+  // going for as long as the visitor stays on the page, not just on load.
+  // Disabled under prefers-reduced-motion, same as every other motion effect
+  // on this page (HeroMediaCarousel, HeroVideoBackground, WaiHealthSpotlight).
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }, []);
+
   return (
     <>
       <SEO
@@ -103,83 +113,89 @@ export const HomeRecap = () => {
         {heroVideos ? <HeroVideoBackground videos={heroVideos} /> : <HeroMediaCarousel photos={heroPhotos} />}
         <div className="absolute inset-0 bg-gradient-to-b from-navy/30 to-navy/70" />
 
-        <motion.div initial="hidden" animate="show" className="relative max-w-3xl">
-          <motion.h1
-            custom={0}
-            variants={fadeUp}
-            className="font-display text-4xl font-black leading-[1.05] text-white sm:text-5xl"
-          >
-            <Trans
-              i18nKey="home.hero.title"
-              defaults="Artificial <styled>Intelligence</styled> in Health Summit 2026"
-              components={{ styled: <span className="text-orange text-italic" /> }}
-            />
-          </motion.h1>
-
-          {/* Real, live confirmed-attendee count (registration.service.ts's
-              fetchPublicConfirmedCount) — falls back to the original mission
-              subtitle only for the brief moment before it's loaded, never a
-              placeholder/invented figure. */}
-          {roundedCount > 0 ? (
-            <motion.div custom={1} variants={fadeUp} className="mt-5 max-w-xl border-l-2 border-orange/60 pl-4">
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-orange">Thank You</p>
-              <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5">
-                <span className="font-display text-3xl font-black leading-none text-white sm:text-4xl">
-                  {animatedCount.toLocaleString()}
-                  <span className="text-orange">+</span>
-                </span>
-                <span className="text-base font-bold uppercase tracking-wide text-slate-200 sm:text-lg">Attendees</span>
-              </p>
-              <p className="mt-3 max-w-xl text-base font-medium leading-relaxed text-slate-300 sm:text-lg">
-                Over two incredible days, you came together from across Nigeria and beyond to shape the future of AI
-                in health. We couldn&rsquo;t have done it without you.
-              </p>
-            </motion.div>
-          ) : (
-            <motion.p
-              custom={1}
+        <motion.div
+          animate={reducedMotion ? undefined : { y: [0, -8, 0] }}
+          transition={reducedMotion ? undefined : { duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
+          className="relative max-w-3xl"
+        >
+          <motion.div initial="hidden" animate="show">
+            <motion.h1
+              custom={0}
               variants={fadeUp}
-              className="mt-4 max-w-xl text-lg font-semibold leading-snug text-slate-100 sm:text-xl"
+              className="font-display text-4xl font-black leading-[1.05] text-white sm:text-5xl"
             >
-              {t(
-                'home.hero.subtitle',
-                'Harnessing Artificial Intelligence to Strengthen Health Systems and Accelerate Universal Health Coverage in Nigeria and Africa.'
-              )}
-            </motion.p>
-          )}
+              <Trans
+                i18nKey="home.hero.title"
+                defaults="Artificial <styled>Intelligence</styled> in Health Summit 2026"
+                components={{ styled: <span className="text-orange text-italic" /> }}
+              />
+            </motion.h1>
 
-          <motion.div custom={2} variants={fadeUp} className="mt-6 flex flex-wrap items-stretch justify-start gap-3 sm:gap-4">
-            <span className="flex max-w-[220px] items-start gap-2 rounded-tl-3xl rounded-br-3xl border border-navy/15 bg-white px-4 py-3">
-              <CalendarDays size={15} className="mt-0.5 shrink-0 text-orange" />
-              <span className="min-w-0 text-left">
-                <span className="block text-[13px] font-bold uppercase tracking-wide text-orange sm:text-sm">19 &ndash; 20 Oct 2026</span>
-                <span className="mt-0.5 block text-[11px] font-medium leading-snug text-navy/50 sm:text-xs">
-                  {t('home.hero.dateWeekdays', 'Monday – Tuesday')}
+            {/* Real, live confirmed-attendee count (registration.service.ts's
+                fetchPublicConfirmedCount) — falls back to the original mission
+                subtitle only for the brief moment before it's loaded, never a
+                placeholder/invented figure. */}
+            {roundedCount > 0 ? (
+              <motion.div custom={1} variants={fadeUp} className="mt-5 max-w-xl border-l-2 border-orange/60 pl-4">
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-orange">Thank You</p>
+                <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5">
+                  <span className="font-display text-3xl font-black leading-none text-white sm:text-4xl">
+                    {animatedCount.toLocaleString()}
+                    <span className="text-orange">+</span>
+                  </span>
+                  <span className="text-base font-bold uppercase tracking-wide text-slate-200 sm:text-lg">Attendees</span>
+                </p>
+                <p className="mt-3 max-w-xl text-base font-medium leading-relaxed text-slate-300 sm:text-lg">
+                  Over two incredible days, you came together from across Nigeria and beyond to shape the future of AI
+                  in health. We couldn&rsquo;t have done it without you.
+                </p>
+              </motion.div>
+            ) : (
+              <motion.p
+                custom={1}
+                variants={fadeUp}
+                className="mt-4 max-w-xl text-lg font-semibold leading-snug text-slate-100 sm:text-xl"
+              >
+                {t(
+                  'home.hero.subtitle',
+                  'Harnessing Artificial Intelligence to Strengthen Health Systems and Accelerate Universal Health Coverage in Nigeria and Africa.'
+                )}
+              </motion.p>
+            )}
+
+            <motion.div custom={2} variants={fadeUp} className="mt-6 flex flex-wrap items-stretch justify-start gap-3 sm:gap-4">
+              <span className="flex max-w-[220px] items-start gap-2 rounded-tl-3xl rounded-br-3xl border border-navy/15 bg-white px-4 py-3">
+                <CalendarDays size={15} className="mt-0.5 shrink-0 text-orange" />
+                <span className="min-w-0 text-left">
+                  <span className="block text-[13px] font-bold uppercase tracking-wide text-orange sm:text-sm">19 &ndash; 20 Oct 2026</span>
+                  <span className="mt-0.5 block text-[11px] font-medium leading-snug text-navy/50 sm:text-xs">
+                    {t('home.hero.dateWeekdays', 'Monday – Tuesday')}
+                  </span>
                 </span>
               </span>
-            </span>
-            <span className="flex max-w-xs items-start gap-2 rounded-tl-3xl rounded-br-3xl border border-navy/15 bg-white px-4 py-3 sm:max-w-sm">
-              <MapPin size={15} className="mt-0.5 shrink-0 text-orange" />
-              <span className="min-w-0 text-left">
-                <span className="block text-[13px] font-bold uppercase tracking-wide text-orange sm:text-sm">{VENUE_NAME}</span>
-                <span className="mt-0.5 block text-[11px] font-medium leading-snug text-navy/50 sm:text-xs">
-                  {VENUE_STREET_ADDRESS}, {VENUE_CITY}
+              <span className="flex max-w-xs items-start gap-2 rounded-tl-3xl rounded-br-3xl border border-navy/15 bg-white px-4 py-3 sm:max-w-sm">
+                <MapPin size={15} className="mt-0.5 shrink-0 text-orange" />
+                <span className="min-w-0 text-left">
+                  <span className="block text-[13px] font-bold uppercase tracking-wide text-orange sm:text-sm">{VENUE_NAME}</span>
+                  <span className="mt-0.5 block text-[11px] font-medium leading-snug text-navy/50 sm:text-xs">
+                    {VENUE_STREET_ADDRESS}, {VENUE_CITY}
+                  </span>
                 </span>
               </span>
-            </span>
-          </motion.div>
+            </motion.div>
 
-          {/* Replaces CountdownCard and the old right panel's Register
-              Interest/Become a Partner buttons — the event already happened
-              and 2026 registration is closed, so these are the only CTAs the
-              hero needs now. */}
-          <motion.div custom={3} variants={fadeUp} className="relative mt-8 flex flex-wrap justify-start gap-3">
-            <ButtonLink to="/2027" variant="primary">
-              Join the 2027 List <ArrowRight size={16} className="ml-1" />
-            </ButtonLink>
-            <ButtonLink to="/compendium" variant="secondary">
-              Browse the Compendium
-            </ButtonLink>
+            {/* Replaces CountdownCard and the old right panel's Register
+                Interest/Become a Partner buttons — the event already happened
+                and 2026 registration is closed, so these are the only CTAs the
+                hero needs now. */}
+            <motion.div custom={3} variants={fadeUp} className="relative mt-8 flex flex-wrap justify-start gap-3">
+              <ButtonLink to="/2027" variant="primary">
+                Join the 2027 List <ArrowRight size={16} className="ml-1" />
+              </ButtonLink>
+              <ButtonLink to="/compendium" variant="secondary">
+                Browse the Compendium
+              </ButtonLink>
+            </motion.div>
           </motion.div>
         </motion.div>
       </section>
