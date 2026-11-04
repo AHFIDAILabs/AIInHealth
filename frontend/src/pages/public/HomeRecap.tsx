@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, type Variants } from 'framer-motion';
 import { CalendarDays, MapPin, ArrowRight } from 'lucide-react';
-import { useTranslation, Trans } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { ButtonLink } from '../../components/ui/Button';
 import { Reveal } from '../../components/ui/Reveal';
 import { SEO } from '../../components/seo/SEO';
@@ -30,6 +30,56 @@ const fadeUp: Variants = {
     y: 0,
     transition: { duration: 0.6, delay: i * 0.1, ease: [0.21, 0.47, 0.32, 0.98] as const },
   }),
+};
+
+// Headline reveals one word at a time rather than fading in as a single
+// block — per direct request for something more dynamic than a block-level
+// fade. Starts after a tiny base delay so it doesn't fire before the section
+// itself has visually settled.
+const wordVariants: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, delay: 0.1 + i * 0.08, ease: [0.21, 0.47, 0.32, 0.98] as const },
+  }),
+};
+
+interface TitleToken {
+  text: string;
+  styled: boolean;
+  // Whitespace runs render verbatim, un-animated — French elisions like
+  // "l'Intelligence" have NO space in the source between "l'" and the styled
+  // word, and always re-inserting a uniform space would wrongly add one.
+  isSpace: boolean;
+}
+
+// home.hero.title carries a <styled>...</styled> tag around whichever word(s)
+// should render in orange — and which word that is, and where it falls in
+// the sentence, differs per language (English: "...<styled>Intelligence</
+// styled>..."; Portuguese: "<styled>Artificial</styled>..."). A plain
+// hardcoded English word list would silently break FR/PT, so this parses
+// whatever string t() actually resolves to, instead of assuming English word
+// order. react-i18next's <Trans> component can't be used here since it
+// renders one block of JSX, not an array of independently-animatable words.
+const splitTitleIntoTokens = (raw: string): TitleToken[] => {
+  const tokens: TitleToken[] = [];
+  let styled = false;
+  for (const part of raw.split(/(<styled>|<\/styled>)/)) {
+    if (part === '<styled>') {
+      styled = true;
+      continue;
+    }
+    if (part === '</styled>') {
+      styled = false;
+      continue;
+    }
+    for (const token of part.split(/(\s+)/)) {
+      if (!token) continue;
+      tokens.push({ text: token, styled, isSpace: /^\s+$/.test(token) });
+    }
+  }
+  return tokens;
 };
 
 // The post-event homepage, built as a close replica of HomeMain.tsx's own
@@ -68,6 +118,14 @@ export const HomeRecap = () => {
   );
   const previewAlbums = (albums ?? []).filter((a) => a.day !== 'special').slice(0, 8);
 
+  const titleTokens = useMemo(
+    () =>
+      splitTitleIntoTokens(
+        t('home.hero.title', 'Artificial <styled>Intelligence</styled> in Health Summit 2026')
+      ),
+    [t]
+  );
+
   // Real, live count — never a hardcoded figure (brief's "no fabricated
   // content" rule). Rounded DOWN (never up — a "+" figure must always be
   // truthfully exceeded, not just close) to the nearest 50 for a clean "N+"
@@ -81,16 +139,6 @@ export const HomeRecap = () => {
   }, []);
   const roundedCount = confirmedCount && confirmedCount >= 50 ? Math.floor(confirmedCount / 50) * 50 : (confirmedCount ?? 0);
   const animatedCount = useCountUp(roundedCount);
-
-  // Continuous, subtle float for the hero text column (below) — on top of
-  // its own one-time staggered fade-up entrance, so it keeps a gentle motion
-  // going for as long as the visitor stays on the page, not just on load.
-  // Disabled under prefers-reduced-motion, same as every other motion effect
-  // on this page (HeroMediaCarousel, HeroVideoBackground, WaiHealthSpotlight).
-  const [reducedMotion, setReducedMotion] = useState(false);
-  useEffect(() => {
-    setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  }, []);
 
   return (
     <>
@@ -113,30 +161,36 @@ export const HomeRecap = () => {
         {heroVideos ? <HeroVideoBackground videos={heroVideos} /> : <HeroMediaCarousel photos={heroPhotos} />}
         <div className="absolute inset-0 bg-gradient-to-b from-navy/30 to-navy/70" />
 
-        <motion.div
-          animate={reducedMotion ? undefined : { y: [0, -8, 0] }}
-          transition={reducedMotion ? undefined : { duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
-          className="relative max-w-3xl"
-        >
+        <div className="relative max-w-3xl">
           <motion.div initial="hidden" animate="show">
-            <motion.h1
-              custom={0}
-              variants={fadeUp}
-              className="font-display text-4xl font-black leading-[1.05] text-white sm:text-5xl"
-            >
-              <Trans
-                i18nKey="home.hero.title"
-                defaults="Artificial <styled>Intelligence</styled> in Health Summit 2026"
-                components={{ styled: <span className="text-orange text-italic" /> }}
-              />
-            </motion.h1>
+            <h1 className="font-display text-4xl font-black leading-[1.05] text-white sm:text-5xl">
+              {(() => {
+                let wordIndex = -1;
+                return titleTokens.map((token, i) => {
+                  if (token.isSpace) return <span key={i}>{token.text}</span>;
+                  wordIndex += 1;
+                  return (
+                    <motion.span
+                      key={i}
+                      custom={wordIndex}
+                      variants={wordVariants}
+                      initial="hidden"
+                      animate="show"
+                      className={`inline-block ${token.styled ? 'text-orange text-italic' : ''}`}
+                    >
+                      {token.text}
+                    </motion.span>
+                  );
+                });
+              })()}
+            </h1>
 
             {/* Real, live confirmed-attendee count (registration.service.ts's
                 fetchPublicConfirmedCount) — falls back to the original mission
                 subtitle only for the brief moment before it's loaded, never a
                 placeholder/invented figure. */}
             {roundedCount > 0 ? (
-              <motion.div custom={1} variants={fadeUp} className="mt-5 max-w-xl border-l-2 border-orange/60 pl-4">
+              <motion.div custom={6} variants={fadeUp} className="mt-5 max-w-xl border-l-2 border-orange/60 pl-4">
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-orange">Thank You</p>
                 <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5">
                   <span className="font-display text-3xl font-black leading-none text-white sm:text-4xl">
@@ -152,7 +206,7 @@ export const HomeRecap = () => {
               </motion.div>
             ) : (
               <motion.p
-                custom={1}
+                custom={6}
                 variants={fadeUp}
                 className="mt-4 max-w-xl text-lg font-semibold leading-snug text-slate-100 sm:text-xl"
               >
@@ -163,7 +217,7 @@ export const HomeRecap = () => {
               </motion.p>
             )}
 
-            <motion.div custom={2} variants={fadeUp} className="mt-6 flex flex-wrap items-stretch justify-start gap-3 sm:gap-4">
+            <motion.div custom={7} variants={fadeUp} className="mt-6 flex flex-wrap items-stretch justify-start gap-3 sm:gap-4">
               <span className="flex max-w-[220px] items-start gap-2 rounded-tl-3xl rounded-br-3xl border border-navy/15 bg-white px-4 py-3">
                 <CalendarDays size={15} className="mt-0.5 shrink-0 text-orange" />
                 <span className="min-w-0 text-left">
@@ -188,7 +242,7 @@ export const HomeRecap = () => {
                 Interest/Become a Partner buttons — the event already happened
                 and 2026 registration is closed, so these are the only CTAs the
                 hero needs now. */}
-            <motion.div custom={3} variants={fadeUp} className="relative mt-8 flex flex-wrap justify-start gap-3">
+            <motion.div custom={8} variants={fadeUp} className="relative mt-8 flex flex-wrap justify-start gap-3">
               <ButtonLink to="/2027" variant="primary">
                 Join the 2027 List <ArrowRight size={16} className="ml-1" />
               </ButtonLink>
@@ -197,7 +251,7 @@ export const HomeRecap = () => {
               </ButtonLink>
             </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
       </section>
 
       {/* Replaces WatchLiveSection — the livestream is over; this shows real
