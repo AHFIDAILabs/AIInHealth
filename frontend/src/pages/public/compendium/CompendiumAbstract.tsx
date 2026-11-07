@@ -90,10 +90,51 @@ export const CompendiumAbstract = () => {
             </ul>
           )}
 
-          <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {record.track && <span className="rounded-full bg-offwhite px-2.5 py-1">{record.track}</span>}
-            {record.presentationType && <span className="rounded-full bg-offwhite px-2.5 py-1">{record.presentationType}</span>}
-          </div>
+          {(record.track || record.presentationType || (record.keywords && record.keywords.length > 0) || record.sessionRef) && (
+            <div className="mt-6 rounded-2xl border border-slate-200 p-5 sm:p-6">
+              <dl className="grid gap-4 sm:grid-cols-2">
+                {record.track && (
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-widest text-slate-400">Track</dt>
+                    <dd className="mt-1 text-sm font-medium text-navy">{record.track}</dd>
+                  </div>
+                )}
+                {record.presentationType && (
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-widest text-slate-400">Presentation type</dt>
+                    <dd className="mt-1 text-sm font-medium capitalize text-navy">{record.presentationType}</dd>
+                  </div>
+                )}
+                {record.sessionRef && (
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-widest text-slate-400">Session</dt>
+                    <dd className="mt-1 text-sm font-medium text-navy">
+                      <Link to="/agenda" className="hover:underline">
+                        {record.sessionRef}
+                      </Link>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+
+              {record.keywords && record.keywords.length > 0 && (
+                <div className="mt-4 border-t border-slate-100 pt-4">
+                  <dt className="text-xs font-semibold uppercase tracking-widest text-slate-400">Keywords</dt>
+                  <dd className="mt-2 flex flex-wrap gap-2">
+                    {record.keywords.map((k) => (
+                      <Link
+                        key={k}
+                        to={`/compendium/keywords#kw-${slugify(k)}`}
+                        className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-navy hover:border-navy"
+                      >
+                        {k}
+                      </Link>
+                    ))}
+                  </dd>
+                </div>
+              )}
+            </div>
+          )}
 
           {record.abstract && (
             <div className="mt-8 max-w-none text-[17px] leading-[1.7] text-slate-800">
@@ -111,26 +152,6 @@ export const CompendiumAbstract = () => {
                 </p>
               ))}
             </div>
-          )}
-
-          {record.keywords && record.keywords.length > 0 && (
-            <div className="mt-8 flex flex-wrap gap-2">
-              {record.keywords.map((k) => (
-                <Link
-                  key={k}
-                  to={`/compendium/keywords#kw-${slugify(k)}`}
-                  className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-navy hover:border-navy"
-                >
-                  {k}
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {record.sessionRef && (
-            <p className="mt-6 text-sm text-slate-600">
-              Session: <Link to="/agenda" className="font-medium text-navy hover:underline">{record.sessionRef}</Link>
-            </p>
           )}
 
           {citations && (

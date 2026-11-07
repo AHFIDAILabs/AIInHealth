@@ -15,6 +15,7 @@ const baseEdition: CompendiumEdition = {
   editors: [],
   foreword: null,
   showPlainSummaries: false,
+  callForAbstracts: null,
 };
 
 const baseRecord: CompendiumAbstractRecord = {

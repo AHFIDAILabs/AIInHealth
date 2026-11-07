@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../../../components/seo/SEO';
-import { CompendiumSubnav, CompendiumLoading, CompendiumError, slugify } from './shared';
+import { CompendiumSubnav, CompendiumLoading, CompendiumError, slugify, groupByFirstLetter } from './shared';
 import { useCompendiumData } from './useCompendiumData';
 
 export const CompendiumAuthors = () => {
@@ -20,6 +20,8 @@ export const CompendiumAuthors = () => {
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [abstracts]);
 
+  const grouped = useMemo(() => groupByFirstLetter(byAuthor), [byAuthor]);
+
   if (loading) return <CompendiumLoading label="Loading authors…" />;
   if (error || !edition) return <CompendiumError message={error ?? 'The compendium could not be loaded.'} />;
 
@@ -36,20 +38,27 @@ export const CompendiumAuthors = () => {
           {byAuthor.length === 0 ? (
             <p className="mt-8 text-sm text-slate-500">No abstracts have been published yet.</p>
           ) : (
-            <dl className="mt-8 space-y-6">
-              {byAuthor.map(([name, items]) => (
-                <div key={name} id={`au-${slugify(name)}`}>
-                  <dt className="font-display text-base font-semibold text-navy">{name}</dt>
-                  <dd className="mt-1.5 space-y-1">
-                    {items.map((it) => (
-                      <Link key={it.code} to={`/compendium/${it.code}`} className="block text-sm text-slate-700 hover:text-navy hover:underline">
-                        {it.title}
-                      </Link>
+            <div className="mt-8 space-y-10">
+              {grouped.map(([letter, entries]) => (
+                <div key={letter}>
+                  <h2 className="font-display text-sm font-bold uppercase tracking-widest text-orange">{letter}</h2>
+                  <dl className="mt-4 space-y-6 border-t border-slate-100 pt-4">
+                    {entries.map(([name, items]) => (
+                      <div key={name} id={`au-${slugify(name)}`}>
+                        <dt className="font-display text-base font-semibold text-navy">{name}</dt>
+                        <dd className="mt-1.5 space-y-1">
+                          {items.map((it) => (
+                            <Link key={it.code} to={`/compendium/${it.code}`} className="block text-sm text-slate-700 hover:text-navy hover:underline">
+                              {it.title}
+                            </Link>
+                          ))}
+                        </dd>
+                      </div>
                     ))}
-                  </dd>
+                  </dl>
                 </div>
               ))}
-            </dl>
+            </div>
           )}
         </div>
       </section>

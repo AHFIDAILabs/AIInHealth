@@ -36,6 +36,13 @@ export interface CompendiumAbstractRecord {
   photoUrl?: string | null;
 }
 
+export interface CompendiumCallForAbstracts {
+  submissionsReceived: number;
+  acceptedOral: number;
+  acceptedPoster: number;
+  acceptanceRatePercent: number;
+}
+
 export interface CompendiumEdition {
   editionTitle: string | null;
   editionYear: number;
@@ -49,6 +56,7 @@ export interface CompendiumEdition {
   editors: string[];
   foreword: string | null;
   showPlainSummaries: boolean;
+  callForAbstracts: CompendiumCallForAbstracts | null;
 }
 
 export interface CompendiumCurrent {

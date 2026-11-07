@@ -1,8 +1,8 @@
 {
   "editionTitle": null,
   "editionYear": 2026,
-  "version": "5",
-  "publishedAt": "2026-10-16T09:22:46.794Z",
+  "version": "6",
+  "publishedAt": "2026-11-07T09:24:53.342Z",
   "publisher": null,
   "licence": {
     "name": "CC BY 4.0",
@@ -14,5 +14,11 @@
   "pdfUrl": null,
   "editors": [],
   "foreword": null,
-  "showPlainSummaries": false
+  "showPlainSummaries": false,
+  "callForAbstracts": {
+    "submissionsReceived": 5,
+    "acceptedOral": 0,
+    "acceptedPoster": 0,
+    "acceptanceRatePercent": 0
+  }
 }

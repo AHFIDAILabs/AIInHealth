@@ -2,16 +2,36 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { InitialsAvatar } from '../../../design-system/primitives/InitialsAvatar';
 
-// Small cross-page nav shared by all five compendium pages — kept out of
+// Small cross-page nav shared by all six compendium pages — kept out of
 // Navbar.tsx entirely (that's the site-wide nav; this is a local section
 // nav, same idea as a book's own running header). Hidden on print since a
 // printed abstract page should be just the abstract.
 const LINKS = [
   { to: '/compendium', label: 'Home' },
   { to: '/compendium/authors', label: 'Authors' },
+  { to: '/compendium/institutions', label: 'Institutions' },
   { to: '/compendium/keywords', label: 'Keywords' },
   { to: '/compendium/about', label: 'About' },
 ];
+
+// Shared by CompendiumHome.tsx and CompendiumAbout.tsx — the one place this
+// literal string lives, so the two pages can never drift apart on it.
+export const FALLBACK_EDITION_TITLE = 'AI in Health Summit 2026 — Compendium of Abstracts';
+
+// Groups an already-sorted [key, value][] list into letter buckets (A, B, C…)
+// for a proper index layout — shared by the Author/Institution/Keyword index
+// pages. Non-letter leading characters (numbers, punctuation) fall under '#'.
+export const groupByFirstLetter = <T,>(entries: [string, T][]): [string, [string, T][]][] => {
+  const buckets = new Map<string, [string, T][]>();
+  for (const entry of entries) {
+    const firstChar = entry[0].trim().charAt(0).toUpperCase();
+    const letter = /[A-Z]/.test(firstChar) ? firstChar : '#';
+    const bucket = buckets.get(letter) ?? [];
+    bucket.push(entry);
+    buckets.set(letter, bucket);
+  }
+  return Array.from(buckets.entries()).sort(([a], [b]) => a.localeCompare(b));
+};
 
 export const CompendiumSubnav = () => (
   <nav aria-label="Compendium sections" className="print:hidden border-b border-slate-200 bg-offwhite">

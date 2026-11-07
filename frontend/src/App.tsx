@@ -54,6 +54,7 @@ import { NotFound } from './pages/public/NotFound';
 import { CompendiumHome } from './pages/public/compendium/CompendiumHome';
 import { CompendiumAbstract } from './pages/public/compendium/CompendiumAbstract';
 import { CompendiumAuthors } from './pages/public/compendium/CompendiumAuthors';
+import { CompendiumInstitutions } from './pages/public/compendium/CompendiumInstitutions';
 import { CompendiumKeywords } from './pages/public/compendium/CompendiumKeywords';
 import { CompendiumAbout } from './pages/public/compendium/CompendiumAbout';
 import { LoginPage } from './pages/admin/LoginPage';
@@ -203,6 +204,7 @@ function App() {
               <>
                 <Route path="/compendium" element={<CompendiumHome />} />
                 <Route path="/compendium/authors" element={<CompendiumAuthors />} />
+                <Route path="/compendium/institutions" element={<CompendiumInstitutions />} />
                 <Route path="/compendium/keywords" element={<CompendiumKeywords />} />
                 <Route path="/compendium/about" element={<CompendiumAbout />} />
                 <Route path="/compendium/:code" element={<CompendiumAbstract />} />

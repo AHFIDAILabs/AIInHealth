@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../../../components/seo/SEO';
 import { fetchCompendiumEdition, type CompendiumEdition } from '../../../services/compendium.service';
 import { citeEdition } from '../../../lib/citation';
-import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT } from './shared';
+import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT, FALLBACK_EDITION_TITLE } from './shared';
 
 export const CompendiumAbout = () => {
   const [edition, setEdition] = useState<CompendiumEdition | null>(null);
@@ -34,6 +34,42 @@ export const CompendiumAbout = () => {
       <section className="bg-white py-14 sm:py-16">
         <div className="mx-auto max-w-3xl space-y-10 px-4 sm:px-6">
           <h1 className="font-display text-2xl font-semibold text-navy sm:text-3xl">About the Compendium</h1>
+
+          <div>
+            <h2 className="font-display text-lg font-semibold text-navy">Publication particulars</h2>
+            <dl className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 text-sm">
+              <ParticularRow label="Title" value={edition.editionTitle ?? FALLBACK_EDITION_TITLE} />
+              <ParticularRow label="Publisher" value={edition.publisher} />
+              <ParticularRow label="Editors" value={edition.editors.length > 0 ? edition.editors.join(', ') : null} />
+              <ParticularRow
+                label="DOI"
+                value={
+                  edition.doi ? (
+                    <a href={`https://doi.org/${edition.doi}`} className="font-medium text-navy hover:underline">
+                      {edition.doi}
+                    </a>
+                  ) : null
+                }
+              />
+              <ParticularRow label="ISBN" value={edition.isbn} />
+              <ParticularRow label="Edition" value={edition.version} />
+              <ParticularRow
+                label="Date of issue"
+                value={
+                  edition.publishedAt
+                    ? new Date(edition.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                    : null
+                }
+              />
+            </dl>
+          </div>
+
+          {edition.foreword && (
+            <div>
+              <h2 className="font-display text-lg font-semibold text-navy">Foreword</h2>
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-600">{edition.foreword}</p>
+            </div>
+          )}
 
           <div>
             <h2 className="font-display text-lg font-semibold text-navy">Open access</h2>
@@ -80,5 +116,15 @@ export const CompendiumAbout = () => {
         </div>
       </section>
     </>
+  );
+};
+
+const ParticularRow = ({ label, value }: { label: string; value: ReactNode }) => {
+  if (!value) return null;
+  return (
+    <div className="flex flex-col gap-0.5 px-4 py-2.5 sm:flex-row sm:items-baseline sm:gap-4">
+      <dt className="w-32 shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</dt>
+      <dd className="text-slate-700">{value}</dd>
+    </div>
   );
 };

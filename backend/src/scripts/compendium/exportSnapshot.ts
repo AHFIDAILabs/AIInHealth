@@ -41,6 +41,7 @@ import { connectDB, disconnectDB } from '../../config/db.js';
 import { logger } from '../../config/logger.js';
 import { EVENT_END_DATE } from '../../config/event.js';
 import { ConfirmedAbstract, type ConfirmedAbstractDoc } from '../../models/ConfirmedAbstract.model.js';
+import { Abstract } from '../../models/Abstract.model.js';
 import { sanitizeAbstractHtml } from './sanitizeAbstractHtml.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -79,6 +80,15 @@ export interface ExportedAbstract {
   photoUrl?: string | null;
 }
 
+export interface CallForAbstracts {
+  submissionsReceived: number;
+  acceptedOral: number;
+  acceptedPoster: number;
+  // Rounded to one decimal — a percentage, not a fraction, so the frontend
+  // can render it directly with a trailing "%".
+  acceptanceRatePercent: number;
+}
+
 export interface Edition {
   editionTitle: string | null;
   editionYear: number;
@@ -92,6 +102,12 @@ export interface Edition {
   editors: string[];
   foreword: string | null;
   showPlainSummaries: boolean;
+  // Real counts from the Abstract submission pipeline — unlike every other
+  // field above (hand-filled once, then preserved by mergeEdition), this is
+  // recomputed fresh on every export run, never preserved from a prior
+  // edition.json, since a stale submission count would misrepresent the
+  // actual call for abstracts.
+  callForAbstracts: CallForAbstracts | null;
 }
 
 // Never invented — the facts here are genuinely unknown until AHFID supplies
@@ -111,14 +127,44 @@ const DEFAULT_EDITION: Edition = {
   editors: [],
   foreword: null,
   showPlainSummaries: false,
+  callForAbstracts: null,
 };
 
 // Merges onto whatever edition.json already exists on disk rather than
 // overwriting it — a human may have already filled in the real title, DOI,
-// editors, etc. between runs, and this must never clobber that. Only
-// version/publishedAt are ever computed fresh by this script itself.
-function mergeEdition(existing: Partial<Edition> | null, version: string, publishedAt: string | null): Edition {
-  return { ...DEFAULT_EDITION, ...existing, version, publishedAt };
+// editors, etc. between runs, and this must never clobber that. version,
+// publishedAt, and callForAbstracts are the only fields ever computed fresh
+// by this script itself (the last of those specifically because it's
+// objectively derived data, never a hand-filled fact — see Edition's own
+// comment on callForAbstracts).
+function mergeEdition(
+  existing: Partial<Edition> | null,
+  version: string,
+  publishedAt: string | null,
+  callForAbstracts: CallForAbstracts | null
+): Edition {
+  return { ...DEFAULT_EDITION, ...existing, version, publishedAt, callForAbstracts };
+}
+
+// Real counts from the Abstract submission-pipeline model (distinct from
+// ConfirmedAbstract above) — every abstract ever submitted, regardless of
+// its eventual compendium-publication status. Never estimated or rounded up;
+// an empty submissions pool just means a null callForAbstracts (see caller),
+// not a zero-row table.
+async function computeCallForAbstracts(): Promise<CallForAbstracts | null> {
+  const [submissionsReceived, acceptedOral, acceptedPoster] = await Promise.all([
+    Abstract.countDocuments({}),
+    Abstract.countDocuments({ decision: 'accepted_oral' }),
+    Abstract.countDocuments({ decision: 'accepted_poster' }),
+  ]);
+  if (submissionsReceived === 0) return null;
+  const accepted = acceptedOral + acceptedPoster;
+  return {
+    submissionsReceived,
+    acceptedOral,
+    acceptedPoster,
+    acceptanceRatePercent: Math.round((accepted / submissionsReceived) * 1000) / 10,
+  };
 }
 
 export function buildExportRecord(doc: ConfirmedAbstractDoc): ExportedAbstract {
@@ -223,7 +269,8 @@ async function main(): Promise<void> {
   }
 
   const publishedAt = new Date().toISOString();
-  const edition = mergeEdition(existingEdition, nextVersion, publishedAt);
+  const callForAbstracts = await computeCallForAbstracts();
+  const edition = mergeEdition(existingEdition, nextVersion, publishedAt, callForAbstracts);
   const searchIndex = buildSearchIndex(exported);
   const compendiumFile = `compendium-${nextVersion}.json`;
 

@@ -7,10 +7,9 @@ import { PageHero } from '../../../design-system/patterns/PageHero';
 import { fetchCompendiumSearchIndexRaw } from '../../../services/compendium.service';
 import { trackEvent } from '../../../lib/analytics';
 import { citeEdition, citeUrlForEdition } from '../../../lib/citation';
-import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT, PresenterPhoto } from './shared';
+import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT, PresenterPhoto, FALLBACK_EDITION_TITLE } from './shared';
 import { useCompendiumData } from './useCompendiumData';
 
-const FALLBACK_TITLE = 'AI in Health Summit 2026 — Compendium of Abstracts';
 const ALL = '__all__';
 
 // Field/option shape must match backend/src/scripts/compendium/exportSnapshot.ts's
@@ -94,7 +93,7 @@ export const CompendiumHome = () => {
   if (loading) return <CompendiumLoading label="Loading the compendium…" />;
   if (error || !edition) return <CompendiumError message={error ?? 'The compendium could not be loaded.'} />;
 
-  const title = edition.editionTitle ?? FALLBACK_TITLE;
+  const title = edition.editionTitle ?? FALLBACK_EDITION_TITLE;
 
   return (
     <>
