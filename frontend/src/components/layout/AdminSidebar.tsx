@@ -178,7 +178,10 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Insights',
-    items: [{ label: 'Analytics', to: '/admin/analytics', icon: BarChart3, roles: allRoles }],
+    items: [
+      { label: 'Analytics', to: '/admin/analytics', icon: BarChart3, roles: allRoles },
+      { label: 'Organizations', to: '/admin/organizations', icon: Building2, roles: allRoles },
+    ],
   },
   {
     label: 'Administration',

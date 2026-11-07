@@ -97,6 +97,7 @@ import { PortalTokensPage } from './pages/admin/PortalTokensPage';
 import { ScholarshipApplicationsPage } from './pages/admin/ScholarshipApplicationsPage';
 import { WaiHealthPage } from './pages/admin/WaiHealthPage';
 import { AnalyticsPage } from './pages/admin/AnalyticsPage';
+import { OrganizationsPage } from './pages/admin/OrganizationsPage';
 import { IntegrationsPage } from './pages/admin/IntegrationsPage';
 import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage';
 import { RapporteurPage } from './pages/admin/RapporteurPage';
@@ -309,6 +310,7 @@ function App() {
                 }
               >
                 <Route path="/admin/analytics" element={<AnalyticsPage />} />
+                <Route path="/admin/organizations" element={<OrganizationsPage />} />
               </Route>
 
               <Route element={<RequireRole roles={['super_admin', 'admin', 'viewer']} />}>

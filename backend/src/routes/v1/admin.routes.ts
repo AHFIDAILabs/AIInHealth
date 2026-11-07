@@ -38,6 +38,7 @@ import * as portalTokenController from '../../controllers/portalToken.controller
 import * as reconciliationController from '../../controllers/reconciliation.controller.js';
 import * as paymentController from '../../controllers/payment.controller.js';
 import * as analyticsController from '../../controllers/analytics.controller.js';
+import * as organizationController from '../../controllers/organization.controller.js';
 import * as integrationsController from '../../controllers/integrations.controller.js';
 import * as onevieIntegrationController from '../../controllers/onevieIntegration.controller.js';
 import * as newsletterController from '../../controllers/newsletter.controller.js';
@@ -689,6 +690,9 @@ router.patch(
   onevieIntegrationController.waiToggle
 );
 router.post('/integrations/onevie-wai/sync-now', requireRole('super_admin'), onevieIntegrationController.waiSyncNow);
+
+router.get('/organizations', requireRole(...allRoles), organizationController.adminList);
+router.get('/organizations/export', requireRole(...allRoles), organizationController.adminExport);
 
 router.get('/analytics', requireRole(...allRoles), analyticsController.overview);
 router.get('/analytics-registrations', requireRole(...allRoles), analyticsController.registrations);
