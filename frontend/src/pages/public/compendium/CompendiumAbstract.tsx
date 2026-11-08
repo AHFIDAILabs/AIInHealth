@@ -6,6 +6,7 @@ import { citeApa, citeBibtex, citeRis, buildScholarlyArticleJsonLd } from '../..
 import { sanitizeAbstractHtml } from '../../../lib/sanitizeAbstractHtml';
 import { splitStructuredAbstract } from '../../../lib/structuredAbstract';
 import { CompendiumSubnav, CompendiumLoading, CompendiumError, LICENCE_CAVEAT, PresenterPhoto, slugify } from './shared';
+import { CompendiumMosaicBanner } from './CompendiumMosaicBanner';
 import { useCompendiumData } from './useCompendiumData';
 import { trackEvent } from '../../../lib/analytics';
 
@@ -19,6 +20,9 @@ export const CompendiumAbstract = () => {
 
   const index = abstracts.findIndex((a) => a.code === code);
   const record = index >= 0 ? abstracts[index] : null;
+
+  const published = useMemo(() => abstracts.filter((a) => a.status === 'published'), [abstracts]);
+  const publishedPosition = record ? published.findIndex((a) => a.code === record.code) : -1;
 
   const citations = useMemo(() => {
     if (!record || !edition) return null;
@@ -44,9 +48,9 @@ export const CompendiumAbstract = () => {
         <CompendiumSubnav />
         <section className="bg-white py-20">
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{record.code}</p>
-            <h1 className="mt-2 font-display text-2xl font-semibold text-navy">{record.title}</h1>
-            <p className="mt-4 rounded-lg border border-slate-200 bg-offwhite px-4 py-3 text-sm font-medium text-slate-600">
+            <p className="text-xs font-semibold uppercase tracking-widest text-compendium-ink/40">{record.code}</p>
+            <h1 className="mt-2 font-compendium-serif text-2xl font-bold text-compendium-ink">{record.title}</h1>
+            <p className="mt-4 border border-compendium-ink/10 bg-compendium-cream px-4 py-3 text-sm font-medium text-compendium-ink/70">
               This abstract has been withdrawn.
             </p>
             <AbstractPager prev={prev} next={next} />
@@ -55,6 +59,10 @@ export const CompendiumAbstract = () => {
       </>
     );
   }
+
+  const presentationLabel = record.presentationType === 'poster' ? 'PA' : 'OA';
+  const bigNumber = publishedPosition >= 0 ? String(publishedPosition + 1).padStart(2, '0') : '—';
+  const correspondingAuthor = record.authors?.find((a) => a.isCorresponding) ?? null;
 
   return (
     <>
@@ -66,165 +74,190 @@ export const CompendiumAbstract = () => {
       />
       <CompendiumSubnav />
 
-      <section className="bg-white py-14 sm:py-16">
-        <article className="mx-auto max-w-3xl px-4 sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{record.code}</p>
-          <div className="mt-2 flex items-start gap-4">
-            <PresenterPhoto
-              photoUrl={record.photoUrl}
-              name={record.authors?.[0]?.name ?? record.title}
-              className="h-16 w-16 shrink-0 rounded-full"
-            />
-            <h1 className="font-display text-2xl font-semibold leading-tight text-navy sm:text-3xl">{record.title}</h1>
+      <div className="mx-auto max-w-5xl px-4 pt-8 sm:px-6">
+        <div className="flex flex-col border border-compendium-ink/10 sm:flex-row">
+          <div className="flex shrink-0 flex-col items-center justify-center bg-orange px-6 py-6 text-white sm:w-[120px]">
+            <span className="text-xs font-bold uppercase tracking-[0.2em]">{presentationLabel}</span>
+            <span className="font-compendium-serif text-4xl font-bold leading-none">{bigNumber}</span>
           </div>
+          <div className="flex-1 bg-compendium-ink px-6 py-6 text-white">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange">
+              Abstract {record.code}
+              {record.track && <> · {record.track}</>}
+            </p>
+            <h1 className="mt-2 font-compendium-serif text-xl font-bold leading-tight sm:text-2xl">{record.title}</h1>
+            {record.track && <p className="mt-1.5 font-compendium-serif text-sm italic text-white/60">{record.track}</p>}
+          </div>
+        </div>
+      </div>
 
-          {record.authors && record.authors.length > 0 && (
-            <ul className="mt-4 space-y-1 text-[15px] text-slate-700">
-              {record.authors.map((a, i) => (
-                <li key={`${a.name}-${i}`}>
-                  <span className="font-medium text-navy">{a.name}</span>
-                  {a.isCorresponding && <span className="ml-1.5 text-xs text-slate-500">(corresponding author)</span>}
-                  {a.affiliation && <span className="text-slate-500"> — {a.affiliation}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
+      <section className="bg-white pb-16 pt-8 sm:pb-20">
+        <article className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="grid gap-8 sm:grid-cols-[220px_1fr] sm:gap-10">
+            <aside className="space-y-4 text-sm">
+              <div className="flex items-start gap-3">
+                <div className="h-11 w-11 shrink-0 overflow-hidden border border-compendium-ink/10">
+                  <CompendiumMosaicBanner seed={record.code} tiles={1} />
+                </div>
+                <PresenterPhoto
+                  photoUrl={record.photoUrl}
+                  name={record.authors?.[0]?.name ?? record.title}
+                  className="h-11 w-11 shrink-0 rounded-full"
+                />
+              </div>
 
-          {(record.track || record.presentationType || (record.keywords && record.keywords.length > 0) || record.sessionRef) && (
-            <div className="mt-6 rounded-2xl border border-slate-200 p-5 sm:p-6">
-              <dl className="grid gap-4 sm:grid-cols-2">
-                {record.track && (
-                  <div>
-                    <dt className="text-xs font-semibold uppercase tracking-widest text-slate-400">Track</dt>
-                    <dd className="mt-1 text-sm font-medium text-navy">{record.track}</dd>
-                  </div>
-                )}
-                {record.presentationType && (
-                  <div>
-                    <dt className="text-xs font-semibold uppercase tracking-widest text-slate-400">Presentation type</dt>
-                    <dd className="mt-1 text-sm font-medium capitalize text-navy">{record.presentationType}</dd>
-                  </div>
-                )}
-                {record.sessionRef && (
-                  <div>
-                    <dt className="text-xs font-semibold uppercase tracking-widest text-slate-400">Session</dt>
-                    <dd className="mt-1 text-sm font-medium text-navy">
-                      <Link to="/agenda" className="hover:underline">
-                        {record.sessionRef}
-                      </Link>
-                    </dd>
-                  </div>
-                )}
-              </dl>
+              {record.authors && record.authors.length > 0 && (
+                <ul className="space-y-1 border-t border-compendium-ink/10 pt-3 text-[14px] text-compendium-ink">
+                  {record.authors.map((a, i) => (
+                    <li key={`${a.name}-${i}`}>
+                      <span className={a.isPresenting ? 'font-semibold text-compendium-ink underline decoration-orange' : 'text-compendium-ink'}>
+                        {a.name}
+                      </span>
+                      {a.affiliation && <span className="block text-xs text-compendium-ink/55">{a.affiliation}</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-              {record.keywords && record.keywords.length > 0 && (
-                <div className="mt-4 border-t border-slate-100 pt-4">
-                  <dt className="text-xs font-semibold uppercase tracking-widest text-slate-400">Keywords</dt>
-                  <dd className="mt-2 flex flex-wrap gap-2">
-                    {record.keywords.map((k) => (
-                      <Link
-                        key={k}
-                        to={`/compendium/keywords#kw-${slugify(k)}`}
-                        className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-navy hover:border-navy"
-                      >
-                        {k}
-                      </Link>
-                    ))}
-                  </dd>
+              {record.studyType && (
+                <div className="border-t border-compendium-ink/10 pt-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-orange">Study type</p>
+                  <p className="mt-1 text-compendium-ink/80">{record.studyType}</p>
                 </div>
               )}
-            </div>
-          )}
 
-          {record.abstract && (
-            <div className="mt-8 max-w-none text-[17px] leading-[1.7] text-slate-800">
-              {splitStructuredAbstract(record.abstract).map((para, i) => (
-                <p key={i} className={`text-justify [text-justify:inter-word] ${i > 0 ? 'mt-5' : ''}`}>
-                  {para.label && (
-                    <strong className="mr-1.5 font-display text-sm font-bold uppercase tracking-wide text-navy">
-                      {para.label}:
-                    </strong>
-                  )}
-                  {/* Already sanitized at export time AND again here (see
-                      sanitizeAbstractHtml.ts) — only an exact i/b/sub/sup
-                      markup can ever survive to reach this point. */}
-                  <span dangerouslySetInnerHTML={{ __html: sanitizeAbstractHtml(para.body) }} />
-                </p>
-              ))}
-            </div>
-          )}
+              {record.setting && (
+                <div className="border-t border-compendium-ink/10 pt-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-orange">Setting</p>
+                  <p className="mt-1 text-compendium-ink/80">{record.setting}</p>
+                </div>
+              )}
 
-          {citations && (
-            <div className="mt-10 rounded-2xl border border-slate-200 p-5 sm:p-6">
-              <h2 className="font-display text-base font-semibold text-navy">Cite this abstract</h2>
-              <div className="print:hidden mt-3 flex flex-wrap gap-2">
-                {(['apa', 'bibtex', 'ris'] as CiteFormat[]).map((f) => (
+              {record.keywords && record.keywords.length > 0 && (
+                <div className="border-t border-compendium-ink/10 pt-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-orange">Keywords</p>
+                  <ul className="mt-1 space-y-0.5">
+                    {record.keywords.map((k) => (
+                      <li key={k}>
+                        <Link to={`/compendium/keywords#kw-${slugify(k)}`} className="text-compendium-ink/80 hover:text-orange hover:underline">
+                          ◦ {k}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {correspondingAuthor && (
+                <div className="border-t border-compendium-ink/10 pt-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-orange">Correspondence</p>
+                  <p className="mt-1 text-compendium-ink/80">
+                    {correspondingAuthor.name} ·{' '}
+                    <Link to={`/contact?abstract=${record.code}`} className="text-orange hover:underline">
+                      contact
+                    </Link>
+                  </p>
+                </div>
+              )}
+
+              {citations && (
+                <div className="border-t border-compendium-ink/10 pt-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-orange">Cite as</p>
+                  <p className="mt-1 text-xs leading-relaxed text-compendium-ink/70">{citations.apa}</p>
+                </div>
+              )}
+            </aside>
+
+            <div className="min-w-0">
+              {record.abstract && (
+                <div className="max-w-none text-[16px] leading-[1.7] text-compendium-ink">
+                  {splitStructuredAbstract(record.abstract).map((para, i) => (
+                    <p key={i} className={`text-justify [text-justify:inter-word] ${i > 0 ? 'mt-5' : ''}`}>
+                      {para.label && <strong className="mr-1.5 font-bold text-orange">{para.label}.</strong>}
+                      {/* Already sanitized at export time AND again here (see
+                          sanitizeAbstractHtml.ts) — only an exact i/b/sub/sup
+                          markup can ever survive to reach this point. */}
+                      <span dangerouslySetInnerHTML={{ __html: sanitizeAbstractHtml(para.body) }} />
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {citations && (
+                <div className="mt-10 border border-compendium-ink/10 p-5 sm:p-6">
+                  <h2 className="font-compendium-serif text-base font-bold text-compendium-ink">Cite this abstract</h2>
+                  <div className="print:hidden mt-3 flex flex-wrap gap-2">
+                    {(['apa', 'bibtex', 'ris'] as CiteFormat[]).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setCiteFormat(f)}
+                        aria-pressed={citeFormat === f}
+                        className={`px-3 py-1 text-xs font-semibold uppercase ${
+                          citeFormat === f ? 'bg-compendium-ink text-white' : 'border border-compendium-ink/20 text-compendium-ink hover:border-compendium-ink'
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                  <pre className="mt-3 whitespace-pre-wrap break-words bg-compendium-cream p-3.5 text-xs text-compendium-ink/80">
+                    {citations[citeFormat]}
+                  </pre>
                   <button
-                    key={f}
                     type="button"
-                    onClick={() => setCiteFormat(f)}
-                    aria-pressed={citeFormat === f}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${
-                      citeFormat === f ? 'bg-navy text-white' : 'border border-slate-200 text-navy hover:border-navy'
-                    }`}
+                    className="print:hidden mt-2 text-xs font-semibold text-orange hover:underline"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(citations[citeFormat]);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      } catch {
+                        // Clipboard access can be denied by the browser — the
+                        // citation text is already selectable/visible either way.
+                      }
+                    }}
                   >
-                    {f}
+                    {copied ? 'Copied!' : 'Copy citation'}
                   </button>
-                ))}
-              </div>
-              <pre className="mt-3 whitespace-pre-wrap break-words rounded-lg bg-offwhite p-3.5 text-xs text-slate-700">
-                {citations[citeFormat]}
-              </pre>
-              <button
-                type="button"
-                className="print:hidden mt-2 text-xs font-semibold text-navy hover:underline"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(citations[citeFormat]);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  } catch {
-                    // Clipboard access can be denied by the browser — the
-                    // citation text is already selectable/visible either way.
-                  }
-                }}
-              >
-                {copied ? 'Copied!' : 'Copy citation'}
-              </button>
+                </div>
+              )}
+
+              <p className="mt-6 text-xs text-compendium-ink/60">
+                Licensed under {edition.licence.name}
+                {!edition.licence.confirmed && LICENCE_CAVEAT}.{' '}
+                <a href={edition.licence.url} className="font-medium text-orange hover:underline">
+                  View licence
+                </a>
+              </p>
+
+              {record.corrections && record.corrections.length > 0 && (
+                <div className="mt-6">
+                  <h2 className="font-compendium-serif text-base font-bold text-compendium-ink">Corrections</h2>
+                  <ul className="mt-2 space-y-2 text-sm text-compendium-ink/70">
+                    {record.corrections.map((c, i) => (
+                      <li key={i}>
+                        <span className="font-medium text-compendium-ink">
+                          {new Date(c.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}:
+                        </span>{' '}
+                        {c.note}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="mt-8 text-sm text-compendium-ink/70">
+                Found an error, or are you this abstract's corresponding author?{' '}
+                <Link to={`/contact?abstract=${record.code}`} className="font-medium text-orange hover:underline">
+                  Contact the secretariat
+                </Link>
+                .
+              </p>
+
+              <AbstractPager prev={prev} next={next} />
             </div>
-          )}
-
-          <p className="mt-6 text-xs text-slate-500">
-            Licensed under {edition.licence.name}
-            {!edition.licence.confirmed && LICENCE_CAVEAT}.{' '}
-            <a href={edition.licence.url} className="font-medium text-navy hover:underline">
-              View licence
-            </a>
-          </p>
-
-          {record.corrections && record.corrections.length > 0 && (
-            <div className="mt-6">
-              <h2 className="font-display text-base font-semibold text-navy">Corrections</h2>
-              <ul className="mt-2 space-y-2 text-sm text-slate-600">
-                {record.corrections.map((c, i) => (
-                  <li key={i}>
-                    <span className="font-medium text-navy">{new Date(c.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}:</span>{' '}
-                    {c.note}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <p className="mt-8 text-sm text-slate-600">
-            Found an error, or are you this abstract's corresponding author?{' '}
-            <Link to={`/contact?abstract=${record.code}`} className="font-medium text-navy hover:underline">
-              Contact the secretariat
-            </Link>
-            .
-          </p>
-
-          <AbstractPager prev={prev} next={next} />
+          </div>
         </article>
       </section>
     </>
@@ -240,16 +273,16 @@ const AbstractPager = ({
 }) => {
   if (!prev && !next) return null;
   return (
-    <nav aria-label="Abstract navigation" className="print:hidden mt-10 flex items-center justify-between gap-4 border-t border-slate-200 pt-6 text-sm">
+    <nav aria-label="Abstract navigation" className="print:hidden mt-10 flex items-center justify-between gap-4 border-t border-compendium-ink/10 pt-6 text-sm">
       {prev ? (
-        <Link to={`/compendium/${prev.code}`} className="font-medium text-navy hover:underline">
+        <Link to={`/compendium/${prev.code}`} className="font-medium text-orange hover:underline">
           ← {prev.title}
         </Link>
       ) : (
         <span />
       )}
       {next && (
-        <Link to={`/compendium/${next.code}`} className="font-medium text-navy hover:underline">
+        <Link to={`/compendium/${next.code}`} className="font-medium text-orange hover:underline">
           {next.title} →
         </Link>
       )}

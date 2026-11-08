@@ -55,6 +55,10 @@ export interface ExportedAuthor {
   affiliation: string | null;
   isCorresponding: boolean | null;
   orcid: string | null;
+  // Derived by matching against the record's own top-level authorName (the
+  // single presenter the existing public showcase page already reads) —
+  // never guessed, and never defaults to authors[0] when no match is found.
+  isPresenting: boolean;
 }
 
 // The explicit allowlist — this exact key set, nothing more. A withdrawn
@@ -68,6 +72,8 @@ export interface ExportedAbstract {
   authors?: ExportedAuthor[];
   abstract?: string;
   keywords?: string[];
+  studyType?: string | null;
+  setting?: string | null;
   track?: string | null;
   presentationType?: string | null;
   sessionRef?: string | null;
@@ -177,11 +183,13 @@ export function buildExportRecord(doc: ConfirmedAbstractDoc): ExportedAbstract {
     return { code: doc.code, title: doc.title, status: 'withdrawn' };
   }
 
+  const presenterName = doc.authorName?.trim().toLowerCase();
   const authors: ExportedAuthor[] = (doc.authors ?? []).map((a) => ({
     name: a.name,
     affiliation: a.affiliation ?? null,
     isCorresponding: a.isCorresponding ?? null,
     orcid: a.orcid ?? null,
+    isPresenting: a.name.trim().toLowerCase() === presenterName,
   }));
 
   return {
@@ -191,6 +199,8 @@ export function buildExportRecord(doc: ConfirmedAbstractDoc): ExportedAbstract {
     authors,
     abstract: sanitizeAbstractHtml(doc.abstractText ?? ''),
     keywords: doc.keywords ?? [],
+    studyType: doc.studyType ?? null,
+    setting: doc.setting ?? null,
     track: doc.track ?? null,
     presentationType: doc.presentationType ?? null,
     photoUrl: doc.photoUrl ?? null,

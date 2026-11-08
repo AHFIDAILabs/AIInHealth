@@ -75,6 +75,8 @@ export interface AdminConfirmedAbstract extends ConfirmedAbstract {
   abstractText?: string;
   authors?: CompendiumAuthor[];
   keywords?: string[];
+  studyType?: string;
+  setting?: string;
   language?: string;
   compendium?: CompendiumFields;
   presentingCard?: PresentingCardFields;
@@ -94,6 +96,8 @@ export interface ConfirmedAbstractInput {
   abstractText?: string;
   authors?: CompendiumAuthor[];
   keywords?: string[];
+  studyType?: string;
+  setting?: string;
   language?: string;
 }
 

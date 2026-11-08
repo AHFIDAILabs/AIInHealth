@@ -14,6 +14,7 @@ export interface CompendiumAuthor {
   affiliation: string | null;
   isCorresponding: boolean | null;
   orcid: string | null;
+  isPresenting: boolean;
 }
 
 export interface CompendiumCorrection {
@@ -28,6 +29,8 @@ export interface CompendiumAbstractRecord {
   authors?: CompendiumAuthor[];
   abstract?: string;
   keywords?: string[];
+  studyType?: string | null;
+  setting?: string | null;
   track?: string | null;
   presentationType?: string | null;
   sessionRef?: string | null;

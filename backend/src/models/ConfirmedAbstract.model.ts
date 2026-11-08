@@ -52,6 +52,12 @@ const confirmedAbstractSchema = new Schema(
       },
     ],
     keywords: [{ type: String, trim: true }],
+    // Free text, admin-filled, e.g. "Original research · case study" /
+    // "Nigeria · WhatsApp" — mirrors the compendium's own print-edition
+    // sidebar fields. Optional: left unset wherever not yet supplied rather
+    // than guessed from the abstract body.
+    studyType: { type: String, trim: true, maxlength: 160 },
+    setting: { type: String, trim: true, maxlength: 160 },
     language: { type: String, trim: true, default: 'en' },
     compendium: {
       consentToPublish: {

@@ -75,6 +75,8 @@ const ReadinessDot = ({ ok, label }: { ok: boolean; label: string }) => (
 interface EditState {
   track: string;
   keywords: string; // comma-separated in the UI, split/joined on save
+  studyType: string;
+  setting: string;
   authors: CompendiumAuthor[];
   abstractText: string;
   // "I will be presenting" card (event-extras plan, Batch 2) — saved via a
@@ -111,6 +113,8 @@ export const CompendiumTab = () => {
   const [editForm, setEditForm] = useState<EditState>({
     track: '',
     keywords: '',
+    studyType: '',
+    setting: '',
     authors: [],
     abstractText: '',
     sessionRef: '',
@@ -233,6 +237,8 @@ export const CompendiumTab = () => {
     setEditForm({
       track: abstract.track ?? '',
       keywords: (abstract.keywords ?? []).join(', '),
+      studyType: abstract.studyType ?? '',
+      setting: abstract.setting ?? '',
       authors: abstract.authors && abstract.authors.length > 0 ? abstract.authors : [{ name: abstract.authorName }],
       abstractText: abstract.abstractText ?? '',
       sessionRef: abstract.presentingCard?.sessionRef ?? '',
@@ -267,6 +273,8 @@ export const CompendiumTab = () => {
           .split(',')
           .map((k) => k.trim())
           .filter(Boolean),
+        studyType: editForm.studyType.trim() || undefined,
+        setting: editForm.setting.trim() || undefined,
         authors,
         abstractText: editForm.abstractText.trim() || undefined,
       });
@@ -620,6 +628,20 @@ export const CompendiumTab = () => {
                   value={editForm.keywords}
                   onChange={(e) => setEditForm((p) => ({ ...p, keywords: e.target.value }))}
                   placeholder="e.g. machine learning, imbalanced data"
+                />
+
+                <AdminInput
+                  label="Study type"
+                  value={editForm.studyType}
+                  onChange={(e) => setEditForm((p) => ({ ...p, studyType: e.target.value }))}
+                  placeholder="e.g. Original research · development and evaluation case study"
+                />
+
+                <AdminInput
+                  label="Setting"
+                  value={editForm.setting}
+                  onChange={(e) => setEditForm((p) => ({ ...p, setting: e.target.value }))}
+                  placeholder="e.g. Nigeria · WhatsApp"
                 />
 
                 <div className="rounded-lg border border-slate-200 p-3">

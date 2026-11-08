@@ -36,6 +36,8 @@ export const createConfirmedAbstractSchema = z.object({
       .max(30)
       .optional(),
     keywords: z.array(z.string().trim().min(1)).max(20).optional(),
+    studyType: z.string().trim().max(160).optional(),
+    setting: z.string().trim().max(160).optional(),
     language: z.string().trim().min(2).max(10).optional(),
   }),
 });

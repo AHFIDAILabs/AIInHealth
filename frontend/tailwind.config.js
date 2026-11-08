@@ -27,10 +27,26 @@ export default {
           amber: '#D97706',
           blue: '#2563EB',
         },
+        // Scoped to the open-access compendium only (CompendiumHome/About/
+        // Abstract/indexes) — the editorial print palette from the reference
+        // compendium PDF design, kept out of the site-wide brand tokens above
+        // since nothing else on the site should pick these up.
+        compendium: {
+          ink: '#1D1B17',
+          cream: '#F0EDE9',
+          peach: '#E8C4AE',
+          rust: '#A8432B',
+          mustard: '#C9922E',
+          olive: '#6E7E3C',
+          steel: '#2F4A5F',
+        },
       },
       fontFamily: {
         display: ['Sora', 'Plus Jakarta Sans', 'sans-serif'],
         body: ['Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        // Compendium-only editorial serif — see the `compendium` color tokens
+        // above for the same scoping rationale.
+        'compendium-serif': ['Lora', 'Georgia', 'serif'],
       },
       boxShadow: {
         'glow-orange': '0 0 50px -10px rgba(232, 121, 44, 0.25)',

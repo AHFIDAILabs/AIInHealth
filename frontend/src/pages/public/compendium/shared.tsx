@@ -18,23 +18,20 @@ const LINKS = [
 // literal string lives, so the two pages can never drift apart on it.
 export const FALLBACK_EDITION_TITLE = 'AI in Health Summit 2026 — Compendium of Abstracts';
 
-// Groups an already-sorted [key, value][] list into letter buckets (A, B, C…)
-// for a proper index layout — shared by the Author/Institution/Keyword index
-// pages. Non-letter leading characters (numbers, punctuation) fall under '#'.
-export const groupByFirstLetter = <T,>(entries: [string, T][]): [string, [string, T][]][] => {
-  const buckets = new Map<string, [string, T][]>();
-  for (const entry of entries) {
-    const firstChar = entry[0].trim().charAt(0).toUpperCase();
-    const letter = /[A-Z]/.test(firstChar) ? firstChar : '#';
-    const bucket = buckets.get(letter) ?? [];
-    bucket.push(entry);
-    buckets.set(letter, bucket);
-  }
-  return Array.from(buckets.entries()).sort(([a], [b]) => a.localeCompare(b));
+// "Lawal, Abiola Abdulrafiu" — the surname-first form used by the reference
+// compendium's own Annex indexes. Takes the last whitespace-separated token
+// as the surname; not a universal name-parsing solution, but matches the
+// "Given Names + single Surname" shape our author data actually has.
+export const formatSurnameFirst = (name: string): string => {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name.trim();
+  const surname = parts[parts.length - 1];
+  const given = parts.slice(0, -1).join(' ');
+  return `${surname}, ${given}`;
 };
 
 export const CompendiumSubnav = () => (
-  <nav aria-label="Compendium sections" className="print:hidden border-b border-slate-200 bg-offwhite">
+  <nav aria-label="Compendium sections" className="print:hidden border-b border-compendium-ink/10 bg-compendium-cream">
     <div className="mx-auto flex max-w-5xl flex-wrap gap-x-6 gap-y-2 px-4 py-3 text-sm sm:px-6">
       {LINKS.map((l) => (
         <NavLink
@@ -42,7 +39,7 @@ export const CompendiumSubnav = () => (
           to={l.to}
           end
           className={({ isActive }) =>
-            `font-medium ${isActive ? 'text-navy underline underline-offset-4' : 'text-slate-600 hover:text-navy hover:underline'}`
+            `font-semibold ${isActive ? 'text-orange underline underline-offset-4' : 'text-compendium-ink/70 hover:text-orange hover:underline'}`
           }
         >
           {l.label}

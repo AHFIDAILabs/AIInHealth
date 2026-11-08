@@ -27,8 +27,28 @@ describe('buildExportRecord', () => {
   it('exports the exact allowlisted key set for a published record — nothing more', () => {
     const result = buildExportRecord(publishedFixture);
     expect(Object.keys(result).sort()).toEqual(
-      ['code', 'title', 'status', 'authors', 'abstract', 'keywords', 'track', 'presentationType', 'sessionRef', 'language', 'corrections', 'photoUrl'].sort()
+      [
+        'code',
+        'title',
+        'status',
+        'authors',
+        'abstract',
+        'keywords',
+        'studyType',
+        'setting',
+        'track',
+        'presentationType',
+        'sessionRef',
+        'language',
+        'corrections',
+        'photoUrl',
+      ].sort()
     );
+  });
+
+  it('marks the author matching the top-level authorName as isPresenting, never a guessed default', () => {
+    const result = buildExportRecord(publishedFixture);
+    expect(result.authors?.[0]).toMatchObject({ name: 'Jane Doe', isPresenting: true });
   });
 
   it('never includes authorName, internalNotes, consent evidence, or any admin-only field', () => {

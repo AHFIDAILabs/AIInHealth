@@ -22,7 +22,7 @@ const baseRecord: CompendiumAbstractRecord = {
   code: 'TEST0001',
   title: 'A Synthetic Test Title',
   status: 'published',
-  authors: [{ name: 'Jane Doe', affiliation: null, isCorresponding: null, orcid: null }],
+  authors: [{ name: 'Jane Doe', affiliation: null, isCorresponding: null, orcid: null, isPresenting: true }],
   abstract: 'Synthetic body.',
   keywords: [],
   track: null,
@@ -60,7 +60,13 @@ describe('citation formats', () => {
   });
 
   it('joins multiple authors correctly in each format', () => {
-    const multi = { ...baseRecord, authors: [{ name: 'Jane Doe', affiliation: null, isCorresponding: null, orcid: null }, { name: 'John Smith', affiliation: null, isCorresponding: null, orcid: null }] };
+    const multi = {
+      ...baseRecord,
+      authors: [
+        { name: 'Jane Doe', affiliation: null, isCorresponding: null, orcid: null, isPresenting: true },
+        { name: 'John Smith', affiliation: null, isCorresponding: null, orcid: null, isPresenting: false },
+      ],
+    };
     expect(citeApa(multi, baseEdition)).toContain('Jane Doe, John Smith');
     expect(citeBibtex(multi, baseEdition)).toContain('Jane Doe and John Smith');
     const ris = citeRis(multi, baseEdition);
