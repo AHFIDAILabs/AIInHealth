@@ -18,6 +18,10 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
+      # sharp@0.32.6 (pulled in transitively by @xenova/transformers) has no
+      # prebuilt binary left for this runner's Node ABI, so npm falls back to
+      # compiling it from source — which needs libvips' headers present.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-dev
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
