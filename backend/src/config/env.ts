@@ -82,8 +82,15 @@ const envSchema = z.object({
   MS_TENANT_ID: z.string().optional().default(''),
   MS_CLIENT_ID: z.string().optional().default(''),
   MS_CLIENT_SECRET: z.string().optional().default(''),
-  MS_SENDER_EMAIL: z.string().email().optional().default(''),
-  SUPPORT_EMAIL: z.string().email().optional().default(''),
+  // A plain `.email().optional().default('')` looks right but isn't: zod
+  // re-validates a substituted default through the full preceding chain, so
+  // the '' fallback would itself fail the .email() check the moment this var
+  // is genuinely unset (confirmed against this project's exact zod version —
+  // this is what broke backend CI, where no .env file exists at all). The
+  // explicit '' alternative in the union is what actually makes "unset is
+  // fine" true.
+  MS_SENDER_EMAIL: z.union([z.string().email(), z.literal('')]).optional().default(''),
+  SUPPORT_EMAIL: z.union([z.string().email(), z.literal('')]).optional().default(''),
 
   // Web Push — empty in dev disables push sends (subscriptions still store fine,
   // sendPush just no-ops with a log line) rather than crashing on missing keys.

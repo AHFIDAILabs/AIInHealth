@@ -11,6 +11,7 @@ Object.assign(process.env, {
   MONGO_URI: 'mongodb://127.0.0.1:27118/ai_health_summit_test', // must match globalSetup.ts's TEST_DB_PORT
   ACCESS_TOKEN_SECRET: 'test-only-access-secret-not-used-anywhere-real-32chars+',
   DELEGATE_TOKEN_SECRET: 'test-only-delegate-secret-not-used-anywhere-real-32chars+',
+  REVIEWER_TOKEN_SECRET: 'test-only-reviewer-secret-not-used-anywhere-real-32chars+',
   FRONTEND_ORIGIN: 'http://localhost:5173',
   // supertest's ephemeral test server listens on 127.0.0.1, not the literal string
   // "localhost" — a Set-Cookie Domain that doesn't match the actual request host is
