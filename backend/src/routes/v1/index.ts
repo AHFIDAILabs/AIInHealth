@@ -38,6 +38,7 @@ import leaderboardRoutes from './leaderboard.routes.js';
 import sessionAttendanceRoutes from './sessionAttendance.routes.js';
 import masterclassRoutes from './masterclass.routes.js';
 import interest2027Routes from './interest2027.routes.js';
+import reportsRoutes from './reports.routes.js';
 
 const router = Router();
 
@@ -80,5 +81,6 @@ router.use('/innovator', innovatorRoutes);
 router.use('/feedback', feedbackRoutes);
 router.use('/livestream', livestreamRoutes);
 router.use('/leaderboard', leaderboardRoutes);
+router.use('/reports', reportsRoutes);
 
 export default router;

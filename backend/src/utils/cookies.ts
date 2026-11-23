@@ -55,3 +55,14 @@ export const setReviewerCookie = (res: Response, token: string, maxAgeMs: number
 export const clearReviewerCookie = (res: Response): void => {
   res.clearCookie('reviewer_token', reviewerCookieOptions);
 };
+
+// Reports Library gate — same idea, its own namespace scoped to /api/v1/reports.
+const reportCookieOptions = { ...baseCookieOptions, path: '/api/v1/reports' };
+
+export const setReportCookie = (res: Response, token: string, maxAgeMs: number): void => {
+  res.cookie('report_token', token, { ...reportCookieOptions, maxAge: maxAgeMs });
+};
+
+export const clearReportCookie = (res: Response): void => {
+  res.clearCookie('report_token', reportCookieOptions);
+};

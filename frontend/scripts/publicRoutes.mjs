@@ -42,7 +42,17 @@ const STATIC_ROUTES = [
   { path: '/2027', priority: '0.8', changefreq: 'weekly' },
   { path: '/2026/gallery', priority: '0.6', changefreq: 'monthly' },
   { path: '/2026/videos', priority: '0.5', changefreq: 'monthly' },
+  { path: '/2026/reports', priority: '0.6', changefreq: 'monthly' },
 ];
+
+// /2026/reports/:sessionId isn't enumerated here the way /2026/gallery/:albumId
+// is below — reports.ts is a TS module (not a plain JSON file under public/),
+// so this plain Node script can't import it without pulling in the whole
+// Vite/TS build graph. Each session page still works fine client-side (the "*"
+// catch-all serves index.html, then the SPA's own <SEO> sets the real title),
+// it just won't get its own prerendered <title>/OG tags or a sitemap entry
+// yet. Follow-up: mirror albumsJsonPath's approach with a small public JSON
+// manifest if that SEO gap turns out to matter.
 
 // /2026/gallery/:albumId is dynamic in principle, but albums only ever get
 // added via the manual Flickr-manifest-rebuild cycle (build-media-manifest.ts

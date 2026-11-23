@@ -783,6 +783,25 @@ export const sendDelegateAccessCodeEmail = async (to: string, fullName: string, 
 // too). The code itself is stable — every send for a given reviewer carries
 // the same accessCode (see ensureReviewerAccessCode) — and the link is just a
 // plain, unparameterized shortcut to the sign-in page, not a one-time token.
+// Reports Library gate — mirrors sendReviewerAssignmentEmail's shape, but the
+// code's expiry is a rolling window from issuance (reportAccess.service.ts's
+// REPORT_ACCESS_CODE_VALID_DAYS), not a fixed Summit-anchored date, so the
+// label here is "roughly N days" rather than a specific calendar date.
+export const sendReportAccessCodeEmail = async (to: string, firstName: string, data: { accessCode: string }): Promise<void> => {
+  const libraryUrl = `${env.FRONTEND_ORIGIN}/2026/reports`;
+  await sendEmail({
+    to,
+    subject: 'Your AI in Health Summit 2026 Reports Library access code',
+    html: `
+      <p>Hi ${firstName},</p>
+      <p>Your access code for the AI in Health Summit 2026 Reports Library is:</p>
+      <p style="font-size:20px;font-weight:700;letter-spacing:1px;">${data.accessCode}</p>
+      <p><a href="${libraryUrl}">Go to the Reports Library</a>, then enter your email and this code. This code doesn't expire on a single use — it stays valid for about six months, so keep it handy and come back to download more reports anytime without verifying again.</p>
+      <p>If you didn't request this, you can safely ignore this email, or contact ${env.SUPPORT_EMAIL || 'the AHFID team'}.</p>
+    `,
+  });
+};
+
 export const sendReviewerAssignmentEmail = async (
   to: string,
   fullName: string,

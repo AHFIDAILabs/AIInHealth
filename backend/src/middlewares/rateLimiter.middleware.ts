@@ -419,6 +419,34 @@ export const interest2027InviteReadLimiter = rateLimit({
   handler: onLimitExceeded('interest2027InviteReadLimiter', 'low'),
 });
 
+// Reports Library gate — request-code/verify-code, same email+IP keying/window
+// as loginLimiter (this is a real auth flow, not a casual public form).
+export const reportAccessLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: emailKey,
+  message: { success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many attempts. Try again in 15 minutes.' } },
+  handler: onLimitExceeded('reportAccessLimiter', 'medium'),
+});
+
+// POST /reports/download — keyed on the gate session itself (req.reportAccess,
+// set by reportAccess.middleware.ts), not IP/email, same reasoning as the
+// rapporteur/attendance token-keyed limiters above: several visitors could
+// share an office/venue IP. Generous — a visitor browsing the 55-document
+// library could reasonably grab a dozen in one sitting; this just blunts a
+// scripted bulk-scrape of the whole asset host through the gate.
+export const reportDownloadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => req.reportAccess?.reportAccessId ?? req.ip ?? 'unknown',
+  message: { success: false, error: { code: 'TOO_MANY_REQUESTS', message: 'Too many downloads. Please try again shortly.' } },
+  handler: onLimitExceeded('reportDownloadLimiter', 'low'),
+});
+
 export const askAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

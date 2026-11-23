@@ -8,7 +8,7 @@ import { Schema, model, type InferSchemaType } from 'mongoose';
 // replaced it (2027 interest list checkpoint). No data existed under that
 // source (the placeholder was never merged past this branch), so nothing to
 // migrate.
-const SOURCES = ['updates', 'concept_note'] as const;
+const SOURCES = ['updates', 'concept_note', 'report_library'] as const;
 
 const newsletterSubscriberSchema = new Schema(
   {

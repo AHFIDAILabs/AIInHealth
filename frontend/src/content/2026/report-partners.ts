@@ -1,0 +1,33 @@
+// Expands a report's partner abbreviation (reports.ts's `partners: string[]`)
+// into a full name + the name to match against the public Partner directory
+// (services/partner.service.ts's listPublicPartners) for a logo. Only
+// entries confirmed from a primary source are filled in here — see each
+// comment; an abbreviation with no entry still renders fine (ReportPartnerBadge
+// falls back to the bare abbreviation, no logo), it just means nobody has
+// confirmed/sourced its full name yet. Add to this table rather than
+// guessing a name — same "ask, don't guess" rule as album-overrides.ts and
+// docs/REPORTS-LIBRARY-BRIEF.md.
+export interface ReportPartnerInfo {
+  fullName: string;
+  // Only set when it differs from fullName — i.e. the Partner directory
+  // record (if one exists) is filed under a different exact string.
+  matchName?: string;
+}
+
+export const REPORT_PARTNER_INFO: Record<string, ReportPartnerInfo> = {
+  // Confirmed directly from each report's own "Session particulars"/"About
+  // this report" page while cataloguing the Breakout Room 1 additions.
+  APIN: { fullName: 'APIN Public Health Initiatives / PHIS3 Project' },
+  CHAI: { fullName: 'Clinton Health Access Initiative (CHAI)', matchName: 'CHAI' },
+  NCAIR: { fullName: 'National Center for Artificial Intelligence and Robotics (NCAIR)' },
+  DSN: { fullName: 'Data Science Nigeria' },
+  equalyzAI: { fullName: 'equalyzAI' },
+  VNDC: { fullName: 'Vaccine Network for Disease Control' },
+  'eHealth Africa': { fullName: 'eHealth Africa' },
+  SCIDaR: { fullName: 'Solina Centre for International Development and Research (SCIDaR)' },
+  'Jacaranda Health': { fullName: 'Jacaranda Health' },
+  MAMII: { fullName: 'Maternal and Neonatal Mortality Reduction Innovation Initiatives (MAMII)' },
+  // User-confirmed abbreviation expansion (2026-11-23) — full org name not
+  // yet sourced from a primary document.
+  DDP: { fullName: 'Development Delivery Partners' },
+};

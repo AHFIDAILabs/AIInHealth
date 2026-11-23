@@ -19,6 +19,8 @@ import { HomeRecap } from './pages/public/HomeRecap';
 import { Gallery2026 } from './pages/public/archive/Gallery2026';
 import { Album2026 } from './pages/public/archive/Album2026';
 import { Videos2026 } from './pages/public/archive/Videos2026';
+import { Reports2026 } from './pages/public/archive/Reports2026';
+import { ReportSession2026 } from './pages/public/archive/ReportSession2026';
 import { Summit2027 } from './pages/public/Summit2027';
 import { About } from './pages/public/About';
 import { Agenda } from './pages/public/Agenda';
@@ -164,6 +166,8 @@ function App() {
             <Route path="/2026/gallery" element={<Gallery2026 />} />
             <Route path="/2026/gallery/:albumId" element={<Album2026 />} />
             <Route path="/2026/videos" element={<Videos2026 />} />
+            <Route path="/2026/reports" element={<Reports2026 />} />
+            <Route path="/2026/reports/:sessionId" element={<ReportSession2026 />} />
             <Route path="/2027" element={<Summit2027 />} />
             <Route path="/about" element={<About />} />
             <Route path="/agenda" element={<Agenda />} />

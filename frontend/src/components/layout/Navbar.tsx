@@ -75,6 +75,7 @@ export const Navbar = () => {
       ? [{ id: 'compendium', label: t('nav.compendium', 'Compendium'), to: '/compendium' }]
       : []),
     { id: 'gallery', label: t('nav.gallery', 'Gallery'), to: '/2026/gallery' },
+    { id: 'reports', label: t('nav.reports', 'Reports'), to: '/2026/reports' },
     { id: 'join2027', label: t('nav.join2027', 'Join the 2027 List'), to: '/2027' },
     { id: 'ahfid', label: 'AHFID', to: 'https://ahfid.org/', external: true },
     // Delegate portal sign-in — kept out of the main nav row (see the filter

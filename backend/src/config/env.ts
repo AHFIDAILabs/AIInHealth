@@ -72,6 +72,21 @@ const envSchema = z.object({
   REVIEWER_TOKEN_SECRET: z.string().min(32),
   REVIEWER_SESSION_TTL_DAYS: z.coerce.number().int().default(60),
 
+  // Reports Library gate — same shape again (own secret/cookie, stable access
+  // code + separate session TTL), but unlike the two above this isn't anchored
+  // to the Summit's own dates: the library is meant to stay live indefinitely,
+  // so its code validity is a rolling window from issuance
+  // (reportAccess.service.ts's REPORT_ACCESS_CODE_VALID_DAYS) rather than a
+  // fixed post-event cutoff.
+  REPORT_TOKEN_SECRET: z.string().min(32),
+  REPORT_SESSION_TTL_DAYS: z.coerce.number().int().default(90),
+
+  // The separate Render static site hosting the 55 report PDFs themselves —
+  // see docs/REPORTS-LIBRARY-BRIEF.md. Only reportAccess download resolution
+  // reads this; never shipped to the frontend bundle (that's the whole point
+  // of the gate — see backend/src/data/reportsManifest.ts's own comment).
+  REPORTS_ASSETS_BASE_URL: z.string().optional().default('https://ahfidailabs-aihs-reports-assets.onrender.com'),
+
   // Paystack — empty in dev disables real checkout (initialize just no-ops with a
   // log line and a fake authorization_url), same fallback style as email/push above.
   PAYSTACK_SECRET_KEY: z.string().optional().default(''),

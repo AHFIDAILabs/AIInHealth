@@ -42,6 +42,7 @@ import * as organizationController from '../../controllers/organization.controll
 import * as integrationsController from '../../controllers/integrations.controller.js';
 import * as onevieIntegrationController from '../../controllers/onevieIntegration.controller.js';
 import * as newsletterController from '../../controllers/newsletter.controller.js';
+import * as reportsController from '../../controllers/reports.controller.js';
 import * as interest2027Controller from '../../controllers/interest2027.controller.js';
 import * as uploadController from '../../controllers/upload.controller.js';
 import * as searchController from '../../controllers/search.controller.js';
@@ -656,6 +657,8 @@ router.get('/newsletter-subscribers/export', requireRole(...adminOnlyRoles), new
 
 router.get('/2027-interest', requireRole(...adminOnlyRoles), interest2027Controller.adminList);
 router.get('/2027-interest/export', requireRole(...adminOnlyRoles), interest2027Controller.adminExport);
+
+router.get('/reports/download-stats', requireRole(...adminOnlyRoles), reportsController.adminDownloadStats);
 
 router.get('/audit-logs', requireRole('super_admin', 'admin', 'viewer'), auditLogController.adminList);
 

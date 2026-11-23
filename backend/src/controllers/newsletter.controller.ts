@@ -11,6 +11,7 @@ import { emitAdminNotification } from '../services/notification.service.js';
 const SOURCE_LABEL: Record<SubscribeNewsletterInput['source'], string> = {
   updates: 'summit updates',
   concept_note: 'the Concept Note download',
+  report_library: 'the Reports Library email gate',
 };
 
 // POST /newsletter/subscribe — public. Same (email, source) submitted twice is a
