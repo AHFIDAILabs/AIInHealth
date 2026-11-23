@@ -2,3 +2,11 @@ node_modules/
 dist/
 .env
 *.log
+
+# Report PDFs (93MB) live on a dedicated Render static site
+# (AHFIDAILabs/AHFIDAILabs-aihs-reports-assets), not in this repo — see
+# public/Reports/REPORTS-LIBRARY-BRIEF.md (moved to docs/) for why.
+public/Reports/*.pdf
+# Working files (e.g. Word-doc source of a report already published as PDF)
+# that land in this folder but were never meant to ship.
+public/Reports/*.docx
