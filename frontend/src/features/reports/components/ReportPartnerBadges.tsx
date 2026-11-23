@@ -60,7 +60,7 @@ export const ReportPartnerBadges = ({ partners, className = '' }: ReportPartnerB
           <span
             key={abbr}
             title={fullName}
-            className="rounded-full border border-slate-200 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500"
+            className="border border-compendium-ink/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-compendium-ink/60"
           >
             {abbr}
           </span>

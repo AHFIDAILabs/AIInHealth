@@ -111,7 +111,7 @@ export const ReportAccessGateModal = ({ open, onClose, onVerified, requestCode, 
 
             {step === 'request' ? (
               <>
-                <h3 className="mt-3.5 font-display text-lg font-semibold text-navy">
+                <h3 className="mt-3.5 font-compendium-serif text-lg font-bold text-compendium-ink">
                   {t('reportsGate.requestTitle', 'Download this report')}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
@@ -140,7 +140,7 @@ export const ReportAccessGateModal = ({ open, onClose, onVerified, requestCode, 
               </>
             ) : (
               <>
-                <h3 className="mt-3.5 font-display text-lg font-semibold text-navy">{t('reportsGate.verifyTitle', 'Enter your code')}</h3>
+                <h3 className="mt-3.5 font-compendium-serif text-lg font-bold text-compendium-ink">{t('reportsGate.verifyTitle', 'Enter your code')}</h3>
                 <p className="mt-1 text-sm text-slate-500">
                   {t('reportsGate.verifyIntro', 'We sent a code to {{email}}. Enter it below to verify.', { email: submittedEmail })}
                 </p>

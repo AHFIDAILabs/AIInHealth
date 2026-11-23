@@ -45,15 +45,6 @@ const STATIC_ROUTES = [
   { path: '/2026/reports', priority: '0.6', changefreq: 'monthly' },
 ];
 
-// /2026/reports/:sessionId isn't enumerated here the way /2026/gallery/:albumId
-// is below — reports.ts is a TS module (not a plain JSON file under public/),
-// so this plain Node script can't import it without pulling in the whole
-// Vite/TS build graph. Each session page still works fine client-side (the "*"
-// catch-all serves index.html, then the SPA's own <SEO> sets the real title),
-// it just won't get its own prerendered <title>/OG tags or a sitemap entry
-// yet. Follow-up: mirror albumsJsonPath's approach with a small public JSON
-// manifest if that SEO gap turns out to matter.
-
 // /2026/gallery/:albumId is dynamic in principle, but albums only ever get
 // added via the manual Flickr-manifest-rebuild cycle (build-media-manifest.ts
 // → commit → redeploy) — never live-published the way compendium abstracts
@@ -69,4 +60,21 @@ const albumRoutes = existsSync(albumsJsonPath)
     }))
   : [];
 
-export const PUBLIC_ROUTES = [...STATIC_ROUTES, ...albumRoutes];
+// /2026/reports/:sessionId — same reasoning as albumRoutes above: reports.ts
+// is a TS module this plain Node script can't import directly, so a small
+// public JSON manifest (id + title only — no filenames, see
+// content/2026/reports.ts's own comment on why) stands in for it, alongside
+// albums.json. Deliberately NOT under public/Reports/ (capital R, the PDF
+// staging folder) — Windows filesystems are case-insensitive, so that path
+// would silently collide with it; media/2026/ avoids the ambiguity entirely.
+// Regenerate this file (not done by this script) if sessions are added/renamed.
+const sessionsJsonPath = path.resolve(fileURLToPath(import.meta.url), '../../public/media/2026/report-sessions.json');
+const reportSessionRoutes = existsSync(sessionsJsonPath)
+  ? JSON.parse(readFileSync(sessionsJsonPath, 'utf-8')).map((session) => ({
+      path: `/2026/reports/${session.sessionId}`,
+      priority: '0.5',
+      changefreq: 'monthly',
+    }))
+  : [];
+
+export const PUBLIC_ROUTES = [...STATIC_ROUTES, ...albumRoutes, ...reportSessionRoutes];

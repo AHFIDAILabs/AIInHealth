@@ -30,4 +30,18 @@ export const REPORT_PARTNER_INFO: Record<string, ReportPartnerInfo> = {
   // User-confirmed abbreviation expansion (2026-11-23) — full org name not
   // yet sourced from a primary document.
   DDP: { fullName: 'Development Delivery Partners' },
+
+  // Confirmed directly from each report's own opening/particulars page.
+  Robomed: { fullName: 'Robomed Global' },
+  Bloom: { fullName: 'Bloom Public Health' },
+  Sydani: { fullName: 'Sydani Group' },
+  AHA: { fullName: 'Advantage Health Africa' },
+  GGHN: { fullName: 'Georgetown Global Health Nigeria (GGHN)' },
+
+  // Internationally standardized acronyms, not sourced per-document — same
+  // "safe to expand" category as spelling out "UN" or "EU".
+  WHO: { fullName: 'World Health Organization (WHO)', matchName: 'WHO' },
+  FCDO: { fullName: 'Foreign, Commonwealth & Development Office (FCDO)' },
+  NCDC: { fullName: 'Nigeria Centre for Disease Control (NCDC)' },
+  WIPO: { fullName: 'World Intellectual Property Organization (WIPO)' },
 };
