@@ -15,7 +15,7 @@ import { Banner } from '../../components/ui/Banner';
 
 const ACTION_LABEL: Record<ReportAccessAction, string> = { view: 'Viewed', download: 'Downloaded' };
 const ACTION_BADGE: Record<ReportAccessAction, string> = {
-  view: 'bg-navy-secondary text-navy',
+  view: 'bg-navy-secondary text-white',
   download: 'bg-navy-secondary text-orange',
 };
 
