@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import type { Request, Response } from 'express';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
@@ -5,12 +6,12 @@ import { ApiError } from '../utils/ApiError.js';
 import { env } from '../config/env.js';
 import { REPORTS_MANIFEST } from '../data/reportsManifest.js';
 import { ReportAccess } from '../models/ReportAccess.model.js';
-import { ReportDownloadEvent } from '../models/ReportDownloadEvent.model.js';
+import { ReportAccessEvent } from '../models/ReportAccessEvent.model.js';
 import { NewsletterSubscriber } from '../models/NewsletterSubscriber.model.js';
 import { setReportCookie, clearReportCookie } from '../utils/cookies.js';
 import { ensureReportAccessCode, verifyReportAccessCode, signReportSessionToken } from '../services/reportAccess.service.js';
 import { sendReportAccessCodeEmail } from '../services/email.service.js';
-import type { RequestReportAccessCodeInput, VerifyReportAccessCodeInput, DownloadReportInput } from '../validations/reports.validation.js';
+import type { RequestReportAccessCodeInput, VerifyReportAccessCodeInput, ViewReportInput } from '../validations/reports.validation.js';
 
 // GET /reports — public. Metadata only (id/session grouping/doc type/partners/
 // page count) — deliberately the SAME shape REPORTS_MANIFEST has minus `file`,
@@ -65,35 +66,90 @@ export const me = catchAsync(async (req: Request, res: Response) => {
   res.json(new ApiResponse({ email: access.email, firstName: access.firstName }));
 });
 
-// POST /reports/download — the ONLY path that ever resolves a real file URL.
-// 404s on an unknown reportId rather than guessing; the manifest is the
-// single source of truth for which ids exist (see backend/src/data/reportsManifest.ts).
-export const download = catchAsync(async (req: Request, res: Response) => {
-  const { reportId } = req.body as DownloadReportInput;
+const findEntryOrThrow = (reportId: string) => {
   const entry = REPORTS_MANIFEST.find((r) => r.id === reportId);
   if (!entry) throw new ApiError(404, 'Report not found', 'NOT_FOUND');
+  return entry;
+};
 
+const requireAccessEmail = async (req: Request): Promise<string> => {
   const access = await ReportAccess.findById(req.reportAccess!.reportAccessId).select('email');
   if (!access) throw new ApiError(401, 'Session invalid', 'UNAUTHENTICATED');
+  return access.email;
+};
 
-  await ReportDownloadEvent.create({ email: access.email, reportId: entry.id });
+// POST /reports/view — the "open in a new tab to read" action. Resolves the
+// real Render asset URL directly (same cost as a redirect — no bytes pass
+// through this server) so the browser's own PDF viewer shows it inline. This
+// is the ONLY path (besides downloadFile below) that ever learns a real file
+// URL — see backend/src/data/reportsManifest.ts's own comment on why that
+// matters.
+export const view = catchAsync(async (req: Request, res: Response) => {
+  const { reportId } = req.body as ViewReportInput;
+  const entry = findEntryOrThrow(reportId);
+  const email = await requireAccessEmail(req);
+
+  await ReportAccessEvent.create({ email, reportId: entry.id, action: 'view' });
 
   res.json(new ApiResponse({ url: `${env.REPORTS_ASSETS_BASE_URL}/${entry.file}` }));
 });
 
-// GET /admin/reports/download-stats — per-report download counts, for the
-// admin side's own visibility into "which reports actually get pulled."
-export const adminDownloadStats = catchAsync(async (_req: Request, res: Response) => {
-  const counts = await ReportDownloadEvent.aggregate<{ _id: string; count: number }>([
-    { $group: { _id: '$reportId', count: { $sum: 1 } } },
+// GET /reports/:reportId/file — the "force an actual save-to-disk" action.
+// Unlike view() above, this one DOES proxy the bytes: the Render static host
+// has no server-side config of its own to set Content-Disposition, so the
+// only way to guarantee a real download (rather than "whatever the visitor's
+// browser/PDF-viewer settings happen to do") is to fetch the file here and
+// set the header ourselves on the way back out. A plain <a href> to this URL
+// works with no special JS — it's a normal GET, the report_token cookie
+// travels with it like any other cross-subdomain navigation, and the
+// Content-Disposition header is what makes the browser download rather than
+// navigate, not the request having been a "fetch".
+export const downloadFile = catchAsync(async (req: Request, res: Response) => {
+  const { reportId } = req.params as { reportId: string };
+  const entry = findEntryOrThrow(reportId);
+  const email = await requireAccessEmail(req);
+
+  const sourceUrl = `${env.REPORTS_ASSETS_BASE_URL}/${entry.file}`;
+  const upstream = await fetch(sourceUrl);
+  if (!upstream.ok || !upstream.body) {
+    throw new ApiError(502, 'The report file is temporarily unavailable. Please try again shortly.', 'UPSTREAM_UNAVAILABLE');
+  }
+
+  await ReportAccessEvent.create({ email, reportId: entry.id, action: 'download' });
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${entry.id}.pdf"`);
+  const contentLength = upstream.headers.get('content-length');
+  if (contentLength) res.setHeader('Content-Length', contentLength);
+
+  // Node's global fetch() types upstream.body as the DOM lib's ReadableStream,
+  // while Readable.fromWeb expects node:stream/web's — same runtime shape,
+  // different type-only identity, so this cast is just bridging the two
+  // declaration sources, not actually unsafe.
+  Readable.fromWeb(upstream.body as import('node:stream/web').ReadableStream).pipe(res);
+});
+
+// GET /admin/reports/access-stats — per-report view/download counts, for the
+// admin side's own visibility into "which reports actually get read/pulled."
+export const adminAccessStats = catchAsync(async (_req: Request, res: Response) => {
+  const counts = await ReportAccessEvent.aggregate<{ _id: { reportId: string; action: string }; count: number }>([
+    { $group: { _id: { reportId: '$reportId', action: '$action' }, count: { $sum: 1 } } },
   ]);
-  const byReportId = Object.fromEntries(counts.map((c) => [c._id, c.count]));
+
+  const byReportId: Record<string, { views: number; downloads: number }> = {};
+  let totalViews = 0;
+  let totalDownloads = 0;
+  for (const c of counts) {
+    const row = (byReportId[c._id.reportId] ??= { views: 0, downloads: 0 });
+    if (c._id.action === 'view') {
+      row.views += c.count;
+      totalViews += c.count;
+    } else {
+      row.downloads += c.count;
+      totalDownloads += c.count;
+    }
+  }
+
   const totalAccessCodesIssued = await ReportAccess.countDocuments({ accessCode: { $exists: true } });
-  res.json(
-    new ApiResponse({
-      totalDownloads: counts.reduce((sum, c) => sum + c.count, 0),
-      totalAccessCodesIssued,
-      byReportId,
-    })
-  );
+  res.json(new ApiResponse({ totalViews, totalDownloads, totalAccessCodesIssued, byReportId }));
 });

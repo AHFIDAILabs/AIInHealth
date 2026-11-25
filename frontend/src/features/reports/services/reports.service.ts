@@ -59,9 +59,22 @@ export const reportAccessLogout = async (): Promise<void> => {
   await api.post('/reports/logout');
 };
 
-// Requires a prior verify-code — the backend's own requireReportAccess
-// middleware is the real enforcement, this just reflects its one error shape.
-export const requestReportDownloadUrl = async (reportId: string): Promise<string> => {
-  const res = await api.post<{ success: true; data: { url: string } }>('/reports/download', { reportId });
+// "View" — resolves the real Render asset URL for the browser's own PDF
+// viewer to open inline. Requires a prior verify-code — the backend's own
+// requireReportAccess middleware is the real enforcement, this just reflects
+// its one error shape.
+export const requestReportViewUrl = async (reportId: string): Promise<string> => {
+  const res = await api.post<{ success: true; data: { url: string } }>('/reports/view', { reportId });
   return res.data.data.url;
+};
+
+// "Download" — a plain GET URL (not a fetch call): the backend proxies the
+// file and sets Content-Disposition: attachment there, so a normal browser
+// navigation to this URL (an <a href>, not window.open/fetch) forces a real
+// save-to-disk regardless of the visitor's own PDF-viewer settings. The
+// report_token cookie travels with this GET the same way it would with any
+// other cross-subdomain navigation — no extra plumbing needed.
+export const reportDownloadFileUrl = (reportId: string): string => {
+  const base = (import.meta.env.VITE_API_URL as string) ?? '/api/v1';
+  return `${base}/reports/${reportId}/file`;
 };

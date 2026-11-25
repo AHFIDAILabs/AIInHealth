@@ -3,7 +3,7 @@ import * as reportsController from '../../controllers/reports.controller.js';
 import { requireReportAccess } from '../../middlewares/reportAccess.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { reportAccessLimiter, reportDownloadLimiter } from '../../middlewares/rateLimiter.middleware.js';
-import { requestReportAccessCodeSchema, verifyReportAccessCodeSchema, downloadReportSchema } from '../../validations/reports.validation.js';
+import { requestReportAccessCodeSchema, verifyReportAccessCodeSchema, viewReportSchema } from '../../validations/reports.validation.js';
 
 const router = Router();
 
@@ -17,6 +17,10 @@ router.use(requireReportAccess);
 
 router.get('/me', reportsController.me);
 router.post('/logout', reportsController.logout);
-router.post('/download', reportDownloadLimiter, validate(downloadReportSchema), reportsController.download);
+router.post('/view', reportDownloadLimiter, validate(viewReportSchema), reportsController.view);
+// :reportId is a path param (not a body field), so viewReportSchema doesn't
+// apply here — reportsController.downloadFile validates it against the
+// manifest itself the same way view() does.
+router.get('/:reportId/file', reportDownloadLimiter, reportsController.downloadFile);
 
 export default router;

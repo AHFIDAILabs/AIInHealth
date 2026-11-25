@@ -1,4 +1,4 @@
-export { groupReportsBySession, requestReportDownloadUrl } from './services/reports.service';
+export { groupReportsBySession, requestReportViewUrl, reportDownloadFileUrl } from './services/reports.service';
 export { useReportAccess } from './hooks/useReportAccess';
 export { useReportDownloadFlow } from './hooks/useReportDownloadFlow';
 export { ReportAccessGateModal } from './components/ReportAccessGateModal';

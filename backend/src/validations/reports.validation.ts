@@ -17,9 +17,9 @@ export const verifyReportAccessCodeSchema = z.object({
 });
 export type VerifyReportAccessCodeInput = z.infer<typeof verifyReportAccessCodeSchema>['body'];
 
-export const downloadReportSchema = z.object({
+export const viewReportSchema = z.object({
   body: z.object({
     reportId: z.string().trim().min(1, 'reportId is required'),
   }),
 });
-export type DownloadReportInput = z.infer<typeof downloadReportSchema>['body'];
+export type ViewReportInput = z.infer<typeof viewReportSchema>['body'];

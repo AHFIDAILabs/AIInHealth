@@ -35,10 +35,13 @@ export const ReportSession2026 = () => {
   const navigate = useNavigate();
   const sessions = useMemo(() => groupReportsBySession(), []);
   const session = sessions.find((s) => s.sessionId === sessionId);
-  const { requestDownload, gateOpen, closeGate, handleVerified, gate, downloadingId } = useReportDownloadFlow();
+  const { requestView, requestDownload, gateOpen, closeGate, handleVerified, gate, busyId } = useReportDownloadFlow();
 
+  // Distinct from the per-document 'report_view' event useReportDownloadFlow
+  // fires when a visitor actually opens one of this session's PDFs — this one
+  // just means the session page itself was visited.
   useEffect(() => {
-    if (session) void trackEvent('report_view', { sessionId: session.sessionId, sessionTitle: session.sessionTitle });
+    if (session) void trackEvent('report_session_view', { sessionId: session.sessionId, sessionTitle: session.sessionTitle });
   }, [session]);
 
   if (!session) return <NotFound />;
@@ -115,13 +118,22 @@ export const ReportSession2026 = () => {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => requestDownload(doc)}
-                  disabled={downloadingId === doc.id}
-                  className="shrink-0 bg-compendium-ink px-4 py-2 text-xs font-semibold text-white hover:bg-orange disabled:opacity-50"
-                >
-                  {downloadingId === doc.id ? 'Preparing…' : 'Download'}
-                </button>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    onClick={() => requestView(doc)}
+                    disabled={busyId === doc.id}
+                    className="border border-compendium-ink/15 px-4 py-2 text-xs font-semibold text-compendium-ink hover:border-orange hover:text-orange disabled:opacity-50"
+                  >
+                    View
+                  </button>
+                  <button
+                    onClick={() => requestDownload(doc)}
+                    disabled={busyId === doc.id}
+                    className="bg-compendium-ink px-4 py-2 text-xs font-semibold text-white hover:bg-orange disabled:opacity-50"
+                  >
+                    {busyId === doc.id ? 'Preparing…' : 'Download'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

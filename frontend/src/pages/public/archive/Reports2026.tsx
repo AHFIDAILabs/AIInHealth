@@ -25,7 +25,7 @@ export const Reports2026 = () => {
   const sessions = useMemo(() => groupReportsBySession(), []);
   const [day, setDay] = useState<string>(ALL);
   const [venue, setVenue] = useState<string>(ALL);
-  const { requestDownload, gateOpen, closeGate, handleVerified, gate, downloadingId } = useReportDownloadFlow();
+  const { requestView, requestDownload, gateOpen, closeGate, handleVerified, gate, busyId } = useReportDownloadFlow();
 
   const venues = useMemo(() => Array.from(new Set(sessions.map((s) => s.venue))).sort(), [sessions]);
   const totalDocs = sessions.reduce((n, s) => n + s.docs.length, 0);
@@ -98,8 +98,9 @@ export const Reports2026 = () => {
                 <ReportSessionCard
                   session={session}
                   onOpen={() => navigate(`/2026/reports/${session.sessionId}`)}
+                  onView={requestView}
                   onDownload={requestDownload}
-                  downloadingId={downloadingId}
+                  busyId={busyId}
                 />
               </li>
             ))}
@@ -121,13 +122,15 @@ export const Reports2026 = () => {
 const ReportSessionCard = ({
   session,
   onOpen,
+  onView,
   onDownload,
-  downloadingId,
+  busyId,
 }: {
   session: ReportSession;
   onOpen: () => void;
+  onView: (doc: ReportSession['docs'][number]) => void;
   onDownload: (doc: ReportSession['docs'][number]) => void;
-  downloadingId: string | null;
+  busyId: string | null;
 }) => (
   <div className="border border-compendium-ink/10">
     <div className="flex flex-col sm:flex-row">
@@ -166,13 +169,22 @@ const ReportSessionCard = ({
                 </span>
               </td>
               <td className="py-2.5 pl-3 text-right align-top">
-                <button
-                  onClick={() => onDownload(doc)}
-                  disabled={downloadingId === doc.id}
-                  className="whitespace-nowrap bg-compendium-ink px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-orange disabled:opacity-50"
-                >
-                  {downloadingId === doc.id ? 'Preparing…' : 'Download'}
-                </button>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => onView(doc)}
+                    disabled={busyId === doc.id}
+                    className="whitespace-nowrap border border-compendium-ink/15 px-3.5 py-1.5 text-xs font-semibold text-compendium-ink hover:border-orange hover:text-orange disabled:opacity-50"
+                  >
+                    View
+                  </button>
+                  <button
+                    onClick={() => onDownload(doc)}
+                    disabled={busyId === doc.id}
+                    className="whitespace-nowrap bg-compendium-ink px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-orange disabled:opacity-50"
+                  >
+                    {busyId === doc.id ? 'Preparing…' : 'Download'}
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
