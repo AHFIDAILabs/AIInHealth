@@ -7,7 +7,8 @@ import { X, FileLock2, KeyRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { LightField } from '../../../components/ui/LightField';
 import { Button } from '../../../components/ui/Button';
-import { getApiErrorMessage } from '../../../services/api';
+import { useToast } from '../../../contexts/ToastContext';
+import { getReportErrorMessage } from '../services/reportsErrorMessage';
 
 type RequestValues = { email: string; firstName: string };
 type VerifyValues = { code: string };
@@ -27,6 +28,7 @@ interface ReportAccessGateModalProps {
 // returning visitor downloading more of the 55 reports never sees this again.
 export const ReportAccessGateModal = ({ open, onClose, onVerified, requestCode, verifyCode }: ReportAccessGateModalProps) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -64,7 +66,9 @@ export const ReportAccessGateModal = ({ open, onClose, onVerified, requestCode, 
       setSubmittedEmail(values.email);
       setStep('verify');
     } catch (err) {
-      setRequestError(getApiErrorMessage(err, t('reportsGate.genericError', "That didn't work. Please try again.")));
+      const message = getReportErrorMessage(err, t('reportsGate.genericError', "That didn't work. Please try again."));
+      setRequestError(message);
+      toast('error', message);
     }
   };
 
@@ -75,7 +79,9 @@ export const ReportAccessGateModal = ({ open, onClose, onVerified, requestCode, 
       onVerified();
       reset();
     } catch (err) {
-      setVerifyError(getApiErrorMessage(err, t('reportsGate.codeInvalid', "That code didn't work. Please try again.")));
+      const message = getReportErrorMessage(err, t('reportsGate.codeInvalid', "That code didn't work. Please try again."));
+      setVerifyError(message);
+      toast('error', message);
     }
   };
 

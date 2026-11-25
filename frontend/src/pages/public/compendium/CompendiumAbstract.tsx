@@ -94,7 +94,7 @@ export const CompendiumAbstract = () => {
       <section className="bg-white pb-16 pt-8 sm:pb-20">
         <article className="mx-auto max-w-5xl px-4 sm:px-6">
           <div className="grid gap-8 sm:grid-cols-[220px_1fr] sm:gap-10">
-            <aside className="space-y-4 text-sm">
+            <aside className="min-w-0 space-y-4 text-sm">
               <div className="flex items-start gap-3">
                 <div className="h-11 w-11 shrink-0 overflow-hidden border border-compendium-ink/10">
                   <CompendiumMosaicBanner seed={record.code} tiles={1} />
@@ -163,7 +163,7 @@ export const CompendiumAbstract = () => {
               {citations && (
                 <div className="border-t border-compendium-ink/10 pt-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-orange">Cite as</p>
-                  <p className="mt-1 text-xs leading-relaxed text-compendium-ink/70">{citations.apa}</p>
+                  <p className="mt-1 break-words text-xs leading-relaxed text-compendium-ink/70">{citations.apa}</p>
                 </div>
               )}
             </aside>
