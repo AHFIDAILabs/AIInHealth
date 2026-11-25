@@ -23,3 +23,12 @@ export const viewReportSchema = z.object({
   }),
 });
 export type ViewReportInput = z.infer<typeof viewReportSchema>['body'];
+
+export const listReportAccessEventsQuerySchema = z.object({
+  action: z.enum(['view', 'download']).optional(),
+  reportId: z.string().trim().max(200).optional(),
+  q: z.string().trim().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+export type ListReportAccessEventsQuery = z.infer<typeof listReportAccessEventsQuerySchema>;

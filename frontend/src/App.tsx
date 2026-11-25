@@ -101,6 +101,7 @@ import { ScholarshipApplicationsPage } from './pages/admin/ScholarshipApplicatio
 import { WaiHealthPage } from './pages/admin/WaiHealthPage';
 import { AnalyticsPage } from './pages/admin/AnalyticsPage';
 import { OrganizationsPage } from './pages/admin/OrganizationsPage';
+import { ReportsLibraryPage } from './pages/admin/ReportsLibraryPage';
 import { IntegrationsPage } from './pages/admin/IntegrationsPage';
 import { RolesPermissionsPage } from './pages/admin/RolesPermissionsPage';
 import { RapporteurPage } from './pages/admin/RapporteurPage';
@@ -317,6 +318,7 @@ function App() {
               >
                 <Route path="/admin/analytics" element={<AnalyticsPage />} />
                 <Route path="/admin/organizations" element={<OrganizationsPage />} />
+                <Route path="/admin/reports-library" element={<ReportsLibraryPage />} />
               </Route>
 
               <Route element={<RequireRole roles={['super_admin', 'admin', 'viewer']} />}>

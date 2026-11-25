@@ -1,17 +1,25 @@
 import { Readable } from 'node:stream';
 import type { Request, Response } from 'express';
+import type { FilterQuery } from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
+import { toCsv } from '../utils/toCsv.js';
 import { env } from '../config/env.js';
 import { REPORTS_MANIFEST } from '../data/reportsManifest.js';
 import { ReportAccess } from '../models/ReportAccess.model.js';
-import { ReportAccessEvent } from '../models/ReportAccessEvent.model.js';
+import { ReportAccessEvent, type ReportAccessEventDoc } from '../models/ReportAccessEvent.model.js';
 import { NewsletterSubscriber } from '../models/NewsletterSubscriber.model.js';
 import { setReportCookie, clearReportCookie } from '../utils/cookies.js';
 import { ensureReportAccessCode, verifyReportAccessCode, signReportSessionToken } from '../services/reportAccess.service.js';
 import { sendReportAccessCodeEmail } from '../services/email.service.js';
-import type { RequestReportAccessCodeInput, VerifyReportAccessCodeInput, ViewReportInput } from '../validations/reports.validation.js';
+import { listReportAccessEventsQuerySchema } from '../validations/reports.validation.js';
+import type {
+  RequestReportAccessCodeInput,
+  VerifyReportAccessCodeInput,
+  ViewReportInput,
+  ListReportAccessEventsQuery,
+} from '../validations/reports.validation.js';
 
 // GET /reports — public. Metadata only (id/session grouping/doc type/partners/
 // page count) — deliberately the SAME shape REPORTS_MANIFEST has minus `file`,
@@ -152,4 +160,52 @@ export const adminAccessStats = catchAsync(async (_req: Request, res: Response) 
 
   const totalAccessCodesIssued = await ReportAccess.countDocuments({ accessCode: { $exists: true } });
   res.json(new ApiResponse({ totalViews, totalDownloads, totalAccessCodesIssued, byReportId }));
+});
+
+const buildEventFilter = (query: ListReportAccessEventsQuery): FilterQuery<ReportAccessEventDoc> => {
+  const filter: FilterQuery<ReportAccessEventDoc> = {};
+  if (query.action) filter.action = query.action;
+  if (query.reportId) filter.reportId = query.reportId;
+  if (query.q) filter.email = new RegExp(query.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  return filter;
+};
+
+// Attaches each event's reportId to its sessionTitle/docTypeLabel so the
+// admin table reads like "Session Report — Welcome Remarks..." rather than a
+// bare id — looked up from the same in-memory manifest everything else here
+// already reads from, no extra query.
+const withReportLabel = (e: { reportId: string; [k: string]: unknown }) => {
+  const entry = REPORTS_MANIFEST.find((r) => r.id === e.reportId);
+  return { ...e, sessionTitle: entry?.sessionTitle ?? null, docTypeLabel: entry?.docTypeLabel ?? null };
+};
+
+// GET /admin/reports/events — who viewed/downloaded which report, and when.
+// This is the actual per-visitor log the admin dashboard's "who downloaded
+// our reports" view needs — access-stats above only has aggregate counts.
+export const adminListAccessEvents = catchAsync(async (req: Request, res: Response) => {
+  const query = listReportAccessEventsQuerySchema.parse(req.query);
+  const filter = buildEventFilter(query);
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    ReportAccessEvent.find(filter).sort({ accessedAt: -1 }).skip(skip).limit(query.limit).lean(),
+    ReportAccessEvent.countDocuments(filter),
+  ]);
+
+  res.json(
+    new ApiResponse(items.map(withReportLabel), { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) || 1 })
+  );
+});
+
+const EVENT_CSV_COLUMNS = ['email', 'reportId', 'sessionTitle', 'docTypeLabel', 'action', 'accessedAt'];
+
+export const adminExportAccessEvents = catchAsync(async (req: Request, res: Response) => {
+  const query = listReportAccessEventsQuerySchema.parse(req.query);
+  const filter = buildEventFilter(query);
+  const items = await ReportAccessEvent.find(filter).sort({ accessedAt: -1 }).lean();
+
+  const csv = toCsv(items.map(withReportLabel) as unknown as Record<string, unknown>[], EVENT_CSV_COLUMNS);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="reports-library-events-${Date.now()}.csv"`);
+  res.send(csv);
 });

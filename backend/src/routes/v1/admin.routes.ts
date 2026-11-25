@@ -659,6 +659,8 @@ router.get('/2027-interest', requireRole(...adminOnlyRoles), interest2027Control
 router.get('/2027-interest/export', requireRole(...adminOnlyRoles), interest2027Controller.adminExport);
 
 router.get('/reports/access-stats', requireRole(...adminOnlyRoles), reportsController.adminAccessStats);
+router.get('/reports/events', requireRole(...adminOnlyRoles), reportsController.adminListAccessEvents);
+router.get('/reports/events/export', requireRole(...adminOnlyRoles), reportsController.adminExportAccessEvents);
 
 router.get('/audit-logs', requireRole('super_admin', 'admin', 'viewer'), auditLogController.adminList);
 

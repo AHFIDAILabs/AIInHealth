@@ -47,6 +47,7 @@ import {
   MailCheck,
   ClipboardCheck,
   BookOpen,
+  Library,
 } from 'lucide-react';
 import type { Role } from '../../services/auth.service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -181,6 +182,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Analytics', to: '/admin/analytics', icon: BarChart3, roles: allRoles },
       { label: 'Organizations', to: '/admin/organizations', icon: Building2, roles: allRoles },
+      { label: 'Reports Library', to: '/admin/reports-library', icon: Library, roles: adminOnlyRoles },
     ],
   },
   {
